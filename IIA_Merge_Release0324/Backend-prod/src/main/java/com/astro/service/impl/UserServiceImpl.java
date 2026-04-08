@@ -66,8 +66,8 @@ public class UserServiceImpl implements UserService {
     public UserRoleDto login(UserDto userDto) {
         UserRoleDto userRoleDto = null;
 
-        if(Objects.nonNull(userDto.getUserId()) && Objects.nonNull(userDto.getPassword())){
-            UserMaster userMaster = userMasterRepository.findById(userDto.getUserId())
+        if(Objects.nonNull(userDto.getEmployeeId()) && Objects.nonNull(userDto.getPassword())){
+            UserMaster userMaster = userMasterRepository.findByEmployeeId(userDto.getEmployeeId())
                 .orElse(null);
                 
             if(Objects.isNull(userMaster)){

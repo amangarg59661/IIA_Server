@@ -16,7 +16,7 @@ const Login = () => {
   const [errorMessage, setErrorMessage] = useState();
   // END
   const [formData, setFormData] = useState({
-    userId: '',
+    employeeId: '',
     password: ''
   });
 
@@ -71,7 +71,7 @@ const Login = () => {
             <FormInputItem 
               label="Employee ID" 
               placeholder="123456" 
-              name='userId' 
+              name='employeeId' 
               onChange={handleFormValueChange} 
               required 
             />

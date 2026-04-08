@@ -21,4 +21,7 @@ public class MaterialMasterUtilRequestDto {
     private String briefDescription;
     private Integer createdBy;
     private String updatedBy;
+      // Added by Aman 
+    private Boolean asset_Flag;
+    // End
 }

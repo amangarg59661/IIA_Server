@@ -49,8 +49,9 @@ private UserService userService;
 @Override
 @Transactional
 public EmployeeDepartmentMasterResponseDto createEmployeeDepartmentWithUser(EmployeeDepartmentMasterRequestDto employeeRequestDto) {
+    // Modified by Aman
     // Validate phone number
-    if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+   /* if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
         throw new BusinessException(
             new ErrorDetails(
                 AppConstant.ERROR_CODE_RESOURCE,
@@ -59,7 +60,8 @@ public EmployeeDepartmentMasterResponseDto createEmployeeDepartmentWithUser(Empl
                 "Phone number must be exactly 10 digits"
             )
         );
-    }
+    }*/
+    // End
 
     // Create employee first
     Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
@@ -153,30 +155,47 @@ public String getDepartmentByEmployeeName(String employeeName) {
     @Override
     @Transactional
     public EmployeeDepartmentMasterResponseDto createEmployeeDepartment(EmployeeDepartmentMasterRequestDto employeeRequestDto) {
-        
-        // Validate phone number
-        if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+        // Modified by Aman
+        // // Validate phone number
+        // if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+        //     throw new BusinessException(
+        //         new ErrorDetails(
+        //             AppConstant.ERROR_CODE_RESOURCE,
+        //             AppConstant.ERROR_TYPE_CODE_RESOURCE,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Phone number must be exactly 10 digits"
+        //         )
+        //     );
+        // }
+      
+
+        // Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
+        // int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
+
+        // String employeeId = "E" + nextNumber;
+
+        // EmployeeIdSequence em = new EmployeeIdSequence();
+        // em.setEmployeeId(nextNumber);
+        // employeeIdSequenceRepository.save(em);
+        // ✅ Check if employeeId already exists in DB
+    if (employeeRequestDto.getEmployeeId() != null && !employeeRequestDto.getEmployeeId().trim().isEmpty()) {
+        boolean exists = employeeRepository.existsById(employeeRequestDto.getEmployeeId().trim());
+        if (exists) {
             throw new BusinessException(
                 new ErrorDetails(
                     AppConstant.ERROR_CODE_RESOURCE,
                     AppConstant.ERROR_TYPE_CODE_RESOURCE,
                     AppConstant.ERROR_TYPE_VALIDATION,
-                    "Phone number must be exactly 10 digits"
+                    "Employee with ID '" + employeeRequestDto.getEmployeeId() + "' already exists."
                 )
             );
         }
-
-        Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
-        int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
-
-        String employeeId = "E" + nextNumber;
-
-        EmployeeIdSequence em = new EmployeeIdSequence();
-        em.setEmployeeId(nextNumber);
-        employeeIdSequenceRepository.save(em);
+    }
+    // ENd
         
         EmployeeDepartmentMaster employee = new EmployeeDepartmentMaster();
-        employee.setEmployeeId(employeeId);
+        employee.setEmployeeId(employeeRequestDto.getEmployeeId());
+        
         employee.setEmployeeName(employeeRequestDto.getEmployeeName());
         employee.setFirstName(employeeRequestDto.getFirstName());
         employee.setLastName(employeeRequestDto.getLastName());

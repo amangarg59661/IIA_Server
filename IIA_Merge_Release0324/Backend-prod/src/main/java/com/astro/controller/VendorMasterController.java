@@ -5,6 +5,10 @@ import com.astro.dto.workflow.ProcurementDtos.approvedTenderIdWithTitle;
 import com.astro.entity.VendorMaster;
 import com.astro.service.VendorMasterService;
 import com.astro.util.ResponseBuilder;
+// modifed by Aman 
+import com.astro.util.APIResponse;
+import java.util.LinkedHashMap;
+// end
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpStatus;
@@ -67,12 +71,32 @@ public class VendorMasterController {
         RegisteredVendorsDataDto response = vendorMasterService.getVendorPurchaseOrders(tenderId);
         return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
     }
+    // Modified by Aman
     @GetMapping("/approvedtenderIDs/{vendorId}")
-    public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendorId) {
-        List<approvedTenderIdWithTitle> response = vendorMasterService.getTenderIds(vendorId);
-        return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
-    }
+public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendorId) {
 
+    List<approvedTenderIdWithTitle> tenders = vendorMasterService.getTenderIds(vendorId);
+    VendorMaster vendor = vendorMasterService.getVendorByVendorId(vendorId);
+
+    APIResponse builtResponse = ResponseBuilder.getSuccessResponse(tenders);
+
+    Map<String, Object> finalResponse = new LinkedHashMap<>();
+    finalResponse.put("responseStatus", builtResponse.getResponseStatus());
+    finalResponse.put("vendorData", Map.of(
+        "vendorId", vendor.getVendorId(),
+        "vendorName", vendor.getVendorName(),
+        "primaryBusiness", vendor.getPrimaryBusiness()
+    ));
+    finalResponse.put("responseData", tenders);
+
+    return ResponseEntity.ok(finalResponse);
+}
+    // @GetMapping("/approvedtenderIDs/{vendorId}")
+    // public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendorId) {
+    //     List<approvedTenderIdWithTitle> response = vendorMasterService.getTenderIds(vendorId);
+    //     return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
+    // }
+// End
     @GetMapping("/vendorIdVendorName")
     public ResponseEntity<Object> getAllvendorIdVendorNames() {
         List<VendorIdNameDTO> response = vendorMasterService.getAllVendorIdAndName();

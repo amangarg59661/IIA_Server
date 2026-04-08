@@ -65,6 +65,10 @@ public class MaterialMasterUtil {
     private Integer createdBy;
     @Column(name = "updated_by")
     private String updatedBy;
+    // Added by Aman
+      @Column(name = "Asset_Flag")
+    private Boolean assetFlag;
+    // End
 
     private LocalDateTime createdDate = LocalDateTime.now();
     private LocalDateTime updatedDate = LocalDateTime.now();

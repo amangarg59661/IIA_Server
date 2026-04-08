@@ -8,7 +8,9 @@ import java.util.List;
 
 @Data
 public class EmployeeDepartmentMasterRequestDto {
-
+    // Added by Aman
+    @NotBlank(message = "Employee id is required")
+    // End
     private String employeeId;
 
     @NotBlank(message = "Employee name is required")

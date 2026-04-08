@@ -86,6 +86,10 @@ public class MaterialMaster {
     private String statusOfMaterialActiveOrDeactive;
 
     private String reasonForDeactive;
+     // Added by Aman
+      @Column(name = "Asset_Flag")
+    private Boolean assetFlag;
+    // End   
 
     private LocalDateTime createdDate = LocalDateTime.now();
     private LocalDateTime updatedDate = LocalDateTime.now();
