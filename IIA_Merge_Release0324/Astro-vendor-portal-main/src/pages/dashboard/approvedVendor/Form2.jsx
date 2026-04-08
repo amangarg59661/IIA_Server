@@ -522,7 +522,9 @@ const Form2 = () => {
     actionStatusAfterPoGenerated:null,
     approvedVendorPoData:null,
   });
-
+  // Modified by Aman 
+  const [vendorInfo, setVendorInfo] = useState({ vendorId: "", vendorName: "", primaryBusiness: "" });
+  // End
   useEffect(() => {
     const fetchTenderIds = async () => {
       try {
@@ -536,6 +538,9 @@ const Form2 = () => {
           }
         );
         setTenderIds(res.data.responseData || []);
+        // Modified by Aman 
+        setVendorInfo(res.data.vendorData );
+        // End 
       } catch (err) {
         console.error("Failed to fetch tender IDs:", err);
         message.error("Could not fetch tender IDs: " + (err.message || ""));
@@ -644,6 +649,18 @@ const getDisplayStatus = (actionStatus) => {
 
   return (
     <div style={{ padding: "20px" }}>
+    {/* Modified by Aman  */}
+<div style={{ textAlign: "center", marginBottom: "16px" }}>
+  <span style={{ color: "#40a9ff", fontSize: "42px", fontWeight: "bold", display: "block" }}>
+    Indian Institute of Astrophysics
+  </span>
+</div>
+    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px", fontWeight: "600" }}>
+  <span>Vendor ID: {vendorInfo.vendorId}</span>
+  <span>Vendor Name: {vendorInfo.vendorName}</span>
+  <span>Primary Business: {vendorInfo.primaryBusiness}</span>
+</div>
+{/* End */}
       <h2 className="font-bold mb-2">Approved Tender IDs</h2>
       <Row gutter={[16, 16]}>
         {/*tenderIds.map((tenderId) => (
