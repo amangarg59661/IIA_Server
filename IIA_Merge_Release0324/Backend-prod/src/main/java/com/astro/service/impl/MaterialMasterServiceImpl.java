@@ -391,6 +391,9 @@ public class MaterialMasterServiceImpl implements MaterialMasterService {
             dto.setCreatedDate(util.getCreatedDate());
             dto.setUpdatedDate(util.getUpdatedDate());
             dto.setBriefDescription(util.getBriefDescription());
+            // Added byb Aman 
+            dto.setAsset_Flag(util.getAssetFlag());
+            // End
 
             dto.setStatus(util.getApprovalStatus() != null ? util.getApprovalStatus().name() : null);
 
@@ -435,6 +438,9 @@ public class MaterialMasterServiceImpl implements MaterialMasterService {
         dto.setMaterialStatus(materialMaster.getStatusOfMaterialActiveOrDeactive());
         dto.setReasonForDeactive(materialMaster.getReasonForDeactive());
         dto.setBriefDescription(materialMaster.getBriefDescription());
+        // Added by Aman
+        dto.setAsset_Flag(materialMaster.getAssetFlag());
+        // End
 
         if (materialMaster.getUploadImageName() == null || materialMaster.getUploadImageName().isEmpty()) {
             dto.setMaterialFile(null);
@@ -498,6 +504,9 @@ public class MaterialMasterServiceImpl implements MaterialMasterService {
         materialMasterResponseDto.setUpdatedBy(materialMaster.getUpdatedBy());
         materialMasterResponseDto.setCreatedDate(materialMaster.getCreatedDate());
         materialMasterResponseDto.setUpdatedDate(materialMaster.getUpdatedDate());
+        // Added by Aman
+        materialMasterResponseDto.setAsset_Flag(materialMaster.getAssetFlag());
+        // End
 
 /*
         List<String> vendorNames= vendorNameRepository.findByMaterialCode(materialMaster.getMaterialCode())

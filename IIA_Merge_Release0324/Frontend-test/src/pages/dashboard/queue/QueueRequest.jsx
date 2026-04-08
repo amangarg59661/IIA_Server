@@ -96,6 +96,11 @@ const MaterialDetailModal = ({ visible, setVisible, materialData }) => {
         <Descriptions.Item label="Comments" span={2}>
           {materialData.comments || "No comments"}
         </Descriptions.Item>
+        {/* Added by aman */}
+            <Descriptions.Item label = "Asset" span = {2}>
+              {materialData.asset_Flag ? "Yes" : "No"}
+            </Descriptions.Item>
+        {/* End */}
 
 <Descriptions.Item label="Upload Documents" span={2}>
   <div className="detail-item">

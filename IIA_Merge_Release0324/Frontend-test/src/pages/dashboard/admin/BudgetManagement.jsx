@@ -299,7 +299,9 @@ const BudgetManagement = () => {
             <Statistic
               title="Total Allocated"
               value={summary.totalAllocated}
+              // Modified by Aman
               prefix="₹" 
+              //  End
               precision={2}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -310,7 +312,9 @@ const BudgetManagement = () => {
             <Statistic
               title="Total Spent"
               value={summary.totalSpent}
+              // Modified by AMan
               prefix="₹" 
+              // End
               precision={2}
               valueStyle={{ color: '#ff4d4f' }}
             />
@@ -321,7 +325,9 @@ const BudgetManagement = () => {
             <Statistic
               title="Total Remaining"
               value={summary.totalRemaining}
+              // Modified by AMan
               prefix="₹" 
+              // End
               precision={2}
               valueStyle={{ color: '#52c41a' }}
             />

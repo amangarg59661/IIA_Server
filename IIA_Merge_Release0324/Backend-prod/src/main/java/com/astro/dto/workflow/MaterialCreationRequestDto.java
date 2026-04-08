@@ -36,5 +36,8 @@ public class MaterialCreationRequestDto {
     private BigDecimal shelfLife;
     private String createdBy;
     private String updatedBy;
+     // Added by Aman
+    private String AssetFlag;
+    // end
 
 }

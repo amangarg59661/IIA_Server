@@ -221,7 +221,9 @@ const AdminDashboard = () => {
             <Statistic
               title="Total Budget Allocated"
               value={stats.totalBudget}
-              prefix={<DollarOutlined />}
+              // Modified by Aman
+              prefix= "₹"
+              // End
               valueStyle={{ color: '#722ed1' }}
               precision={2}
             />

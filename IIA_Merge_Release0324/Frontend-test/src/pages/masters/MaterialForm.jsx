@@ -78,6 +78,11 @@ const MaterialForm = ({materialCode}) => {
               materialCode: materialData.materialCode, // Show existing code
               indigenousOrImported: originValue,//seting the origin if true then inigenous,flase Imported
               status: materialData.status,
+              // Added by Aman
+              
+              Asset_Flag: materialData.asset_Flag ?'true' : 'false',
+
+              // End
               materialStatus: materialData.materialStatus,
               reasonForDeactive: materialData.reasonForDeactive,
             });
@@ -339,6 +344,9 @@ const searchMaterials = async (searchText) => {
         // estimatedPriceWithCcy: values.estimatedPriceWithCcy,
        // indigenousOrImported: values.indigenousOrImported,originBoolean
         indigenousOrImported: originBoolean,
+        // Added by aman
+        asset_Flag: values.Asset_Flag ,
+        // End
         subCategory: values.subCategory,
         unitPrice: values.unitPrice,
         uom: values.uom,
@@ -462,6 +470,7 @@ options={Array.isArray(materialList) ? materialList : []}
       const originValue = materialData.indigenousOrImported ? "indigenous" : "imported";
 
       // Autofill material fields
+      console.log("Asset_Flag raw value:", materialData.Asset_Flag, typeof materialData.Asset_Flag);
       form.setFieldsValue({
         materialCode: materialData.materialCode,
         category: materialData.category,
@@ -475,6 +484,9 @@ options={Array.isArray(materialList) ? materialList : []}
         status: materialData.status,
         materialStatus: materialData.materialStatus,
         reasonForDeactive: materialData.reasonForDeactive,
+        // Added by Aman
+        Asset_Flag: materialData.asset_Flag ? 'true' :'false',
+        // end
 
       });
 
@@ -691,6 +703,19 @@ options={Array.isArray(materialList) ? materialList : []}
               ))}
             </Select>
           </Form.Item>
+
+           {/* Added by aman */}
+                    <Form.Item
+                      name="Asset_Flag"
+                      label="Asset"
+                      rules={[{ required: true }]}
+                    >
+                      <Radio.Group>
+                        <Radio value="true">Yes</Radio>
+                        <Radio value="false">No</Radio>
+                      </Radio.Group>
+                    </Form.Item>
+                    {/* ENd */}
 
           <Form.Item
             name="indigenousOrImported"

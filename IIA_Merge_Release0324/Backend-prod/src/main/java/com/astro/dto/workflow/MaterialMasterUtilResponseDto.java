@@ -28,5 +28,8 @@ public class MaterialMasterUtilResponseDto {
     private List<String> materialFile;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
+    // Added by Aman 
+    private Boolean asset_Flag;
+    // End
 }
 

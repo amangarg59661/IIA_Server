@@ -37,5 +37,8 @@ public class MaterialMasterResponseDto {
     private String status;
     private String materialStatus;
     private String reasonForDeactive;
+    // Added by Aman 
+    private Boolean asset_Flag;
+    // End
 
 }

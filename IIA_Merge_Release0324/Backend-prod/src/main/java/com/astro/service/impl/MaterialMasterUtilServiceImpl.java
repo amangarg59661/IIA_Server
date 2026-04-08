@@ -77,6 +77,9 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
         material.setIndigenousOrImported(dto.getIndigenousOrImported());
         material.setApprovalStatus(MaterialMasterUtil.ApprovalStatus.AWAITING_APPROVAL);
         material.setComments(null);
+        // Added by Aman
+        material.setAssetFlag(dto.getAsset_Flag());
+        // End
         material.setBriefDescription(dto.getBriefDescription());
         material.setCreatedBy(dto.getCreatedBy());
         material.setUpdatedBy(dto.getUpdatedBy());
@@ -149,6 +152,9 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
         response.setUpdatedBy(material.getUpdatedBy());
         response.setCreatedDate(material.getCreatedDate());
         response.setUpdatedDate(material.getUpdatedDate());
+        // Added by Aman 
+        response.setAsset_Flag(material.getAssetFlag());
+        // End
 
         return response;
     }
@@ -308,6 +314,9 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
         materialMaster.setStatusOfMaterialActiveOrDeactive("Active");
         materialMaster.setCreatedBy(actionBy);
         materialMaster.setUpdatedBy(material.getUpdatedBy());
+        // Added by Aman 
+        materialMaster.setAssetFlag(material.getAssetFlag());
+        // End
         materialMasterRepository.save(materialMaster);
         saveMaterialTracking(material.getMaterialCode(), "COMPLETED","APPROVED", remarks, actionBy);
 
@@ -405,6 +414,9 @@ private void saveMaterialTracking(String materialCode, String status, String act
         material.setComments(null);
         material.setCreatedBy(dto.getCreatedBy());
         material.setUpdatedBy(dto.getUpdatedBy());
+        // Added by Aman 
+        material.setAssetFlag(dto.getAsset_Flag());
+        // End
 
         materialMasterUtilRepository.save(material);
 
