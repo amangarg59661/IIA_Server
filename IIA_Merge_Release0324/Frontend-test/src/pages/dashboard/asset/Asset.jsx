@@ -68,7 +68,7 @@ const assetFields = [
             {
                 name: "locatorId",
                 label: "Field Station",
-                type: "text",
+                type: "select",
                 span: 2,
                 required: true
             },
@@ -112,7 +112,7 @@ const assetFields = [
                 name: "assetDesc",
                 label: "Asset Description",
                 type: "text",
-                span: 3,
+                span: 2,
                 required: true
             },
             {
@@ -126,7 +126,10 @@ const assetFields = [
     },
     {
         heading: "Technical Details",
-        colCnt: 6,
+        // Modified by Aman
+        // colCnt:4
+        colCnt: 4,
+        // End
         fieldList: [
             {
                 name: "makeNo",
