@@ -47,7 +47,7 @@ export const ogpFields = [
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 6,
+        colCnt: 4,
         children: [
             {
                 name: "assetId",
@@ -168,7 +168,7 @@ export const ogpFieldsGiRejected = [
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 3,
+        colCnt: 4,
         children: [
             {
                 name: "assetId",
@@ -314,7 +314,7 @@ export const ogpFieldsPo = [
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 6,
+        colCnt: 4,
         children: [
             {
                 name: "materialCode",
@@ -463,7 +463,7 @@ export const gtOgpFields = [
     {
       heading: "Material Details",
       name: "materialDtlList",
-      colCnt: 8,
+      colCnt: 4,
       children: [
         {
           name: "materialCode",
@@ -603,7 +603,7 @@ export const gtOgpFields = [
   {
     heading: "Material Details",
     name: "assets", 
-    colCnt: 6,
+    colCnt: 4,
     children: [
       {
         name: "disposalId",
