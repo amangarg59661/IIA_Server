@@ -80,7 +80,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 6,
+        colCnt: 4,
         children: [
             {
                 name: "assetId",

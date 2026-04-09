@@ -266,10 +266,10 @@ const { data } = await axios.get(`/api/process-controller/SearchByDiId`, {
     {
       heading: "Material Details",
       name: "materialDtlList",
-      colCnt: 5,
+      colCnt: 4,
       children: [
         { name: "materialCode", label: "Material Code", type: "text", span: 2 },
-        { name: "materialDesc", label: "Material Description", type: "text", span: 3 },
+        { name: "materialDesc", label: "Material Description", type: "text", span: 2 },
         { name: "quantity", label: "Quantity", type: "text", span: 2, required: true },
         { name: "uom", label: "UOM", type: "text", span: 2, required: true },
        
