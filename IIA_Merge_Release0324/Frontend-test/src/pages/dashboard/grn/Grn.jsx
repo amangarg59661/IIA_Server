@@ -505,7 +505,7 @@ const grvFields =(formData)=> [
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 8,
+        colCnt: 4,
         children: [
             {
                 name: "assetId",
@@ -525,7 +525,7 @@ const grvFields =(formData)=> [
                 name: "assetDesc",
                 label: "Asset Description",
                 type: "text",
-                span: 3,
+                span: 2,
                 // required: true
             },
             {
@@ -539,14 +539,14 @@ const grvFields =(formData)=> [
                 name: "materialDesc",
                 label: "Material Description",
                 type: "text",
-                span: 3,
+                span: 2,
                 // required: true
             },
             {
                 name: "uomId",
                 label: "UOM",
                 type: "text",
-                span: 1,
+                span: 2,
                 required: true
             },
             {
