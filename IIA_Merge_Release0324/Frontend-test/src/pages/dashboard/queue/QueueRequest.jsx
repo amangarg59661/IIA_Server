@@ -1825,7 +1825,7 @@ const fetchEmployees = () => {
                           }
                         }}
                       >
-                        <Button type="link">Request Change</Button>
+                        <Button type="link">Seek Clarification</Button>
                       </Popover>
                     )}
 
@@ -2168,7 +2168,7 @@ const fetchEmployees = () => {
                           }
                         }}
                       >
-                        <Button type="link">Request Change</Button>
+                        <Button type="link">Seek Clarification</Button>
                       </Popover>
                     )}
                 </Space>

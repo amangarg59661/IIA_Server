@@ -726,6 +726,7 @@ const Indent1 = () => {
                     name: "budgetCode",
                     label: "Budget Code",
                     type: "select",
+                    // required: true,
                     options: projectBudgetCodes.length > 0 ? projectBudgetCodes : budgetCodeDropdown,
                     placeholder: formData.isUnderProject && !formData.projectName
                         ? "Please select a project first"

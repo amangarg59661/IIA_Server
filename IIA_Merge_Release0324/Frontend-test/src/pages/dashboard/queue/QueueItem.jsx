@@ -53,7 +53,7 @@ const QueueItem = ({ item }) => {
           <Button icon={<CommentOutlined />} onClick={handleAdditionalInfo}>
             Additional Info
           </Button>
-          <Button onClick={handleRequestChange}>Request Change</Button>
+          <Button onClick={handleRequestChange}>Seek Clarification</Button>
         </Space>
       }
     >

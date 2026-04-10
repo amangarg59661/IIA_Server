@@ -152,7 +152,7 @@ const Form17 = () => {
     {
       heading: "Material Details",
       name: "materialDtlList",
-      colCnt: 8,
+      colCnt: 4,
       children: [
         {
           name: "materialCode",
