@@ -34,8 +34,9 @@ const QueueHistory = ({ requestId, open, onCancel }) => {
       dataIndex: 'assignedToEmployeeName',
       key: 'assignedTo',
       render: (name, record) => {
-        if (!name && !record.assignedToUserId) return '--';
-        const role = record.currentRole || '';
+        const role = record.nextRole || '';
+        if (!name && !record.assignedToUserId) return `${role}`;
+        
         return name ? `${name}${role ? ` (${role})` : ''}` : '--';
       },
     },
