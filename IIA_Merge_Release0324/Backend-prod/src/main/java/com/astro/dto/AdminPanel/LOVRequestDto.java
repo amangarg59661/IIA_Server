@@ -26,6 +26,5 @@ public class LOVRequestDto {
     private Long parentLovId;
        // Added by Aman
     private BigDecimal departmentLimit;
-    private String subCategorySequence; 
     // End  
 }

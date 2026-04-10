@@ -1186,6 +1186,7 @@ public class GiServiceImpl implements GiService {
 
                         GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
                         mapper.map(gmdd, gimde);
+                        gimde.setAcceptedQuantity(BigDecimal.ONE); 
                         gimde.setAssetId(asset.getAssetId());
                         gimde.setAssetCode(asset.getAssetCode());
                         gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
