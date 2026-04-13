@@ -1283,6 +1283,10 @@ const QueueModal = ({
                                   {indent.indentorName || "N/A"}
                                 </div>
                                 <div className="detail-item">
+                                  <strong>Indentor Department:</strong> 
+                                  {indent.employeeDept || "N/A"}
+                                </div>
+                                <div className="detail-item">
                                   <strong>Contact:</strong>{" "}
                                   {indent.indentorMobileNo || "N/A"}
                                 </div>
@@ -1309,13 +1313,10 @@ const QueueModal = ({
                                   {indent.employeeId || "N/A"}
                                 </div>
                                 <div className="detail-item">
-                                  <strong>Employee Name:</strong>{" "}
+                                  <strong>Created By:</strong>{" "}
                                   {indent.employeeName || "N/A"}
                                 </div>
-                                <div className="detail-item">
-                                  <strong>Employee Department:</strong> ₹
-                                  {indent.employeeDept || "N/A"}
-                                </div>
+                                
                               </Col>
                             </Row>
 
