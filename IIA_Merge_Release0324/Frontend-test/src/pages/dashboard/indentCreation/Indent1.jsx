@@ -749,7 +749,7 @@ const Indent1 = () => {
     name: "budgetCode",
     label: "Budget Code",
     type: "select",
-    // required: true,
+    required: true,
     options: formData.isUnderProject
         ? (projectBudgetCodes.length > 0 ? projectBudgetCodes : [])
         : allBudgetCodes,
