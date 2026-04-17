@@ -59,6 +59,9 @@ public class LOVMaster {
     @Column(name = "updated_date")
     private LocalDateTime updatedDate;
 
+    @Column(name="locator_location")
+    private String locationCode;
+
     @PrePersist
     public void prePersist() {
         this.createdDate = LocalDateTime.now();

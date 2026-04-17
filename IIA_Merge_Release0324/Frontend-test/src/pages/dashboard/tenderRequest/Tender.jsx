@@ -202,7 +202,8 @@ const Tender = () => {
     budgetCode: material.budgetCode,
     totalPrice: material.totalPrice,
     materialCategory: material.materialCategory,
-   // currency: material.currency,
+   currency: material.currency,
+   conversionRate: material.conversionRate,
     materialSubCategory: material.materialSubCategory,
     modeOfProcurement: material.modeOfProcurement,
     vendorNames: material.vendorNames,
@@ -221,6 +222,7 @@ const Tender = () => {
    
         if (indentData?.materialDetails) {
           allMaterials.push(...indentData.materialDetails);
+          
         }
          if (indentData?.buyBack) {
         isBuyBack = true;
@@ -244,7 +246,8 @@ const Tender = () => {
         uom: material.uom,
         quantity: material.quantity,
         unitPrice: material.unitPrice,
-       // currency: material.currency,
+       currency: material.currency,             // ✅ add this
+  conversionRate: material.conversionRate,
         materialCategory: material.materialCategory,
         materialSubCategory: material.materialSubCategory,
         budgetCode: material.budgetCode,
@@ -707,7 +710,7 @@ console.log("uday"+formData.buyBack);
     {
       heading: "Material Details",
       name: "materialDetails",
-      colCnt: 8,
+      colCnt: 4,
       children: [
         // Update materialCode field options to be populated dynamically
         {
@@ -728,7 +731,7 @@ console.log("uday"+formData.buyBack);
           name: "materialDescription",
           label: "Description",
           type: "select",
-          span: 3,
+          span: 2,
           options: [], // Will be populated from API data
           showSearch: true,
           disabled: true,
@@ -756,7 +759,7 @@ console.log("uday"+formData.buyBack);
           type: "text",
           span:1
         },
-       /* {
+        {
           name: "currency",
           label: "Currency",
           disabled: true,
@@ -764,13 +767,24 @@ console.log("uday"+formData.buyBack);
           required: true,
           span: 1,
           disabled: true,
-        }*/,
+        },
+      ...(
+      (formData.materialDetails || []).some(m => m.currency && m.currency !== "INR")
+        ? [{
+            name: "conversionRate",
+            label: "Conversion Rate",
+            disabled: true,
+            type: "text",
+            span: 1,
+          }]
+        : []
+    ),
         {
           name: "budgetCode",
           label: "Budget Code",
           type: "select",
          // required: true,
-         // disabled: true,
+         disabled: true,
           span: 2,
           options: [],
         },
@@ -801,7 +815,7 @@ console.log("uday"+formData.buyBack);
           label: "Mode of Procurement",
           type: "select",
           disabled: true,
-          span: 3,
+          span: 2,
           options: [],
         },
         {
@@ -874,7 +888,7 @@ console.log("uday"+formData.buyBack);
       ]
     },
     {
-      heading: "Pre-bid Meeting Details (TC_47)",
+      heading: "Pre-bid Meeting Details",
       colCnt: 3,
       fieldList: [
         {

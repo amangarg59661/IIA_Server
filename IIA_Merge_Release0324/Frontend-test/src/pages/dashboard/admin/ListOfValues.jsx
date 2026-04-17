@@ -182,6 +182,7 @@ const [locationLoading, setLocationLoading] = useState(false);
       const payload = {
         ...values,
         designatorId: selectedDesignator,
+        // locationCode: locationCode,
         createdBy: 'admin' // Replace with actual user from auth state
       };
 
