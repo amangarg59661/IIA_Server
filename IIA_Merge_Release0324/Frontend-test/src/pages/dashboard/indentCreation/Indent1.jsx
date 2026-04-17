@@ -198,6 +198,7 @@ const Indent1 = () => {
 
     // ✅ NEW: State for project-specific budget codes
     const [projectBudgetCodes, setProjectBudgetCodes] = useState([]);
+    const [allBudgetCodes, setAllBudgetCodes] = useState([]);
 
     // ✅ Fetch consignee location values from LOV system (Form ID: 3 = IndentCreation, Designator: consigneeLocation)
     const { lovValues: consigneeLocationLOV, loading: loadingLocations } = useLOVValues(3, 'consigneeLocation');
@@ -425,6 +426,23 @@ const Indent1 = () => {
         }
     };
 
+    const fetchAllBudgetCodes = async () => {
+    try {
+        const { data } = await axios.get('/api/admin/budget');
+        const budgetData = data?.responseData || [];
+        const budgetOptions = budgetData.map(budget => ({
+            label: budget.budgetName,
+            value: budget.budgetCode
+        }));
+        setAllBudgetCodes(budgetOptions);
+    } catch (error) {
+        console.error('Error fetching all budget codes:', error);
+        setAllBudgetCodes([]);
+    }
+};
+
+
+
     // ✅ NEW: Fetch budget codes based on selected project
     const fetchBudgetCodesByProject = async (projectCode) => {
         if (!projectCode) {
@@ -444,10 +462,14 @@ const Indent1 = () => {
                 budgetData = data;
             }
 
+            // const budgetOptions = budgetData.map(budget => ({
+            //     label: `${budget.budgetCode} - ${budget.budgetName || budget.budgetCode}`,
+            //     value: budget.budgetCode
+            // }));
             const budgetOptions = budgetData.map(budget => ({
-                label: `${budget.budgetCode} - ${budget.budgetName || budget.budgetCode}`,
-                value: budget.budgetCode
-            }));
+    label: budget.budgetName || budget.budgetCode,
+    value: budget.budgetCode
+}));
 
             setProjectBudgetCodes(budgetOptions);
             console.log(`✅ Loaded ${budgetOptions.length} budget codes for project ${projectCode}`);
@@ -513,6 +535,7 @@ const Indent1 = () => {
         fetchEmployeeDetailsByUserId();
         fetchJobMaster();
         fetchUomMaster();
+        fetchAllBudgetCodes();
     }, [userId]);
 
     // Filter materials based on category type (Computer / Non-Computer)
@@ -723,16 +746,29 @@ const Indent1 = () => {
                     disabled: !formData.isEditable
                 },
                 {
-                    name: "budgetCode",
-                    label: "Budget Code",
-                    type: "select",
-                    // required: true,
-                    options: projectBudgetCodes.length > 0 ? projectBudgetCodes : budgetCodeDropdown,
-                    placeholder: formData.isUnderProject && !formData.projectName
-                        ? "Please select a project first"
-                        : "Select budget code",
-                    disabled: !formData.isEditable || (formData.isUnderProject && !formData.projectName),
-                },
+    name: "budgetCode",
+    label: "Budget Code",
+    type: "select",
+    required: true,
+    options: formData.isUnderProject
+        ? (projectBudgetCodes.length > 0 ? projectBudgetCodes : [])
+        : allBudgetCodes,
+    placeholder: formData.isUnderProject && !formData.projectName
+        ? "Please select a project first"
+        : "Select budget code",
+    disabled: !formData.isEditable || (formData.isUnderProject && !formData.projectName),
+},
+                // {
+                //     name: "budgetCode",
+                //     label: "Budget Code",
+                //     type: "select",
+                //     // required: true,
+                //     options: projectBudgetCodes.length > 0 ? projectBudgetCodes : budgetCodeDropdown,
+                //     placeholder: formData.isUnderProject && !formData.projectName
+                //         ? "Please select a project first"
+                //         : "Select budget code",
+                //     disabled: !formData.isEditable || (formData.isUnderProject && !formData.projectName),
+                // },
                 {
                     name: "vendorNames",
                     label: NO_VENDOR_MODES.includes(selectedModeOfProcurement)
@@ -1132,7 +1168,7 @@ const Indent1 = () => {
                         required: true
                     }
                 ] : []),
-                ...(["PROPRIETARY", "LIMITED_TENDER", "Proprietary/Single Tender", "Limited Pre Approved Vendor Tender"].includes(selectedModeOfProcurement) ? [
+                ...(["PROPRIETARY", "LIMITED_TENDER", "Proprietary/Single Tender"].includes(selectedModeOfProcurement) ? [
                     {
                         name: "proprietaryAndLimitedDeclaration",
                         label: proprietaryLimitedDeclarationLabel,

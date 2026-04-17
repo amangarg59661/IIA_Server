@@ -1319,13 +1319,13 @@ const fetchEmployees = () => {
       render: (_, record) =>
         getCommonField(record.workflowId, record, "budget") || "-",
     },
-    {
-      title: "Indentor Title",
-      dataIndex: "workflowName",
-      key: "indentTitle",
-      render: (_, record) =>
-        getCommonField(record.workflowId, record, "indentTitle") || "-",
-    },
+    // {
+    //   title: "Indentor Title",
+    //   dataIndex: "workflowName",
+    //   key: "indentTitle",
+    //   render: (_, record) =>
+    //     getCommonField(record.workflowId, record, "indentTitle") || "-",
+    // },
     {
       title: "Mode of Procurement",
       dataIndex: "modeOfProcurement",

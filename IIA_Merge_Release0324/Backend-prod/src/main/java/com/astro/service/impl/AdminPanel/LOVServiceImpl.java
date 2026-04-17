@@ -17,6 +17,7 @@ import com.astro.service.LocationMasterService;
 import com.astro.service.DepartmentComputerPriceLimitService;
 import com.astro.dto.AdminPanel.LOVRequestDto;
 import com.astro.service.UomMasterService;
+import com.astro.service.LocatorService;
 // END
 
 import javax.persistence.EntityManager;
@@ -36,6 +37,7 @@ public class LOVServiceImpl implements LOVService {
    // ========== DESIGNATOR ID CONSTANTS ==========
 
     private static final Long DESIGNATOR_LOCATION     = 1L;
+    private static final Long DESIGNATOR_LOCATOR = 10L;
     private static final Long DESIGNATOR_DEPARTMENT   = 13L;
     private static final Long DESIGNATOR_UOM = 22L;
     
@@ -47,6 +49,9 @@ private UomMasterService uomMasterService;
 
     @Autowired 
     private DepartmentComputerPriceLimitService departmentComputerPriceLimitService;
+
+    @Autowired
+    private LocatorService locatorService;
 
     // End
 
@@ -274,6 +279,7 @@ private UomMasterService uomMasterService;
             lov.setColorCode(lovMaster.getColorCode());
             lov.setIconName(lovMaster.getIconName());
             lov.setParentLovId(lovMaster.getParentLovId());
+            lov.setLocationCode(lovMaster.getLocationCode());
             LOVMaster updated = lovMasterRepository.save(lov);
             // Added by Aman
              dispatchUpdateHandler(updated, request);
@@ -309,6 +315,9 @@ private UomMasterService uomMasterService;
         } else if (saved.getDesignatorId().equals(DESIGNATOR_UOM)){
             uomMasterService.createFromLOV(saved);
         }
+        else if (saved.getDesignatorId().equals(DESIGNATOR_LOCATOR)){
+            locatorService.createFromLOV(saved, request);
+        }
     }
 
     private void dispatchUpdateHandler(LOVMaster updated, LOVRequestDto request) {
@@ -320,6 +329,9 @@ private UomMasterService uomMasterService;
             departmentComputerPriceLimitService.updateFromLOV(updated, request);
         } else if (updated.getDesignatorId().equals(DESIGNATOR_UOM)){
             uomMasterService.updateFromLOV(updated);
+        }
+        else if (updated.getDesignatorId().equals(DESIGNATOR_LOCATOR)){
+            locatorService.updateFromLOV(updated, request);
         }
     }
     // End

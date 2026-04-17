@@ -26,5 +26,6 @@ public class LOVRequestDto {
     private Long parentLovId;
        // Added by Aman
     private BigDecimal departmentLimit;
+    private String locationCode;  // added for Locator Added bu Aman 
     // End  
 }

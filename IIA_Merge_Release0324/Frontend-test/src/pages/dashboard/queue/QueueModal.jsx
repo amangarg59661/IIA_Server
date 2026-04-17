@@ -414,6 +414,9 @@ const QueueModal = ({
                         ? "No"
                         : "N/A"}
                     </div>
+                    <div className="detail-item">
+                      <strong>Justification:</strong> {detailsData.proprietaryJustification || "N/A"}
+                    </div>
                     </Col>
                     </Row>
                 </div>
@@ -1258,7 +1261,7 @@ const QueueModal = ({
                       ))}
                     </div>
 
-                    <Collapse accordion defaultActiveKey={["0"]}>
+                    <Collapse accordion defaultActiveKey={["0"]}style={{ overflow: 'hidden' }}>
                       {detailsData.indentResponseDTO.map((indent, index) => (
                         <Collapse.Panel
                           key={index}
@@ -1271,7 +1274,7 @@ const QueueModal = ({
                             </Tag>
                           }
                         >
-                          <div style={{ padding: "16px 0" }}>
+                          <div style={{ padding: "16px 0",  overflowX: 'auto' }}>
                             <Row gutter={24}>
                               <Col span={12}>
                                 <div className="detail-item">
@@ -1281,6 +1284,10 @@ const QueueModal = ({
                                 <div className="detail-item">
                                   <strong>Indentor:</strong>{" "}
                                   {indent.indentorName || "N/A"}
+                                </div>
+                                <div className="detail-item">
+                                  <strong>Indentor Department:</strong> 
+                                  {indent.employeeDept || "N/A"}
                                 </div>
                                 <div className="detail-item">
                                   <strong>Contact:</strong>{" "}
@@ -1309,13 +1316,10 @@ const QueueModal = ({
                                   {indent.employeeId || "N/A"}
                                 </div>
                                 <div className="detail-item">
-                                  <strong>Employee Name:</strong>{" "}
+                                  <strong>Created By:</strong>{" "}
                                   {indent.employeeName || "N/A"}
                                 </div>
-                                <div className="detail-item">
-                                  <strong>Employee Department:</strong> ₹
-                                  {indent.employeeDept || "N/A"}
-                                </div>
+                                
                               </Col>
                             </Row>
 
@@ -1373,7 +1377,19 @@ const QueueModal = ({
                                     title: "Unit Price",
                                     dataIndex: "unitPrice",
                                     align: "right",
-                                    render: (text) => `₹${text?.toFixed(2)}`,
+                                    render: (text) => `${text?.toFixed(2)}`,
+                                  },
+                                  {
+                                    title: "Currency",
+                                    dataIndex: "currency",
+                                    align: "right",
+                                    // render: (text) => `₹${text?.toFixed(2)}`,
+                                  },
+                                  {
+                                    title: "Conversion Rate",
+                                    dataIndex: "conversionRate",
+                                    align: "right",
+                                    // render: (text) => `₹${text?.toFixed(2)}`,
                                   },
                                   {
                                     title: "Total Price",

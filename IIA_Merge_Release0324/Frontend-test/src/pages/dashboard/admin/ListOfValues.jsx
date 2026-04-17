@@ -16,10 +16,26 @@ const ListOfValues = () => {
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingLOV, setEditingLOV] = useState(null);
+  const [locationOptions, setLocationOptions] = useState([]);
+const [locationLoading, setLocationLoading] = useState(false);
 
   useEffect(() => {
     fetchForms();
   }, []);
+
+  const fetchLocationOptions = async () => {
+  try {
+    setLocationLoading(true);
+    const response = await axios.get('/api/location-master');
+    const options = response.data.responseData || [];
+    setLocationOptions(options);
+  } catch (error) {
+    message.error('Failed to fetch locations');
+    console.error('Fetch locations error:', error);
+  } finally {
+    setLocationLoading(false);
+  }
+};
 
   const fetchForms = async () => {
     try {
@@ -131,9 +147,11 @@ const ListOfValues = () => {
     }
     setEditingLOV(null);
     form.resetFields();
-    form.setFieldsValue({ isActive: true });
-    setModalVisible(true);
-  };
+    form.setFieldsValue({ isActive: true });  
+    if (selectedDesignator === 10) fetchLocationOptions(); // ✅
+
+  setModalVisible(true);
+};
 
   const handleEdit = (record) => {
     setEditingLOV(record);
@@ -142,8 +160,10 @@ const ListOfValues = () => {
       lovDisplayValue: record.lovDisplayValue,
       colorCode: record.colorCode,
       displayOrder: record.displayOrder,
-      isActive: record.isActive
+      isActive: record.isActive,
+      locationCode: record.locationCode 
     });
+    if (selectedDesignator === 10) fetchLocationOptions();
     setModalVisible(true);
   };
 
@@ -162,6 +182,7 @@ const ListOfValues = () => {
       const payload = {
         ...values,
         designatorId: selectedDesignator,
+        // locationCode: locationCode,
         createdBy: 'admin' // Replace with actual user from auth state
       };
 
@@ -399,6 +420,26 @@ const ListOfValues = () => {
             <Input.TextArea placeholder="Enter description" rows={3} />
           </Form.Item>
           {/* Modified by Aman for department vise limit for computer category */}
+          {selectedDesignator === 10 && (
+  <Form.Item
+    label="Location"
+    name="locationCode"
+    rules={[{ required: true, message: 'Please select a location' }]}
+  >
+    <Select
+      placeholder="Select a location"
+      loading={locationLoading}
+      showSearch
+      optionFilterProp="children"
+    >
+      {locationOptions.map((loc) => (
+        <Option key={loc.locationCode} value={loc.locationCode}>
+          {loc.locationName}
+        </Option>
+      ))}
+    </Select>
+  </Form.Item>
+)}
           {selectedDesignator === 13 && (
         <Form.Item
             label="Limit"

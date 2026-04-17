@@ -76,6 +76,7 @@ const assetFields = [
                 name: "poId",
                 label: "Po Id",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -91,13 +92,14 @@ const assetFields = [
                 type: "select",
                 span: 2,
                 options: assetIdList,
-                // disabled: true,
+                disabled: true,
                 // required: true
             },
             {
                 name: "materialCode",
                 label: "Material Code",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -105,6 +107,7 @@ const assetFields = [
                 name: "materialDesc",
                 label: "Material Description",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -120,6 +123,7 @@ const assetFields = [
                 label: "UOM",
                 type: "text",
                 span: 3,
+                disabled: true,
                 required: true
             }
         ]
@@ -192,6 +196,7 @@ const assetFields = [
                 name: "quantity",
                 label: "Quantity",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -199,6 +204,7 @@ const assetFields = [
                 name: "unitPrice",
                 label: "Unit Price",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },

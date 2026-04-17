@@ -178,6 +178,12 @@ const TenderPrintFormat = forwardRef(({ data = {} }, ref) => {
 
 
       {/* Materials Table (narrower & centered) */}
+      <br></br>
+      <br></br>
+      <br></br>
+      <br></br>
+      <br></br>
+      <br></br>
       <div className="text-[14px] font-semibold underline mb-1 text-center">
         LIST OF MATERIALS / JOB
       </div>
