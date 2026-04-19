@@ -103,7 +103,7 @@ public class EmailService {
            helper.setTo(toEmail);
            helper.setSubject("Welcome to IIA – Vendor Login Details");
            helper.setText(htmlContent, true);
-           helper.setFrom("iiapdkg@gmail.com");
+           helper.setFrom("sipm");
 
            mailSender.send(message);
        }
@@ -113,7 +113,7 @@ public class EmailService {
 
     @Async
     public void sendWorkflowEmail(WorkflowTransitionDto wt) throws IOException, MessagingException {
-        Email from = new Email("udaykirandkg@gmail.com");
+        Email from = new Email("sipm");
         String subject = "Workflow Update - Request ID: " + wt.getRequestId();
         String workFlowName = null;
         if (wt.getWorkflowId() == 1) {
@@ -170,7 +170,7 @@ public class EmailService {
         }
 
         List<String> recipients = Arrays.asList(
-                "udaychowdhary743@gmail.com"
+                // "udaychowdhary743@gmail.com"
               //  "satish.k@iiap.res.in",
               //  "neeraj.jha@iiap.res.in",
              //   "sayee.kishan@iiap.res.in",
@@ -196,7 +196,7 @@ public class EmailService {
      helper.setTo(toEmail);
      helper.setSubject(subject);
      helper.setText(htmlContent, true); // true for HTML content
-     helper.setFrom("your_email@gmail.com"); // replace with your Gmail
+     helper.setFrom("sipm"); // replace with your Gmail
 
      mailSender.send(message);
  }
@@ -210,7 +210,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
     helper.setTo(toEmails.toArray(new String[0]));
     helper.setSubject(subject);
     helper.setText(htmlContent, true);
-    helper.setFrom("iiapdkg@gmail.com");
+    helper.setFrom("sipm");
 
     mailSender.send(message);
 }
@@ -218,7 +218,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
 
     @Async
     public void sendSubWorkflowEmail(SubWorkflowTransitionDto wt) throws IOException, MessagingException {
-        Email from = new Email("udaykirandkg@gmail.com");
+        Email from = new Email("sipm");
         String subject = "Workflow Update - Request ID: " + wt.getRequestId();
 
         String templateName = "";
@@ -244,7 +244,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
        // sendMail(from, new Email(toEmail), subject, content);
      //   sendMail("kudaykiran.9949@gmail.com", subject, body);
         List<String> recipients = Arrays.asList(
-                "udaychowdhary743@gmail.com"
+                // "udaychowdhary743@gmail.com"
                // "satish.k@iiap.res.in",
               //  "neeraj.jha@iiap.res.in",
               //  "sayee.kishan@iiap.res.in",
@@ -264,7 +264,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlContent, true); // true = HTML
-        helper.setFrom("your_email@gmail.com");
+        helper.setFrom("sipm");
 
         mailSender.send(message);
     }
@@ -276,7 +276,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);
-        helper.setFrom("your_email@gmail.com");
+        helper.setFrom("sipm");
 
         for (File file : attachments) {
             helper.addAttachment(file.getName(), file);
@@ -335,7 +335,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
     private void sendRemainderMail(List<String> toEmails, String subject, String body) throws MessagingException {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            helper.setFrom("iiapdkg@gmail.com");
+            helper.setFrom("sipm");
             helper.setTo(toEmails.toArray(new String[0]));
             helper.setSubject(subject);
             helper.setText(body, true); // true = HTML
@@ -423,7 +423,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
     private void sendNotificationMail(List<String> toEmails, String subject, String body) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setFrom("iiapdkg@gmail.com");
+        helper.setFrom("sipm");
         helper.setTo(toEmails.toArray(new String[0]));
         helper.setSubject(subject);
         helper.setText(body, true); // true = HTML
@@ -473,7 +473,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
     private void sendNotificationMailToEmployee(String toEmail, String subject, String body) throws MessagingException {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);
-        helper.setFrom("iiapdkg@gmail.com");
+        helper.setFrom("sipm");
         helper.setTo(toEmail);
         helper.setSubject(subject);
         helper.setText(body, true);
@@ -535,7 +535,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
             helper.setTo(email);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
-            helper.setFrom("iiapdkg@gmail.com");
+            helper.setFrom("sipm");
 
             mailSender.send(message);
         }
@@ -574,7 +574,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
                 helper.setTo(toEmails.toArray(new String[0]));
                 helper.setSubject(subject);
                 helper.setText(body, true); // HTML content
-                helper.setFrom("iiapdkg@gmail.com");
+                helper.setFrom("sipm");
 
                 mailSender.send(message);
                 System.out.println("Email sent successfully to " + toEmails);
@@ -599,7 +599,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
             helper.setTo(recipients.toArray(new String[0]));
             helper.setSubject(subject);
             helper.setText(body, true); // HTML content
-            helper.setFrom("iiapdkg@gmail.com");
+            helper.setFrom("sipm");
 
             mailSender.send(message);
             System.out.println("Email sent successfully to " + recipients);
@@ -683,7 +683,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
         helper.setTo(emailId);
         helper.setSubject("GI Inspection Status Update – IIA");
         helper.setText(htmlContent, true);
-        helper.setFrom("iiapdkg@gmail.com");
+        helper.setFrom("sipm");
 
 
         mailSender.send(message);

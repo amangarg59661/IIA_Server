@@ -84,7 +84,7 @@ public class PendingApprovalReminderSchedule {
            // if (storeOfficer != null && storeOfficer.getEmail() != null) {
              //   recipients.add(storeOfficer.getEmail());
             //}
-            recipients.add("kudaykiran.9949@gmail.com");
+            // recipients.add("kudaykiran.9949@gmail.com");
 
             // Send notification if we have any recipients
             if (!recipients.isEmpty()) {

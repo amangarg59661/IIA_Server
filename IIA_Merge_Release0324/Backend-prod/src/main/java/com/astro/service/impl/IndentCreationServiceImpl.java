@@ -879,7 +879,13 @@ public class IndentCreationServiceImpl implements IndentCreationService {
             // - nextRole is null or empty (no more approvers)
             // Note: Old transitions keep "In-progress" status even after approval,
             // only their nextAction changes to "Completed"
-            boolean isFullyApproved = lastTransition != null
+            boolean isRejected = lastTransition != null
+    && ("Rejected".equalsIgnoreCase(lastTransition.getAction())
+        || "Rejected".equalsIgnoreCase(lastTransition.getNextAction()));
+
+
+            boolean isFullyApproved = !isRejected &&
+            lastTransition != null 
                     && "Completed".equalsIgnoreCase(lastTransition.getStatus())
                     && (lastTransition.getNextRole() == null || lastTransition.getNextRole().isEmpty());
 
@@ -917,7 +923,11 @@ public class IndentCreationServiceImpl implements IndentCreationService {
             }
 
             // Set appropriate status and message
-            if (isFullyApproved) {
+            if (isRejected) {
+    response.setCurrentStatus("REJECTED");
+    response.setStatusMessage("Indent has been rejected.");
+    response.setIsEditable(false);}
+           else if (isFullyApproved) {
                 response.setCurrentStatus("APPROVED");
                 response.setStatusMessage("Your indent is finally approved.");
                 response.setIsEditable(true);
@@ -1388,6 +1398,10 @@ public class IndentCreationServiceImpl implements IndentCreationService {
             // FIX: Workflow is fully approved when the LAST transition has:
             // - status = "Completed" (final state)
             // - nextRole is null or empty (no more approvers)
+boolean isRejected = lastTransition != null
+    && ("Rejected".equalsIgnoreCase(lastTransition.getAction())
+        || "Rejected".equalsIgnoreCase(lastTransition.getNextAction()));
+
             boolean isFullyApproved = lastTransition != null
                     && "Completed".equalsIgnoreCase(lastTransition.getStatus())
                     && (lastTransition.getNextRole() == null || lastTransition.getNextRole().isEmpty());
@@ -1414,7 +1428,11 @@ public class IndentCreationServiceImpl implements IndentCreationService {
             response.setIsFullyApproved(isFullyApproved);
 
             // Set appropriate status and message
-            if (isFullyApproved) {
+            if (isRejected) {
+    response.setCurrentStatus("REJECTED");
+    response.setStatusMessage("Indent has been rejected.");
+    response.setIsEditable(false);}
+            else if (isFullyApproved) {
                 response.setCurrentStatus("APPROVED");
                 response.setStatusMessage("Your indent is finally approved.");
             } else if (pendingTransition != null) {

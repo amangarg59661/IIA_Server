@@ -186,6 +186,7 @@ LEFT JOIN MaterialDetails md ON md.indentCreation = ic AND md.id = (
 )
 WHERE wt.workflowId = :workflowId
   AND wt.status = :status
+  AND wt.action <> 'Rejected'
   AND ic.employeeId IS NULL
   AND wt.workflowTransitionId = (
         SELECT MAX(wt2.workflowTransitionId)

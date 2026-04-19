@@ -137,6 +137,8 @@ public class TenderRequest {
 
     @Column(name = "locked_date")
     private LocalDateTime lockedDate;
+    @Column(name ="current_status")
+    private String currentStatus;
 
     private Boolean buyBack;
     private String buyBackAmount;

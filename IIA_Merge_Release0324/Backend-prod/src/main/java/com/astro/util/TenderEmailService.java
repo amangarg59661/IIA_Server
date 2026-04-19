@@ -111,7 +111,7 @@ public class TenderEmailService {
            helper.setSubject(subject);
           // helper.setText(bodyText, true);
            helper.setText(htmlBody, true);
-           helper.setFrom("iiapdkg@gmail.com");
+           helper.setFrom("sipm");
 
            for (File file : attachments) {
                helper.addAttachment(file.getName(), file);
@@ -255,7 +255,7 @@ public void handleTenderAmendmentEmail(String tenderId,
             helper.setTo(vendor.getEmailAddress());
             helper.setSubject("Tender Amendment Notification - " + tenderId + " (Version " + tenderData.getTenderVersion() + ")");
             helper.setText(emailHtmlBody, true);
-            helper.setFrom("iiapdkg@gmail.com");
+            helper.setFrom("sipm");
 
             mailSender.send(message);
             System.out.println("Tender Amendment Email Sent to Vendor: " + vendor.getEmailAddress());
@@ -291,7 +291,7 @@ public void handleTenderCancellationEmail(String tenderId,
             helper.setTo(vendor.getEmailAddress());
             helper.setSubject("Tender Cancellation Notification - " + tenderId);
             helper.setText(emailHtmlBody, true);
-            helper.setFrom("iiapdkg@gmail.com");
+            helper.setFrom("sipm");
 
             mailSender.send(message);
             System.out.println("Tender Cancellation Email Sent to Vendor: " + vendor.getEmailAddress());

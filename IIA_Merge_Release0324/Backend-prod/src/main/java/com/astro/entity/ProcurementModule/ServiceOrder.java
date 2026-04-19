@@ -48,6 +48,8 @@ public class ServiceOrder {
     private BigDecimal totalValueOfSo;
     @Column(name = "project_name")
     private String projectName;
+    @Column(name = "current_status")
+    private String currentStatus;
 
     @Column(name = "start_date_amc")
     private LocalDate startDateAmc;

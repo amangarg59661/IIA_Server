@@ -246,7 +246,7 @@ public interface IndentCreationRepository extends JpaRepository<IndentCreation, 
             JOIN indent_creation ind ON wt.requestId = ind.indent_id
             JOIN material_details m  ON ind.indent_id = m.indent_id
             WHERE wt.workflowName = 'Indent Workflow'
-              AND wt.createdDate BETWEEN :fromDate AND :toDate
+              AND wt.createdDate >= :fromDate AND wt.createdDate < :toDate
               AND ind.created_by = :userId
             GROUP BY ind.indent_id,
                      ind.indentor_name,
