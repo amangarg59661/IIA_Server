@@ -337,7 +337,7 @@ const QueueModal = ({
                       title: "Unit Price",
                       dataIndex: "unitPrice",
                       align: "right",
-                      render: (text) => `₹${text?.toFixed(2)}`,
+                      render: (text) => `${text?.toFixed(2)}`,
                     },
                     {
                       title: "Currency",
@@ -673,7 +673,7 @@ const QueueModal = ({
                       title: "Unit Price",
                       dataIndex: "unitPrice",
                       align: "right",
-                      render: (text) => `₹${text?.toFixed(2)}`,
+                      render: (text) => `${text?.toFixed(2)}`,
                     },
                     { title: "UOM", dataIndex: "uom", width: 100 },
                     {
