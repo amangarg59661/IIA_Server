@@ -3134,7 +3134,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
           amount: apiData.amount,
           project:
             apiData.tenderDetails?.indentResponseDTO?.[0]?.projectName || "N/A",
-          budgetName: apiData.budgetCode,
+          budgetName: apiData.budgetName,
           indentTitle: "Purchase Order",
           modeOfProcurement: apiData.modeOfProcurement,
           procurementMode: apiData.procurementType,
@@ -3145,7 +3145,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
         return {
           indentor: apiData.createdBy,
           project: apiData.projectName,
-          budgetName: apiData.budgetCode,
+          budgetName: apiData.budgetName,
           indentTitle: "Tender",
           modeOfProcurement: apiData.modeOfProcurement,
           consignee: apiData.consignee,
@@ -3156,7 +3156,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
         return {
           indentor: apiData.createdBy,
           project: apiData.projectName,
-          budgetName: apiData.budgetCode,
+          budgetName: apiData.budgetName,
           indentTitle: "Service Order",
           procurementMode: apiData.procurementType,
           consignee: apiData.consignee,
@@ -3166,7 +3166,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
         return {
           indentor: apiData.createdBy,
           project: apiData.projectName,
-          budgetName: apiData.budgetCode,
+          budgetName: apiData.budgetName,
           indentTitle: "Tender",
           modeOfProcurement: apiData.modeOfProcurement,
           consignee: apiData.consignee,
@@ -3176,7 +3176,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
       case 9:
         return {
           indentor: apiData.indentorName,
-          budgetName: apiData.budgetCode,
+          budgetName: apiData.budgetName,
           indentTitle: "Material",
           amount: apiData.amount,
         }[field];
@@ -3402,7 +3402,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
       dataIndex: "budgetName",
       key: "budgetName",
       render: (_, record) =>
-        getCommonField(record.workflowId, record, "budget") || "-",
+        getCommonField(record.workflowId, record, "budgetName") || "-",
     },
     {
       title: "Mode of Procurement",
