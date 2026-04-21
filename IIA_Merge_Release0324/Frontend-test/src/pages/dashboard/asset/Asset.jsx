@@ -569,7 +569,7 @@ useEffect(() => {
   title="Asset Search Results"
   onCancel={() => setIsSearchModalOpen(false)}
   footer={null}
-  width={800}
+  width={1000}
 >
   <Table
   rowKey={(record) => `${record.assetId}-${record.locatorId}-${record.custodianId}`}
@@ -582,6 +582,8 @@ useEffect(() => {
     { title: "Custodian ID", dataIndex: "custodianId" },
     { title: "Locator ID", dataIndex: "locatorId" },
     { title: "Quantity", dataIndex: "quantity" },
+    { title: "GRN Number", dataIndex: "grnNumber"},
+    { title: "Asset Description", dataIndex: "assetDesc"},
     {
       title: "Action",
       render: (_, record) => {
@@ -659,7 +661,7 @@ useEffect(() => {
 />
 
 
-  <div style={{ marginTop: 16, textAlign: "right" }}>
+  {/* <div style={{ marginTop: 16, textAlign: "right" }}>
     <Button
       type="primary"
       onClick={() => {
@@ -685,7 +687,7 @@ useEffect(() => {
     >
       Deselect
     </Button>
-  </div>
+  </div> */}
 </Modal>
 
     </Card>
