@@ -1087,6 +1087,15 @@ public class GiServiceImpl implements GiService {
     @Transactional
     public String saveGi(SaveGiDto req) {
         gprnService.validateGprnSubProcessId(req.getGprnNo());
+        GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(
+        Integer.parseInt(req.getGprnNo().split("/")[1]));
+if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
+    throw new BusinessException(new ErrorDetails(
+            AppConstant.ERROR_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_RESOURCE,
+            "You are not authorised to create a Goods Inspection for this GPRN."));
+}
         SaveGprnDto gprnDto = gprnService.getGprnDtls(req.getGprnNo());
 
         ModelMapper mapper = new ModelMapper();
@@ -1711,6 +1720,16 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
                     "Invalid process number format"));
         }
 
+        GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(
+        Integer.parseInt(processNoSplit[1]));
+if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
+    throw new BusinessException(new ErrorDetails(
+            AppConstant.ERROR_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_RESOURCE,
+            "You are not authorised to update a Goods Inspection for this GPRN."));
+}
+
         Integer subProcessId = Integer.parseInt(processNoSplit[1]);
         GiMasterEntity gime = gimr.findByGprnSubProcessId(subProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -1827,19 +1846,50 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
         }).toList();
     }
 
-    public List<GprnDropdownDto> getPendingGprnsForGI() {
-        List<GprnMasterEntity> pendingGprns = gprnMasterRepository.findPendingGprnsWithMaterial();
+    // public List<GprnDropdownDto> getPendingGprnsForGI() {
+    //     List<GprnMasterEntity> pendingGprns = gprnMasterRepository.findPendingGprnsWithMaterial();
 
-        return pendingGprns.stream()
-                .map(g -> new GprnDropdownDto(
-                        g.getSubProcessId(),
-                      "INV" + g.getProcessId() + "/" + g.getSubProcessId(),
-                        g.getPoId(),
-                        g.getVendorId(),
-                        gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(g.getSubProcessId())
-                ))
-                .collect(Collectors.toList());
+    //     return pendingGprns.stream()
+    //             .map(g -> new GprnDropdownDto(
+    //                     g.getSubProcessId(),
+    //                   "INV" + g.getProcessId() + "/" + g.getSubProcessId(),
+    //                     g.getPoId(),
+    //                     g.getVendorId(),
+    //                     gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(g.getSubProcessId())
+    //             ))
+    //             .collect(Collectors.toList());
+    // }
+
+    public List<GprnDropdownDto> getPendingGprnsForGI(Integer userId, String role) {
+    return gprnMasterRepository.findPendingGprnsWithMaterial()
+            .stream()
+            .filter(gprn -> isGprnAccessibleToUser(gprn, userId, role))
+            .map(g -> new GprnDropdownDto(
+                    g.getSubProcessId(),
+                    "INV" + g.getProcessId() + "/" + g.getSubProcessId(),
+                    g.getPoId(),
+                    g.getVendorId(),
+                    gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(g.getSubProcessId())))
+            .collect(Collectors.toList());
+}
+
+public boolean isGprnAccessibleToUser(GprnMasterEntity gprn, Integer userId, String role) {
+    if ("store person".equalsIgnoreCase(role)) {
+        return true;
     }
+    String poId = gprn.getPoId();
+    if (poId == null) return false;
+
+    String tenderId = gprnMasterRepository.findTenderIdByPoId(poId);
+    if (tenderId == null) return false;
+
+    int indentCount = gprnMasterRepository.countIndentsByTenderId(tenderId);
+    if (indentCount == 1) {
+        Integer indentorUserId = gprnMasterRepository.findSingleIndentCreatedByForTender(tenderId);
+        return userId != null && userId.equals(indentorUserId);
+    }
+    return false;
+}
 /*
     public List<GprnDropdownDto> getPendingRejectedGis() {
 

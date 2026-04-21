@@ -68,7 +68,7 @@ public class AssetMasterEntity {
     private Long igpId;
     
     @Column(name="grn_no")
-    private String grnNo;
+    private String grnNumber;
     
     private Integer updatedBy;
 }

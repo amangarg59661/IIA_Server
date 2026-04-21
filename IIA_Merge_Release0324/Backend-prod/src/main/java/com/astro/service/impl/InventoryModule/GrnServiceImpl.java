@@ -105,6 +105,7 @@ public class GrnServiceImpl implements GrnService {
         if ("GI".equalsIgnoreCase(req.getGrnType())) {
           //  giService.validateGiSubProcessId(req.getGiNo());
             giService.validateGiIsApproved(req.getGiNo());
+             
 
         }
 
@@ -141,6 +142,18 @@ public class GrnServiceImpl implements GrnService {
             grnMaster.setIgpProcessId(req.getIgpId());
 
         }
+
+        GiMasterEntity giMaster = gimr.findById(
+            Integer.parseInt(req.getGiNo().split("/")[1])).orElse(null);
+    if (giMaster != null) {
+        GprnMasterEntity gprnEntity = gprnMasterRepository
+                .findBySubProcessId(giMaster.getGprnSubProcessId());
+        if (gprnEntity != null && gprnEntity.getPoId() != null) {
+            String consigneeName = resolveConsigneeName(
+                    gprnEntity.getPoId(), req.getConsigneeName());
+            grnMaster.setConsigneeName(consigneeName);
+        }
+    }
 
         grnMaster = grnmr.save(grnMaster);
 
@@ -194,7 +207,11 @@ public class GrnServiceImpl implements GrnService {
                 grnMaterialDtl.setAssetCode(materialDtl.getAssetCode());
                 grnMaterialDtlList.add(grnMaterialDtl);
 
-                updateAssetAndOhq(materialDtl, req.getCustodianId());
+                grnMaster = grnmr.save(grnMaster);
+
+// Build GRN number once here, after save (so subProcessId is available)
+String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnSubProcessId();
+                updateAssetAndOhq(materialDtl, req.getCustodianId() , grnNumber);
             }
 
             else {
@@ -312,7 +329,11 @@ public class GrnServiceImpl implements GrnService {
                 }
 
                 grnMaterialDtlList.add(grnMaterialDtl);
-                updateAssetAndOhq(materialDtl, req.getCustodianId());
+                grnMaster = grnmr.save(grnMaster);
+
+// Build GRN number once here, after save (so subProcessId is available)
+String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnSubProcessId();
+                updateAssetAndOhq(materialDtl, req.getCustodianId(), grnNumber);
             }
         }
 
@@ -343,7 +364,7 @@ public class GrnServiceImpl implements GrnService {
     }
 
 
-    private void updateAssetAndOhq(GrnMaterialDtlDto materialDtl, String custodianId) {
+    private void updateAssetAndOhq(GrnMaterialDtlDto materialDtl, String custodianId, String grnNumber) {
         System.out.println("UPDATE CALLED");
         AssetMasterEntity asset = amr.findById(materialDtl.getAssetId())
                 .orElseThrow(() -> new BusinessException(new ErrorDetails(
@@ -354,6 +375,7 @@ public class GrnServiceImpl implements GrnService {
 
         if (asset.getInitQuantity() == null || asset.getInitQuantity().compareTo(BigDecimal.ZERO) == 0) {
             asset.setInitQuantity(materialDtl.getAcceptedQuantity());
+            asset.setGrnNumber(grnNumber);
             amr.save(asset);
         }
 
@@ -1276,7 +1298,18 @@ public List<PoGrnInfoDto> getDistinctGrnProcessIdsForGIAndApproved() {
                 })
                 .collect(Collectors.toList());
     }
+private String resolveConsigneeName(String poId, String storePersonName) {
+    String tenderId = gprnMasterRepository.findTenderIdByPoId(poId);
+    if (tenderId == null) return storePersonName;
 
+    int indentCount = gprnMasterRepository.countIndentsByTenderId(tenderId);
+
+    if (indentCount == 1) {
+        String indentorName = gprnMasterRepository.findSingleIndentorNameForTender(tenderId);
+        return indentorName != null ? indentorName : storePersonName;
+    }
+    return storePersonName;
+}
 
 
 }

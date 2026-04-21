@@ -20,4 +20,5 @@ public class SaveGiDto {
     private Integer createdBy;
     private BigDecimal gprnAmount;
     private BigDecimal poAmount;
+    private String role;
 }

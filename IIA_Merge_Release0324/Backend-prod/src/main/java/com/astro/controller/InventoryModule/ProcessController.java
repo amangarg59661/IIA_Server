@@ -711,11 +711,19 @@ public class ProcessController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
 
+    // @GetMapping("/pendingGprnsForGi")
+    // public ResponseEntity<Object> getPendingGprnsForGI() {
+    //    List<GprnDropdownDto> res = gis.getPendingGprnsForGI();
+    //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+    // }
+
     @GetMapping("/pendingGprnsForGi")
-    public ResponseEntity<Object> getPendingGprnsForGI() {
-       List<GprnDropdownDto> res = gis.getPendingGprnsForGI();
-        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
-    }
+public ResponseEntity<Object> getPendingGprnsForGI(
+        @RequestParam Integer userId,
+        @RequestParam String role) {
+    List<GprnDropdownDto> res = gis.getPendingGprnsForGI(userId, role);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
 
     @GetMapping("/getPendingGrns")
     public ResponseEntity<Object> getgetPendingGrns() {

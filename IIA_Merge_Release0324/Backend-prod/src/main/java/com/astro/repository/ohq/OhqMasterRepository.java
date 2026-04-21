@@ -119,7 +119,8 @@ public interface OhqMasterRepository extends JpaRepository<OhqMasterEntity, Inte
            LOWER(o.custodianId) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
            LOWER(a.poId) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
            LOWER(o.assetCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
-           CAST(o.assetId AS string) LIKE CONCAT('%', :keyword, '%'))
+           CAST(o.assetId AS string) LIKE CONCAT('%', :keyword, '%')
+           OR LOWER(a.grnNumber)    LIKE LOWER(CONCAT('%', :keyword, '%')))
        """)
     List<AssetSearchResponseDto> searchAssetsByKeyword(String keyword);
 

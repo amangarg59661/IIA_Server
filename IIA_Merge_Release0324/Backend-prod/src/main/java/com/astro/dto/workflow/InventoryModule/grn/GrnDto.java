@@ -19,4 +19,5 @@ public class GrnDto {
     private String custodianId;
     private Boolean storesStock;
     private List<GrnMaterialDtlDto> materialDtlList;
+    private String consigneeName;
 }
