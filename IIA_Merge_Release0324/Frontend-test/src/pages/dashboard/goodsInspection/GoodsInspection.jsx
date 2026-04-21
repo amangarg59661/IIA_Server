@@ -146,10 +146,12 @@ const handleGISearch = async () => {
 }, []);
 
 
-  const {userId} = useSelector(state => state.auth);
+  // const {userId} = useSelector(state => state.auth);
+  const { userId, role } = useSelector(state => state.auth);
 
   const onFinish = async () => {
-    const payload = {...formData, createdBy: userId};
+    // const payload = {...formData, createdBy: userId};
+    const payload = {...formData, createdBy: userId, role};
     // const {data} = await axios.post("/api/process-controller/saveGi", payload);
     try {
       setSubmitBtnLoading(true);
@@ -212,6 +214,8 @@ const handleGISearch = async () => {
           render: () => (
             <GprnSearchDropdown
               label="GPRN No" 
+              userId={userId}
+              role={role}
               value={formData.gprnNo}
               onChange={(val) => {
               handleChange("gprnNo", val); 

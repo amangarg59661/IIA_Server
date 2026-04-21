@@ -286,7 +286,7 @@ const Grn = () => {
   const { userId } = useSelector((state) => state.auth);
 
   const onFinish = async () => {
-    const payload = { ...formData, createdBy: userId };
+    const payload = { ...formData, createdBy: userId , consigneeName: formData.custodianName};
 
     if(formData.grnType === "materialIn"){
       try{

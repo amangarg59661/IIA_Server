@@ -874,6 +874,53 @@ const Indent1 = () => {
                     type: "text",
                     span: 2,
                     disabled: true
+                },
+                {
+                    name: "modeOfProcurement",
+                    label: "Mode of Procurement",
+                    type: "select",
+                    span: 2,
+                    options: modeOfProcurementOptions,
+                    required: true,
+                    disabled: !formData.isEditable
+                },
+                {
+    name: "budgetCode",
+    label: "Budget Code",
+    type: "select",
+    required: true,
+    options: formData.isUnderProject
+        ? (projectBudgetCodes.length > 0 ? projectBudgetCodes : [])
+        : allBudgetCodes,
+    placeholder: formData.isUnderProject && !formData.projectName
+        ? "Please select a project first"
+        : "Select budget code",
+    disabled: !formData.isEditable || (formData.isUnderProject && !formData.projectName),
+},
+                // {
+                //     name: "budgetCode",
+                //     label: "Budget Code",
+                //     type: "select",
+                //     // required: true,
+                //     options: projectBudgetCodes.length > 0 ? projectBudgetCodes : budgetCodeDropdown,
+                //     placeholder: formData.isUnderProject && !formData.projectName
+                //         ? "Please select a project first"
+                //         : "Select budget code",
+                //     disabled: !formData.isEditable || (formData.isUnderProject && !formData.projectName),
+                // },
+                {
+                    name: "vendorNames",
+                    label: NO_VENDOR_MODES.includes(selectedModeOfProcurement)
+                        ? "Vendor Names (Not applicable for this mode)"
+                        : selectedModeOfProcurement === "LIMITED_TENDER"
+                            ? "Vendor Names (Minimum 4 required)"
+                            : selectedModeOfProcurement === "PROPRIETARY"
+                                ? "Vendor Names (Maximum 1 allowed)"
+                                : "Vendor Names",
+                    type: selectedModeOfProcurement === "PROPRIETARY" ? "select" : "multiselect",
+                    options: vendorDropdown,
+                    span: 2,
+                    disabled: !formData.isEditable || !VENDOR_REQUIRED_MODES.includes(selectedModeOfProcurement),
                 }
             ]
         };

@@ -33,7 +33,8 @@ const GPRN = () => {
 
   const processNo = location?.state?.processNo || null;
 
-  const [fsDd, setFsDd] = useState([])
+  const [fsDd, setFsDd] = useState([]);
+  const [errorField, setErrorField] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
@@ -61,11 +62,27 @@ const GPRN = () => {
         prevMaterialDtlList[fieldName[1]][fieldName[2]] = value
 
         // Calculate total amount when receivedQuantity changes
+        // if (fieldName[2] === 'receivedQuantity') {
+        //   const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
+        //   const quantity = parseFloat(value || 0);
+        //   prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * quantity).toFixed(2);
+        // }
+
         if (fieldName[2] === 'receivedQuantity') {
-          const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
-          const quantity = parseFloat(value || 0);
-          prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * quantity).toFixed(2);
-        }
+  const pendingQty = parseFloat(prevMaterialDtlList[fieldName[1]].orderedQuantity || 0);
+  const enteredQty = parseFloat(value || 0);
+
+  if (enteredQty > pendingQty) {
+    const rowIndex = fieldName[1];
+    message.error(`Received quantity cannot exceed pending quantity (${pendingQty})`);
+    setErrorField({ rowIndex, field: 'receivedQuantity' });
+    return prev; // ❗ prevent update
+  }
+  setErrorField(null);
+
+  const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
+  prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty).toFixed(2);
+}
 
         let totQuant = 0
         prevMaterialDtlList.forEach(mat => {
@@ -423,7 +440,8 @@ setPendingGprnList(formattedPoList);
           name: "receivedQuantity",
           label: "Received Quantity",
           type: "text",
-          required: true
+          required: true,
+          
         },
         {
           name: "unitPrice",
@@ -483,7 +501,7 @@ setPendingGprnList(formattedPoList);
           label: "Material Photograph",
           type: "multiImage",  // changed from "image" to "multiImage"
           span: 3,
-          // required: true,
+          required: true,
           accept: "image/*",
           multiple: true  // added multiple property
         }
