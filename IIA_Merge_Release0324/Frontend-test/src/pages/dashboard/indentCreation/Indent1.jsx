@@ -298,6 +298,18 @@ const Indent1 = () => {
         }
     };
 
+    const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+const [versionHistoryList, setVersionHistoryList] = useState([]);
+const fetchVersionHistory = async (indentId) => {
+    try {
+        const { data } = await axios.get(`/api/indents/version-history`, {params:{indentId}});
+        setVersionHistoryList(data?.responseData || []);
+        setVersionHistoryOpen(true);
+    } catch (error) {
+        message.error("Could not load version history.");
+    }
+};
+
     // ✅ NEW: Fetch department for a given employee name
     const fetchDepartmentByName = async (employeeName) => {
         if (!employeeName || employeeName.trim() === '') {
@@ -1608,7 +1620,7 @@ const Indent1 = () => {
     // ✅ UPDATED: Load department from stored indent data or fetch from employee table
     const handleSearch = async (value) => {
         try {
-            const { data } = await axios.get(`/api/indents/indentData/${value}`)
+            const { data } = await axios.get(`/api/indents/indentData`, {params:{indentId :value}})
             const responseData = data.responseData || {};
 
             // Ensure rateContractJobCodes is always an array
@@ -1647,6 +1659,8 @@ const Indent1 = () => {
 
             setFormData(responseData);
             setSearchDone(true);
+                if (responseData.isActive === false) {
+             setFormData(prev => ({ ...prev, isEditable: false }));}
         }
         catch (error) {
             message.error("Error while fetching indent data.")
@@ -1806,7 +1820,9 @@ const Indent1 = () => {
             let response;
 
             if (formData?.indentId) {
-                response = await axios.put(`/api/indents/${formData.indentId}`, payload);
+                response = await axios.put(`/api/indents` ,payload, {params:{indentId : formData.indentId}} );
+                const newIndentId = response?.data?.responseData?.indentId; // e.g. IND1111/2
+                setFormData(prev => ({ ...prev, indentId: newIndentId }));
                 message.success("Indent updated successfully");
                 navigate("/queue");
             } else {
@@ -1964,6 +1980,15 @@ const Indent1 = () => {
                             closable={false}
                         />
                     )}
+                    {formData.isActive === false && (
+    <Alert
+        message={`Viewing Old Version (V${formData.version})`}
+        description={`This is a superseded version. Load the latest version to make changes.`}
+        type="warning"
+        showIcon
+        closable={false}
+    />
+)}
                     {formData.version > 1 && (
                         <Alert
                             message={`Version ${formData.version}`}
@@ -1973,6 +1998,15 @@ const Indent1 = () => {
                             closable={false}
                         />
                     )}
+                    {/* {formData?.indentId && (
+    <Button
+        icon={<HistoryOutlined />}
+        onClick={() => fetchVersionHistory(formData.indentId)}
+        style={{ marginTop: '4px' }}
+    >
+        View Version History
+    </Button>
+)} */}
                 </Space>
             )}
 
@@ -2053,6 +2087,48 @@ const Indent1 = () => {
                 requestedByName={userName}
                 onSuccess={handleCancellationSuccess}
             />
+            <CustomModal
+    isOpen={versionHistoryOpen}
+    setIsOpen={setVersionHistoryOpen}
+    title="Indent Version History"
+    footer={null}
+>
+    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+            <tr style={{ background: '#f0f0f0' }}>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Indent ID</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
+                <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {versionHistoryList.map((v) => (
+                <tr key={v.indentId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
+                    <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>
+                        V{v.version}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        <Button type="link" onClick={() => { handleSearch(v.indentId); setVersionHistoryOpen(false); }}>
+                            {v.indentId}
+                        </Button>
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
+                    </td>
+                    <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                        {v.isActive
+                            ? <Tag color="green">Active</Tag>
+                            : <Tag color="default">Superseded</Tag>
+                        }
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+</CustomModal>
             <div style={{ display: "none" }}>
                 <PrintFormate ref={printComponentRef} data={formData} />
             </div>

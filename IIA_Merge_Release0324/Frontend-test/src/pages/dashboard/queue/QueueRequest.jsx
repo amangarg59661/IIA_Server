@@ -4982,18 +4982,18 @@ const fetchEmployees = () => {
         const previousApprovals = history.filter(
           (entry) => entry.action === "APPROVED"
         );
-        if (previousApprovals.length === 0) {
-          message.error("No previous approval found to revert to.");
-          return;
-        }
+        // if (previousApprovals.length === 0) {
+        //   message.error("No previous approval found to revert to.");
+        //   return;
+        // }
 
-        const lastApproval = previousApprovals[previousApprovals.length - 1];
+        // const lastApproval = previousApprovals[previousApprovals.length - 1];
         const currentTransition = history[0];
 
         const payload = {
           action: "REJECTED",
           actionBy: actionPerformer,
-          assignmentRole: lastApproval.assignmentRole,
+          // assignmentRole: lastApproval.assignmentRole,
           remarks: rejectComment,
           requestId: record.requestId,
           workflowTransitionId: currentTransition.workflowTransitionId,
@@ -5148,12 +5148,14 @@ const fetchEmployees = () => {
     setDetailLoading(true);
 
     let endpoint = "";
+    let config = {};
     const workflowIdNum = parseInt(record.workflowId, 10);
 
     switch (workflowIdNum) {
       case 1:
-        endpoint = `/api/indents/${record.requestId}`;
-        break;
+       endpoint = `/api/indents/byId`;
+    config = { params: { indentId: record.requestId } };
+    break;
       case 2:
         endpoint = `/api/contigency-purchase/${record.requestId}`;
         break;
@@ -5179,7 +5181,7 @@ const fetchEmployees = () => {
     }
 
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(endpoint,config);
       setDetailsData(response.data.responseData);
       setQueueData(response.data.responseData);
       setModalVisible(true);

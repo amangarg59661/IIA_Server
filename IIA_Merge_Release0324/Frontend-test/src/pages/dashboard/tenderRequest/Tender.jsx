@@ -217,7 +217,7 @@ const Tender = () => {
       let buyBackData = {};
       // Loop through all selected indent IDs
       for (const id of indentIds) {
-        const res = await axios.get(`/api/indents/IndentDataForTender/${id}`);
+        const res = await axios.get(`/api/indents/IndentDataForTender`,{params: {indentId :id}});
         const indentData = res.data?.responseData;
    
         if (indentData?.materialDetails) {

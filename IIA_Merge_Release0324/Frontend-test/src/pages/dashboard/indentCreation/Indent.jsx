@@ -255,7 +255,7 @@ const Indent = () => {
   const handleSearch = async (value) => {
     try {
       const { data } = await axios.get(
-        `/api/indents/${value ? value : formData.indentId}`
+        `/api/indents/gbyId`, {params : {value ? value : formData.indentId}}
       );
 
       setFormData({
