@@ -27,7 +27,7 @@ public interface IndentCreationService {
     public List<IndentCreationResponseDTO> getAllIndents();
 
     void deleteIndent(String indentId);
-
+    public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) ;
 
     List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate);
 

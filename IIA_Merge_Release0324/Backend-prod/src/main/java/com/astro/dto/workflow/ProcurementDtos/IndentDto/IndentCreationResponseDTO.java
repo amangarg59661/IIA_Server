@@ -18,7 +18,7 @@ public class IndentCreationResponseDTO {
     private String draftEOIOrRFPFileName;
     private String uploadPACOrBrandPACFileName;
     private String fileType;
-
+    private Boolean isActive;
     private String projectName;
     private Boolean isPreBidMeetingRequired;
     private String preBidMeetingDate;

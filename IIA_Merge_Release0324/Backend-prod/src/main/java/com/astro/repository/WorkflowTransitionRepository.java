@@ -246,4 +246,8 @@ ORDER BY wt.requestId, wt.createdDate
             @Param("roleName") String roleName,
             @Param("userId") Integer userId);
 
+// Get the latest active (PENDING) transition row for a given requestId
+@Query("SELECT wt FROM WorkflowTransition wt WHERE wt.requestId = :requestId AND wt.nextAction = 'Pending' ORDER BY wt.workflowTransitionId DESC")
+List<WorkflowTransition> findPendingTransitionsByRequestId(@Param("requestId") String requestId);
+
 }

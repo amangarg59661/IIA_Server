@@ -277,29 +277,29 @@ public interface IndentCreationRepository extends JpaRepository<IndentCreation, 
     // Search by indentId filtered by indentType AND materialCategoryType
     List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(String indentId, String indentType, String materialCategoryType);
 
-    // Search by Submitted Date (createdDate)
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end")
-    List<SearchIndentIdDto> findByCreatedDateBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+    // // Search by Submitted Date (createdDate)
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end")
+    // List<SearchIndentIdDto> findByCreatedDateBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    // Search by Submitted Date filtered by indentType
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType")
-    List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType);
+    // // Search by Submitted Date filtered by indentType
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType")
+    // List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType);
 
-    // Search by Submitted Date filtered by indentType AND materialCategoryType
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
-    List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
+    // // Search by Submitted Date filtered by indentType AND materialCategoryType
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
+    // List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
 
-    // Search by Indentor Name
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%'))")
-    List<SearchIndentIdDto> findByIndentorName(@Param("name") String name);
+    // // Search by Indentor Name
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%'))")
+    // List<SearchIndentIdDto> findByIndentorName(@Param("name") String name);
 
-    // Search by Indentor Name filtered by indentType
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType")
-    List<SearchIndentIdDto> findByIndentorNameAndIndentType(@Param("name") String name, @Param("indentType") String indentType);
+    // // Search by Indentor Name filtered by indentType
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType")
+    // List<SearchIndentIdDto> findByIndentorNameAndIndentType(@Param("name") String name, @Param("indentType") String indentType);
 
-    // Search by Indentor Name filtered by indentType AND materialCategoryType
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
-    List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryType(@Param("name") String name, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
+    // // Search by Indentor Name filtered by indentType AND materialCategoryType
+    // @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
+    // List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryType(@Param("name") String name, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
 
     // Search by Material Description (join with MaterialDetails)
     @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i JOIN i.materialDetails m WHERE LOWER(m.materialDescription) LIKE LOWER(CONCAT('%', :desc, '%'))")
@@ -317,6 +317,45 @@ public interface IndentCreationRepository extends JpaRepository<IndentCreation, 
     @Query("SELECT i.buyBackAmount FROM IndentCreation i " +
             "WHERE i.indentId IN :indentIds AND i.buyBack = true")
     List<String> findBuyBackAmountsByIndentIds(@Param("indentIds") List<String> indentIds);
+
+
+    // Fetch all versions of an indent family (e.g. IND1111, IND1111/2, IND1111/3)
+@Query("SELECT i FROM IndentCreation i WHERE (i.indentId = :baseId OR i.indentId LIKE CONCAT(:baseId, '/%')) ORDER BY i.version DESC")
+List<IndentCreation> findAllVersionsByBaseId(@Param("baseId") String baseId);
+
+// Fetch current active version
+@Query("SELECT i FROM IndentCreation i WHERE (i.indentId = :baseId OR i.indentId LIKE CONCAT(:baseId, '/%')) AND i.isActive = true")
+Optional<IndentCreation> findActiveVersionByBaseId(@Param("baseId") String baseId);
+
+// Update all existing search queries — add AND i.isActive = true to each one
+// Example — replace the existing findByIndentIdContainingIgnoreCase:
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIsActiveTrue(String indentId);
+
+// Replace findByIndentIdContainingIgnoreCaseAndIndentType:
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndIsActiveTrue(String indentId, String indentType);
+
+// Replace findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType:
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndIsActiveTrue(String indentId, String indentType, String materialCategoryType);
+
+// Replace the JPQL date-range searches — add AND i.isActive = true:
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.isActive = true")
+List<SearchIndentIdDto> findByCreatedDateBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.isActive = true")
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType);
+
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.isActive = true")
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
+
+// Replace indentor name searches:
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentorName(@Param("name") String name);
+
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentorNameAndIndentType(@Param("name") String name, @Param("indentType") String indentType);
+
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%', :name, '%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryType(@Param("name") String name, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
 
 
 

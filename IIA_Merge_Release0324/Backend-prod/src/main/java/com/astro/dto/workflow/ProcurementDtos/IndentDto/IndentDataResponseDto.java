@@ -60,6 +60,7 @@ public class IndentDataResponseDto {
     private String pacAndBrandFileName;
     private String processStage;
     private String status;
+    private Integer version;
 
     // Project-related fields
     private Boolean isUnderProject;

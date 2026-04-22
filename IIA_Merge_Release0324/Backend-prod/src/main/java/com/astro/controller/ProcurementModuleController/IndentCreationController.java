@@ -73,44 +73,100 @@ public class IndentCreationController {
 }
 
 
-    @PutMapping(value = "/{indentId}")
-    public ResponseEntity<Object> updateIndent(
-            @PathVariable String indentId, @RequestBody IndentCreationRequestDTO indentRequestDTO
+    // @PutMapping(value = "/{indentId}")
+    // public ResponseEntity<Object> updateIndent(
+    //         @PathVariable String indentId, @RequestBody IndentCreationRequestDTO indentRequestDTO
 
-    ) throws JsonProcessingException {
+    // ) throws JsonProcessingException {
 
-        IndentCreationResponseDTO responseDTO = indentCreationService.updateIndent(indentId, indentRequestDTO);
+    //     IndentCreationResponseDTO responseDTO = indentCreationService.updateIndent(indentId, indentRequestDTO);
 
 
-        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    }
+    //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    // }
+
+    @PutMapping
+public ResponseEntity<Object> updateIndent(
+        @RequestParam String indentId,
+        @RequestBody IndentCreationRequestDTO indentRequestDTO
+) throws JsonProcessingException {
+
+    IndentCreationResponseDTO responseDTO = indentCreationService.updateIndent(indentId, indentRequestDTO);
+
+    workflowService.initiateWorkflow(
+            responseDTO.getIndentId(),
+            "Indent Workflow",
+            responseDTO.getCreatedBy()
+    );
+
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
+    // @PutMapping(value = "/{indentId}")
+//     @PutMapping
+// public ResponseEntity<Object> updateIndent(
+//         @RequestParam String indentId,
+//         @RequestBody IndentCreationRequestDTO indentRequestDTO
+// ) throws JsonProcessingException {
+
+//     IndentCreationResponseDTO responseDTO = indentCreationService.updateIndent(indentId, indentRequestDTO);
+
+//     // Re-initiate workflow for the new version
+//     workflowService.initiateWorkflow(
+//             responseDTO.getIndentId(),     // this is now IND1111/2 (new version ID)
+//             "Indent Workflow",
+//             responseDTO.getCreatedBy()
+//     );
+
+//     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+// }
+
+@GetMapping("/version-history")
+public ResponseEntity<Object> getIndentVersionHistory(@RequestParam String indentId) {
+    List<IndentCreationResponseDTO> history = indentCreationService.getIndentVersionHistory(indentId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+}
 
 
     // Get Indent by ID
-    @GetMapping("/{indentId}")
-    public ResponseEntity<Object> getIndentById(@PathVariable String indentId) {
-        IndentCreationResponseDTO responseDTO = indentCreationService.getIndentById(indentId);
-        // Set filenames for the uploaded files in the response DTO
-       // responseDTO.setUploadingPriorApprovalsFileName(responseDTO.getUploadingPriorApprovalsFileName());
-       // responseDTO.setUploadTenderDocumentsFileName(responseDTO.getUploadTenderDocumentsFileName());
-     //   responseDTO.setUploadGOIOrRFPFileName(responseDTO.getUploadGOIOrRFPFileName());
-      //  responseDTO.setUploadPACOrBrandPACFileName(responseDTO.getUploadPACOrBrandPACFileName());
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    } @GetMapping("/IndentDataForTender/{indentId}")
-    public ResponseEntity<Object> getIndentDataForTenderById(@PathVariable String indentId) throws IOException {
-        IndentCreationResponseDTO responseDTO = indentCreationService.getIndentDataForTenderById(indentId);
-        // Set filenames for the uploaded files in the response DTO
-        // responseDTO.setUploadingPriorApprovalsFileName(responseDTO.getUploadingPriorApprovalsFileName());
-        // responseDTO.setUploadTenderDocumentsFileName(responseDTO.getUploadTenderDocumentsFileName());
-        //   responseDTO.setUploadGOIOrRFPFileName(responseDTO.getUploadGOIOrRFPFileName());
-        //  responseDTO.setUploadPACOrBrandPACFileName(responseDTO.getUploadPACOrBrandPACFileName());
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    }
-    @GetMapping("/indentData/{indentId}")
-    public ResponseEntity<Object> getIndentDataById(@PathVariable String indentId) throws IOException {
-        IndentDataResponseDto responseDTO = indentCreationService.getIndentDataById(indentId);
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    }
+    @GetMapping("/byId")
+public ResponseEntity<Object> getIndentById(@RequestParam String indentId) {
+    IndentCreationResponseDTO responseDTO = indentCreationService.getIndentById(indentId);
+    return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
+@GetMapping("/indentData")
+public ResponseEntity<Object> getIndentDataById(@RequestParam String indentId) throws IOException {
+    IndentDataResponseDto responseDTO = indentCreationService.getIndentDataById(indentId);
+    return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
+    // @GetMapping("/{indentId}")
+    // public ResponseEntity<Object> getIndentById(@PathVariable String indentId) {
+    //     IndentCreationResponseDTO responseDTO = indentCreationService.getIndentById(indentId);
+    //     // Set filenames for the uploaded files in the response DTO
+    //    // responseDTO.setUploadingPriorApprovalsFileName(responseDTO.getUploadingPriorApprovalsFileName());
+    //    // responseDTO.setUploadTenderDocumentsFileName(responseDTO.getUploadTenderDocumentsFileName());
+    //  //   responseDTO.setUploadGOIOrRFPFileName(responseDTO.getUploadGOIOrRFPFileName());
+    //   //  responseDTO.setUploadPACOrBrandPACFileName(responseDTO.getUploadPACOrBrandPACFileName());
+    //     return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);}
+        @GetMapping("/IndentDataForTender")
+public ResponseEntity<Object> getIndentDataForTenderById(@RequestParam String indentId) throws IOException {
+    IndentCreationResponseDTO responseDTO = indentCreationService.getIndentDataForTenderById(indentId);
+    return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
+    // } @GetMapping("/IndentDataForTender/{indentId}")
+    // public ResponseEntity<Object> getIndentDataForTenderById(@PathVariable String indentId) throws IOException {
+    //     IndentCreationResponseDTO responseDTO = indentCreationService.getIndentDataForTenderById(indentId);
+    //     // Set filenames for the uploaded files in the response DTO
+    //     // responseDTO.setUploadingPriorApprovalsFileName(responseDTO.getUploadingPriorApprovalsFileName());
+    //     // responseDTO.setUploadTenderDocumentsFileName(responseDTO.getUploadTenderDocumentsFileName());
+    //     //   responseDTO.setUploadGOIOrRFPFileName(responseDTO.getUploadGOIOrRFPFileName());
+    //     //  responseDTO.setUploadPACOrBrandPACFileName(responseDTO.getUploadPACOrBrandPACFileName());
+    //     return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    // }
+    // @GetMapping("/indentData/{indentId}")
+    // public ResponseEntity<Object> getIndentDataById(@PathVariable String indentId) throws IOException {
+    //     IndentDataResponseDto responseDTO = indentCreationService.getIndentDataById(indentId);
+    //     return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    // }
     @GetMapping("/indentStatus/{indentId}")
     public ResponseEntity<Object> getIndentStauts(@PathVariable String indentId,
     @RequestParam Integer userId , @RequestParam String roleName) throws IOException {

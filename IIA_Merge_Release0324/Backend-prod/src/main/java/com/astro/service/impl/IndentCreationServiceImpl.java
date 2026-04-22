@@ -104,7 +104,16 @@ public class IndentCreationServiceImpl implements IndentCreationService {
     public IndentCreationServiceImpl(@Value("${filePath}") String bp) {
         this.basePath = bp + "/Indent";
     }
-
+/**
+ * Extracts base indent ID from any version's ID.
+ * "IND1111"   -> "IND1111"
+ * "IND1111/2" -> "IND1111"
+ */
+private String extractBaseIndentId(String indentId) {
+    if (indentId == null) return null;
+    int slashIdx = indentId.indexOf('/');
+    return slashIdx >= 0 ? indentId.substring(0, slashIdx) : indentId;
+}
     @Transactional
     public IndentCreationResponseDTO createIndent(IndentCreationRequestDTO indentRequestDTO) {
 
@@ -400,265 +409,520 @@ public class IndentCreationServiceImpl implements IndentCreationService {
         }
     }
 
-    public IndentCreationResponseDTO updateIndent(String indentId, IndentCreationRequestDTO indentRequestDTO) {
-        IndentCreation indentCreation = indentCreationRepository.findById(indentId)
-                .orElseThrow(() -> new BusinessException(
-                new ErrorDetails(
-                        AppConstant.ERROR_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_VALIDATION,
-                        "indent not found for the provided indent ID.")
-        ));
 
-        // Bug Fix 2: Check if indent is locked due to tender creation
-        if (Boolean.TRUE.equals(indentCreation.getIsLockedForTender())) {
-            throw new BusinessException(
-                    new ErrorDetails(
-                            AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_VALIDATION,
-                            "Indent is locked for editing as tender has been created. Reason: " + indentCreation.getLockedReason())
-            );
-        }
+    @Transactional
+public IndentCreationResponseDTO updateIndent(String indentId, IndentCreationRequestDTO indentRequestDTO) {
 
-        // Bug Fix 1: Check if indent is editable (workflow-based edit restriction)
-        if (Boolean.FALSE.equals(indentCreation.getIsEditable())) {
-            throw new BusinessException(
-                    new ErrorDetails(
-                            AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_VALIDATION,
-                            "Indent is not editable. It can only be edited when sent back by an approver for revision.")
-            );
-        }
+    // 1. Load existing active indent
+    IndentCreation old = indentCreationRepository.findById(indentId)
+            .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Indent not found for the provided indent ID.")));
 
-        // Bug Fix 3: Increment version on update
-        Integer currentVersion = indentCreation.getVersion();
-        if (currentVersion == null) {
-            currentVersion = 1;
-        }
-        indentCreation.setVersion(currentVersion + 1);
-
-        // Determine indent type (use request if given, otherwise existing, default material)
-        String indentType = indentRequestDTO.getIndentType();
-        if (indentType == null || indentType.isEmpty()) {
-            indentType = (indentCreation.getIndentType() == null || indentCreation.getIndentType().isEmpty())
-                    ? "material"
-                    : indentCreation.getIndentType();
-        }
-        indentCreation.setIndentType(indentType);
-        indentCreation.setMaterialCategoryType(indentRequestDTO.getMaterialCategoryType());
-
-        // Update project-related fields for workflow branch matching
-        indentCreation.setIsUnderProject(indentRequestDTO.getIsUnderProject() != null ? indentRequestDTO.getIsUnderProject() : false);
-        indentCreation.setProjectCode(indentRequestDTO.getProjectCode());
-        indentCreation.setModeOfProcurement(indentRequestDTO.getModeOfProcurement());
-
-        // Update indent fields
-        indentCreation.setIndentorName(indentRequestDTO.getIndentorName());
-        indentCreation.setIndentorMobileNo(indentRequestDTO.getIndentorMobileNo());
-        indentCreation.setIndentorEmailAddress(indentRequestDTO.getIndentorEmailAddress());
-        indentCreation.setConsignesLocation(indentRequestDTO.getConsignesLocation());
-        indentCreation.setProjectName(indentRequestDTO.getProjectName());
-        indentCreation.setIsPreBitMeetingRequired(indentRequestDTO.getIsPreBidMeetingRequired());
-        indentCreation.setProprietaryAndLimitedDeclaration(indentRequestDTO.getProprietaryAndLimitedDeclaration());
-
-        String preBidDate = indentRequestDTO.getPreBidMeetingDate();
-        indentCreation.setPreBidMeetingDate(preBidDate != null ? CommonUtils.convertStringToDateObject(preBidDate) : null);
-
-        indentCreation.setPreBidMeetingVenue(indentRequestDTO.getPreBidMeetingVenue());
-        indentCreation.setIsItARateContractIndent(indentRequestDTO.getIsItARateContractIndent());
-        indentCreation.setEstimatedRate(indentRequestDTO.getEstimatedRate());
-        indentCreation.setPeriodOfContract(indentRequestDTO.getPeriodOfContract());
-
-        // NEW: Handle multiple job codes for rate contract on update
-        if (indentRequestDTO.getRateContractJobCodes() != null && !indentRequestDTO.getRateContractJobCodes().isEmpty()) {
-            String jobCodesStr = String.join(",", indentRequestDTO.getRateContractJobCodes());
-            indentCreation.setRateContractJobCodes(jobCodesStr);
-        } else {
-            indentCreation.setRateContractJobCodes(null);
-        }
-
-        if (indentRequestDTO.getUploadBuyBackFileNames() == null || indentRequestDTO.getUploadBuyBackFileNames().isEmpty()) {
-            indentCreation.setUploadBuyBackFileNames(null);
-        } else {
-            String buy = saveBase64Files(indentRequestDTO.getUploadBuyBackFileNames(), basePath);
-            indentCreation.setUploadBuyBackFileNames(buy);
-        }
-        if (indentRequestDTO.getUploadingPriorApprovalsFileName() == null || indentRequestDTO.getUploadingPriorApprovalsFileName().isEmpty()) {
-            indentCreation.setUploadingPriorApprovalsFileName(null);
-        } else {
-            String prior = saveBase64Files(indentRequestDTO.getUploadingPriorApprovalsFileName(), basePath);
-            indentCreation.setUploadingPriorApprovalsFileName(prior);
-        }
-        if (indentRequestDTO.getTechnicalSpecificationsFileName() == null || indentRequestDTO.getTechnicalSpecificationsFileName().isEmpty()) {
-            indentCreation.setTechnicalSpecificationsFileName(null);
-        } else {
-            String technical = saveBase64Files(indentRequestDTO.getTechnicalSpecificationsFileName(), basePath);
-            indentCreation.setTechnicalSpecificationsFileName(technical);
-        }
-        if (indentRequestDTO.getDraftEOIOrRFPFileName() == null || indentRequestDTO.getDraftEOIOrRFPFileName().isEmpty()) {
-            indentCreation.setDraftEOIOrRFPFileName(null);
-        } else {
-            String draft = saveBase64Files(indentRequestDTO.getDraftEOIOrRFPFileName(), basePath);
-            indentCreation.setDraftEOIOrRFPFileName(draft);
-        }
-        if (indentRequestDTO.getUploadPACOrBrandPACFileName() == null || indentRequestDTO.getUploadPACOrBrandPACFileName().isEmpty()) {
-            indentCreation.setUploadPACOrBrandPACFileName(null);
-        } else {
-            String pac = saveBase64Files(indentRequestDTO.getUploadPACOrBrandPACFileName(), basePath);
-            indentCreation.setUploadPACOrBrandPACFileName(pac);
-        }
-
-        indentCreation.setBrandPac(indentRequestDTO.getBrandPac());
-        indentCreation.setJustification(indentRequestDTO.getJustification());
-        indentCreation.setBrandAndModel(indentRequestDTO.getBrandAndModel());
-        indentCreation.setQuarter(indentRequestDTO.getQuarter());
-        indentCreation.setPurpose(indentRequestDTO.getPurpose());
-        indentCreation.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
-        indentCreation.setReason(indentRequestDTO.getReason());
-        indentCreation.setBuyBack(indentRequestDTO.getBuyBack());
-        indentCreation.setSerialNumber(indentRequestDTO.getSerialNumber());
-        indentCreation.setModelNumber(indentRequestDTO.getModelNumber());
-
-        String purchaseDate = indentRequestDTO.getDateOfPurchase();
-        indentCreation.setDateOfPurchase(purchaseDate != null ? CommonUtils.convertStringToDateObject(purchaseDate) : null);
-
-        indentCreation.setFileType(indentRequestDTO.getFileType());
-        indentCreation.setUpdatedBy(indentRequestDTO.getUpdatedBy());
-        indentCreation.setCreatedBy(indentRequestDTO.getCreatedBy());
-        indentCreation.setEmployeeDepartment(indentRequestDTO.getEmployeeDepartment());
-
-        // Update details based on indentType
-        if ("material".equalsIgnoreCase(indentType)) {
-
-            // Validate vendor count based on mode of procurement
-            validateVendorCountByModeOfProcurement(indentRequestDTO.getModeOfProcurement(), indentRequestDTO.getMaterialDetails());
-
-            // Validate computer item prices for department-specific limits
-            if (indentRequestDTO.getEmployeeDepartment() != null && !indentRequestDTO.getEmployeeDepartment().isEmpty()) {
-                validateComputerItemPrices(indentRequestDTO.getMaterialDetails(), indentRequestDTO.getEmployeeDepartment());
-            }
-
-            List<MaterialDetails> existingMaterials = indentCreation.getMaterialDetails();
-            Map<String, MaterialDetails> existingMap = existingMaterials.stream()
-                    .filter(m -> m.getMaterialCode() != null)
-                    .collect(Collectors.toMap(MaterialDetails::getMaterialCode, m -> m));
-
-            for (MaterialDetailsRequestDTO materialRequest : indentRequestDTO.getMaterialDetails()) {
-                MaterialDetails material = existingMap.getOrDefault(
-                        materialRequest.getMaterialCode(), new MaterialDetails());
-
-                material.setMaterialCode(materialRequest.getMaterialCode());
-                material.setMaterialDescription(materialRequest.getMaterialDescription());
-                material.setQuantity(materialRequest.getQuantity());
-                material.setUnitPrice(materialRequest.getUnitPrice());
-                material.setUom(materialRequest.getUom());
-                material.setModeOfProcurement(materialRequest.getModeOfProcurement());
-                material.setCurrency(materialRequest.getCurrency());
-                material.setConversionRate(materialRequest.getConversionRate());
-                BigDecimal updatedTotalPrice = materialRequest.getQuantity().multiply(materialRequest.getUnitPrice());
-                if (materialRequest.getConversionRate() != null
-                        && materialRequest.getCurrency() != null
-                        && !"INR".equalsIgnoreCase(materialRequest.getCurrency())) {
-                    updatedTotalPrice = updatedTotalPrice.multiply(materialRequest.getConversionRate());
-                }
-                material.setTotalPrice(updatedTotalPrice);
-                material.setBudgetCode(materialRequest.getBudgetCode());
-                material.setMaterialCategory(materialRequest.getMaterialCategory());
-                material.setMaterialSubCategory(materialRequest.getMaterialSubCategory());
-                material.setIndentCreation(indentCreation);
-
-                MaterialDetails savedMaterial = materialDetailsRepository.save(material);
-
-                if (savedMaterial.getId() != null) {
-                    List<VendorNamesForJobWorkMaterial> existingVendors = vendorNameRepository
-                            .findByIndentIdAndMaterialIdAndMaterialCode(indentCreation.getIndentId(), savedMaterial.getId(), savedMaterial.getMaterialCode());
-
-                    List<String> updatedVendorNames = materialRequest.getVendorNames() != null
-                            ? materialRequest.getVendorNames()
-                            : new ArrayList<>();
-
-                    for (VendorNamesForJobWorkMaterial existingVendor : existingVendors) {
-                        if (!updatedVendorNames.contains(existingVendor.getVendorName())) {
-                            vendorNameRepository.delete(existingVendor);
-                        }
-                    }
-
-                    for (String newVendor : updatedVendorNames) {
-                        boolean alreadyExists = existingVendors.stream()
-                                .anyMatch(ev -> ev.getVendorName().equalsIgnoreCase(newVendor));
-
-                        if (!alreadyExists) {
-                            VendorNamesForJobWorkMaterial vendor = new VendorNamesForJobWorkMaterial();
-                            vendor.setVendorName(newVendor);
-                            vendor.setIndentId(indentCreation.getIndentId());
-                            vendor.setMaterialId(savedMaterial.getId());
-                            vendor.setMaterialCode(savedMaterial.getMaterialCode());
-                            vendorNameRepository.save(vendor);
-                        }
-                    }
-                    if (!existingMaterials.contains(savedMaterial)) {
-                        existingMaterials.add(savedMaterial);
-                    }
-                }
-            }
-
-        } else if ("job".equalsIgnoreCase(indentType)) {
-            // Basic job update logic: replace existing jobs with the new list
-            if (indentCreation.getJobDetails() != null && !indentCreation.getJobDetails().isEmpty()) {
-                jobDetailsRepository.deleteAll(indentCreation.getJobDetails());
-                indentCreation.getJobDetails().clear();
-            }
-
-            if (indentRequestDTO.getJobDetails() != null) {
-                List<JobDetails> jobDetailsList = indentRequestDTO.getJobDetails().stream().map(jobRequest -> {
-                    JobDetails job = new JobDetails();
-                    job.setJobCode(jobRequest.getJobCode());
-                    job.setJobDescription(jobRequest.getJobDescription());
-                    job.setCategory(jobRequest.getCategory());
-                    job.setSubCategory(jobRequest.getSubCategory());
-                    job.setUom(jobRequest.getUom());
-                    job.setQuantity(jobRequest.getQuantity());
-                    job.setEstimatedPrice(jobRequest.getEstimatedPrice());
-                    job.setCurrency(jobRequest.getCurrency());
-                    job.setBriefDescription(jobRequest.getBriefDescription());
-                    job.setOrigin(jobRequest.getOrigin());
-                    job.setModeOfProcurement(jobRequest.getModeOfProcurement());
-                    job.setBudgetCode(jobRequest.getBudgetCode());
-                    job.setVendorNames(jobRequest.getVendorNames());
-
-                    BigDecimal qty = jobRequest.getQuantity() != null ? jobRequest.getQuantity() : BigDecimal.ZERO;
-                    BigDecimal price = jobRequest.getEstimatedPrice() != null ? jobRequest.getEstimatedPrice() : BigDecimal.ZERO;
-                    BigDecimal jobTotal = qty.multiply(price);
-                    job.setTotalPrice(jobTotal);
-                    job.setIndentCreation(indentCreation);
-                    return job;
-                }).collect(Collectors.toList());
-
-                indentCreation.setJobDetails(jobDetailsList);
-            }
-        }
-
-        // Calculate totalIndentPrice based on type
-        BigDecimal totalIndentPrice;
-        if ("job".equalsIgnoreCase(indentType)) {
-            totalIndentPrice = indentCreation.getJobDetails() != null
-                    ? indentCreation.getJobDetails().stream()
-                            .map(JobDetails::getTotalPrice)
-                            .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    : BigDecimal.ZERO;
-        } else {
-            totalIndentPrice = indentCreation.getMaterialDetails().stream()
-                    .map(MaterialDetails::getTotalPrice)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-
-        indentCreation.setTotalIntentValue(totalIndentPrice);
-
-        indentCreationRepository.save(indentCreation);
-        return mapToResponseDTO(indentCreation);
+    // 2. Guard: locked for tender
+    if (Boolean.TRUE.equals(old.getIsLockedForTender())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Indent is locked — tender has already been created. Reason: " + old.getLockedReason()));
     }
+
+    // 3. Guard: workflow-based edit restriction
+    if (Boolean.FALSE.equals(old.getIsEditable())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Indent is not editable. It can only be edited when sent back by an approver for revision."));
+    }
+
+    // 4. Guard: only the original creator can edit
+    if (!old.getCreatedBy().equals(indentRequestDTO.getCreatedBy())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Only the original indentor can edit this indent."));
+    }
+
+    // 5. Deactivate old version
+    old.setIsActive(false);
+    indentCreationRepository.save(old);
+
+    // 6. Supersede old version's pending workflow transitions
+    List<WorkflowTransition> pendingTransitions =
+            workflowTransitionRepository.findPendingTransitionsByRequestId(old.getIndentId());
+    for (WorkflowTransition wt : pendingTransitions) {
+        wt.setStatus("SUPERSEDED");
+        wt.setNextAction(null);
+        wt.setRemarks("Superseded by new version: " + extractBaseIndentId(old.getIndentId())
+                + "/" + (old.getVersion() + 1));
+        workflowTransitionRepository.save(wt);
+    }
+    
+    // 7. Compute new indent ID  e.g. IND1111 -> IND1111/2, IND1111/2 -> IND1111/3
+    String baseId = extractBaseIndentId(old.getIndentId());
+    int newVersion = old.getVersion() + 1;
+    String newIndentId = baseId + "/" + newVersion;
+
+    // 8. Build new IndentCreation (copy-new pattern)
+    IndentCreation newIndent = new IndentCreation();
+
+    // Identity / versioning fields
+    newIndent.setIndentId(newIndentId);
+    newIndent.setIndentNumber(old.getIndentNumber());   // same number, new suffix
+    newIndent.setVersion(newVersion);
+    newIndent.setIsActive(true);
+    newIndent.setParentIndentId(old.getIndentId());
+    newIndent.setCreatedBy(old.getCreatedBy());          // original creator always
+    newIndent.setUpdatedBy(indentRequestDTO.getUpdatedBy());
+    newIndent.setCreatedDate(old.getCreatedDate());      // preserve original submission date
+    newIndent.setUpdatedDate(LocalDateTime.now());
+
+    // Carry over lock/editable state fresh
+    newIndent.setIsEditable(true);
+    newIndent.setIsLockedForTender(false);
+    newIndent.setLockedReason(null);
+    newIndent.setCurrentStatus("DRAFT");
+    newIndent.setCurrentStage("INDENT_CREATION");
+    newIndent.setApprovalLevel(0);
+    newIndent.setCancelStatus(false);
+
+    // Determine indent type
+    String indentType = indentRequestDTO.getIndentType();
+    if (indentType == null || indentType.isEmpty()) {
+        indentType = old.getIndentType() != null ? old.getIndentType() : "material";
+    }
+    newIndent.setIndentType(indentType);
+    newIndent.setMaterialCategoryType(indentRequestDTO.getMaterialCategoryType());
+
+    // All the field-level updates — same as the original updateIndent field block:
+    newIndent.setIndentorName(indentRequestDTO.getIndentorName());
+    newIndent.setIndentorMobileNo(indentRequestDTO.getIndentorMobileNo());
+    newIndent.setIndentorEmailAddress(indentRequestDTO.getIndentorEmailAddress());
+    newIndent.setConsignesLocation(indentRequestDTO.getConsignesLocation());
+    newIndent.setProjectName(indentRequestDTO.getProjectName());
+    newIndent.setIsPreBitMeetingRequired(indentRequestDTO.getIsPreBidMeetingRequired());
+    newIndent.setProprietaryAndLimitedDeclaration(indentRequestDTO.getProprietaryAndLimitedDeclaration());
+
+    String preBidDate = indentRequestDTO.getPreBidMeetingDate();
+    newIndent.setPreBidMeetingDate(preBidDate != null ? CommonUtils.convertStringToDateObject(preBidDate) : null);
+
+    newIndent.setPreBidMeetingVenue(indentRequestDTO.getPreBidMeetingVenue());
+    newIndent.setIsItARateContractIndent(indentRequestDTO.getIsItARateContractIndent());
+    newIndent.setEstimatedRate(indentRequestDTO.getEstimatedRate());
+    newIndent.setPeriodOfContract(indentRequestDTO.getPeriodOfContract());
+
+    if (indentRequestDTO.getRateContractJobCodes() != null && !indentRequestDTO.getRateContractJobCodes().isEmpty()) {
+        newIndent.setRateContractJobCodes(String.join(",", indentRequestDTO.getRateContractJobCodes()));
+    }
+
+    newIndent.setFileType(indentRequestDTO.getFileType());
+    newIndent.setEmployeeDepartment(indentRequestDTO.getEmployeeDepartment());
+    newIndent.setBuyBackAmount(indentRequestDTO.getBuyBackAmount());
+    newIndent.setBrandPac(indentRequestDTO.getBrandPac());
+    newIndent.setJustification(indentRequestDTO.getJustification());
+    newIndent.setBrandAndModel(indentRequestDTO.getBrandAndModel());
+    newIndent.setQuarter(indentRequestDTO.getQuarter());
+    newIndent.setPurpose(indentRequestDTO.getPurpose());
+    newIndent.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
+    newIndent.setReason(indentRequestDTO.getReason());
+    newIndent.setBuyBack(indentRequestDTO.getBuyBack());
+    newIndent.setSerialNumber(indentRequestDTO.getSerialNumber());
+    newIndent.setModelNumber(indentRequestDTO.getModelNumber());
+    newIndent.setIsUnderProject(indentRequestDTO.getIsUnderProject() != null ? indentRequestDTO.getIsUnderProject() : false);
+    newIndent.setProjectCode(indentRequestDTO.getProjectCode());
+    newIndent.setModeOfProcurement(indentRequestDTO.getModeOfProcurement());
+
+    String purchaseDate = indentRequestDTO.getDateOfPurchase();
+    newIndent.setDateOfPurchase(purchaseDate != null ? CommonUtils.convertStringToDateObject(purchaseDate) : null);
+
+    // File handling — same logic as existing updateIndent
+    if (indentRequestDTO.getUploadingPriorApprovalsFileName() != null && !indentRequestDTO.getUploadingPriorApprovalsFileName().isEmpty()) {
+        newIndent.setUploadingPriorApprovalsFileName(saveBase64Files(indentRequestDTO.getUploadingPriorApprovalsFileName(), basePath));
+    }
+    if (indentRequestDTO.getTechnicalSpecificationsFileName() != null && !indentRequestDTO.getTechnicalSpecificationsFileName().isEmpty()) {
+        newIndent.setTechnicalSpecificationsFileName(saveBase64Files(indentRequestDTO.getTechnicalSpecificationsFileName(), basePath));
+    }
+    if (indentRequestDTO.getDraftEOIOrRFPFileName() != null && !indentRequestDTO.getDraftEOIOrRFPFileName().isEmpty()) {
+        newIndent.setDraftEOIOrRFPFileName(saveBase64Files(indentRequestDTO.getDraftEOIOrRFPFileName(), basePath));
+    }
+    if (indentRequestDTO.getUploadPACOrBrandPACFileName() != null && !indentRequestDTO.getUploadPACOrBrandPACFileName().isEmpty()) {
+        newIndent.setUploadPACOrBrandPACFileName(saveBase64Files(indentRequestDTO.getUploadPACOrBrandPACFileName(), basePath));
+    }
+    if (indentRequestDTO.getUploadBuyBackFileNames() != null && !indentRequestDTO.getUploadBuyBackFileNames().isEmpty()) {
+        newIndent.setUploadBuyBackFileNames(saveBase64Files(indentRequestDTO.getUploadBuyBackFileNames(), basePath));
+    }
+
+    // Resolve indentorDepartment
+    if (old.getCreatedBy() != null) {
+        try {
+            UserMaster creatingUser = userMasterRepository.findByUserId(old.getCreatedBy());
+            if (creatingUser != null && creatingUser.getEmployeeId() != null) {
+                employeeDepartmentMasterRepository.findByEmployeeId(creatingUser.getEmployeeId())
+                        .ifPresent(emp -> newIndent.setIndentorDepartment(emp.getDepartmentName()));
+            }
+        } catch (Exception e) {
+            System.err.println("Could not resolve indentorDepartment: " + e.getMessage());
+        }
+    }
+
+    // 9. Material / Job details — same processing as existing updateIndent
+    BigDecimal totalIndentPrice = BigDecimal.ZERO;
+
+    if ("material".equalsIgnoreCase(indentType)) {
+        validateVendorCountByModeOfProcurement(indentRequestDTO.getModeOfProcurement(), indentRequestDTO.getMaterialDetails());
+        if (indentRequestDTO.getEmployeeDepartment() != null && !indentRequestDTO.getEmployeeDepartment().isEmpty()) {
+            validateComputerItemPrices(indentRequestDTO.getMaterialDetails(), indentRequestDTO.getEmployeeDepartment());
+        }
+
+        List<MaterialDetails> materialDetailsList = indentRequestDTO.getMaterialDetails().stream().map(req -> {
+            MaterialDetails m = new MaterialDetails();
+            m.setMaterialCode(req.getMaterialCode());
+            m.setMaterialDescription(req.getMaterialDescription());
+            m.setQuantity(req.getQuantity());
+            m.setUnitPrice(req.getUnitPrice());
+            m.setUom(req.getUom());
+            m.setModeOfProcurement(req.getModeOfProcurement());
+            m.setCurrency(req.getCurrency());
+            m.setConversionRate(req.getConversionRate());
+            BigDecimal tp = req.getQuantity().multiply(req.getUnitPrice());
+            if (req.getConversionRate() != null && req.getCurrency() != null && !"INR".equalsIgnoreCase(req.getCurrency())) {
+                tp = tp.multiply(req.getConversionRate());
+            }
+            m.setTotalPrice(tp);
+            m.setBudgetCode(req.getBudgetCode());
+            m.setMaterialCategory(req.getMaterialCategory());
+            m.setMaterialSubCategory(req.getMaterialSubCategory());
+            m.setIndentCreation(newIndent);
+            return m;
+        }).collect(Collectors.toList());
+
+        newIndent.setMaterialDetails(materialDetailsList);
+        totalIndentPrice = materialDetailsList.stream().map(MaterialDetails::getTotalPrice).reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    } else if ("job".equalsIgnoreCase(indentType)) {
+        List<JobDetails> jobDetailsList = indentRequestDTO.getJobDetails().stream().map(req -> {
+            JobDetails j = new JobDetails();
+            j.setJobCode(req.getJobCode());
+            j.setJobDescription(req.getJobDescription());
+            j.setCategory(req.getCategory());
+            j.setSubCategory(req.getSubCategory());
+            j.setUom(req.getUom());
+            j.setQuantity(req.getQuantity());
+            j.setEstimatedPrice(req.getEstimatedPrice());
+            j.setCurrency(req.getCurrency());
+            j.setBriefDescription(req.getBriefDescription());
+            j.setOrigin(req.getOrigin());
+            j.setModeOfProcurement(req.getModeOfProcurement());
+            j.setBudgetCode(req.getBudgetCode());
+            j.setVendorNames(req.getVendorNames());
+            BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : BigDecimal.ZERO;
+            BigDecimal price = req.getEstimatedPrice() != null ? req.getEstimatedPrice() : BigDecimal.ZERO;
+            j.setTotalPrice(qty.multiply(price));
+            j.setIndentCreation(newIndent);
+            return j;
+        }).collect(Collectors.toList());
+
+        newIndent.setJobDetails(jobDetailsList);
+        totalIndentPrice = jobDetailsList.stream().map(jd -> jd.getTotalPrice() != null ? jd.getTotalPrice() : BigDecimal.ZERO).reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    newIndent.setTotalIntentValue(totalIndentPrice);
+
+    // 10. Save new version
+    indentCreationRepository.saveAndFlush(newIndent);
+
+    // 11. Save vendor name mappings for new indent's materials
+    if ("material".equalsIgnoreCase(indentType)) {
+        List<MaterialDetails> savedMaterials = materialDetailsRepository.findByIndentCreation_IndentId(newIndentId);
+        List<VendorNamesForJobWorkMaterial> vendorList = new ArrayList<>();
+        for (int i = 0; i < savedMaterials.size(); i++) {
+            MaterialDetails savedMaterial = savedMaterials.get(i);
+            MaterialDetailsRequestDTO materialRequest = indentRequestDTO.getMaterialDetails().get(i);
+            if (materialRequest.getVendorNames() != null && !materialRequest.getVendorNames().isEmpty()) {
+                for (String vendorName : materialRequest.getVendorNames()) {
+                    VendorNamesForJobWorkMaterial vendor = new VendorNamesForJobWorkMaterial();
+                    vendor.setVendorName(vendorName);
+                    vendor.setMaterialId(savedMaterial.getId());
+                    vendor.setIndentId(newIndentId);
+                    vendor.setMaterialCode(savedMaterial.getMaterialCode());
+                    vendorList.add(vendor);
+                }
+            }
+        }
+        if (!vendorList.isEmpty()) vendorNameRepository.saveAll(vendorList);
+    }
+
+    return mapToResponseDTO(newIndent);
+}
+
+
+public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) {
+    String baseId = extractBaseIndentId(indentId);
+    return indentCreationRepository.findAllVersionsByBaseId(baseId)
+            .stream()
+            .map(this::mapToResponseDTO)
+            .collect(Collectors.toList());
+}
+
+    // public IndentCreationResponseDTO updateIndent(String indentId, IndentCreationRequestDTO indentRequestDTO) {
+    //     IndentCreation indentCreation = indentCreationRepository.findById(indentId)
+    //             .orElseThrow(() -> new BusinessException(
+    //             new ErrorDetails(
+    //                     AppConstant.ERROR_CODE_RESOURCE,
+    //                     AppConstant.ERROR_TYPE_CODE_RESOURCE,
+    //                     AppConstant.ERROR_TYPE_VALIDATION,
+    //                     "indent not found for the provided indent ID.")
+    //     ));
+
+    //     // Bug Fix 2: Check if indent is locked due to tender creation
+    //     if (Boolean.TRUE.equals(indentCreation.getIsLockedForTender())) {
+    //         throw new BusinessException(
+    //                 new ErrorDetails(
+    //                         AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                         AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                         AppConstant.ERROR_TYPE_VALIDATION,
+    //                         "Indent is locked for editing as tender has been created. Reason: " + indentCreation.getLockedReason())
+    //         );
+    //     }
+
+    //     // Bug Fix 1: Check if indent is editable (workflow-based edit restriction)
+    //     if (Boolean.FALSE.equals(indentCreation.getIsEditable())) {
+    //         throw new BusinessException(
+    //                 new ErrorDetails(
+    //                         AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                         AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                         AppConstant.ERROR_TYPE_VALIDATION,
+    //                         "Indent is not editable. It can only be edited when sent back by an approver for revision.")
+    //         );
+    //     }
+
+    //     // Bug Fix 3: Increment version on update
+    //     Integer currentVersion = indentCreation.getVersion();
+    //     if (currentVersion == null) {
+    //         currentVersion = 1;
+    //     }
+    //     indentCreation.setVersion(currentVersion + 1);
+
+    //     // Determine indent type (use request if given, otherwise existing, default material)
+    //     String indentType = indentRequestDTO.getIndentType();
+    //     if (indentType == null || indentType.isEmpty()) {
+    //         indentType = (indentCreation.getIndentType() == null || indentCreation.getIndentType().isEmpty())
+    //                 ? "material"
+    //                 : indentCreation.getIndentType();
+    //     }
+    //     indentCreation.setIndentType(indentType);
+    //     indentCreation.setMaterialCategoryType(indentRequestDTO.getMaterialCategoryType());
+
+    //     // Update project-related fields for workflow branch matching
+    //     indentCreation.setIsUnderProject(indentRequestDTO.getIsUnderProject() != null ? indentRequestDTO.getIsUnderProject() : false);
+    //     indentCreation.setProjectCode(indentRequestDTO.getProjectCode());
+    //     indentCreation.setModeOfProcurement(indentRequestDTO.getModeOfProcurement());
+
+    //     // Update indent fields
+    //     indentCreation.setIndentorName(indentRequestDTO.getIndentorName());
+    //     indentCreation.setIndentorMobileNo(indentRequestDTO.getIndentorMobileNo());
+    //     indentCreation.setIndentorEmailAddress(indentRequestDTO.getIndentorEmailAddress());
+    //     indentCreation.setConsignesLocation(indentRequestDTO.getConsignesLocation());
+    //     indentCreation.setProjectName(indentRequestDTO.getProjectName());
+    //     indentCreation.setIsPreBitMeetingRequired(indentRequestDTO.getIsPreBidMeetingRequired());
+    //     indentCreation.setProprietaryAndLimitedDeclaration(indentRequestDTO.getProprietaryAndLimitedDeclaration());
+
+    //     String preBidDate = indentRequestDTO.getPreBidMeetingDate();
+    //     indentCreation.setPreBidMeetingDate(preBidDate != null ? CommonUtils.convertStringToDateObject(preBidDate) : null);
+
+    //     indentCreation.setPreBidMeetingVenue(indentRequestDTO.getPreBidMeetingVenue());
+    //     indentCreation.setIsItARateContractIndent(indentRequestDTO.getIsItARateContractIndent());
+    //     indentCreation.setEstimatedRate(indentRequestDTO.getEstimatedRate());
+    //     indentCreation.setPeriodOfContract(indentRequestDTO.getPeriodOfContract());
+
+    //     // NEW: Handle multiple job codes for rate contract on update
+    //     if (indentRequestDTO.getRateContractJobCodes() != null && !indentRequestDTO.getRateContractJobCodes().isEmpty()) {
+    //         String jobCodesStr = String.join(",", indentRequestDTO.getRateContractJobCodes());
+    //         indentCreation.setRateContractJobCodes(jobCodesStr);
+    //     } else {
+    //         indentCreation.setRateContractJobCodes(null);
+    //     }
+
+    //     if (indentRequestDTO.getUploadBuyBackFileNames() == null || indentRequestDTO.getUploadBuyBackFileNames().isEmpty()) {
+    //         indentCreation.setUploadBuyBackFileNames(null);
+    //     } else {
+    //         String buy = saveBase64Files(indentRequestDTO.getUploadBuyBackFileNames(), basePath);
+    //         indentCreation.setUploadBuyBackFileNames(buy);
+    //     }
+    //     if (indentRequestDTO.getUploadingPriorApprovalsFileName() == null || indentRequestDTO.getUploadingPriorApprovalsFileName().isEmpty()) {
+    //         indentCreation.setUploadingPriorApprovalsFileName(null);
+    //     } else {
+    //         String prior = saveBase64Files(indentRequestDTO.getUploadingPriorApprovalsFileName(), basePath);
+    //         indentCreation.setUploadingPriorApprovalsFileName(prior);
+    //     }
+    //     if (indentRequestDTO.getTechnicalSpecificationsFileName() == null || indentRequestDTO.getTechnicalSpecificationsFileName().isEmpty()) {
+    //         indentCreation.setTechnicalSpecificationsFileName(null);
+    //     } else {
+    //         String technical = saveBase64Files(indentRequestDTO.getTechnicalSpecificationsFileName(), basePath);
+    //         indentCreation.setTechnicalSpecificationsFileName(technical);
+    //     }
+    //     if (indentRequestDTO.getDraftEOIOrRFPFileName() == null || indentRequestDTO.getDraftEOIOrRFPFileName().isEmpty()) {
+    //         indentCreation.setDraftEOIOrRFPFileName(null);
+    //     } else {
+    //         String draft = saveBase64Files(indentRequestDTO.getDraftEOIOrRFPFileName(), basePath);
+    //         indentCreation.setDraftEOIOrRFPFileName(draft);
+    //     }
+    //     if (indentRequestDTO.getUploadPACOrBrandPACFileName() == null || indentRequestDTO.getUploadPACOrBrandPACFileName().isEmpty()) {
+    //         indentCreation.setUploadPACOrBrandPACFileName(null);
+    //     } else {
+    //         String pac = saveBase64Files(indentRequestDTO.getUploadPACOrBrandPACFileName(), basePath);
+    //         indentCreation.setUploadPACOrBrandPACFileName(pac);
+    //     }
+
+    //     indentCreation.setBrandPac(indentRequestDTO.getBrandPac());
+    //     indentCreation.setJustification(indentRequestDTO.getJustification());
+    //     indentCreation.setBrandAndModel(indentRequestDTO.getBrandAndModel());
+    //     indentCreation.setQuarter(indentRequestDTO.getQuarter());
+    //     indentCreation.setPurpose(indentRequestDTO.getPurpose());
+    //     indentCreation.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
+    //     indentCreation.setReason(indentRequestDTO.getReason());
+    //     indentCreation.setBuyBack(indentRequestDTO.getBuyBack());
+    //     indentCreation.setSerialNumber(indentRequestDTO.getSerialNumber());
+    //     indentCreation.setModelNumber(indentRequestDTO.getModelNumber());
+
+    //     String purchaseDate = indentRequestDTO.getDateOfPurchase();
+    //     indentCreation.setDateOfPurchase(purchaseDate != null ? CommonUtils.convertStringToDateObject(purchaseDate) : null);
+
+    //     indentCreation.setFileType(indentRequestDTO.getFileType());
+    //     indentCreation.setUpdatedBy(indentRequestDTO.getUpdatedBy());
+    //     indentCreation.setCreatedBy(indentRequestDTO.getCreatedBy());
+    //     indentCreation.setEmployeeDepartment(indentRequestDTO.getEmployeeDepartment());
+
+    //     // Update details based on indentType
+    //     if ("material".equalsIgnoreCase(indentType)) {
+
+    //         // Validate vendor count based on mode of procurement
+    //         validateVendorCountByModeOfProcurement(indentRequestDTO.getModeOfProcurement(), indentRequestDTO.getMaterialDetails());
+
+    //         // Validate computer item prices for department-specific limits
+    //         if (indentRequestDTO.getEmployeeDepartment() != null && !indentRequestDTO.getEmployeeDepartment().isEmpty()) {
+    //             validateComputerItemPrices(indentRequestDTO.getMaterialDetails(), indentRequestDTO.getEmployeeDepartment());
+    //         }
+
+    //         List<MaterialDetails> existingMaterials = indentCreation.getMaterialDetails();
+    //         Map<String, MaterialDetails> existingMap = existingMaterials.stream()
+    //                 .filter(m -> m.getMaterialCode() != null)
+    //                 .collect(Collectors.toMap(MaterialDetails::getMaterialCode, m -> m));
+
+    //         for (MaterialDetailsRequestDTO materialRequest : indentRequestDTO.getMaterialDetails()) {
+    //             MaterialDetails material = existingMap.getOrDefault(
+    //                     materialRequest.getMaterialCode(), new MaterialDetails());
+
+    //             material.setMaterialCode(materialRequest.getMaterialCode());
+    //             material.setMaterialDescription(materialRequest.getMaterialDescription());
+    //             material.setQuantity(materialRequest.getQuantity());
+    //             material.setUnitPrice(materialRequest.getUnitPrice());
+    //             material.setUom(materialRequest.getUom());
+    //             material.setModeOfProcurement(materialRequest.getModeOfProcurement());
+    //             material.setCurrency(materialRequest.getCurrency());
+    //             material.setConversionRate(materialRequest.getConversionRate());
+    //             BigDecimal updatedTotalPrice = materialRequest.getQuantity().multiply(materialRequest.getUnitPrice());
+    //             if (materialRequest.getConversionRate() != null
+    //                     && materialRequest.getCurrency() != null
+    //                     && !"INR".equalsIgnoreCase(materialRequest.getCurrency())) {
+    //                 updatedTotalPrice = updatedTotalPrice.multiply(materialRequest.getConversionRate());
+    //             }
+    //             material.setTotalPrice(updatedTotalPrice);
+    //             material.setBudgetCode(materialRequest.getBudgetCode());
+    //             material.setMaterialCategory(materialRequest.getMaterialCategory());
+    //             material.setMaterialSubCategory(materialRequest.getMaterialSubCategory());
+    //             material.setIndentCreation(indentCreation);
+
+    //             MaterialDetails savedMaterial = materialDetailsRepository.save(material);
+
+    //             if (savedMaterial.getId() != null) {
+    //                 List<VendorNamesForJobWorkMaterial> existingVendors = vendorNameRepository
+    //                         .findByIndentIdAndMaterialIdAndMaterialCode(indentCreation.getIndentId(), savedMaterial.getId(), savedMaterial.getMaterialCode());
+
+    //                 List<String> updatedVendorNames = materialRequest.getVendorNames() != null
+    //                         ? materialRequest.getVendorNames()
+    //                         : new ArrayList<>();
+
+    //                 for (VendorNamesForJobWorkMaterial existingVendor : existingVendors) {
+    //                     if (!updatedVendorNames.contains(existingVendor.getVendorName())) {
+    //                         vendorNameRepository.delete(existingVendor);
+    //                     }
+    //                 }
+
+    //                 for (String newVendor : updatedVendorNames) {
+    //                     boolean alreadyExists = existingVendors.stream()
+    //                             .anyMatch(ev -> ev.getVendorName().equalsIgnoreCase(newVendor));
+
+    //                     if (!alreadyExists) {
+    //                         VendorNamesForJobWorkMaterial vendor = new VendorNamesForJobWorkMaterial();
+    //                         vendor.setVendorName(newVendor);
+    //                         vendor.setIndentId(indentCreation.getIndentId());
+    //                         vendor.setMaterialId(savedMaterial.getId());
+    //                         vendor.setMaterialCode(savedMaterial.getMaterialCode());
+    //                         vendorNameRepository.save(vendor);
+    //                     }
+    //                 }
+    //                 if (!existingMaterials.contains(savedMaterial)) {
+    //                     existingMaterials.add(savedMaterial);
+    //                 }
+    //             }
+    //         }
+
+    //     } else if ("job".equalsIgnoreCase(indentType)) {
+    //         // Basic job update logic: replace existing jobs with the new list
+    //         if (indentCreation.getJobDetails() != null && !indentCreation.getJobDetails().isEmpty()) {
+    //             jobDetailsRepository.deleteAll(indentCreation.getJobDetails());
+    //             indentCreation.getJobDetails().clear();
+    //         }
+
+    //         if (indentRequestDTO.getJobDetails() != null) {
+    //             List<JobDetails> jobDetailsList = indentRequestDTO.getJobDetails().stream().map(jobRequest -> {
+    //                 JobDetails job = new JobDetails();
+    //                 job.setJobCode(jobRequest.getJobCode());
+    //                 job.setJobDescription(jobRequest.getJobDescription());
+    //                 job.setCategory(jobRequest.getCategory());
+    //                 job.setSubCategory(jobRequest.getSubCategory());
+    //                 job.setUom(jobRequest.getUom());
+    //                 job.setQuantity(jobRequest.getQuantity());
+    //                 job.setEstimatedPrice(jobRequest.getEstimatedPrice());
+    //                 job.setCurrency(jobRequest.getCurrency());
+    //                 job.setBriefDescription(jobRequest.getBriefDescription());
+    //                 job.setOrigin(jobRequest.getOrigin());
+    //                 job.setModeOfProcurement(jobRequest.getModeOfProcurement());
+    //                 job.setBudgetCode(jobRequest.getBudgetCode());
+    //                 job.setVendorNames(jobRequest.getVendorNames());
+
+    //                 BigDecimal qty = jobRequest.getQuantity() != null ? jobRequest.getQuantity() : BigDecimal.ZERO;
+    //                 BigDecimal price = jobRequest.getEstimatedPrice() != null ? jobRequest.getEstimatedPrice() : BigDecimal.ZERO;
+    //                 BigDecimal jobTotal = qty.multiply(price);
+    //                 job.setTotalPrice(jobTotal);
+    //                 job.setIndentCreation(indentCreation);
+    //                 return job;
+    //             }).collect(Collectors.toList());
+
+    //             indentCreation.setJobDetails(jobDetailsList);
+    //         }
+    //     }
+
+    //     // Calculate totalIndentPrice based on type
+    //     BigDecimal totalIndentPrice;
+    //     if ("job".equalsIgnoreCase(indentType)) {
+    //         totalIndentPrice = indentCreation.getJobDetails() != null
+    //                 ? indentCreation.getJobDetails().stream()
+    //                         .map(JobDetails::getTotalPrice)
+    //                         .reduce(BigDecimal.ZERO, BigDecimal::add)
+    //                 : BigDecimal.ZERO;
+    //     } else {
+    //         totalIndentPrice = indentCreation.getMaterialDetails().stream()
+    //                 .map(MaterialDetails::getTotalPrice)
+    //                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    //     }
+
+    //     indentCreation.setTotalIntentValue(totalIndentPrice);
+
+    //     indentCreationRepository.save(indentCreation);
+    //     return mapToResponseDTO(indentCreation);
+    // }
 
     public IndentCreationResponseDTO getIndentById(String indentId) {
         IndentCreation indentCreation = indentCreationRepository.findById(indentId)
@@ -690,6 +954,7 @@ public class IndentCreationServiceImpl implements IndentCreationService {
         response.setIndentorEmailAddress(indentCreation.getIndentorEmailAddress());
         response.setPriorApprovalsFileName(indentCreation.getUploadingPriorApprovalsFileName());
         response.setProjectName(indentCreation.getProjectName());
+        response.setVersion(indentCreation.getVersion());
         response.setProprietaryAndLimitedDeclaration(indentCreation.getProprietaryAndLimitedDeclaration());
         response.setIsPreBidMeetingRequired(indentCreation.getIsPreBitMeetingRequired());
         LocalDate Date = indentCreation.getPreBidMeetingDate();
@@ -1195,6 +1460,8 @@ public class IndentCreationServiceImpl implements IndentCreationService {
         response.setIndentorName(indentCreation.getIndentorName());
         response.setIndentId(indentCreation.getIndentId());
         response.setIndentorMobileNo(indentCreation.getIndentorMobileNo());
+        response.setIsActive(indentCreation.getIsActive());
+        response.setParentIndentId(indentCreation.getParentIndentId());
         response.setIndentorEmailAddress(indentCreation.getIndentorEmailAddress());
         response.setUploadingPriorApprovalsFileName(indentCreation.getUploadingPriorApprovalsFileName());
         response.setProjectName(
@@ -1457,6 +1724,8 @@ boolean isRejected = lastTransition != null
         return response;
     }
 
+
+
     @Override
     public void deleteIndent(String indentId) {
 
@@ -1478,8 +1747,8 @@ boolean isRejected = lastTransition != null
                             AppConstant.ERROR_TYPE_CODE_INTERNAL,
                             AppConstant.ERROR_TYPE_ERROR,
                             "An error occurred while deleting the  Indent."
-                    ),
-                    ex
+                    )
+                    
             );
         }
     }
