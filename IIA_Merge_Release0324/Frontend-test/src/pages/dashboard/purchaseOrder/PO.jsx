@@ -43,7 +43,8 @@ const PO = () => {
       const { poId } = location.state || {};
 
       console.log("PO ID:", poId);
-
+const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+const [versionHistoryList, setVersionHistoryList] = useState([]);
   // ✅ Fetch LOV values for Purchase Order (Form ID: 8)
   const { lovValues: deliveryPeriodLOV, loading: loadingDeliveryPeriod } = useLOVValues(8, 'deliveryPeriod');
   const { lovValues: warrantyLOV, loading: loadingWarranty } = useLOVValues(8, 'warranty');
@@ -127,7 +128,7 @@ const PO = () => {
       ;
 
       // 1. Fetch the full tender DTO by tenderId using axios and relative path
-      const tenderRes = await axios.get(`/api/tender-requests/${tenderId}`);
+      const tenderRes = await axios.get(`/api/tender-requests/byId` , {params:{tenderId}});
       const tenderDto = tenderRes.data.responseData;
       ;
 
@@ -152,7 +153,7 @@ const PO = () => {
       let vendorIdOptions= [];
       let vendorNameOptions=[];
     try {
-      const completedResp = await axios.get(`/api/vendor-quotation/completed-vendorNames/${tenderId}`);
+      const completedResp = await axios.get(`/api/vendor-quotation/completed-vendorNames`, {params:{tenderId}});
       const completedVendorsData = completedResp.data?.responseData || [];
     vendorIdOptions = completedVendorsData.map((vendor) => ({
   label: vendor.vendorId,
@@ -510,8 +511,15 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
     let data;
     if (formData.poId) {
       // Update
-      const response = await axios.put(`/api/purchase-orders/${formData.poId}`, payload);
+      // const response = await axios.put(`/api/purchase-orders/${formData.poId}`, payload);
+      const response = await axios.put(`/api/purchase-orders`, payload, {
+  params: { poId: formData.poId }
+});
       data = response.data;
+      const newPoId = data?.responseData?.poId;
+if (newPoId) {
+  setFormData(prev => ({ ...prev, poId: newPoId }));
+}
       message.success("Purchase Order updated successfully");
     } else {
       // Create
@@ -532,9 +540,13 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
 
   const handleSearch = async (value) => {
     try {
+      // const { data } = await axios.get(
+      //   `/api/purchase-orders/base64Files/${value ? value : formData.poId}`
+      // );
       const { data } = await axios.get(
-        `/api/purchase-orders/base64Files/${value ? value : formData.poId}`
-      );
+  `/api/purchase-orders/base64Files`,
+  { params: { poId: value || formData.poId } }
+);
       const responseData = data?.responseData || {};
 
       setFormData({
@@ -548,6 +560,9 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
       });
       console.log(formData);
       setSearchDone(true);
+if (responseData.isActive === false) {
+  message.warning("You are viewing an older version of this PO. Load the latest version to make changes.");
+}
     } catch (error) {
       ;
       message.error(
@@ -662,9 +677,33 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
         documentTitle: `Po - ${formData?.poId || "Draft"}`
     });
 
+
+    const fetchPoVersionHistory = async (pid) => {
+  try {
+    const basePid = (pid || formData.poId || "").split("/")[0];
+    const { data } = await axios.get(`/api/purchase-orders/version-history/` , {params: {poId:basePid}});
+    setVersionHistoryList(data?.responseData || []);
+    setVersionHistoryOpen(true);
+  } catch (error) {
+    message.error("Could not load PO version history.");
+  }
+};
+
   return (
     <Card className="a4-container" ref={printRef}>
       <Heading title="Purchase Order Creation" />
+      {formData?.poId && (
+  <div style={{ marginBottom: 16 }}>
+    {formData.isActive === false && (
+      <div style={{ background: '#fff7e6', border: '1px solid #ffd591', padding: '8px 16px', borderRadius: 4, marginBottom: 8 }}>
+        ⚠️ Viewing Old Version (V{formData.poVersion}) — This is a superseded version. Load the latest to make changes.
+      </div>
+    )}
+    <Button onClick={() => fetchPoVersionHistory(formData.poId)}>
+      View Version History
+    </Button>
+  </div>
+)}
       <CustomForm formData={formData} onFinish={onFinish}>
         {renderFormFields(
          // hydratedPoDetails,
@@ -694,6 +733,53 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
         title="Purchase Order"
         processNo={generatedPOId}
       />
+      {versionHistoryOpen && (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 600, maxHeight: '80vh', overflow: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ margin: 0 }}>PO Version History</h3>
+        <Button onClick={() => setVersionHistoryOpen(false)}>Close</Button>
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>PO ID</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {versionHistoryList.map((v) => (
+            <tr key={v.poId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>V{v.poVersion}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                <Button type="link" onClick={() => { handleSearch(v.poId); setVersionHistoryOpen(false); }}>
+                  {v.poId}
+                </Button>
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.isActive
+                  ? <span style={{ color: 'green' }}>● Active</span>
+                  : <span style={{ color: '#999' }}>○ Superseded</span>
+                }
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
        <div style={{ display: "none" }}>
                 <PoFormat ref={printComponentRef} po={formData} />
       </div>

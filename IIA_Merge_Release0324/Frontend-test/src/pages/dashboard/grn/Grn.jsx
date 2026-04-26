@@ -172,7 +172,10 @@ const Grn = () => {
 
         setFormData({
           ...data?.responseData?.giDtls,
-          indentorName: data?.responseData?.gprnDtls?.receivedBy,
+          indentorName: data?.responseData?.gprnDtls?.indentorName,
+          poNumber: data?.responseData?.gprnDtls?.poId,
+  vendorName: data?.responseData?.gprnDtls?.vendorName,
+          receivedBy: data?.responseData?.gprnDts?.receivedBy,
           giNo: data?.responseData?.giDtls?.inspectionNo,
           grnType: "GI",
           materialDtlList: materialWithPrice,
@@ -394,12 +397,13 @@ const Grn = () => {
 const grvFields =(formData)=> [
     {
         heading: "Order Details",
-        colCnt: 5,
+        colCnt: 4,
         fieldList: [
             {
                 name: "grnType",
                 label: "GRN Type",
                 type: "select",
+                span: 4,
                 required: true,
                 options: [
                     {
@@ -448,7 +452,7 @@ const grvFields =(formData)=> [
 
   ),
   required: true,
-  span: 2
+  span: 4
 },
             {
                 name: "grnNo",
@@ -479,14 +483,30 @@ const grvFields =(formData)=> [
               name: "gprnAmount",
               label: "grn Amount",
               type: "text",
-              span: 2,
+              span: 4,
+              disabled: true
+            },{
+              name: "poNumber",
+              label: "PO Number",
+              type: "text",
+              span:4,
+              disabled: true
+            },
+             {
+              name: "vendorName",
+              label: "Vendor Name",
+              type: "text",
+              span:2,
+              disabled: true
             },
              {
               name: "poAmount",
               label: "Po Amount",
               type: "text",
-              span: 2,
+              span: 4,
+              disabled: true,
             },
+              
          ...(formData?.grnType === "GI" &&
     formData?.gprnDtls?.materialDtlList?.some(m => m.category === "Consumable")
     ? [
@@ -502,6 +522,8 @@ const grvFields =(formData)=> [
 
         ]
     },
+   
+
     {
         heading: "Material Details",
         name: "materialDtlList",
@@ -512,6 +534,7 @@ const grvFields =(formData)=> [
                 label: "Asset ID",
                 type: "text",
                 span: 2,
+                disabled: true
                 // required: true
             },
              {
@@ -519,6 +542,7 @@ const grvFields =(formData)=> [
                 label: "Asset Code",
                 type: "text",
                 span: 2,
+                disabled: true
                 // required: true
             },
             {
@@ -526,6 +550,7 @@ const grvFields =(formData)=> [
                 label: "Asset Description",
                 type: "text",
                 span: 2,
+                
                 // required: true
             },
             {
@@ -533,6 +558,7 @@ const grvFields =(formData)=> [
                 label: "Material Code",
                 type: "text",
                 span: 2,
+                disabled: true
                 // required: true
             },
             {
@@ -540,6 +566,7 @@ const grvFields =(formData)=> [
                 label: "Material Description",
                 type: "text",
                 span: 2,
+                disabled: true
                 // required: true
             },
             {
@@ -547,6 +574,7 @@ const grvFields =(formData)=> [
                 label: "UOM",
                 type: "text",
                 span: 2,
+                disabled: true,
                 required: true
             },
             {
@@ -561,6 +589,7 @@ const grvFields =(formData)=> [
                 name: "unitPrice",
                 label: "Unit Price",
                 type: "text",
+                disabled: true,
                 required: true
             },...(formData.isDepreciationDisabled ? [] : [{
                 name: "depriciationRate",
@@ -581,12 +610,14 @@ const grvFields =(formData)=> [
                 name: "receivedQuantity",
                 label: "Received Quantity",
                 type: "text",
-                required: true
+                required: true,
+                disabled: true
             },
             {
                 name: "acceptedQuantity",
                 label: "Accepted Quantity",
                 type: "text",
+                disabled: true,
                 required: true
             },
         ]

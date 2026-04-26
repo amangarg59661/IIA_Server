@@ -159,6 +159,7 @@ const Form17 = () => {
           label: "Material Code",
           type: "text",
           span: 2,
+          disabled: true,
           // required: true,
         },
         {
@@ -166,6 +167,7 @@ const Form17 = () => {
           label: "Material Description",
           type: "text",
           span: 3,
+          disabled: true,
           // required: true,
         },
         {
@@ -173,6 +175,7 @@ const Form17 = () => {
           label: "Asset Id",
           type: "text",
           span: 2,
+          disabled: true,
           // required: true,
         },
          {
@@ -180,6 +183,7 @@ const Form17 = () => {
           label: "Asset Code",
           type: "text",
           span: 2,
+          disabled: true,
           // required: true,
         },
         {
@@ -187,6 +191,7 @@ const Form17 = () => {
           label: "Asset Description",
           type: "text",
           span: 3,
+          disabled: true,
           // required: true,
         },
         // {
@@ -209,6 +214,7 @@ const Form17 = () => {
           label: "Sender Locator",
           type: "text",
           span: 2,
+          disabled: true,
           required: true,
         },
         {
@@ -216,6 +222,7 @@ const Form17 = () => {
           label: "Quantity",
           type: "text",
           span: 2,
+          disabled: true,
           required: true,
         },
         {
@@ -223,6 +230,7 @@ const Form17 = () => {
           label: "Unit Price",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },
         {
@@ -230,6 +238,7 @@ const Form17 = () => {
           label: "Depriciation Rate",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },
           {
@@ -237,6 +246,7 @@ const Form17 = () => {
           label: "Book Value",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },
          {
@@ -244,6 +254,7 @@ const Form17 = () => {
           label: "Po Id",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },
          {
@@ -251,12 +262,14 @@ const Form17 = () => {
           label: "Model No",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },{
           name: "serialNo",
           label: "Serial No",
           type: "text",
           span: 2,
+          disabled: true,
           required: true
         },{
           name: "reasonForTransfer",

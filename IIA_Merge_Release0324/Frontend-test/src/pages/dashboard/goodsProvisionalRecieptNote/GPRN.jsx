@@ -139,10 +139,11 @@ const GPRN = () => {
 
   const handleSearch = useCallback(async (value) => {
     try {
-      const { data } = await axios.get(`api/purchase-orders/${value ? value : formData.poId}`)
+      const { data } = await axios.get(`api/purchase-orders/byId`, {params: {poId : value ? value : formData.poId}})
 
       const { data: vendorData } = await axios.get(`/api/vendor-master/${data?.responseData?.vendorId}`)
-      const { data: indentData } = await axios.get(`/api/indents/${data?.responseData?.indentIds[0]}`)
+      const indentId = data?.responseData?.indentIds[0];
+      const { data: indentData } = await axios.get(`/api/indents/byId` , {params: {indentId}})
 
        // Resolve locationId at search time using current fsDd
     const consigneesAddress = data?.responseData?.consignesAddress;
@@ -385,14 +386,15 @@ setPendingGprnList(formattedPoList);
           type: "text",
           span: 2,
           required: true,
-          // disabled: true
+          disabled: true
         },
         {
           name: "materialDesc",
           label: "Description",
           type: "text",
           span: 3,
-          required: true
+          required: true,
+          disabled: true,
         },
         {
           name: "uomId",
@@ -400,7 +402,7 @@ setPendingGprnList(formattedPoList);
           type: "text",
           span: 1,
           required: true,
-          // disabled: true
+          disabled: true
         },
         {
           name: "warrantyTerms",
@@ -419,6 +421,7 @@ setPendingGprnList(formattedPoList);
           name: "totalQuantity",
           label: "Ordered Quantity",
           type: "text",
+          disabled: true,
         },
         {
           name: "orderedQuantity",
@@ -426,7 +429,7 @@ setPendingGprnList(formattedPoList);
           type: "text",
           span: 3,
           required: true,
-          // disabled: true
+          disabled: true
         },
         {
           name: "quantityDelivered",

@@ -103,7 +103,7 @@ const handleSearchTender = async () => {
 
     // flow for Store Purchase Officer: require comparison sheet
     if (role === 'Store Purchase Officer') {
-      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations/${tenderId}`);
+      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations`,{params:{tenderId}});
       const { vendor = [], uploadQualifiedVendorsFileName } = compResp.data?.responseData || {};
 
      /* if (!uploadQualifiedVendorsFileName) {

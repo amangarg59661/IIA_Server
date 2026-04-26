@@ -55,6 +55,8 @@ const Tender = () => {
   const [selectedProjectName, setSelectedProjectName] = useState(null);
   const [tenderIdOptions,setTenderIdOptions] = useState([]);
   const [searchDone, setSearchDone] = useState(false);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+const [versionHistoryList, setVersionHistoryList] = useState([]);
 
   const [buyBackFields, setBuyBackFields] = useState([]);
 
@@ -215,6 +217,7 @@ const Tender = () => {
       const allMaterials = [];
       let isBuyBack = false; 
       let buyBackData = {};
+      console.log("test4");
       // Loop through all selected indent IDs
       for (const id of indentIds) {
         const res = await axios.get(`/api/indents/IndentDataForTender`,{params: {indentId :id}});
@@ -337,38 +340,49 @@ const Tender = () => {
   };*/
   const handleSearch = async (value) => {
   try {
-    const { data } = await axios.get(
-      `/api/tender-requests/base64Files/${value || formData.tenderId}`
-    );
+    // const { data } = await axios.get(
+    //   `/api/tender-requests/base64Files/${value || formData.tenderId}`
+    // );
+    console.log("yy");
+        const { data } = await axios.get(
+  `/api/tender-requests/base64Files`,
+  { params: { tenderId: value || formData.tenderId } }
+);
     setSearchDone(true); 
-
-    const responseData = data?.responseData || {};
-
-    const indentIds = Array.isArray(responseData.indentIds)
-      ? responseData.indentIds
-      : responseData.indentIds
-      ? [responseData.indentIds]
+    console.log("hello");
+    const tenderResponse = data?.responseData || {};
+// ADD: set form read-only if this is an old version
+if (tenderResponse.isActive === false) {
+  message.warning("You are viewing an older version of this tender. Load the latest version to make changes.");
+}
+    
+  console.log("Aman");
+    const indentIds = Array.isArray(tenderResponse.indentIds)
+      ? tenderResponse.indentIds
+      : tenderResponse.indentIds
+      ? [tenderResponse.indentIds]
       : [];
 
     // Directly use projectName from response
     const formattedIndentIds = indentIds.map((id) => ({
       value: id,
-      label: `Indent ${id} (${responseData.projectName || ""})`,
+      label: `Indent ${id} (${tenderResponse.projectName || ""})`,
     }));
 
-    setSelectedProjectName(responseData.projectName);
-
+    setSelectedProjectName(tenderResponse.projectName);
+    console.log("test 1");
     setFormData((prev) => ({
       ...prev,
-      ...responseData,
+      ...tenderResponse,
       indentId: indentIds,
     }));
+    console.log("test2");
 
     form.setFieldsValue({
-      ...responseData,
+      ...tenderResponse,
       indentId: formattedIndentIds,
     });
-
+    console.log("test 3");
     if (indentIds.length) {
       await handleIndentSearch(indentIds);
     }
@@ -489,10 +503,18 @@ const Tender = () => {
 
     if (tenderId) {
       // Update
-      const response = await axios.put(`/api/tender-requests/${tenderId}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // const response = await axios.put(`/api/tender-requests/${tenderId}`, payload, {
+      //   headers: { Authorization: `Bearer ${token}` },
+      // });
+      const response = await axios.put(`/api/tender-requests`, payload, {
+  headers: { Authorization: `Bearer ${token}` },
+  params: { tenderId: formData.tenderId || tenderId }
+});
       data = response.data;
+      const newTenderId = data?.responseData?.tenderId; // e.g. T1001/2
+if (newTenderId) {
+  setFormData(prev => ({ ...prev, tenderId: newTenderId }));
+}
       message.success({
         content: `Tender updated successfully to version ${data?.responseData?.tenderVersion || 'N/A'}. Vendors have been notified.`,
         duration: 5
@@ -794,7 +816,7 @@ console.log("uday"+formData.buyBack);
           type: "text",
           disabled: true,
           span: 2,
-          disabled: true,
+         
         },
         {
           name: "materialCategory",
@@ -1088,12 +1110,39 @@ console.log("uday"+formData.buyBack);
 };
 
 
- 
+ const fetchVersionHistory = async (tid) => {
+  try {
+    const baseTid = (tid || formData.tenderId || "").split("/")[0];
+    const { data } = await axios.get(`/api/tender-requests/version-history{baseTid}`);
+    setVersionHistoryList(data?.responseData || []);
+    setVersionHistoryOpen(true);
+  } catch (error) {
+    message.error("Could not load version history.");
+  }
+};
 
 
   return (
     <Card className="a4-container" ref={printRef}>
       <Heading title="Tender Creation" />
+        {/* Version info and history */}
+{formData?.tenderId && (
+  <div style={{ marginBottom: 16 }}>
+    {formData.isActive === false && (
+      <div style={{ background: '#fff7e6', border: '1px solid #ffd591', padding: '8px 16px', borderRadius: 4, marginBottom: 8 }}>
+        ⚠️ Viewing Old Version (V{formData.tenderVersion}) — This is a superseded version. Load the latest to make changes.
+      </div>
+    )}
+    {formData.tenderVersion > 1 && (
+      <div style={{ background: '#e6f7ff', border: '1px solid #91d5ff', padding: '8px 16px', borderRadius: 4, marginBottom: 8 }}>
+        Version {formData.tenderVersion} — This tender has been revised {formData.tenderVersion - 1} time(s).
+      </div>
+    )}
+    <Button icon={<SearchOutlined />} onClick={() => fetchVersionHistory(formData.tenderId)}>
+      View Version History
+    </Button>
+  </div>
+)}
 
       {/* Form Start */}
       <CustomForm
@@ -1132,6 +1181,54 @@ console.log("uday"+formData.buyBack);
         title="Tender Submission Successful"
         processNo={generatedTenderId}
       />
+      {/* Version History Modal */}
+{versionHistoryOpen && (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 600, maxHeight: '80vh', overflow: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ margin: 0 }}>Tender Version History</h3>
+        <Button onClick={() => setVersionHistoryOpen(false)}>Close</Button>
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Tender ID</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {versionHistoryList.map((v) => (
+            <tr key={v.tenderId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>V{v.tenderVersion}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                <Button type="link" onClick={() => { handleSearch(v.tenderId); setVersionHistoryOpen(false); }}>
+                  {v.tenderId}
+                </Button>
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.isActive
+                  ? <span style={{ color: 'green' }}>● Active</span>
+                  : <span style={{ color: '#999' }}>○ Superseded</span>
+                }
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
       <div style={{ display: "none" }}>
                 <TenderPrintFormat ref={printComponentRef} data={formData} />
       </div>

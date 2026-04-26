@@ -310,7 +310,7 @@ useEffect(() => {
    const handleSearch = async (value) => {
     try {
       const { data } = await axios.get(
-        `/api/purchase-orders/${value ? value : formData.poId}`
+        `/api/purchase-orders/byId`,{params:{poId: value ? value : formData.poId}}
       );
       const responseData = data?.responseData || {};
 

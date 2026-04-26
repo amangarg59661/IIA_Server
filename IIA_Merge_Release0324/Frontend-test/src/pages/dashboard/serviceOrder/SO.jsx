@@ -15,7 +15,9 @@ const SO = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
   const [generatedSOId, setGeneratedSOId] = useState("");
-
+const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+const [versionHistoryList, setVersionHistoryList] = useState([]);
+const [searchDone, setSearchDone] = useState(false);
   // Redux selectors
   const auth = useSelector((state) => state.auth);
   const actionPerformer = auth.userId;
@@ -71,7 +73,8 @@ const SO = () => {
       ;
 
       // 1. Fetch the full tender DTO by tenderId using axios and relative path
-      const tenderRes = await axios.get(`/api/tender-requests/${tenderId}`);
+      const tenderRes = await axios.get(`/api/tender-requests/byId`, { params: { tenderId } });
+      // const tenderRes = await axios.get(`/api/tender-requests/${tenderId}`);
       const tenderDto = tenderRes.data.responseData;
       ;
 
@@ -219,9 +222,30 @@ const SO = () => {
         applicablePBGToBeSubmitted: formData.applicablePBGToBeSubmitted || "",
       };
 
-      const { data } = await axios.post("/api/service-orders", payload);
-      setGeneratedSOId(data.responseData.soId);
-      setModalOpen(true);
+      // const { data } = await axios.post("/api/service-orders", payload);
+      // setGeneratedSOId(data.responseData.soId);
+      // setModalOpen(true);
+      // Replace the existing onFinish axios.post block:
+let data;
+if (formData.soId) {
+  // Update
+  const response = await axios.put(`/api/service-orders`, payload, {
+    params: { soId: formData.soId }
+  });
+  data = response.data;
+  const newSoId = data?.responseData?.soId;
+  if (newSoId) {
+    setFormData(prev => ({ ...prev, soId: newSoId }));
+  }
+  message.success("Service Order updated successfully");
+} else {
+  // Create
+  const response = await axios.post("/api/service-orders", payload);
+  data = response.data;
+  message.success("Service Order created successfully");
+}
+setGeneratedSOId(data.responseData.soId);
+setModalOpen(true);
     } catch (error) {
       message.error("Failed to create service order");
     } finally {
@@ -231,15 +255,24 @@ const SO = () => {
 
   const handleSearch = async (value) => {
     try {
+      // const { data } = await axios.get(
+      //   `/api/service-orders/${value ? value : formData.soId}`
+      // );
       const { data } = await axios.get(
-        `/api/service-orders/${value ? value : formData.soId}`
-      );
+  `/api/service-orders/byId`,
+  { params: { soId: value || formData.soId } }
+);
       const responseData = data?.responseData || {};
 
       setFormData({
         ...responseData,
         materialDtlList: responseData?.materials || [],
       });
+
+      setSearchDone(true);
+if (responseData.isActive === false) {
+  message.warning("You are viewing an older version of this SO. Load the latest version to make changes.");
+}
     } catch (error) {
       ;
       message.error(
@@ -270,9 +303,32 @@ const SO = () => {
     content: () => printRef.current,
   });
 
+  const fetchSoVersionHistory = async (sid) => {
+  try {
+    const baseSid = (sid || formData.soId || "").split("/")[0];
+    const { data } = await axios.get(`/api/service-orders/version-history/${baseSid}`);
+    setVersionHistoryList(data?.responseData || []);
+    setVersionHistoryOpen(true);
+  } catch (error) {
+    message.error("Could not load SO version history.");
+  }
+};
+
   return (
     <Card className="a4-container" ref={printRef}>
       <Heading title="Service Order Creation" />
+      {formData?.soId && (
+  <div style={{ marginBottom: 16 }}>
+    {formData.isActive === false && (
+      <div style={{ background: '#fff7e6', border: '1px solid #ffd591', padding: '8px 16px', borderRadius: 4, marginBottom: 8 }}>
+        ⚠️ Viewing Old Version (V{formData.soVersion}) — This is a superseded version. Load the latest to make changes.
+      </div>
+    )}
+    <Button onClick={() => fetchSoVersionHistory(formData.soId)}>
+      View Version History
+    </Button>
+  </div>
+)}
       <CustomForm formData={formData} onFinish={onFinish}>
         {renderFormFields(
           hydratedSoDetails,
@@ -301,6 +357,53 @@ const SO = () => {
         title="Service Order"
         processNo={generatedSOId}
       />
+      {versionHistoryOpen && (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center'
+  }}>
+    <div style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 600, maxHeight: '80vh', overflow: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h3 style={{ margin: 0 }}>SO Version History</h3>
+        <Button onClick={() => setVersionHistoryOpen(false)}>Close</Button>
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ background: '#f0f0f0' }}>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>SO ID</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
+            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {versionHistoryList.map((v) => (
+            <tr key={v.soId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
+              <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>V{v.soVersion}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                <Button type="link" onClick={() => { handleSearch(v.soId); setVersionHistoryOpen(false); }}>
+                  {v.soId}
+                </Button>
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
+              </td>
+              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
+                {v.isActive
+                  ? <span style={{ color: 'green' }}>● Active</span>
+                  : <span style={{ color: '#999' }}>○ Superseded</span>
+                }
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
     </Card>
   );
 };

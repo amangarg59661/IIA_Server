@@ -401,12 +401,27 @@ const [locationLoading, setLocationLoading] = useState(false);
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
-            label="Code"
-            name="lovValue"
-            rules={[{ required: true, message: 'Please enter code' }]}
-          >
-            <Input placeholder="Enter code" />
-          </Form.Item>
+  label="Code"
+  name="lovValue"
+  rules={[
+    { required: true, message: 'Please enter code' },
+    ...(selectedDesignator === 10
+      ? [{ pattern: /^\d+$/, message: 'Only numbers are allowed' }]
+      : [])
+  ]}
+>
+  <Input
+    placeholder="Enter code"
+    type={selectedDesignator === 10 ? 'number' : 'text'}
+    onKeyDown={selectedDesignator === 10
+      ? (e) => {
+          if (!/[\d]/.test(e.key) && !['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+          }
+        }
+      : undefined}
+  />
+</Form.Item>
 
           <Form.Item
             label="Name"

@@ -11,6 +11,17 @@ const TenderPrintFormat = forwardRef(({ data = {} }, ref) => {
       return <span>Not Attached</span>;
     }
 
+    const rawVendor = data.vendorNames; // e.g. "9060087-CITO INFOTECH PVT LTD"
+
+const [vendorId, vendorName] = rawVendor
+  ? rawVendor.split("-")
+  : ["", ""];
+  const vendorDetails = {
+  label: "Vendor Name",
+  value: vendorName,
+  id: vendorId
+};
+
     return (
       <div className="flex flex-col gap-1">
         {fileNames.map((fileName, index) => {
@@ -91,7 +102,7 @@ const TenderPrintFormat = forwardRef(({ data = {} }, ref) => {
 
       {/* Vendor */}
       <div className="mb-4">
-        <strong>M/s {data.vendorName}</strong><br />
+        <strong>M/s {data.vendorNames}</strong><br />
         {data.vendorAddress1 || "____________________"}<br />
         {data.vendorAddress2 || "____________________"}
       </div>
@@ -111,7 +122,7 @@ const TenderPrintFormat = forwardRef(({ data = {} }, ref) => {
       ["Tender Inviting Authority", "Indian Institute of Astrophysics"],
       ["Tender Title", data.titleOfTender || ""],
       ["Tender Start Date", data.openingDate || ""],
-      ["Pre-bid Meeting Time, Date & Place", data.preBidMeeting || ""],
+      ["Pre-bid Meeting Time, Date & Place", data.preBidMeetingDate || ""],
       ["Tender End Date", data.closingDate || ""],
       ["Tender Opening Date", data.openingDate || ""],
       ["Tender Offer Validity (From Tender End Date)",
@@ -133,7 +144,7 @@ const TenderPrintFormat = forwardRef(({ data = {} }, ref) => {
       ],["Buyer Email", "purchase@iiap.res.in"],
       ["Type of Tender", data.bidType === "Double" ? "Two Bid System" : "Single Bid System"],
       ["Time allowed for technical clarifications", "2 Days"],
-      ["Estimated Tender Value (₹)", `₹ ${data.totalTenderValue || "Indent Total Value"}`],
+      ["Estimated Tender Value (₹)", `₹ ${data.totalPrice || "Indent Total Value"}`],
       ["Evaluation Method", data.evaluationMethod || "1) Item value wise evaluation (or) 2) Total value wise evaluation"],
       ["Consignee and Address", data.consignes || ""],
     ].map(([label, value], idx) => {

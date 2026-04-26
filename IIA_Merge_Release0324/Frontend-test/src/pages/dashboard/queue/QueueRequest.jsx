@@ -5160,19 +5160,25 @@ const fetchEmployees = () => {
         endpoint = `/api/contigency-purchase/${record.requestId}`;
         break;
       case 3:
-        endpoint = `/api/purchase-orders/${record.requestId}`;
+        endpoint = `/api/purchase-orders/byId`;
+        config = { params: { poId: record.requestId } };
         break;
       case 4:
-        endpoint = `/api/tender-requests/${record.requestId}`;
+         endpoint = `/api/tender-requests/byId`;
+        config = { params: { tenderId: record.requestId } };
         break;
       case 5:
-        endpoint = `/api/service-orders/${record.requestId}`;
+        endpoint = `/api/service-orders/byId`;
+        config = { params: { soId: record.requestId } };
         break;
       case 7:
-        endpoint = `/api/tender-requests/${record.requestId}`;
+        endpoint = `/api/tender-requests/byId`;
+        config = { params: { tenderId: record.requestId } };
         break;
       case 10:
-        endpoint = `/api/process-controller/VoucherData?processNo=${record.requestId}`;
+        // endpoint = `/api/process-controller/VoucherData?processNo=${record.requestId}`;
+        endpoint = `/api/process-controller/VoucherData`;
+    config = { params: { processNo: record.requestId } };
         break;
       default:
         message.error("Invalid workflow ID.");
