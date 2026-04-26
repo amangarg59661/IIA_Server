@@ -52,7 +52,7 @@ const AllVendorsQuotationsstatus = ({ tenderId, vendorId, open, onClose }) => {
     if (open && tenderId && vendorId) {
       setLoading(true);
       axios
-        .get(`/api/vendor-quotation/all-vendors/Status/${tenderId}`)
+        .get(`/api/vendor-quotation/all-vendors/Status`, {param:{tenderId}})
         .then((res) => {
           const data = res.data?.responseData || [];
           setHistory(data);

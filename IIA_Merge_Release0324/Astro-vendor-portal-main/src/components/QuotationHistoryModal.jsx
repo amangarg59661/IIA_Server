@@ -47,7 +47,7 @@ const QuotationHistoryModal = ({ tenderId, vendorId, open, onClose }) => {
     if (open && tenderId && vendorId) {
       setLoading(true);
       axios
-        .get(`/api/vendor-quotation/vendorHistory/${tenderId}/${vendorId}`)
+        .get(`/api/vendor-quotation/vendorHistory`,{param: {tenderId : tenderId,vendorId:vendorId}})
         .then((res) => {
           const data = res.data?.responseData || [];
           setHistory(data);

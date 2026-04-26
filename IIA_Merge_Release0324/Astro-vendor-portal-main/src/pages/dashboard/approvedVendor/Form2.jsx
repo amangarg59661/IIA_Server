@@ -557,7 +557,7 @@ const Form2 = () => {
       setSelectedTenderLoading(true);
       try {
         const res = await axios.get(
-          `/api/tender-requests/vendor/${tenderId}/${vendorId}`,
+          `/api/tender-requests/vendor` , {param:{tenderId:tenderId,vendorId:vendorId}},
           {
             headers: {
               "Content-Type": "application/json",
