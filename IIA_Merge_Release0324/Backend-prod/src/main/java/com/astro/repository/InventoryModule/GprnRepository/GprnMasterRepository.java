@@ -38,6 +38,9 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
 
     GprnMasterEntity findBySubProcessId(Integer gprnSubProcessId);
 
+//     @Query("SELECT COALESCE(MAX(CAST(g.processId AS int)), 0) FROM GprnMasterEntity g WHERE g.processId IS NOT NULL")
+// Integer findMaxGprnSequence();
+
     @Query("SELECT DISTINCT g FROM GprnMasterEntity g " +
             "LEFT JOIN GprnMaterialDtlEntity m ON g.subProcessId = m.subProcessId " +
             "LEFT JOIN GiMasterEntity gi ON g.subProcessId = gi.gprnSubProcessId " +

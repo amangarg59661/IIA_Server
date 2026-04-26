@@ -36,6 +36,14 @@ public class ServiceOrder {
     private String vendorName;
     @Column(name = "vendor_address")
     private String vendorAddress;
+    @Column(name = "is_active")
+private Boolean isActive = true;
+
+@Column(name = "so_version")
+private Integer soVersion = 1;
+
+@Column(name = "parent_so_id")
+private String parentSoId;
     @Column(name = "applicable_pbg_to_be_submitted")
     private String applicablePBGToBeSubmitted;
     @Column(name = "vendors_account_no")

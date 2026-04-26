@@ -63,18 +63,36 @@ public class TenderRequestController {
     }
 
 
-    @PutMapping(value = "/{tenderId}")
-    public ResponseEntity<Object> updateTenderRequest(@PathVariable String tenderId, @RequestBody TenderRequestDto tenderRequestDTO) {// Set files in DTO if provided
+    // @PutMapping(value = "/{tenderId}")
+    // public ResponseEntity<Object> updateTenderRequest(@PathVariable String tenderId, @RequestBody TenderRequestDto tenderRequestDTO) {// Set files in DTO if provided
 
-        // Call service to update tender request
-        TenderResponseDto updated = TRService.updateTenderRequest(tenderId, tenderRequestDTO);
+    //     // Call service to update tender request
+    //     TenderResponseDto updated = TRService.updateTenderRequest(tenderId, tenderRequestDTO);
 
-        // Return success response
-        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(updated), HttpStatus.OK);
-    }
+    //     // Return success response
+    //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(updated), HttpStatus.OK);
+    // }
+    // With:
+@PutMapping
+public ResponseEntity<Object> updateTenderRequest(@RequestParam String tenderId, @RequestBody TenderRequestDto tenderRequestDTO) {
+    TenderResponseDto updated = TRService.updateTenderRequest(tenderId, tenderRequestDTO);
 
-    @PutMapping(value = "/update/{tenderId}")
-    public ResponseEntity<Object> updateTender(@PathVariable String tenderId, @RequestBody tenderUpdateDto tenderRequestDTO) {// Set files in DTO if provided
+    // Re-initiate workflow for new version
+    workflowService.initiateWorkflow(
+            updated.getTenderId(),
+            WorkflowName.TENDER_APPROVER.getKey(),
+            updated.getCreatedBy()
+    );
+
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(updated), HttpStatus.OK);
+}
+// @GetMapping("/version-history/{tenderId}")
+// public ResponseEntity<Object> getTenderVersionHistory(@PathVariable String tenderId) {
+//     List<TenderResponseDto> history = TRService.getTenderVersionHistory(tenderId);
+//     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+// }
+    @PutMapping(value = "/update")
+    public ResponseEntity<Object> updateTender(@RequestParam String tenderId, @RequestBody tenderUpdateDto tenderRequestDTO) {// Set files in DTO if provided
 
         // Call service to update tender request
         TenderResponseDto updated = TRService.updateTender(tenderId, tenderRequestDTO);
@@ -90,23 +108,23 @@ public class TenderRequestController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(tenderRequest), HttpStatus.OK);
     }
 
-    @GetMapping("vendor/{tenderId}/{vendorId}")
-    public ResponseEntity<Object> vendorCheck(@PathVariable String tenderId,@PathVariable String vendorId) {
+    @GetMapping("vendor")
+    public ResponseEntity<Object> vendorCheck(@RequestParam String tenderId,@RequestParam String vendorId) {
 
         VendorQualificationResponseDto status = TRService.vendorCheck(tenderId, vendorId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
-    @GetMapping("/{tenderId}")
-    public ResponseEntity<Object> getTenderRequestById(@PathVariable String tenderId) {
+    @GetMapping("/byId")
+    public ResponseEntity<Object> getTenderRequestById(@RequestParam String tenderId) {
 
         TenderWithIndentResponseDTO tenderRequest = TRService.getTenderRequestById(tenderId);
 
 
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(tenderRequest), HttpStatus.OK);
     }
-    @GetMapping("/base64Files/{tenderId}")
-    public ResponseEntity<Object> getTenderDataAndBase64FilesById(@PathVariable String tenderId) throws IOException {
+    @GetMapping("/base64Files")
+    public ResponseEntity<Object> getTenderDataAndBase64FilesById(@RequestParam String tenderId) throws IOException {
 
         TenderResponseBase64FilesDto tenderRequest = TRService.getTenderDataWithBase64Files(tenderId);
 
@@ -115,8 +133,8 @@ public class TenderRequestController {
     }
 
 
-    @GetMapping("/data/{tenderId}")
-    public ResponseEntity<Object> getTenderDataById(@PathVariable String tenderId) {
+    @GetMapping("/data")
+    public ResponseEntity<Object> getTenderDataById(@RequestParam String tenderId) {
 
         TenderResponseDto tenderRequest = TRService.getTenderData(tenderId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(tenderRequest), HttpStatus.OK);

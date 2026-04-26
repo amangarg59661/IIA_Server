@@ -23,6 +23,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.math.BigDecimal;
 import java.util.stream.Collectors;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.astro.service.InventoryModule.GrnService;
 import com.astro.service.InventoryModule.IgpService;
@@ -125,7 +127,8 @@ public class GrnServiceImpl implements GrnService {
         grnMaster.setGrnType(req.getGrnType());
         grnMaster.setStatus("APPROVED");
         if(!req.getGrnType().equalsIgnoreCase("MATERIAL_IN")){
-            grnMaster.setGrnProcessId(req.getGiNo().split("/")[0].substring(3));
+            // grnMaster.setGrnProcessId(req.getGiNo().split("/")[0].substring(3));
+            grnMaster.setGrnProcessId(extractProcessId(req.getGiNo()));
         }
 
         if ("GI".equalsIgnoreCase(req.getGrnType())) {
@@ -135,8 +138,10 @@ public class GrnServiceImpl implements GrnService {
             if (req.getCommissioningDate() != null && !req.getCommissioningDate().trim().isEmpty()) {
                 grnMaster.setCommissioningDate(CommonUtils.convertStringToDateObject(req.getCommissioningDate()));
             }
-            grnMaster.setGiProcessId(req.getGiNo().split("/")[0].substring(3));
-            grnMaster.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+            grnMaster.setGiProcessId(extractProcessId(req.getGiNo()));
+            // grnMaster.setGiProcessId(req.getGiNo().split("/")[0].substring(3));
+            // grnMaster.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+            grnMaster.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
         } else {
             // grnMaster.setIgpProcessId(req.getGiNo().split("/")[0].substring(3));
             grnMaster.setIgpProcessId(req.getIgpId());
@@ -144,7 +149,8 @@ public class GrnServiceImpl implements GrnService {
         }
 
         GiMasterEntity giMaster = gimr.findById(
-            Integer.parseInt(req.getGiNo().split("/")[1])).orElse(null);
+            extractSubProcessId(req.getGiNo())).orElse(null);
+            // Integer.parseInt(req.getGiNo().split("/")[1])).orElse(null);
     if (giMaster != null) {
         GprnMasterEntity gprnEntity = gprnMasterRepository
                 .findBySubProcessId(giMaster.getGprnSubProcessId());
@@ -165,8 +171,12 @@ public class GrnServiceImpl implements GrnService {
         if ("GI".equalsIgnoreCase(req.getGrnType())) {
             // GI validation logic
             List<GiMaterialDtlEntity> giMaterialList = gimdr.findByInspectionSubProcessId(
-                    Integer.parseInt(req.getGiNo().split("/")[1]));
-            List<GoodsInspectionConsumableDetailEntity> giConsumableList = gicdr.findByInspectionSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+                    // Integer.parseInt(req.getGiNo().split("/")[1]));
+                    extractSubProcessId(req.getGiNo()));
+            List<GoodsInspectionConsumableDetailEntity> giConsumableList = gicdr.findByInspectionSubProcessId(
+                extractSubProcessId(req.getGiNo())
+                // Integer.parseInt(req.getGiNo().split("/")[1])
+                );
 
             for (GrnMaterialDtlDto materialDtl : req.getMaterialDtlList()) {
                 if(Objects.nonNull(materialDtl.getAssetId())){
@@ -183,7 +193,8 @@ public class GrnServiceImpl implements GrnService {
                 }
 
                 BigDecimal previouslyReceivedQty = grnmdr.findByGiSubProcessIdAndAssetId(
-                        Integer.parseInt(req.getGiNo().split("/")[1]),
+                        // Integer.parseInt(req.getGiNo().split("/")[1]),
+                        extractSubProcessId(req.getGiNo()),
                         materialDtl.getAssetId())
                         .stream()
                         .map(GrnMaterialDtlEntity::getQuantity)
@@ -202,7 +213,8 @@ public class GrnServiceImpl implements GrnService {
                 mapper.map(materialDtl, grnMaterialDtl);
                 grnMaterialDtl.setQuantity(materialDtl.getAcceptedQuantity());
                 grnMaterialDtl.setGrnProcessId(grnMaster.getGrnProcessId());
-                grnMaterialDtl.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+                // grnMaterialDtl.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+                grnMaterialDtl.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
                 grnMaterialDtl.setGrnSubProcessId(grnMaster.getGrnSubProcessId());
                 grnMaterialDtl.setAssetCode(materialDtl.getAssetCode());
                 grnMaterialDtlList.add(grnMaterialDtl);
@@ -226,7 +238,8 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
                         continue;
                     }
                     BigDecimal prevRecQuant = gcdr.findByGiSubProcessIdAndMaterialCode(
-                                    Integer.parseInt(req.getGiNo().split("/")[1]),
+                        extractSubProcessId(req.getGiNo()),
+                                    // Integer.parseInt(req.getGiNo().split("/")[1]),
                                     materialDtl.getMaterialCode())
                             .stream()
                             .map(GrnConsumableDtlEntity::getQuantity)
@@ -245,7 +258,8 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
                     mapper.map(materialDtl, gcde);  // Change from mapping giConsumable to mapping materialDtl
                     gcde.setQuantity(materialDtl.getAcceptedQuantity());
                     gcde.setGrnProcessId(grnMaster.getGrnProcessId());
-                    gcde.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+                    gcde.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
+                    // gcde.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
                     gcde.setGrnSubProcessId(grnMaster.getGrnSubProcessId());
                     gcde.setBookValue(materialDtl.getBookValue());         // Set book value
                     gcde.setDepriciationRate(materialDtl.getDepriciationRate()); // Set depreciation rate
@@ -308,8 +322,8 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
                 grnMaterialDtl.setQuantity(materialDtl.getAcceptedQuantity());
                 grnMaterialDtl.setGrnProcessId(grnMaster.getGrnProcessId());
                 grnMaterialDtl.setGrnSubProcessId(grnMaster.getGrnSubProcessId());
-                grnMaterialDtl.setIgpSubProcessId(Integer.parseInt(req.getIgpId().split("/")[1]));
-
+                // grnMaterialDtl.setIgpSubProcessId(Integer.parseInt(req.getIgpId().split("/")[1]));
+                grnMaterialDtl.setIgpSubProcessId(extractSubProcessId(req.getIgpId()));
 
 
                 // Copy financial values from existing OHQ if available
@@ -363,6 +377,14 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
         return "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnSubProcessId();
     }
 
+private String extractProcessId(String processNo) {
+    int lastSlash = processNo.lastIndexOf("/");
+    return processNo.substring(3, lastSlash);
+}
+
+private int extractSubProcessId(String processNo) {
+    return Integer.parseInt(processNo.substring(processNo.lastIndexOf("/") + 1));
+}
 
     private void updateAssetAndOhq(GrnMaterialDtlDto materialDtl, String custodianId, String grnNumber) {
         System.out.println("UPDATE CALLED");
@@ -424,15 +446,28 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
 
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        //     throw new InvalidInputException(new ErrorDetails(
+        //             AppConstant.USER_INVALID_INPUT,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Invalid process ID"));
+        // }
+
+         Integer grnSubProcessId ;
+        if (3 == processNoSplit.length ){
+             grnSubProcessId = Integer.parseInt(processNoSplit[2]);
+        }else if(2 == processNoSplit.length) {
+             grnSubProcessId = Integer.parseInt(processNoSplit[1]);
+        }else {
             throw new InvalidInputException(new ErrorDetails(
-                    AppConstant.USER_INVALID_INPUT,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Invalid process ID"));
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Invalid process ID"));
         }
 
-        Integer grnSubProcessId = Integer.parseInt(processNoSplit[1]);
+        // Integer grnSubProcessId = Integer.parseInt(processNoSplit[1]);
 
         GrnMasterEntity grnMaster = grnmr.findById(grnSubProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -539,15 +574,16 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
 
     private void updateGrnStatusAndRemarks(GiApprovalDto req) {
         String[] processNoSplit = req.getProcessNo().split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+         if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION,
                     "Invalid process number format"));
         }
-
-        Integer grnSubProcessId = Integer.parseInt(processNoSplit[1]);
+        Integer grnSubProcessId = extractSubProcessId(req.getProcessNo());
+        // Integer grnSubProcessId = Integer.parseInt(processNoSplit[1]);
         GrnMasterEntity grnMaster = grnmr.findById(grnSubProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,
@@ -559,7 +595,8 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
         grnmr.save(grnMaster);
 
         GrnWorkflowStatus history = new GrnWorkflowStatus();
-        history.setProcessId(processNoSplit[0]);
+        // history.setProcessId(processNoSplit[0]);
+        history.setProcessId("INV" + extractProcessId(req.getProcessNo()));
         history.setSubProcessId(grnSubProcessId);
         history.setAction(req.getStatus());
         history.setRemarks(req.getRemarks());
@@ -1057,7 +1094,11 @@ public List<PoGrnInfoDto> getDistinctGrnProcessIdsForGIAndApproved() {
 
         if (grnProcessId != null && grnProcessId.contains("/")) {
             String[] processNoSplit = grnProcessId.split("/");
-            subProcessId = Integer.parseInt(processNoSplit[1]);
+            if (2 == processNoSplit.length){
+            subProcessId = Integer.parseInt(processNoSplit[1]);}
+            else{
+                subProcessId = Integer.parseInt(processNoSplit[2]);
+            }
         }
 
         System.out.println("Sub Process ID: " + subProcessId);
@@ -1109,66 +1150,135 @@ public List<PoGrnInfoDto> getDistinctGrnProcessIdsForGIAndApproved() {
             }).collect(Collectors.toList());
         }
         // Merge Material Data into DTO
-        dto.setMaterialsList(
-                grnMaterials.stream().map(grns -> {
-                    // Find matching GPRN record for the same asset/material if applicable
-                    GprnMaterialDtlEntity gprn = gprnMaterials.stream()
-                            .filter(g -> g.getSubProcessId().equals(gi.getGprnSubProcessId()))
-                            .findFirst().orElse(null);
+        // dto.setMaterialsList(
+        //         grnMaterials.stream().map(grns -> {
+        //             // Find matching GPRN record for the same asset/material if applicable
+        //             GprnMaterialDtlEntity gprn = gprnMaterials.stream()
+        //                     .filter(g -> g.getSubProcessId().equals(gi.getGprnSubProcessId()))
+        //                     .findFirst().orElse(null);
 
-                    paymentVoucherMaterials mat = new paymentVoucherMaterials();
-                    mat.setMaterialCode(gprn.getMaterialCode());
-                    mat.setMaterialDescription(gprn.getMaterialDesc());
-                    String grnNumber="INV"+grn.getGrnProcessId()+"/"+grn.getGrnSubProcessId();
-                    System.out.println("ufahkl"+ grnNumber);
-                   /* PaymentVoucher pv = paymentVoucherReposiotry.findByGrnNumber(grnNumber);
-                    if(pv!= null) {
+        //             paymentVoucherMaterials mat = new paymentVoucherMaterials();
+        //             mat.setMaterialCode(gprn.getMaterialCode());
+        //             mat.setMaterialDescription(gprn.getMaterialDesc());
+        //             String grnNumber="INV"+grn.getGrnProcessId()+"/"+grn.getGrnSubProcessId();
+        //             System.out.println("ufahkl"+ grnNumber);
+        //            /* PaymentVoucher pv = paymentVoucherReposiotry.findByGrnNumber(grnNumber);
+        //             if(pv!= null) {
 
-                        PaymentVoucherMaterials m = paymentVoucherMaterialsRepository
-                                .findByMaterialCodeAndPaymentVoucherId(gprn.getMaterialCode(), pv.getId());
-                        BigDecimal finalQuantity = (m != null && m.getQuantity() != null)
-                                ? grns.getQuantity().subtract(m.getQuantity())
-                                : grns.getQuantity();
-                        mat.setQuantity(finalQuantity);
-                    }else{
-                        mat.setQuantity(grns.getQuantity());
-                    }*/
-                    //  String grnNumber = "INV" + grn.getGrnProcessId() + "/" + grn.getGrnSubProcessId();
-                    System.out.println("GRN Number: " + grnNumber);
-
-
-                  //  BigDecimal totalReceivedQty = paymentVoucherMaterialsRepository
-                           // .getTotalReceivedQuantity(grnNumber, gprn.getMaterialCode());
-
-                  //  BigDecimal finalQuantity = grns.getQuantity().subtract(totalReceivedQty);
-                   // mat.setQuantity(finalQuantity);
+        //                 PaymentVoucherMaterials m = paymentVoucherMaterialsRepository
+        //                         .findByMaterialCodeAndPaymentVoucherId(gprn.getMaterialCode(), pv.getId());
+        //                 BigDecimal finalQuantity = (m != null && m.getQuantity() != null)
+        //                         ? grns.getQuantity().subtract(m.getQuantity())
+        //                         : grns.getQuantity();
+        //                 mat.setQuantity(finalQuantity);
+        //             }else{
+        //                 mat.setQuantity(grns.getQuantity());
+        //             }*/
+        //             //  String grnNumber = "INV" + grn.getGrnProcessId() + "/" + grn.getGrnSubProcessId();
+        //             System.out.println("GRN Number: " + grnNumber);
 
 
-                    BigDecimal gst = purchaseOrderAttributesRepo
-                            .findGstByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
-                    System.out.println("GST: " + gst);
-                    BigDecimal exchangeRate = purchaseOrderAttributesRepo
-                            .findExchangeRateByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
+        //           //  BigDecimal totalReceivedQty = paymentVoucherMaterialsRepository
+        //                    // .getTotalReceivedQuantity(grnNumber, gprn.getMaterialCode());
 
-                    String currency = purchaseOrderAttributesRepo
-                            .findCurrencyByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
-
-                    if (gprn != null) {
-                        mat.setUom(gprn.getUomId());
-                        mat.setUnitPrice(gprn.getUnitPrice());
-                        mat.setCurrency(currency);
-                        mat.setExchangeRate(exchangeRate != null ? exchangeRate : BigDecimal.ONE);
-                        mat.setGst(gst);
-                        mat.setQuantity(grns.getQuantity());
-                        BigDecimal amount = grns.getQuantity().multiply(gprn.getUnitPrice());
-                        mat.setAmount(amount);
-                    }
-                    return mat;
-                }).collect(Collectors.toList())
+        //           //  BigDecimal finalQuantity = grns.getQuantity().subtract(totalReceivedQty);
+        //            // mat.setQuantity(finalQuantity);
 
 
+        //             BigDecimal gst = purchaseOrderAttributesRepo
+        //                     .findGstByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
+        //             System.out.println("GST: " + gst);
+        //             BigDecimal exchangeRate = purchaseOrderAttributesRepo
+        //                     .findExchangeRateByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
 
-        );
+        //             String currency = purchaseOrderAttributesRepo
+        //                     .findCurrencyByMaterialCodeAndPoId(gprn.getMaterialCode(), gprnMaster.getPoId());
+
+        //             if (gprn != null) {
+        //                 mat.setUom(gprn.getUomId());
+        //                 mat.setUnitPrice(gprn.getUnitPrice());
+        //                 mat.setCurrency(currency);
+        //                 mat.setExchangeRate(exchangeRate != null ? exchangeRate : BigDecimal.ONE);
+        //                 mat.setGst(gst);
+        //                 mat.setQuantity(grns.getQuantity());
+        //                 BigDecimal amount = grns.getQuantity().multiply(gprn.getUnitPrice());
+        //                 mat.setAmount(amount);
+        //             }
+        //             return mat;
+        //         }).collect(Collectors.toList())
+
+
+
+        // );
+        // ── STEP 1: Resolve materialCode for each GRN row via AssetMaster
+//    Group GRN rows by materialCode, summing quantities
+Map<String, BigDecimal> qtyByMaterialCode = new LinkedHashMap<>();
+
+for (GrnMaterialDtlEntity grns : grnMaterials) {
+    String materialCode = null;
+
+    if (grns.getAssetId() != null) {
+        // Look up materialCode from AssetMaster
+        AssetMasterEntity asset = amr.findById(grns.getAssetId()).orElse(null);
+        if (asset != null) {
+            materialCode = asset.getMaterialCode(); // confirm this field name in AssetMasterEntity
+        }
+    }
+
+    // Fallback: try to match from GPRN by subProcessId (consumable path)
+    if (materialCode == null) {
+        GprnMaterialDtlEntity fallbackGprn = gprnMaterials.stream()
+                .filter(g -> g.getSubProcessId().equals(gi.getGprnSubProcessId()))
+                .findFirst().orElse(null);
+        if (fallbackGprn != null) {
+            materialCode = fallbackGprn.getMaterialCode();
+        }
+    }
+
+    if (materialCode == null) continue;
+
+    // Sum quantities per materialCode
+    qtyByMaterialCode.merge(materialCode, 
+        grns.getQuantity() != null ? grns.getQuantity() : BigDecimal.ZERO, 
+        BigDecimal::add);
+}
+
+// ── STEP 2: Build one paymentVoucherMaterials line per unique materialCode
+List<paymentVoucherMaterials> mergedMaterials = new ArrayList<>();
+
+for (Map.Entry<String, BigDecimal> entry : qtyByMaterialCode.entrySet()) {
+    String materialCode = entry.getKey();
+    BigDecimal totalQty = entry.getValue();
+
+    // Find matching GPRN material for description, unit price, uom
+    GprnMaterialDtlEntity gprn = gprnMaterials.stream()
+            .filter(g -> materialCode.equals(g.getMaterialCode()))
+            .findFirst().orElse(null);
+
+    if (gprn == null) continue;
+
+    BigDecimal gst = purchaseOrderAttributesRepo
+            .findGstByMaterialCodeAndPoId(materialCode, gprnMaster.getPoId());
+    BigDecimal exchangeRate = purchaseOrderAttributesRepo
+            .findExchangeRateByMaterialCodeAndPoId(materialCode, gprnMaster.getPoId());
+    String currency = purchaseOrderAttributesRepo
+            .findCurrencyByMaterialCodeAndPoId(materialCode, gprnMaster.getPoId());
+
+    paymentVoucherMaterials mat = new paymentVoucherMaterials();
+    mat.setMaterialCode(materialCode);
+    mat.setMaterialDescription(gprn.getMaterialDesc());
+    mat.setUom(gprn.getUomId());
+    mat.setUnitPrice(gprn.getUnitPrice());
+    mat.setCurrency(currency);
+    mat.setExchangeRate(exchangeRate != null ? exchangeRate : BigDecimal.ONE);
+    mat.setGst(gst);
+    mat.setQuantity(totalQty);
+    mat.setAmount(totalQty.multiply(gprn.getUnitPrice()));
+
+    mergedMaterials.add(mat);
+}
+
+dto.setMaterialsList(mergedMaterials);
 
 
         BigDecimal totalAmount = dto.getMaterialsList().stream()

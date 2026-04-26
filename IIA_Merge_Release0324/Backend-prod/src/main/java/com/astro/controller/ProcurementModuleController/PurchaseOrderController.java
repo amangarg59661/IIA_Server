@@ -54,9 +54,9 @@ public class PurchaseOrderController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(createdPO), HttpStatus.OK);
     }
 
-    @PutMapping("/{poId}")
+    @PutMapping
     public ResponseEntity<Object> updatePurchaseOrder(
-            @PathVariable String poId,
+            @RequestParam String poId,
             @RequestBody @Valid PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
         PurchaseOrderResponseDTO updatedPO = poService.updatePurchaseOrder(poId, purchaseOrderRequestDTO);
 
@@ -80,24 +80,30 @@ public class PurchaseOrderController {
 
 
     // Get a PO by ID
-    @GetMapping("/{poId}")
-    public ResponseEntity<Object> getPurchaseOrderById(@PathVariable String poId)  {
+    @GetMapping("/byId")
+    public ResponseEntity<Object> getPurchaseOrderById(@RequestParam String poId)  {
         poWithTenderAndIndentResponseDTO po = poService.getPurchaseOrderById(poId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(po), HttpStatus.OK);
     }
 
-    @GetMapping("/base64Files/{poId}")
-    public ResponseEntity<Object> getPurchaseOrderByIdWithBase64Files(@PathVariable String poId) throws IOException {
+    @GetMapping("/base64Files")
+    public ResponseEntity<Object> getPurchaseOrderByIdWithBase64Files(@RequestParam String poId) throws IOException {
         PoWithTenderAndIndentBase64FilesDto po = poService.getPurchaseOrderBase64FilesById(poId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(po), HttpStatus.OK);
     }
 
     // Delete a PO by ID
-    @DeleteMapping("/{poId}")
-    public ResponseEntity<String> deletePurchaseOrder(@PathVariable String poId) {
+    @DeleteMapping
+        public ResponseEntity<String> deletePurchaseOrder(@RequestParam String poId) {
         poService.deletePurchaseOrder(poId);
         return ResponseEntity.ok("Purchase Order deleted successfully."+" " +poId);
     }
+
+    @GetMapping("/version-history")
+public ResponseEntity<Object> getPoVersionHistory(@RequestParam String poId) {
+    List<PurchaseOrderResponseDTO> history = poService.getPoVersionHistory(poId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+}
 
     @GetMapping("/search")
     public ResponseEntity<Object> searchPoIds(

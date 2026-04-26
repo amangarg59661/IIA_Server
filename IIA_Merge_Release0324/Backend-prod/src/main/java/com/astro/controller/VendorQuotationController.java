@@ -28,18 +28,18 @@ public class VendorQuotationController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(vq), HttpStatus.OK);
     }
 
-    @GetMapping("/{tenderId}")
-    public ResponseEntity<Object> getVendorQuotationByTenderId(@PathVariable String tenderId,@RequestParam String userRole) {
+    @GetMapping
+    public ResponseEntity<Object> getVendorQuotationByTenderId(@RequestParam String tenderId,@RequestParam String userRole) {
         List<VendorQuotationAgainstTenderDto> responseDTO = vqService.getQuotationsByTenderId(tenderId, userRole);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
-    @GetMapping("/getAllVendorQuotations/{tenderId}")
-    public ResponseEntity<Object> getVendorAllQuotationsByTenderId(@PathVariable String tenderId) {
+    @GetMapping("/getAllVendorQuotations")
+    public ResponseEntity<Object> getVendorAllQuotationsByTenderId(@RequestParam String tenderId) {
         VendorQuotationAcceptedAndRejectedDataDto responseDTO = vqService.getAllVendorQuotationsByTenderId(tenderId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
-    @GetMapping("NotSubmitVendors/{tenderId}")
-    public ResponseEntity<Object> getVendorNotSubmittedQuotationByTenderId(@PathVariable String tenderId) {
+    @GetMapping("NotSubmitVendors")
+    public ResponseEntity<Object> getVendorNotSubmittedQuotationByTenderId(@RequestParam String tenderId) {
         List<String> responseDTO = vqService.getVendorsWhoDidNotSubmitQuotation(tenderId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
@@ -50,13 +50,14 @@ public class VendorQuotationController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
 
-    @GetMapping("vendorHistory/{tenderId}/{vendorId}")
-    public ResponseEntity<Object> getVendorHistory(@PathVariable String tenderId,@PathVariable String vendorId) {
+    @GetMapping("vendorHistory")
+    public ResponseEntity<Object> getVendorHistory(@RequestParam String tenderId,@RequestParam String vendorId) {
         List<QuotationViewHistoryDto> responseDTO = vqService.getVendorHistory(tenderId,vendorId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
-    @GetMapping("tenderEvaluationHistory/{tenderId}/{vendorId}")
-    public ResponseEntity<Object> getTenderEvaluationHistory(@PathVariable String tenderId,@PathVariable String vendorId) {
+    @GetMapping("tenderEvaluationHistory")
+    public ResponseEntity<Object> getTenderEvaluationHistory(@RequestParam String tenderId,@RequestParam
+     String vendorId) {
         List<TenderEvaluationHistory> responseDTO = vqService.getFullQuotationHistory(tenderId,vendorId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
@@ -124,24 +125,24 @@ public class VendorQuotationController {
         );
     }
 
-    @GetMapping("/completed-vendors/{tenderId}")
-    public ResponseEntity<Object> getVendorsWithCompletedStatus(@PathVariable String tenderId) {
+    @GetMapping("/completed-vendors")
+    public ResponseEntity<Object> getVendorsWithCompletedStatus(@RequestParam String tenderId) {
         List<String> vendorIds = vqService.getVendorsWithCompletedQuotation(tenderId);
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(vendorIds),
                 HttpStatus.OK
         );
     }
-    @GetMapping("/all-vendors/Status/{tenderId}")
-    public ResponseEntity<Object> getAllVendorsStatusOfTender(@PathVariable String tenderId) {
+    @GetMapping("/all-vendors/Status")
+    public ResponseEntity<Object> getAllVendorsStatusOfTender(@RequestParam String tenderId) {
         List<AllVendorStatus> vendor = vqService.getAllVendorStatusOnTenderid(tenderId);
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(vendor),
                 HttpStatus.OK
         );
     }
-    @GetMapping("/all-gem-vendors/Status/{tenderId}")
-    public ResponseEntity<Object> getAllGemVendorsStatusOfTender(@PathVariable String tenderId) {
+    @GetMapping("/all-gem-vendors/Status")
+    public ResponseEntity<Object> getAllGemVendorsStatusOfTender(@RequestParam String tenderId) {
         List<AllVendorStatus> vendor = vqService.getAllVendorStatusOnTenderidsForGem(tenderId);
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(vendor),
@@ -149,8 +150,8 @@ public class VendorQuotationController {
         );
     }
 
-    @GetMapping("/completed-vendorNames/{tenderId}")
-    public ResponseEntity<Object> getVendorsNamesWithCompletedStatus(@PathVariable String tenderId) {
+    @GetMapping("/completed-vendorNames")
+    public ResponseEntity<Object> getVendorsNamesWithCompletedStatus(@RequestParam String tenderId) {
         List<CompletedVendorsDto> vendorIds = vqService.getVendorsNamesWithCompletedQuotation(tenderId);
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(vendorIds),

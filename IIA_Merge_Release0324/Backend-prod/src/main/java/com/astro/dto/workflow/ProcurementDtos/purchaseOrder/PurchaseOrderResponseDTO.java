@@ -21,6 +21,9 @@ public class PurchaseOrderResponseDTO {
     private String incoTerms;
     private String paymentTerms;
     private String vendorName;
+    private Boolean isActive;
+private String parentPoId;
+private Integer poVersion;
     private String vendorAddress;
     private String applicablePbgToBeSubmitted;
     private String transporterAndFreightForWarderDetails;

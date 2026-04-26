@@ -49,10 +49,16 @@ public class ServiceOrderController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
 
-    @PutMapping("/{soId}")
-    public ResponseEntity<Object> updateServiceOrder(@PathVariable String soId,
+    @PutMapping
+    public ResponseEntity<Object> updateServiceOrder(@RequestParam String soId,
                                                                   @RequestBody ServiceOrderRequestDTO requestDTO) {
         ServiceOrderResponseDTO responseDTO = serviceOrder.updateServiceOrder(soId, requestDTO);
+          // Re-initiate workflow for new version
+    workflowService.initiateWorkflow(
+            responseDTO.getSoId(),   // new versioned ID e.g. SO1001/2
+            "SO Workflow",
+            requestDTO.getCreatedBy()
+    );
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
     @GetMapping
@@ -61,17 +67,22 @@ public class ServiceOrderController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTOList), HttpStatus.OK);
     }
 
-    @GetMapping("/{soId}")
-    public ResponseEntity<Object> getServiceOrderById(@PathVariable String soId) {
+    @GetMapping("/byId")
+    public ResponseEntity<Object> getServiceOrderById(@RequestParam String soId) {
         soWithTenderAndIndentResponseDTO responseDTO = serviceOrder.getServiceOrderById(soId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
 
-    @DeleteMapping("/{soId}")
-    public ResponseEntity<String> deleteServiceOrder(@PathVariable String soId) {
+    @DeleteMapping
+    public ResponseEntity<String> deleteServiceOrder(@RequestParam String soId) {
         serviceOrder.deleteServiceOrder(soId);
         return ResponseEntity.ok("Service Order deleted successfully. Id:"+" " +soId);
     }
+    @GetMapping("/version-history")
+public ResponseEntity<Object> getSoVersionHistory(@RequestParam String soId) {
+    List<ServiceOrderResponseDTO> history = serviceOrder.getSoVersionHistory(soId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+}
 
 
 }

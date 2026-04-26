@@ -100,15 +100,29 @@ public class GrvServiceImpl implements GrvService {
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
         
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        //     throw new InvalidInputException(new ErrorDetails(
+        //             AppConstant.USER_INVALID_INPUT,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Invalid process ID"));
+        // }
+
+                Integer grvSubProcessId ;
+
+        if (3 == processNoSplit.length ){
+             grvSubProcessId = Integer.parseInt(processNoSplit[2]);
+        }else if(2 == processNoSplit.length) {
+             grvSubProcessId = Integer.parseInt(processNoSplit[1]);
+        }else {
             throw new InvalidInputException(new ErrorDetails(
-                    AppConstant.USER_INVALID_INPUT,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Invalid process ID"));
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Invalid process ID"));
         }
 
-        Integer grvSubProcessId = Integer.parseInt(processNoSplit[1]);
+        // Integer grvSubProcessId = Integer.parseInt(processNoSplit[1]);
 
         GrvMasterEntity grvMaster = grvMasterRepository.findById(grvSubProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(

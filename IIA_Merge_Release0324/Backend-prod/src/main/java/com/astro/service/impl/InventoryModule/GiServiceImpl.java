@@ -1082,13 +1082,20 @@ public class GiServiceImpl implements GiService {
     public GiServiceImpl(@Value("${filePath}") String bp) {
         this.basePath = bp + "/INV";
     }
+private String extractProcessId(String processNo) {
+    int lastSlash = processNo.lastIndexOf("/");
+    return processNo.substring(3, lastSlash);
+}
 
+private int extractSubProcessId(String processNo) {
+    return Integer.parseInt(processNo.substring(processNo.lastIndexOf("/") + 1));
+}
     @Override
     @Transactional
     public String saveGi(SaveGiDto req) {
         gprnService.validateGprnSubProcessId(req.getGprnNo());
-        GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(
-        Integer.parseInt(req.getGprnNo().split("/")[1]));
+       Integer gprn = extractSubProcessId(req.getGprnNo());
+        GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(gprn);
 if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
     throw new BusinessException(new ErrorDetails(
             AppConstant.ERROR_CODE_RESOURCE,
@@ -1102,8 +1109,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
         GiMasterEntity gime = new GiMasterEntity();
         gime.setCommissioningDate(CommonUtils.convertStringToDateObject(req.getCommissioningDate()));
         gime.setInstallationDate(CommonUtils.convertStringToDateObject(req.getCommissioningDate()));
-        gime.setGprnProcessId(req.getGprnNo().split("/")[0].substring(3));
-        gime.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+        gime.setGprnProcessId(extractProcessId(req.getGprnNo()));
+        gime.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+        // gime.setGprnProcessId(req.getGprnNo().split("/")[0].substring(3));
+        // gime.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
         gime.setCreateDate(LocalDateTime.now());
         gime.setCreatedBy(req.getCreatedBy());
         gime.setLocationId(req.getLocationId());
@@ -1122,7 +1131,9 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
 
             if (gmdd.getCategory().equalsIgnoreCase("consumable")) {
                 Optional<GoodsInspectionConsumableDetailEntity> gicdeOpt = gicdr.findByGprnSubProcessIdAndMaterialCode(
-                        Integer.parseInt(req.getGprnNo().split("/")[1]), gmdd.getMaterialCode());
+                        extractSubProcessId(req.getGprnNo())
+                        // Integer.parseInt(req.getGprnNo().split("/")[1])
+                        , gmdd.getMaterialCode());
 
                 if (gicdeOpt.isPresent()) {
                     errorMessage.append("Inspection already done for the provided GPRN No. " + req.getGprnNo()
@@ -1142,9 +1153,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                 mapper.map(gmdd, gicde);
 
                 gicde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                gicde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                gicde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
-
+                // gicde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+                // gicde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                gicde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+               gicde.setGprnProcessId(extractProcessId(req.getGprnNo()));
                 try {
                     String instlRepFileName = CommonUtils.saveBase64Image(gmdd.getInstallationReportBase64(), basePath);
                     gicde.setInstallationReportFilename(instlRepFileName);
@@ -1156,7 +1168,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                 gicdeList.add(gicde);
             } else {
                 Optional<GiMaterialDtlEntity> gimdeOpt = gimdr.findByGprnSubProcessIdAndMaterialCode(
-                        Integer.parseInt(req.getGprnNo().split("/")[1]), gmdd.getMaterialCode());
+                        
+                            extractSubProcessId(req.getGprnNo())
+                            // req.getGprnNo().split("/")[1])
+                        , gmdd.getMaterialCode());
 
                 if (gimdeOpt.isPresent()) {
                     errorMessage.append("Inspection already done for the provided GPRN No. " + req.getGprnNo()
@@ -1199,8 +1214,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                         gimde.setAssetId(asset.getAssetId());
                         gimde.setAssetCode(asset.getAssetCode());
                         gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                        gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                        gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                        // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+                        // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                        gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+                        
                         gimde.setInstallationReportFileName(instlRepFileName);
                         gimdeList.add(gimde);
                     }
@@ -1209,8 +1226,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                     GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
                     mapper.map(gmdd, gimde);
                     gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                    gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                    gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                    gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+                        gimde.setGprnProcessId(extractProcessId(req.getGprnNo()));
+                    // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+                    // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
                     gimde.setInstallationReportFileName(instlRepFileName);
                     gimdeList.add(gimde);
                 }
@@ -1245,15 +1264,17 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
 
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION,
                     "Invalid process ID"));
         }
-
-        Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+Integer inspectionId = extractSubProcessId(processNo);
+System.out.println("inspection ID " + inspectionId) ;
+        // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
         GiMasterEntity gime = gimr.findById(inspectionId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,
@@ -1287,11 +1308,12 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
 
                     gmdd.setAssetCode(gimde.getAssetCode());
                     gmdd.setInstallationReportFileName(gimde.getInstallationReportFileName());
+                    if (gimde.getAssetId() != null) {
                     Optional<AssetMasterEntity> aeOpt = amr.findById(gimde.getAssetId());
                     if (aeOpt.isPresent()) {
                         gmdd.setAssetDesc(aeOpt.get().getAssetDesc());
                         gmdd.setUomId(aeOpt.get().getUomId());
-                    }
+                    }}
 
                     try {
                         String imageBase64 = CommonUtils.convertImageToBase64(gimde.getInstallationReportFileName(),
@@ -1383,7 +1405,8 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
     @Override
     public void validateGiIsApproved(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -1392,9 +1415,10 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
         }
 
         // Integer processId = Integer.parseInt(processNoSplit[0].substring(3));
-        String processId = processNoSplit[0].substring(3);
-        Integer subProcessId = Integer.parseInt(processNoSplit[1]);
-
+        // String processId = processNoSplit[0].substring(3);
+        // Integer subProcessId = Integer.parseInt(processNoSplit[1]);
+        String processId = extractProcessId(processNo);
+        Integer subProcessId = extractSubProcessId(processNo);
         // GiMasterEntity giMaster =
         // gimr.findByGprnProcessIdAndInspectionSubProcessId(processId, subProcessId)
         GiMasterEntity giMaster = gimr.findByGprnProcessIdAndInspectionSubProcessId(processId, subProcessId)
@@ -1417,15 +1441,16 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
     @Override
     public void validateGiSubProcessId(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION,
                     "Invalid GI No."));
         }
-
-        Integer subProcessId = Integer.parseInt(processNoSplit[1]);
+        Integer subProcessId = extractSubProcessId(processNo);
+        // Integer subProcessId = Integer.parseInt(processNoSplit[1]);
         if (!gimr.existsById(subProcessId)) {
             throw new BusinessException(new ErrorDetails(
                     AppConstant.ERROR_CODE_RESOURCE,
@@ -1502,8 +1527,8 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
     public String giMailSender(String processNumber) {
         try {
             String[] parts = processNumber.split("/");
-            Integer inspectionSubProcessId = Integer.parseInt(parts[1]);
-
+            // Integer inspectionSubProcessId = Integer.parseInt(parts[1]);
+            Integer inspectionSubProcessId = extractSubProcessId(processNumber);
 
             GiMasterEntity giMaster = gimr.findById(inspectionSubProcessId)
                     .orElseThrow(() -> new BusinessException(new ErrorDetails(
@@ -1587,10 +1612,20 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
 */
 private void updatePoBasedonRejectionType(GiApprovalDto req) {
 
-    String[] processNoSplit = req.getProcessNo().split("/");
-    String poId = "PO" + processNoSplit[0].substring(3);
-    Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+    // String[] processNoSplit = req.getProcessNo().split("/");
+    // String poId = "PO" + processNoSplit[0].substring(3);
+    // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+    Integer inspectionId = extractSubProcessId(req.getProcessNo());
+    // Derive poId via GI master → GPRN master
+    GiMasterEntity giMaster = gimr.findById(inspectionId)
+        .orElseThrow(() -> new BusinessException(new ErrorDetails(
+            AppConstant.ERROR_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_CODE_RESOURCE,
+            AppConstant.ERROR_TYPE_RESOURCE,
+            "GI not found")));
 
+    GprnMasterEntity gprnMaster = gprnMasterRepository.findBySubProcessId(giMaster.getGprnSubProcessId());
+    String poId = gprnMaster.getPoId();
     List<GiMaterialDtlEntity> gimdeList = gimdr.findByInspectionSubProcessId(inspectionId);
     List<GoodsInspectionConsumableDetailEntity> gicdeList = gicdr.findByInspectionSubProcessId(inspectionId);
 
@@ -1668,15 +1703,16 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
 
     private void updateGiStatusAndRemarks(GiApprovalDto req) {
         String[] processNoSplit = req.getProcessNo().split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION,
                     "Invalid process number format"));
         }
-
-        Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+        Integer inspectionId = extractSubProcessId(req.getProcessNo());
+        // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
         GiMasterEntity giMaster = gimr.findById(inspectionId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,
@@ -1712,7 +1748,8 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
     @Transactional
     public String updateGi(SaveGiDto req) {
         String[] processNoSplit = req.getGprnNo().split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {    
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -1721,7 +1758,9 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
         }
 
         GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(
-        Integer.parseInt(processNoSplit[1]));
+        extractSubProcessId(req.getGprnNo())
+        // Integer.parseInt(processNoSplit[1])
+        );
 if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
     throw new BusinessException(new ErrorDetails(
             AppConstant.ERROR_CODE_RESOURCE,
@@ -1729,8 +1768,8 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
             AppConstant.ERROR_TYPE_RESOURCE,
             "You are not authorised to update a Goods Inspection for this GPRN."));
 }
-
-        Integer subProcessId = Integer.parseInt(processNoSplit[1]);
+Integer subProcessId = extractSubProcessId(req.getGprnNo());
+        // Integer subProcessId = Integer.parseInt(processNoSplit[1]);
         GiMasterEntity gime = gimr.findByGprnSubProcessId(subProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,

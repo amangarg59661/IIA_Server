@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
 import java.awt.print.Pageable;
 import java.time.LocalDate;
@@ -409,7 +410,22 @@ LEFT JOIN p.purchaseOrderAttributes a
 WHERE p.poId IN :poIds
 """)
     List<PaymentVoucherPoSearchDto> findPoDetailsDtoByPoIds(@Param("poIds") List<String> poIds);
+        
 
+        // All versions of a PO family
+@Query("SELECT p FROM PurchaseOrder p WHERE (p.poId = :baseId OR p.poId LIKE CONCAT(:baseId, '/%')) ORDER BY p.poVersion DESC")
+List<PurchaseOrder> findAllVersionsByBaseId(@Param("baseId") String baseId);
+
+// Active version
+@Query("SELECT p FROM PurchaseOrder p WHERE (p.poId = :baseId OR p.poId LIKE CONCAT(:baseId, '/%')) AND p.isActive = true")
+Optional<PurchaseOrder> findActiveVersionByBaseId(@Param("baseId") String baseId);
+
+// Update existing search queries to filter isActive = true:
+List<SearchPOIdDto> findByPoIdContainingIgnoreCaseAndIsActiveTrue(String poId);
+
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.purchaseOrder.SearchPOIdDto(p.poId) " +
+        "FROM PurchaseOrder p WHERE p.createdDate BETWEEN :start AND :end AND p.isActive = true")
+List<SearchPOIdDto> findByCreatedDateBetweenAndIsActive(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
 
 

@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import java.util.Optional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -264,7 +264,13 @@ public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, Stri
 
     @Query("SELECT so FROM ServiceOrder so WHERE so.endDateAmc <= :alertDate")
     List<ServiceOrder> findExpiringServiceOrders(@Param("alertDate") LocalDate alertDate);
+// All versions of an SO family
+@Query("SELECT s FROM ServiceOrder s WHERE (s.soId = :baseId OR s.soId LIKE CONCAT(:baseId, '/%')) ORDER BY s.soVersion DESC")
+List<ServiceOrder> findAllVersionsByBaseId(@Param("baseId") String baseId);
 
+// Active version
+@Query("SELECT s FROM ServiceOrder s WHERE (s.soId = :baseId OR s.soId LIKE CONCAT(:baseId, '/%')) AND s.isActive = true")
+Optional<ServiceOrder> findActiveVersionByBaseId(@Param("baseId") String baseId);
 
     //ServiceOrder getSoId(String soId);
 }

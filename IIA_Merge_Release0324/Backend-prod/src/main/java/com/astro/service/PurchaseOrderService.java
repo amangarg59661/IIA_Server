@@ -19,7 +19,8 @@ public interface PurchaseOrderService {
     public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO purchaseOrderRequestDTO);
 
 
-
+    List<PurchaseOrderResponseDTO> getPoVersionHistory(String poId);
+    
    public List<PurchaseOrderResponseDTO > getAllPurchaseOrders();
 
     public poWithTenderAndIndentResponseDTO getPurchaseOrderById(String poId) ;

@@ -54,7 +54,8 @@ public class TenderResponseDto {
     private String serialNumber;
     private String dateOfPurchase;
     private String uploadBuyBackFileNames;
-
+private Boolean isActive;
+private String parentTenderId;
     // TC_44: Tender Versioning
     private Integer tenderVersion;
 
