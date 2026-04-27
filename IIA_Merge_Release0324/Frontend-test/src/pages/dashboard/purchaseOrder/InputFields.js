@@ -129,7 +129,7 @@ export const PoDetails = [
     {
       heading: "Material Details",
       name: "materialDtlList",
-      colCnt: 6,
+      colCnt: 4,
       children: [
         {
           name: "materialCode",
@@ -142,6 +142,14 @@ export const PoDetails = [
         {
           name: "materialDescription",
           label: "Material Description",
+          type: "text",
+          disabled: true,
+          required: true,
+          span: 2
+        },
+        {
+          name: "uom",
+          label: "UOM",
           type: "text",
           disabled: true,
           required: true,
@@ -194,14 +202,14 @@ export const PoDetails = [
             name: "freightCharge",
             label: "Freight Charges",
             type: "text", 
-            span: 2
+            span: 3
         },
         {
             name: "inrEquivalent",
             label: "Equivalent INR",
             type: "text",
             disabled: true,
-            span: 2
+            span: 3
         }
 
       ]
