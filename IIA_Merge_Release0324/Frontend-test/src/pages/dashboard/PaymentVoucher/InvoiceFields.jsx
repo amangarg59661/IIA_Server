@@ -94,27 +94,32 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
         name: "vendorName",
         label: "Vendor Name",
         type: "text",
+        disabled: true,
       },
       {
         name: "vendorInvoiceNumber",
         label: "Vendor Invoice Number",
         type: "text",
+        disabled: true,
         required: true,
       },
       {
         name: "vendorInvoiceDate",
         label: "Vendor Invoice Date",
         type: "date",
+        disabled: true,
       },
       {
         name: "currency",
         label: "Currency",
         type: "text",
+        disabled: true,
         required: true,
       },
       {
         name: "exchangeRate",
         label: "Exchange Rate",
+        disabled: true,
         type: "text",
       },
      /* {
@@ -131,6 +136,7 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
         name: "totalAmount",
         label: "Total Amount Payable",
         type: "text",
+        disabled: true,
         span: 2,
       },
       
@@ -266,12 +272,14 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
           name: "quantity",
           label: "Quantity",
           type: "text",
+          disabled: true,
           required: true
         },
         {
           name: "rate",
           label: "Unit Rate",
           type: "text",
+          disabled: true,
           required: true
         },
         {
@@ -281,21 +289,24 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
           disabled: true,
           required: true
         },
-        {
-            name: "exchangeRate",
-            label: "Exchange Rate",
-            type: "text",
-            span: 2
-        },
+          // {
+          //     name: "exchangeRate",
+          //     label: "Exchange Rate",
+          //     type: "text",
+          //     disabled: true,
+          //     span: 2
+          // },
         {
             name: "gst",
             label: "GST (%)",
             type: "text",
+            disabled: true,
             required: true
         },  {
             name: "amount",
             label: "Amount",
             type: "text",
+            disabled: true,
             required: true
         },
       ]
