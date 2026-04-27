@@ -61,7 +61,7 @@ public class PurchaseOrderController {
         PurchaseOrderResponseDTO updatedPO = poService.updatePurchaseOrder(poId, purchaseOrderRequestDTO);
 
         // added by abhinav new line
-        String requestId = poId;
+        String requestId = updatedPO.getPoId();
         String workflowName = "PO Workflow";
         Integer userId = purchaseOrderRequestDTO.getCreatedBy();
 
