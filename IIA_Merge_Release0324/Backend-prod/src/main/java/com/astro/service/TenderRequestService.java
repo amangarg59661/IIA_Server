@@ -26,6 +26,7 @@ public interface TenderRequestService {
 
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluation();
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForGemTenderEvaluation();
+    public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
 
 
 

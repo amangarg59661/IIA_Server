@@ -5,6 +5,7 @@ import com.astro.constant.AppConstant;
 import com.astro.constant.WorkflowName; // added by abhinav
 import com.astro.dto.workflow.ApprovedIndentsDto;
 import com.astro.dto.workflow.ApprovedTenderDto;
+import java.util.Comparator;
 import com.astro.dto.workflow.ProcurementDtos.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.CancelIndentRequestDto;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCreationResponseDTO;
@@ -377,10 +378,15 @@ private String extractBaseTenderId(String tenderId) {
     int slashIdx = tenderId.indexOf('/');
     return slashIdx >= 0 ? tenderId.substring(0, slashIdx) : tenderId;
 }
-// @Override
-// public List<TenderResponseDto> getTenderVersionHistory(String tenderId) {
-// return ;
-// }
+@Override
+public List<TenderResponseDto> getTenderVersionHistory(String tenderId) {
+    String baseId = tenderId.split("/")[0];
+    return TRrepo.findAll().stream()
+        .filter(t -> t.getTenderId().equals(baseId) || t.getTenderId().startsWith(baseId + "/"))
+        .sorted(Comparator.comparingInt(t -> t.getTenderVersion() != null ? t.getTenderVersion() : 1))
+        .map(this::mapToResponseDTO)
+        .collect(Collectors.toList());
+}
 @Override
 public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto tenderRequestDto) {
 

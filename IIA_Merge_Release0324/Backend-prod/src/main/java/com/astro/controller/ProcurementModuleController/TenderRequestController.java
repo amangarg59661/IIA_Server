@@ -73,6 +73,11 @@ public class TenderRequestController {
     //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(updated), HttpStatus.OK);
     // }
     // With:
+    @GetMapping("/version-history")
+public ResponseEntity<Object> getTenderVersionHistory(@RequestParam String tenderId) {
+    List<TenderResponseDto> history = TRService.getTenderVersionHistory(tenderId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+}
 @PutMapping
 public ResponseEntity<Object> updateTenderRequest(@RequestParam String tenderId, @RequestBody TenderRequestDto tenderRequestDTO) {
     TenderResponseDto updated = TRService.updateTenderRequest(tenderId, tenderRequestDTO);
