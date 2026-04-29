@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Card, Form, Input, Select, DatePicker, message } from "antd";
+import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag } from "antd";
 import { SearchOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
@@ -57,6 +57,7 @@ const Tender = () => {
   const [searchDone, setSearchDone] = useState(false);
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
+const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 
   const [buyBackFields, setBuyBackFields] = useState([]);
 
@@ -1113,8 +1114,11 @@ console.log("uday"+formData.buyBack);
  const fetchVersionHistory = async (tid) => {
   try {
     const baseTid = (tid || formData.tenderId || "").split("/")[0];
-    const { data } = await axios.get(`/api/tender-requests/version-history{baseTid}`);
-    setVersionHistoryList(data?.responseData || []);
+    // const { data } = await axios.get(`/api/tender-requests/version-history{baseTid}`);
+    const { data } = await axios.get(`/api/tender-requests/version-history`, { params: { tenderId: baseTid } });
+    const list = data?.responseData || [];
+    setVersionHistoryList(list);
+     setSelectedVersionIdx(list.length - 1);
     setVersionHistoryOpen(true);
   } catch (error) {
     message.error("Could not load version history.");
@@ -1181,54 +1185,189 @@ console.log("uday"+formData.buyBack);
         title="Tender Submission Successful"
         processNo={generatedTenderId}
       />
-      {/* Version History Modal */}
-{versionHistoryOpen && (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center'
-  }}>
-    <div style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 600, maxHeight: '80vh', overflow: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h3 style={{ margin: 0 }}>Tender Version History</h3>
-        <Button onClick={() => setVersionHistoryOpen(false)}>Close</Button>
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ background: '#f0f0f0' }}>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Tender ID</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {versionHistoryList.map((v) => (
-            <tr key={v.tenderId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
-              <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>V{v.tenderVersion}</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                <Button type="link" onClick={() => { handleSearch(v.tenderId); setVersionHistoryOpen(false); }}>
-                  {v.tenderId}
-                </Button>
-              </td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
-              </td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                {v.isActive
-                  ? <span style={{ color: 'green' }}>● Active</span>
-                  : <span style={{ color: '#999' }}>○ Superseded</span>
-                }
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+      <Modal
+    open={versionHistoryOpen}
+    onCancel={() => setVersionHistoryOpen(false)}
+    title="Tender Version History"
+    footer={null}
+    width={900}
+    destroyOnClose
+>
+    {(() => {
+        const sorted = [...versionHistoryList].sort((a, b) => (a.tenderVersion || 0) - (b.tenderVersion || 0));
+        const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
+        const curr = sorted[selIdx];
+        const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
+
+        if (!curr) return <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>No versions found.</div>;
+
+        const HEADER_FIELDS = [
+            { key: 'titleOfTender',        label: 'Title' },
+            { key: 'modeOfProcurement',    label: 'Mode of Procurement' },
+            { key: 'bidType',              label: 'Bid Type' },
+            { key: 'openingDate',          label: 'Opening Date' },
+            { key: 'closingDate',          label: 'Closing Date' },
+            { key: 'lastDateOfSubmission', label: 'Last Date of Submission' },
+            { key: 'applicableTaxes',      label: 'Applicable Taxes' },
+            { key: 'incoTerms',            label: 'Inco Terms' },
+            { key: 'paymentTerms',         label: 'Payment Terms' },
+            { key: 'ldClause',             label: 'LD Clause' },
+            { key: 'projectName',          label: 'Project Name' },
+            { key: 'singleAndMultipleVendors', label: 'Vendor Type' },
+        ];
+
+        const headerDiffs = prev
+            ? HEADER_FIELDS.filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
+                .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
+            : [];
+
+        // Indent IDs diff
+        const prevIndents = prev?.indentIds || [];
+        const currIndents = curr.indentIds || [];
+        const addedIndents = currIndents.filter(id => !prevIndents.includes(id));
+        const removedIndents = prevIndents.filter(id => !currIndents.includes(id));
+        const indentsChanged = addedIndents.length > 0 || removedIndents.length > 0;
+
+        // Total value diff
+        const prevTotal = prev ? Number(prev.totalTenderValue || 0) : null;
+        const currTotal = Number(curr.totalTenderValue || 0);
+        const totalChanged = prev && prevTotal !== currTotal;
+
+        const totalChanges = headerDiffs.length + (indentsChanged ? 1 : 0) + (totalChanged ? 1 : 0);
+        const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+        const fmtVal = val => (val == null || val === '') ? '—' : String(val);
+
+        return (
+            <div style={{ display: 'flex', minHeight: '450px' }}>
+
+                {/* ── Left: version list ── */}
+                <div style={{ width: '190px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
+                    <div style={{ padding: '8px 12px', fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', borderBottom: '1px solid #f0f0f0' }}>
+                        VERSIONS
+                    </div>
+                    {sorted.map((v, idx) => {
+                        const isSel = idx === selIdx;
+                        return (
+                            <div key={v.tenderId} onClick={() => setSelectedVersionIdx(idx)} style={{
+                                padding: '10px 14px', cursor: 'pointer',
+                                borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
+                                background: isSel ? '#e6f7ff' : 'transparent',
+                                borderBottom: '1px solid #f5f5f5',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.tenderVersion}</span>
+                                    {v.isActive
+                                        ? <Tag color="green" style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
+                                        : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>{v.updatedBy || v.createdBy || '—'}</div>
+                                <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
+                                    {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString('en-IN') : '—'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* ── Right: diff panel ── */}
+                <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '520px' }}>
+
+                    {/* Comparison heading */}
+                    <div style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {prev ? (
+                            <>
+                                <span style={{ fontWeight: 600, color: '#888' }}>V{prev.tenderVersion}</span>
+                                <span style={{ color: '#ccc' }}>→</span>
+                                <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.tenderVersion}</span>
+                                {totalChanges === 0
+                                    ? <Tag>No changes</Tag>
+                                    : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>}
+                            </>
+                        ) : (
+                            <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.tenderVersion} — Initial Version</span>
+                        )}
+                        <Button type="link" size="small" style={{ marginLeft: 'auto', padding: 0 }}
+                            onClick={() => { handleSearch(curr.tenderId); setVersionHistoryOpen(false); }}>
+                            Load {curr.tenderId} ↗
+                        </Button>
+                    </div>
+
+                    {/* Initial version */}
+                    {!prev && (
+                        <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
+                            This is the first version. No previous version to compare against.
+                            <div style={{ marginTop: '12px' }}>
+                                {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
+                                    <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
+                                        <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
+                                        <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* No changes */}
+                    {prev && totalChanges === 0 && (
+                        <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
+                            No field-level changes detected compared to V{prev.tenderVersion}.
+                        </div>
+                    )}
+
+                    {/* Diff sections */}
+                    {prev && totalChanges > 0 && (
+                        <>
+                            {/* Total value */}
+                            {totalChanged && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>TOTAL VALUE</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px' }}>
+                                        <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total Tender Value</span>
+                                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtCurrency(prevTotal)}</span>
+                                        <span style={{ color: '#bbb' }}>→</span>
+                                        <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>{fmtCurrency(currTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Header fields */}
+                            {headerDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>GENERAL FIELDS</div>
+                                    {headerDiffs.map(f => (
+                                        <div key={f.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 14px', marginBottom: '4px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
+                                            <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>{f.label}</span>
+                                            <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(f.oldVal)}</span>
+                                            <span style={{ color: '#bbb' }}>→</span>
+                                            <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(f.newVal)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Indent IDs changed */}
+                            {indentsChanged && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>LINKED INDENTS</div>
+                                    {addedIndents.map(id => (
+                                        <div key={id} style={{ padding: '7px 14px', marginBottom: '4px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '4px', color: '#389e0d', fontSize: '13px' }}>
+                                            + {id}
+                                        </div>
+                                    ))}
+                                    {removedIndents.map(id => (
+                                        <div key={id} style={{ padding: '7px 14px', marginBottom: '4px', background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: '4px', color: '#cf1322', fontSize: '13px' }}>
+                                            − {id}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    })()}
+</Modal>
       <div style={{ display: "none" }}>
                 <TenderPrintFormat ref={printComponentRef} data={formData} />
       </div>

@@ -62,13 +62,14 @@ const assetFields = [
                 label: "Custodian Id",
                 type: "text",
                 span: 2,
-                // disabled: true,
+                disabled: true,
                 // required: true
             },
             {
                 name: "locatorId",
                 label: "Field Station",
                 type: "select",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -226,6 +227,7 @@ const assetFields = [
                 name: "locatorId",
                 label: "Locator",
                 type: "select",
+                disabled: true,
                 options: locatorLOV.length > 0
                     ? locatorLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
                     : locatorMaster,

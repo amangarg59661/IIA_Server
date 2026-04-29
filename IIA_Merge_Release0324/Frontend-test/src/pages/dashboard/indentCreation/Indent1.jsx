@@ -2138,7 +2138,7 @@
 
     // export default Indent1
 
-        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space } from 'antd'
+        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal } from 'antd'
         import React, { useEffect, useRef, useState } from 'react'
         import { useSelector, useDispatch } from 'react-redux'
         import { fetchMasters } from '../../../store/slice/masterSlice'
@@ -2439,16 +2439,19 @@
             };
     
             const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
-        const [versionHistoryList, setVersionHistoryList] = useState([]);
+const [versionHistoryList, setVersionHistoryList] = useState([]);
+const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
         const fetchVersionHistory = async (indentId) => {
-            try {
-                const { data } = await axios.get(`/api/indents/version-history`, {params:{indentId}});
-                setVersionHistoryList(data?.responseData || []);
-                setVersionHistoryOpen(true);
-            } catch (error) {
-                message.error("Could not load version history.");
-            }
-        };
+    try {
+        const { data } = await axios.get(`/api/indents/version-history`, {params:{indentId}});
+        const list = data?.responseData || [];
+        setVersionHistoryList(list);
+        setSelectedVersionIdx(list.length - 1); // default to latest version
+        setVersionHistoryOpen(true);
+    } catch (error) {
+        message.error("Could not load version history.");
+    }
+};
     
             // ✅ NEW: Fetch department for a given employee name
             const fetchDepartmentByName = async (employeeName) => {
@@ -4204,7 +4207,7 @@
                                     closable={false}
                                 />
                             )}  
-                            {/* {formData?.indentId && (
+                            {formData?.indentId && (
             <Button
                 icon={<HistoryOutlined />}
                 onClick={() => fetchVersionHistory(formData.indentId)}
@@ -4212,7 +4215,7 @@
             >
                 View Version History
             </Button>
-        )} */}
+        )}
                         </Space>
                     )}
     
@@ -4293,48 +4296,258 @@
                         requestedByName={userName}
                         onSuccess={handleCancellationSuccess}
                     />
-                    <CustomModal
-            isOpen={versionHistoryOpen}
-            setIsOpen={setVersionHistoryOpen}
-            title="Indent Version History"
-            footer={null}
-        >
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr style={{ background: '#f0f0f0' }}>
-                        <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
-                        <th style={{ padding: '8px', border: '1px solid #ddd' }}>Indent ID</th>
-                        <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
-                        <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
-                        <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {versionHistoryList.map((v) => (
-                        <tr key={v.indentId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
-                            <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                V{v.version}
-                            </td>
-                            <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                                <Button type="link" onClick={() => { handleSearch(v.indentId); setVersionHistoryOpen(false); }}>
-                                    {v.indentId}
-                                </Button>
-                            </td>
-                            <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
-                            <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
-                            </td>
-                            <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                                {v.isActive
-                                    ? <Tag color="green">Active</Tag>
-                                    : <Tag color="default">Superseded</Tag>
+                 <Modal
+    open={versionHistoryOpen}
+    onCancel={() => setVersionHistoryOpen(false)}
+    title="Indent Version History"
+    footer={null}
+    width={900}
+    destroyOnClose
+>
+    {(() => {
+        // Sort ASC so index 0 = V1, last index = latest
+        const sorted = [...versionHistoryList].sort((a, b) => (a.version || 0) - (b.version || 0));
+        const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
+        const curr = sorted[selIdx];
+        const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
+
+        if (!curr) return <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>No versions found.</div>;
+
+        // Fields to diff — header level
+        const HEADER_FIELDS = [
+            { key: 'indentorName',       label: 'Indentor' },
+            { key: 'modeOfProcurement',  label: 'Mode of Procurement' },
+            { key: 'projectName',        label: 'Project' },
+            { key: 'consignesLocation',  label: 'Consignee Location' },
+            { key: 'purpose',            label: 'Purpose' },
+            { key: 'justification',      label: 'Justification' },
+        ];
+
+        // Fields to diff — material line items
+        const MAT_FIELDS = [
+            { key: 'materialDescription', label: 'Description' },
+            { key: 'quantity',            label: 'Qty' },
+            { key: 'unitPrice',           label: 'Unit Price' },
+            { key: 'uom',                 label: 'UOM' },
+            { key: 'budgetCode',          label: 'Budget Code' },
+            { key: 'currency',            label: 'Currency' },
+        ];
+
+        // Fields to diff — job line items
+        const JOB_FIELDS = [
+            { key: 'jobDescription', label: 'Description' },
+            { key: 'quantity',       label: 'Qty' },
+            { key: 'estimatedPrice', label: 'Est. Price' },
+            { key: 'uom',            label: 'UOM' },
+            { key: 'budgetCode',     label: 'Budget Code' },
+        ];
+
+        const isJob = (curr.indentType || 'material').toLowerCase() === 'job';
+        const lineLabel = isJob ? 'Job' : 'Material';
+        const lineFields = isJob ? JOB_FIELDS : MAT_FIELDS;
+        const descKey = isJob ? 'jobDescription' : 'materialDescription';
+        const prevLines = isJob ? (prev?.jobDetails || []) : (prev?.materialDetails || []);
+        const currLines = isJob ? (curr.jobDetails || []) : (curr.materialDetails || []);
+
+        // Compute header diffs
+        const headerDiffs = prev
+            ? HEADER_FIELDS
+                .filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
+                .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
+            : [];
+
+        // Compute line item diffs (matched by position/index)
+        const lineDiffs = [];
+        const maxLen = Math.max(prevLines.length, currLines.length);
+        for (let i = 0; i < maxLen; i++) {
+            const p = prevLines[i];
+            const c = currLines[i];
+            if (!p) {
+                lineDiffs.push({ idx: i, type: 'added', item: c });
+            } else if (!c) {
+                lineDiffs.push({ idx: i, type: 'removed', item: p });
+            } else {
+                const changed = lineFields
+                    .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
+                    .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
+                if (changed.length) lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c[descKey] || `Item ${i + 1}` });
+            }
+        }
+
+        // Total value change
+        const prevTotal = prev != null ? Number(prev.totalPriceOfAllMaterials || 0) : null;
+        const currTotal = Number(curr.totalPriceOfAllMaterials || 0);
+        const totalChanged = prev && prevTotal !== currTotal;
+        const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
+
+        const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+        const fmtVal = val => (val == null || val === '') ? '—' : String(val);
+
+        return (
+            <div style={{ display: 'flex', minHeight: '450px' }}>
+
+                {/* ── Left: version selector ── */}
+                <div style={{ width: '190px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
+                    <div style={{ padding: '8px 12px', fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', borderBottom: '1px solid #f0f0f0' }}>
+                        VERSIONS
+                    </div>
+                    {sorted.map((v, idx) => {
+                        const isSel = idx === selIdx;
+                        return (
+                            <div
+                                key={v.indentId}
+                                onClick={() => setSelectedVersionIdx(idx)}
+                                style={{
+                                    padding: '10px 14px',
+                                    cursor: 'pointer',
+                                    borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
+                                    background: isSel ? '#e6f7ff' : 'transparent',
+                                    borderBottom: '1px solid #f5f5f5',
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.version}</span>
+                                    {v.isActive
+                                        ? <Tag color="green"  style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
+                                        : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>
+                                    }
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>{v.updatedBy || v.createdBy || '—'}</div>
+                                <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
+                                    {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString('en-IN') : '—'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* ── Right: diff panel ── */}
+                <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '520px' }}>
+
+                    {/* Comparison heading */}
+                    <div style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {prev ? (
+                            <>
+                                <span style={{ fontWeight: 600, color: '#888' }}>V{prev.version}</span>
+                                <span style={{ color: '#ccc' }}>→</span>
+                                <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.version}</span>
+                                {totalChanges === 0
+                                    ? <Tag>No changes</Tag>
+                                    : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>
                                 }
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </CustomModal>
+                            </>
+                        ) : (
+                            <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.version} — Initial Version</span>
+                        )}
+                        <Button
+                            type="link"
+                            size="small"
+                            style={{ marginLeft: 'auto', padding: 0 }}
+                            onClick={() => { handleSearch(curr.indentId); setVersionHistoryOpen(false); }}
+                        >
+                            Load {curr.indentId} ↗
+                        </Button>
+                    </div>
+
+                    {/* Initial version — no diff to show */}
+                    {!prev && (
+                        <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
+                            This is the first version. No previous version to compare against.
+                            <div style={{ marginTop: '12px' }}>
+                                {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
+                                    <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
+                                        <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
+                                        <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Has previous but nothing changed */}
+                    {prev && totalChanges === 0 && (
+                        <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
+                            No field-level changes detected compared to V{prev.version}.
+                        </div>
+                    )}
+
+                    {/* Diff sections */}
+                    {prev && totalChanges > 0 && (
+                        <>
+                            {/* Total value */}
+                            {totalChanged && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>TOTAL VALUE</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px' }}>
+                                        <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total Value</span>
+                                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtCurrency(prevTotal)}</span>
+                                        <span style={{ color: '#bbb' }}>→</span>
+                                        <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>{fmtCurrency(currTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Header field changes */}
+                            {headerDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>GENERAL FIELDS</div>
+                                    {headerDiffs.map(f => (
+                                        <div key={f.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 14px', marginBottom: '4px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
+                                            <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>{f.label}</span>
+                                            <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(f.oldVal)}</span>
+                                            <span style={{ color: '#bbb' }}>→</span>
+                                            <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(f.newVal)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Line item changes */}
+                            {lineDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>{lineLabel.toUpperCase()} DETAILS</div>
+                                    {lineDiffs.map((diff, i) => {
+                                        const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
+                                        const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
+                                        const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
+                                        const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
+                                        return (
+                                            <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+                                                <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
+                                                    {prefix}{lineLabel} {diff.idx + 1}
+                                                    {diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}
+                                                    {diff.type !== 'modified' && diff.item?.[descKey] ? ` — ${diff.item[descKey]}` : ''}
+                                                </div>
+                                                <div style={{ padding: '8px 12px', background: '#fff' }}>
+                                                    {diff.type === 'modified'
+                                                        ? diff.changes.map(c => (
+                                                            <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
+                                                                <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
+                                                                <span style={{ color: '#bbb' }}>→</span>
+                                                                <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
+                                                            </div>
+                                                        ))
+                                                        : lineFields.map(f => (
+                                                            <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
+                                                                <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    })()}
+</Modal>
                     <div style={{ display: "none" }}>
                         <PrintFormate ref={printComponentRef} data={formData} />
                     </div>

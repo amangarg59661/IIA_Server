@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Card, Form, message } from "antd";
+import { Button, Card, Form, message, Modal, Tag } from "antd";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -17,6 +17,7 @@ const SO = () => {
   const [generatedSOId, setGeneratedSOId] = useState("");
 const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
+const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 const [searchDone, setSearchDone] = useState(false);
   // Redux selectors
   const auth = useSelector((state) => state.auth);
@@ -303,11 +304,14 @@ if (responseData.isActive === false) {
     content: () => printRef.current,
   });
 
-  const fetchSoVersionHistory = async (sid) => {
+  // TO:
+const fetchSoVersionHistory = async (sid) => {
   try {
     const baseSid = (sid || formData.soId || "").split("/")[0];
-    const { data } = await axios.get(`/api/service-orders/version-history/${baseSid}`);
-    setVersionHistoryList(data?.responseData || []);
+    const { data } = await axios.get(`/api/service-orders/version-history`, { params: { soId: baseSid } });
+    const list = data?.responseData || [];
+    setVersionHistoryList(list);
+    setSelectedVersionIdx(list.length - 1);
     setVersionHistoryOpen(true);
   } catch (error) {
     message.error("Could not load SO version history.");
@@ -357,53 +361,222 @@ if (responseData.isActive === false) {
         title="Service Order"
         processNo={generatedSOId}
       />
-      {versionHistoryOpen && (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.5)', zIndex: 1000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center'
-  }}>
-    <div style={{ background: 'white', borderRadius: 8, padding: 24, minWidth: 600, maxHeight: '80vh', overflow: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h3 style={{ margin: 0 }}>SO Version History</h3>
-        <Button onClick={() => setVersionHistoryOpen(false)}>Close</Button>
-      </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ background: '#f0f0f0' }}>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Version</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>SO ID</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Updated By</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Date</th>
-            <th style={{ padding: '8px', border: '1px solid #ddd' }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {versionHistoryList.map((v) => (
-            <tr key={v.soId} style={{ background: v.isActive ? '#f6ffed' : 'white' }}>
-              <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>V{v.soVersion}</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                <Button type="link" onClick={() => { handleSearch(v.soId); setVersionHistoryOpen(false); }}>
-                  {v.soId}
-                </Button>
-              </td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>{v.updatedBy || '-'}</td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString() : '-'}
-              </td>
-              <td style={{ padding: '8px', border: '1px solid #ddd' }}>
-                {v.isActive
-                  ? <span style={{ color: 'green' }}>● Active</span>
-                  : <span style={{ color: '#999' }}>○ Superseded</span>
-                }
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+     <Modal
+    open={versionHistoryOpen}
+    onCancel={() => setVersionHistoryOpen(false)}
+    title="SO Version History"
+    footer={null}
+    width={900}
+    destroyOnClose
+>
+    {(() => {
+        const sorted = [...versionHistoryList].sort((a, b) => (a.soVersion || 0) - (b.soVersion || 0));
+        const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
+        const curr = sorted[selIdx];
+        const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
+
+        if (!curr) return <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>No versions found.</div>;
+
+        const HEADER_FIELDS = [
+            { key: 'vendorName',               label: 'Vendor Name' },
+            { key: 'vendorAddress',            label: 'Vendor Address' },
+            { key: 'jobCompletionPeriod',      label: 'Job Completion Period' },
+            { key: 'incoTerms',                label: 'Inco Terms' },
+            { key: 'paymentTerms',             label: 'Payment Terms' },
+            { key: 'ifLdClauseApplicable',     label: 'LD Clause' },
+            { key: 'consignesAddress',         label: 'Consignee Address' },
+            { key: 'billingAddress',           label: 'Billing Address' },
+            { key: 'applicablePBGToBeSubmitted', label: 'PBG' },
+            { key: 'projectName',              label: 'Project Name' },
+        ];
+
+        const LINE_FIELDS = [
+            { key: 'materialDescription', label: 'Description' },
+            { key: 'quantity',            label: 'Quantity' },
+            { key: 'rate',                label: 'Rate' },
+            { key: 'currency',            label: 'Currency' },
+            { key: 'gst',                 label: 'GST' },
+            { key: 'duties',              label: 'Duties' },
+            { key: 'budgetCode',          label: 'Budget Code' },
+        ];
+
+        const headerDiffs = prev
+            ? HEADER_FIELDS.filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
+                .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
+            : [];
+
+        const prevLines = prev?.materials || [];
+        const currLines = curr.materials || [];
+        const lineDiffs = [];
+        const maxLen = Math.max(prevLines.length, currLines.length);
+        for (let i = 0; i < maxLen; i++) {
+            const p = prevLines[i];
+            const c = currLines[i];
+            if (!p) {
+                lineDiffs.push({ idx: i, type: 'added', item: c });
+            } else if (!c) {
+                lineDiffs.push({ idx: i, type: 'removed', item: p });
+            } else {
+                const changed = LINE_FIELDS
+                    .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
+                    .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
+                if (changed.length) lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c.materialDescription || `Item ${i + 1}` });
+            }
+        }
+
+        const prevTotal = prev ? Number(prev.totalValue || 0) : null;
+        const currTotal = Number(curr.totalValue || 0);
+        const totalChanged = prev && prevTotal !== currTotal;
+        const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
+
+        const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+        const fmtVal = val => (val == null || val === '') ? '—' : String(val);
+
+        return (
+            <div style={{ display: 'flex', minHeight: '450px' }}>
+
+                {/* Left: version list */}
+                <div style={{ width: '190px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
+                    <div style={{ padding: '8px 12px', fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', borderBottom: '1px solid #f0f0f0' }}>
+                        VERSIONS
+                    </div>
+                    {sorted.map((v, idx) => {
+                        const isSel = idx === selIdx;
+                        return (
+                            <div key={v.soId} onClick={() => setSelectedVersionIdx(idx)} style={{
+                                padding: '10px 14px', cursor: 'pointer',
+                                borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
+                                background: isSel ? '#e6f7ff' : 'transparent',
+                                borderBottom: '1px solid #f5f5f5',
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.soVersion}</span>
+                                    {v.isActive
+                                        ? <Tag color="green" style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
+                                        : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>}
+                                </div>
+                                <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>{v.updatedBy || v.createdBy || '—'}</div>
+                                <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
+                                    {v.updatedDate ? new Date(v.updatedDate).toLocaleDateString('en-IN') : '—'}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Right: diff panel */}
+                <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '520px' }}>
+
+                    <div style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        {prev ? (
+                            <>
+                                <span style={{ fontWeight: 600, color: '#888' }}>V{prev.soVersion}</span>
+                                <span style={{ color: '#ccc' }}>→</span>
+                                <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.soVersion}</span>
+                                {totalChanges === 0
+                                    ? <Tag>No changes</Tag>
+                                    : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>}
+                            </>
+                        ) : (
+                            <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.soVersion} — Initial Version</span>
+                        )}
+                        <Button type="link" size="small" style={{ marginLeft: 'auto', padding: 0 }}
+                            onClick={() => { handleSearch(curr.soId); setVersionHistoryOpen(false); }}>
+                            Load {curr.soId} ↗
+                        </Button>
+                    </div>
+
+                    {!prev && (
+                        <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
+                            This is the first version. No previous version to compare against.
+                            <div style={{ marginTop: '12px' }}>
+                                {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
+                                    <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
+                                        <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
+                                        <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {prev && totalChanges === 0 && (
+                        <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
+                            No field-level changes detected compared to V{prev.soVersion}.
+                        </div>
+                    )}
+
+                    {prev && totalChanges > 0 && (
+                        <>
+                            {totalChanged && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>TOTAL VALUE</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px' }}>
+                                        <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total SO Value</span>
+                                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtCurrency(prevTotal)}</span>
+                                        <span style={{ color: '#bbb' }}>→</span>
+                                        <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>{fmtCurrency(currTotal)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {headerDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>GENERAL FIELDS</div>
+                                    {headerDiffs.map(f => (
+                                        <div key={f.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 14px', marginBottom: '4px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
+                                            <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>{f.label}</span>
+                                            <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(f.oldVal)}</span>
+                                            <span style={{ color: '#bbb' }}>→</span>
+                                            <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(f.newVal)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {lineDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>LINE ITEMS</div>
+                                    {lineDiffs.map((diff, i) => {
+                                        const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
+                                        const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
+                                        const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
+                                        const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
+                                        return (
+                                            <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+                                                <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
+                                                    {prefix}Item {diff.idx + 1}{diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}{diff.type !== 'modified' && diff.item?.materialDescription ? ` — ${diff.item.materialDescription}` : ''}
+                                                </div>
+                                                <div style={{ padding: '8px 12px', background: '#fff' }}>
+                                                    {diff.type === 'modified'
+                                                        ? diff.changes.map(c => (
+                                                            <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
+                                                                <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
+                                                                <span style={{ color: '#bbb' }}>→</span>
+                                                                <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
+                                                            </div>
+                                                        ))
+                                                        : LINE_FIELDS.map(f => (
+                                                            <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
+                                                                <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    })()}
+</Modal>
     </Card>
   );
 };

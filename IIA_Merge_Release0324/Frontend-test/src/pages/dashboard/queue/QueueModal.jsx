@@ -45,6 +45,8 @@ const QueueModal = ({
   setMaterialHistoryVisible,
   selectedMaterialCode,
   setSelectedMaterialCode,
+   fetchVersionHistory,        // ADD
+  versionHistoryLoading,
 }) => {
 
   return (
@@ -56,6 +58,14 @@ const QueueModal = ({
               selectedRecord?.requestId || "N/A"
             }`}
           </span>
+          <Button
+  type="link"
+  icon={<HistoryOutlined />}
+  onClick={() => fetchVersionHistory(selectedRecord)}
+  loading={versionHistoryLoading}
+>
+  View Version History
+</Button>
           <Button
             type="link"
             icon={<HistoryOutlined />}
