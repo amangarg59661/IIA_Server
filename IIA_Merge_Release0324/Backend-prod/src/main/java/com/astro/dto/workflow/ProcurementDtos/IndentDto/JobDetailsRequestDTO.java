@@ -3,6 +3,7 @@ package com.astro.dto.workflow.ProcurementDtos.IndentDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 import java.math.BigDecimal;
 
@@ -24,5 +25,6 @@ public class JobDetailsRequestDTO {
     private String origin;
     private String modeOfProcurement;
     private String budgetCode;
-    private String vendorNames;
+    // private String vendorNames;
+    private List<String> vendorNames;
 }

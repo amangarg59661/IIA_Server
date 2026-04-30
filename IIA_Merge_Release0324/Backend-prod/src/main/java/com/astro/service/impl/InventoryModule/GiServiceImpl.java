@@ -1221,18 +1221,37 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                         gimde.setInstallationReportFileName(instlRepFileName);
                         gimdeList.add(gimde);
                     }
-                } else {
-                    // assetFlag is false/null — save a single row with no asset linked
-                    GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
-                    mapper.map(gmdd, gimde);
-                    gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                    gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
-                        gimde.setGprnProcessId(extractProcessId(req.getGprnNo()));
-                    // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                    // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
-                    gimde.setInstallationReportFileName(instlRepFileName);
-                    gimdeList.add(gimde);
-                }
+                } 
+                // else {
+                //     // assetFlag is false/null — save a single row with no asset linked
+                //     GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
+                //     mapper.map(gmdd, gimde);
+                //     gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
+                //     gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+                //         gimde.setGprnProcessId(extractProcessId(req.getGprnNo()));
+                //     // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+                //     // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                //     gimde.setInstallationReportFileName(instlRepFileName);
+                //     gimdeList.add(gimde);
+                // }
+                else {
+    // assetFlag is false/null — no asset created, flows like consumable through GRN/OHQ/ISN
+    GoodsInspectionConsumableDetailEntity gicde = new GoodsInspectionConsumableDetailEntity();
+    mapper.map(gmdd, gicde);
+    gicde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
+    gicde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+    gicde.setGprnProcessId(extractProcessId(req.getGprnNo()));
+    gicde.setInstallationReportFilename(instlRepFileName);
+
+    // ✅ Save UOM — mandatory for downstream processes
+    if (gmdd.getUomId() != null) {
+        gicde.setUomId(gmdd.getUomId());
+    } else if (materialMaster != null && materialMaster.getUom() != null) {
+        gicde.setUomId(materialMaster.getUom());
+    }
+
+    gicdeList.add(gicde); // ← consumable list, not gimdeList
+}
             }
         }
 

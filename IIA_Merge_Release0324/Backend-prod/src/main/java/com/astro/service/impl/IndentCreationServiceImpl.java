@@ -336,7 +336,13 @@ private String extractBaseIndentId(String indentId) {
                 job.setOrigin(jobRequest.getOrigin());
                 job.setModeOfProcurement(jobRequest.getModeOfProcurement());
                 job.setBudgetCode(jobRequest.getBudgetCode());
-                job.setVendorNames(jobRequest.getVendorNames());
+                // Convert List<String> from DTO → comma-separated String for entity storage
+List<String> vendorNamesList = jobRequest.getVendorNames();
+String vendorNamesStr = (vendorNamesList != null && !vendorNamesList.isEmpty())
+        ? String.join(",", vendorNamesList)
+        : null;
+job.setVendorNames(vendorNamesStr);
+                // job.setVendorNames(jobRequest.getVendorNames());
 
                 BigDecimal qty = jobRequest.getQuantity() != null ? jobRequest.getQuantity() : BigDecimal.ZERO;
                 BigDecimal price = jobRequest.getEstimatedPrice() != null ? jobRequest.getEstimatedPrice() : BigDecimal.ZERO;
@@ -614,7 +620,9 @@ public IndentCreationResponseDTO updateIndent(String indentId, IndentCreationReq
             j.setOrigin(req.getOrigin());
             j.setModeOfProcurement(req.getModeOfProcurement());
             j.setBudgetCode(req.getBudgetCode());
-            j.setVendorNames(req.getVendorNames());
+            // j.setVendorNames(req.getVendorNames());
+            List<String> vn = req.getVendorNames();
+j.setVendorNames((vn != null && !vn.isEmpty()) ? String.join(",", vn) : null);
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : BigDecimal.ZERO;
             BigDecimal price = req.getEstimatedPrice() != null ? req.getEstimatedPrice() : BigDecimal.ZERO;
             j.setTotalPrice(qty.multiply(price));
@@ -1118,7 +1126,12 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
                         jobResponse.setBriefDescription(job.getBriefDescription());
                         jobResponse.setModeOfProcurement(job.getModeOfProcurement());
                         jobResponse.setBudgetCode(job.getBudgetCode());
-                        jobResponse.setVendorNames(job.getVendorNames());
+                        // jobResponse.setVendorNames(job.getVendorNames());
+                        String rawVendorNames = job.getVendorNames();
+List<String> vendorNamesList = (rawVendorNames != null && !rawVendorNames.isEmpty())
+        ? Arrays.asList(rawVendorNames.split(","))
+        : new ArrayList<>();
+jobResponse.setVendorNames(vendorNamesList);
                         return jobResponse;
                     }).collect(Collectors.toList());
             response.setJobDetails(jobDetailsResponse);
@@ -1417,7 +1430,18 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
                 jobResponse.setOrigin(job.getOrigin());
                 jobResponse.setModeOfProcurement(job.getModeOfProcurement());
                 jobResponse.setBudgetCode(job.getBudgetCode());
-                jobResponse.setVendorNames(job.getVendorNames());
+                String rawVendorNames = job.getVendorNames();
+                List<String> vendorIds = (rawVendorNames != null && !rawVendorNames.isEmpty())
+                        ? Arrays.asList(rawVendorNames.split(","))
+                        : new ArrayList<>();
+                List<String> vendorIdNameList = vendorIds.stream()
+                        .map(vendorId -> {
+                            String name = vendorMasterRepository.findVendorNameByVendorId(vendorId);
+                            return vendorId + "-" + name;
+                        })
+                        .collect(Collectors.toList());
+                jobResponse.setVendorNames(vendorIdNameList);
+                // jobResponse.setVendorNames(job.getVendorNames());
                 return jobResponse;
             }).collect(Collectors.toList());
 
@@ -1605,7 +1629,18 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
                 jobResponse.setOrigin(job.getOrigin());
                 jobResponse.setModeOfProcurement(job.getModeOfProcurement());
                 jobResponse.setBudgetCode(job.getBudgetCode());
-                jobResponse.setVendorNames(job.getVendorNames());
+               String rawVendorNames = job.getVendorNames();
+                List<String> vendorIds = (rawVendorNames != null && !rawVendorNames.isEmpty())
+                        ? Arrays.asList(rawVendorNames.split(","))
+                        : new ArrayList<>();
+                List<String> vendorIdNameList = vendorIds.stream()
+                        .map(vendorId -> {
+                            String name = vendorMasterRepository.findVendorNameByVendorId(vendorId);
+                            return vendorId + "-" + name;
+                        })
+                        .collect(Collectors.toList());
+                jobResponse.setVendorNames(vendorIdNameList);
+                // jobResponse.setVendorNames(job.getVendorNames());
                 return jobResponse;
             }).collect(Collectors.toList());
 
