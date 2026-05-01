@@ -2130,24 +2130,24 @@ boolean isRejected = lastTransition != null
                 + " assigned to indent " + dto.getIndentId() + " successfully";
     } // updated till here by abhinav
 
-    @Override
-    public String cancelIndent(CancelIndentRequestDto request) {
-        IndentCreation indent = indentCreationRepository.findById(request.getIndentId())
-                .orElseThrow(() -> new BusinessException(
-                new ErrorDetails(
-                        AppConstant.ERROR_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_RESOURCE,
-                        "Indent not found for the provided ID."
-                )
-        ));
+    // @Override
+    // public String cancelIndent(CancelIndentRequestDto request) {
+    //     IndentCreation indent = indentCreationRepository.findById(request.getIndentId())
+    //             .orElseThrow(() -> new BusinessException(
+    //             new ErrorDetails(
+    //                     AppConstant.ERROR_CODE_RESOURCE,
+    //                     AppConstant.ERROR_TYPE_CODE_RESOURCE,
+    //                     AppConstant.ERROR_TYPE_RESOURCE,
+    //                     "Indent not found for the provided ID."
+    //             )
+    //     ));
 
-        indent.setCancelStatus(request.getCancelStatus());
-        indent.setCancelRemarks(request.getCancelRemarks());
+    //     indent.setCancelStatus(request.getCancelStatus());
+    //     indent.setCancelRemarks(request.getCancelRemarks());
 
-        indentCreationRepository.save(indent);
-        return "indent saved";
-    }
+    //     indentCreationRepository.save(indent);
+    //     return "indent saved";
+    // }
 
     /**
      * Validates computer item prices against department-specific price limits
@@ -2327,32 +2327,71 @@ if (departmentPriceLimit== null ){
     @Override
     @Transactional
     public String requestIndentCancellation(IndentCancellationRequestDto request) {
-        // Validate indent exists
-        IndentCreation indent = indentCreationRepository.findById(request.getIndentId())
-                .orElseThrow(() -> new BusinessException(
-                new ErrorDetails(
-                        AppConstant.ERROR_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                        AppConstant.ERROR_TYPE_RESOURCE,
-                        "Indent not found for the provided ID: " + request.getIndentId()
-                )
+        // // Validate indent exists
+        // IndentCreation indent = indentCreationRepository.findById(request.getIndentId())
+        //         .orElseThrow(() -> new BusinessException(
+        //         new ErrorDetails(
+        //                 AppConstant.ERROR_CODE_RESOURCE,
+        //                 AppConstant.ERROR_TYPE_CODE_RESOURCE,
+        //                 AppConstant.ERROR_TYPE_RESOURCE,
+        //                 "Indent not found for the provided ID: " + request.getIndentId()
+        //         )
+        // ));
+
+        // // Check if there's already a pending cancellation request
+        // Optional<com.astro.entity.ProcurementModule.IndentCancellationRequest> existingRequest
+        //         = indentCancellationRequestRepository.findByIndentIdAndRequestStatus(request.getIndentId(), "PENDING");
+
+        // if (existingRequest.isPresent()) {
+        //     throw new InvalidInputException(new ErrorDetails(
+        //             AppConstant.ERROR_CODE_INVALID,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "A cancellation request is already pending for this indent."
+        //     ));
+        // }
+
+        // // Validate that there's no active Tender or Purchase Order
+        // validateNoActiveTenderOrPO(request.getIndentId());
+
+         // Validate indent exists
+    IndentCreation indent = indentCreationRepository.findById(request.getIndentId())
+            .orElseThrow(() -> new BusinessException(
+            new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_RESOURCE,
+                    "Indent not found for the provided ID: " + request.getIndentId()
+            )
+    ));
+
+    // Cannot request cancellation if already cancelled
+    if (Boolean.TRUE.equals(indent.getCancelStatus())) {
+        throw new InvalidInputException(new ErrorDetails(
+                AppConstant.ERROR_CODE_INVALID,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "This indent is already cancelled."
         ));
+    }
 
-        // Check if there's already a pending cancellation request
-        Optional<com.astro.entity.ProcurementModule.IndentCancellationRequest> existingRequest
-                = indentCancellationRequestRepository.findByIndentIdAndRequestStatus(request.getIndentId(), "PENDING");
+    // Check if there's already a pending cancellation request
+    Optional<com.astro.entity.ProcurementModule.IndentCancellationRequest> existingRequest
+            = indentCancellationRequestRepository.findByIndentIdAndRequestStatus(request.getIndentId(), "PENDING");
 
-        if (existingRequest.isPresent()) {
-            throw new InvalidInputException(new ErrorDetails(
-                    AppConstant.ERROR_CODE_INVALID,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "A cancellation request is already pending for this indent."
-            ));
-        }
+    if (existingRequest.isPresent()) {
+        throw new InvalidInputException(new ErrorDetails(
+                AppConstant.ERROR_CODE_INVALID,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "A cancellation request is already pending for this indent."
+        ));
+    }
 
-        // Validate that there's no active Tender or Purchase Order
-        validateNoActiveTenderOrPO(request.getIndentId());
+    // NOTE: No tender/PO check here intentionally.
+    // Indentor can always raise a cancellation request.
+    // The approver will be blocked at approval time if active tender exists.
+
 
         // Create cancellation request
         com.astro.entity.ProcurementModule.IndentCancellationRequest cancellationRequest
@@ -2406,7 +2445,27 @@ if (departmentPriceLimit== null ){
         }
 
         // If approved, validate again that no tender/PO exists and cancel the indent
+        // if ("APPROVED".equals(approval.getApprovalStatus())) {
+        //     validateNoActiveTenderOrPO(cancellationRequest.getIndentId());
+
+        //     // Cancel the indent
+        //     IndentCreation indent = indentCreationRepository.findById(cancellationRequest.getIndentId())
+        //             .orElseThrow(() -> new BusinessException(
+        //             new ErrorDetails(
+        //                     AppConstant.ERROR_CODE_RESOURCE,
+        //                     AppConstant.ERROR_TYPE_CODE_RESOURCE,
+        //                     AppConstant.ERROR_TYPE_RESOURCE,
+        //                     "Indent not found."
+        //             )
+        //     ));
+
+        //     indent.setCancelStatus(true);
+        //     indent.setCancelRemarks(cancellationRequest.getCancellationReason());
+        //     indentCreationRepository.save(indent);
+        // }
+
         if ("APPROVED".equals(approval.getApprovalStatus())) {
+            // Guard: approver cannot approve if an active tender or PO exists
             validateNoActiveTenderOrPO(cancellationRequest.getIndentId());
 
             // Cancel the indent
@@ -2423,6 +2482,19 @@ if (departmentPriceLimit== null ){
             indent.setCancelStatus(true);
             indent.setCancelRemarks(cancellationRequest.getCancellationReason());
             indentCreationRepository.save(indent);
+
+            // Pull indent out of the approval workflow:
+            // Find all pending workflow transitions for this indent and mark them CANCELLED
+            List<WorkflowTransition> pendingTransitions =
+                    workflowTransitionRepository.findPendingTransitionsByRequestId(
+                            cancellationRequest.getIndentId());
+
+            for (WorkflowTransition wt : pendingTransitions) {
+                wt.setStatus("CANCELLED");
+                wt.setNextAction(null);
+                wt.setRemarks("Indent cancelled. Approved by: " + approval.getApprovedByName());
+                workflowTransitionRepository.save(wt);
+            }
         }
 
         // Update cancellation request status
@@ -2449,37 +2521,77 @@ if (departmentPriceLimit== null ){
      * @param indentId The indent ID to validate
      * @throws InvalidInputException if there's an active Tender or PO
      */
+    // private void validateNoActiveTenderOrPO(String indentId) {
+    //     // Check if indent is linked to any tender
+    //     Optional<com.astro.entity.ProcurementModule.IndentId> indentIdEntity
+    //             = indentIdRepository.findByIndentId(indentId);
+
+    //     if (indentIdEntity.isPresent() && indentIdEntity.get().getTenderRequest() != null) {
+    //         String tenderId = indentIdEntity.get().getTenderRequest().getTenderId();
+
+    //         // Check if there's a purchase order for this tender
+    //         com.astro.entity.ProcurementModule.PurchaseOrder purchaseOrder
+    //                 = purchaseOrderRepository.findByTenderId(tenderId);
+
+    //         if (purchaseOrder != null) {
+    //             throw new InvalidInputException(new ErrorDetails(
+    //                     AppConstant.ERROR_CODE_INVALID,
+    //                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                     AppConstant.ERROR_TYPE_VALIDATION,
+    //                     "Cannot cancel indent. An active Purchase Order (PO ID: " + purchaseOrder.getPoId()
+    //                     + ") exists for this indent. Please cancel the Purchase Order first."
+    //             ));
+    //         }
+
+    //         throw new InvalidInputException(new ErrorDetails(
+    //                 AppConstant.ERROR_CODE_INVALID,
+    //                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
+    //                 AppConstant.ERROR_TYPE_VALIDATION,
+    //                 "Cannot cancel indent. An active Tender (Tender ID: " + tenderId
+    //                 + ") exists for this indent. Please cancel the Tender first."
+    //         ));
+    //     }
+    // }
     private void validateNoActiveTenderOrPO(String indentId) {
-        // Check if indent is linked to any tender
-        Optional<com.astro.entity.ProcurementModule.IndentId> indentIdEntity
-                = indentIdRepository.findByIndentId(indentId);
+    Optional<com.astro.entity.ProcurementModule.IndentId> indentIdEntity
+            = indentIdRepository.findByIndentId(indentId);
 
-        if (indentIdEntity.isPresent() && indentIdEntity.get().getTenderRequest() != null) {
-            String tenderId = indentIdEntity.get().getTenderRequest().getTenderId();
+    if (indentIdEntity.isPresent() && indentIdEntity.get().getTenderRequest() != null) {
+        com.astro.entity.ProcurementModule.TenderRequest tender
+                = indentIdEntity.get().getTenderRequest();
 
-            // Check if there's a purchase order for this tender
-            com.astro.entity.ProcurementModule.PurchaseOrder purchaseOrder
-                    = purchaseOrderRepository.findByTenderId(tenderId);
+        // If the linked tender is already cancelled, no block needed
+        if (Boolean.TRUE.equals(tender.getCancelStatus())) {
+            return;
+        }
 
-            if (purchaseOrder != null) {
-                throw new InvalidInputException(new ErrorDetails(
-                        AppConstant.ERROR_CODE_INVALID,
-                        AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                        AppConstant.ERROR_TYPE_VALIDATION,
-                        "Cannot cancel indent. An active Purchase Order (PO ID: " + purchaseOrder.getPoId()
-                        + ") exists for this indent. Please cancel the Purchase Order first."
-                ));
-            }
+        String tenderId = tender.getTenderId();
 
+        // Check if a PO exists against this tender
+        com.astro.entity.ProcurementModule.PurchaseOrder purchaseOrder
+                = purchaseOrderRepository.findByTenderId(tenderId);
+
+        if (purchaseOrder != null) {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.ERROR_CODE_INVALID,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION,
-                    "Cannot cancel indent. An active Tender (Tender ID: " + tenderId
-                    + ") exists for this indent. Please cancel the Tender first."
+                    "Cannot approve cancellation. An active Purchase Order (PO ID: "
+                    + purchaseOrder.getPoId()
+                    + ") exists for this indent. Please cancel the Purchase Order first."
             ));
         }
+
+        // Tender exists and is not cancelled — block the approver
+        throw new InvalidInputException(new ErrorDetails(
+                AppConstant.ERROR_CODE_INVALID,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Cannot approve cancellation. An active Tender (Tender ID: " + tenderId
+                + ") exists for this indent. Please cancel the Tender first."
+        ));
     }
+}
 
     /**
      * Maps IndentCancellationRequest entity to IndentCancellationResponseDto

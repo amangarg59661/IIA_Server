@@ -45,7 +45,7 @@ public interface IndentCreationService {
 
     public String assignEmployeeToIndent(AssignEmployeeToIndentDto dto);
 
-    public String cancelIndent(CancelIndentRequestDto request);
+    // public String cancelIndent(CancelIndentRequestDto request);
 
     public String requestIndentCancellation(com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCancellationRequestDto request);
 

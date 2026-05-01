@@ -109,7 +109,7 @@ private int extractSubProcessId(String processNo) {
             gmde.setProcessId(gme.getProcessId());
             gmde.setPoId(gme.getPoId());
             gmde.setSubProcessId(gme.getSubProcessId());
-            
+            if (dtl.getImageBase64() != null && !dtl.getImageBase64().isEmpty()) {
             try {
                 List<String> imageFileNames = new ArrayList<>();
                 for (String base64Image : dtl.getImageBase64()) {
@@ -124,7 +124,7 @@ private int extractSubProcessId(String processNo) {
                     AppConstant.ERROR_TYPE_CORRUPTED,
                     "Error while uploading images."));
             }
-    
+            }
             saveDtlEntityList.add(gmde);
             Optional<PurchaseOrderAttributes> poMaterial = poMaterialRepo.findByPurchaseOrder_PoIdAndMaterialCode(gme.getPoId(), dtl.getMaterialCode());
 
