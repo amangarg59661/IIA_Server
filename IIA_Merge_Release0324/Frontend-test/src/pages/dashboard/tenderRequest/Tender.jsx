@@ -212,70 +212,161 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
     vendorNames: material.vendorNames,
   });
  
-  
+ 
   const handleIndentSearch = async (indentIds) => {
-    try {
-      const allMaterials = [];
-      let isBuyBack = false; 
-      let buyBackData = {};
-      console.log("test4");
-      // Loop through all selected indent IDs
-      for (const id of indentIds) {
-        const res = await axios.get(`/api/indents/IndentDataForTender`,{params: {indentId :id}});
-        const indentData = res.data?.responseData;
-   
-        if (indentData?.materialDetails) {
-          allMaterials.push(...indentData.materialDetails);
-          
-        }
-         if (indentData?.buyBack) {
+  try {
+    const allMaterials = [];
+    const allJobs = [];
+    let isBuyBack = false;
+    let buyBackData = {};
+    let indentType = null;
+
+    for (const id of indentIds) {
+      const res = await axios.get(`/api/indents/IndentDataForTender`, { params: { indentId: id } });
+      const indentData = res.data?.responseData;
+
+      // Track indent type (material vs job)
+      if (indentData?.indentType) indentType = indentData.indentType;
+
+      if (indentData?.materialDetails?.length) {
+        allMaterials.push(...indentData.materialDetails);
+      }
+
+      if (indentData?.jobDetails?.length) {
+        allJobs.push(...indentData.jobDetails);
+      }
+
+      if (indentData?.buyBack) {
         isBuyBack = true;
-         buyBackData = {
+        buyBackData = {
           uploadBuyBackFileNames: indentData.uploadBuyBackFile || [],
           modelNumber: indentData.modelNumber || "",
           serialNumber: indentData.serialNumber || "",
           dateOfPurchase: indentData.dateOfPurchase || null,
           buyBackAmount: indentData.buyBackAmount || "",
         };
-        
       }
+    }
+
+    const formattedMaterials = allMaterials.map((material) => ({
+      materialCode: material.materialCode,
+      materialDescription: material.materialDescription,
+      uom: material.uom,
+      quantity: material.quantity,
+      unitPrice: material.unitPrice,
+      currency: material.currency,
+      conversionRate: material.conversionRate,
+      materialCategory: material.materialCategory,
+      materialSubCategory: material.materialSubCategory,
+      budgetCode: material.budgetCode,
+      totalPrice: material.totalPrice,
+      modeOfProcurement: material.modeOfProcurement,
+      vendorNames: material.vendorNames,
+      origin: material.origin,           // ← was missing
+      briefDescription: material.briefDescription, // ← was missing
+    }));
+
+    const formattedJobs = allJobs.map((job) => ({
+      jobCode: job.jobCode,
+      jobDescription: job.jobDescription,
+      category: job.category,
+      subCategory: job.subCategory,
+      uom: job.uom,
+      quantity: job.quantity,
+      estimatedPrice: job.estimatedPrice,
+      totalPrice: job.totalPrice,
+      currency: job.currency,
+      briefDescription: job.briefDescription,
+      origin: job.origin,
+      modeOfProcurement: job.modeOfProcurement,
+      budgetCode: job.budgetCode,
+      vendorNames: job.vendorNames,
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      indentType,
+      materialDetails: formattedMaterials,
+      jobDetails: formattedJobs,
+      buyBack: isBuyBack,
+      ...buyBackData,
+    }));
+
+    form.setFieldsValue({
+      materialDetails: formattedMaterials,
+      jobDetails: formattedJobs,
+      buyBack: isBuyBack,
+      ...buyBackData,
+    });
+
+  } catch (err) {
+    console.error("Failed to fetch indent data", err);
+    message.error("Failed to load indent details");
+  }
+};
+  // const handleIndentSearch = async (indentIds) => {
+  //   try {
+  //     const allMaterials = [];
+  //     let isBuyBack = false; 
+  //     let buyBackData = {};
+  //     console.log("test4");
+  //     // Loop through all selected indent IDs
+  //     for (const id of indentIds) {
+  //       const res = await axios.get(`/api/indents/IndentDataForTender`,{params: {indentId :id}});
+  //       const indentData = res.data?.responseData;
+   
+  //       if (indentData?.materialDetails) {
+  //         allMaterials.push(...indentData.materialDetails);
+          
+  //       }
+  //        if (indentData?.buyBack) {
+  //       isBuyBack = true;
+  //        buyBackData = {
+  //         uploadBuyBackFileNames: indentData.uploadBuyBackFile || [],
+  //         modelNumber: indentData.modelNumber || "",
+  //         serialNumber: indentData.serialNumber || "",
+  //         dateOfPurchase: indentData.dateOfPurchase || null,
+  //         buyBackAmount: indentData.buyBackAmount || "",
+  //       };
+        
+  //     }
 
        
-      }
+  //     }
       
   
-      const formattedMaterials = allMaterials.map((material) => ({
-        materialCode: material.materialCode,
-        materialDescription: material.materialDescription,
-        uom: material.uom,
-        quantity: material.quantity,
-        unitPrice: material.unitPrice,
-       currency: material.currency,             // ✅ add this
-  conversionRate: material.conversionRate,
-        materialCategory: material.materialCategory,
-        materialSubCategory: material.materialSubCategory,
-        budgetCode: material.budgetCode,
-        totalPrice: material.totalPrice,
-        modeOfProcurement: material.modeOfProcurement,
-        vendorNames: material.vendorNames,
-      }));
+  //     const formattedMaterials = allMaterials.map((material) => ({
+  //       materialCode: material.materialCode,
+  //       materialDescription: material.materialDescription,
+  //       uom: material.uom,
+  //       quantity: material.quantity,
+  //       unitPrice: material.unitPrice,
+  //      currency: material.currency,             // ✅ add this
+  // conversionRate: material.conversionRate,
+  //       materialCategory: material.materialCategory,
+  //       materialSubCategory: material.materialSubCategory,
+  //       budgetCode: material.budgetCode,
+  //       totalPrice: material.totalPrice,
+  //       modeOfProcurement: material.modeOfProcurement,
+  //       vendorNames: material.vendorNames,
+  //     }));
   
-      // Update formData with the fetched material details
-      setFormData((prev) => ({
-        ...prev,
-        materialDetails: formattedMaterials,
-         buyBack: isBuyBack, 
-          ...buyBackData,
+  //     // Update formData with the fetched material details
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       materialDetails: formattedMaterials,
+  //        buyBack: isBuyBack, 
+  //         ...buyBackData,
 
-      }));
+  //     }));
   
-      form.setFieldsValue({ materialDetails: formattedMaterials,buyBack: isBuyBack,  ...buyBackData,});
+  //     form.setFieldsValue({ materialDetails: formattedMaterials,buyBack: isBuyBack,  ...buyBackData,});
   
-    } catch (err) {
-      console.error("Failed to fetch materials for indent", err);
-      message.error("Failed to load indent materials");
-    }
-  };
+  //   } catch (err) {
+  //     console.error("Failed to fetch materials for indent", err);
+  //     message.error("Failed to load indent materials");
+  //   }
+  // };
   
   
   /*
@@ -470,35 +561,82 @@ if (tenderResponse.isActive === false) {
 
     setSubmitBtnLoading(true);
 
+    // const payload = {
+    //   ...formData,
+    //   createdBy: userId,
+    //   lastUpdatedBy: userId,
+    //   fileType: "Tender",
+    //   materialDetails: (formData.materialDetails || []).map((m) => ({
+    //     materialCode: m.materialCode || "",
+    //     materialDescription: m.materialDescription || "",
+    //     uom: m.uom || "",
+    //     quantity: Number(m.quantity) || 0,
+    //     unitPrice: Number(m.unitPrice) || 0,
+    //     materialCategory: m.materialCategory || "",
+    //     materialSubCategory: m.materialSubCategory || "",
+    //     budgetCode: m.budgetCode || "",
+    //     totalPrice: Number(m.totalPrice) || 0,
+    //     modeOfProcurement: m.modeOfProcurement || "",
+    //     vendorNames: m.vendorNames || "",
+    //   })),
+    //    ...(formData.buyBack
+    //     ? {
+    //         buyBack: formData.buyBack,
+    //         buyBackAmount: formData.buyBackAmount || "",
+    //         modelNumber: formData.modelNumber || "",
+    //         serialNumber: formData.serialNumber || "",
+    //         dateOfPurchase: formData.dateOfPurchase || null,
+    //         uploadBuyBackFileNames: formData.uploadBuyBackFileNames || "",
+    //       }
+    //     : {}),
+    // };
     const payload = {
-      ...formData,
-      createdBy: userId,
-      lastUpdatedBy: userId,
-      fileType: "Tender",
-      materialDetails: (formData.materialDetails || []).map((m) => ({
-        materialCode: m.materialCode || "",
-        materialDescription: m.materialDescription || "",
-        uom: m.uom || "",
-        quantity: Number(m.quantity) || 0,
-        unitPrice: Number(m.unitPrice) || 0,
-        materialCategory: m.materialCategory || "",
-        materialSubCategory: m.materialSubCategory || "",
-        budgetCode: m.budgetCode || "",
-        totalPrice: Number(m.totalPrice) || 0,
-        modeOfProcurement: m.modeOfProcurement || "",
-        vendorNames: m.vendorNames || "",
-      })),
-       ...(formData.buyBack
-        ? {
-            buyBack: formData.buyBack,
-            buyBackAmount: formData.buyBackAmount || "",
-            modelNumber: formData.modelNumber || "",
-            serialNumber: formData.serialNumber || "",
-            dateOfPurchase: formData.dateOfPurchase || null,
-            uploadBuyBackFileNames: formData.uploadBuyBackFileNames || "",
-          }
-        : {}),
-    };
+  ...formData,
+  createdBy: userId,
+  lastUpdatedBy: userId,
+  fileType: "Tender",
+  materialDetails: (formData.materialDetails || []).map((m) => ({
+    materialCode: m.materialCode || "",
+    materialDescription: m.materialDescription || "",
+    uom: m.uom || "",
+    quantity: Number(m.quantity) || 0,
+    unitPrice: Number(m.unitPrice) || 0,
+    currency: m.currency || "",
+    conversionRate: m.conversionRate || null,
+    materialCategory: m.materialCategory || "",
+    materialSubCategory: m.materialSubCategory || "",
+    budgetCode: m.budgetCode || "",
+    totalPrice: Number(m.totalPrice) || 0,
+    modeOfProcurement: m.modeOfProcurement || "",
+    vendorNames: m.vendorNames || "",
+    origin: m.origin || "",
+    briefDescription: m.briefDescription || "",
+  })),
+  jobDetails: (formData.jobDetails || []).map((j) => ({
+    jobCode: j.jobCode || "",
+    jobDescription: j.jobDescription || "",
+    category: j.category || "",
+    subCategory: j.subCategory || "",
+    uom: j.uom || "",
+    quantity: Number(j.quantity) || 0,
+    estimatedPrice: Number(j.estimatedPrice) || 0,
+    totalPrice: Number(j.totalPrice) || 0,
+    currency: j.currency || "",
+    briefDescription: j.briefDescription || "",
+    origin: j.origin || "",
+    modeOfProcurement: j.modeOfProcurement || "",
+    budgetCode: j.budgetCode || "",
+    vendorNames: j.vendorNames || "",
+  })),
+  ...(formData.buyBack ? {
+    buyBack: formData.buyBack,
+    buyBackAmount: formData.buyBackAmount || "",
+    modelNumber: formData.modelNumber || "",
+    serialNumber: formData.serialNumber || "",
+    dateOfPurchase: formData.dateOfPurchase || null,
+    uploadBuyBackFileNames: formData.uploadBuyBackFileNames || "",
+  } : {}),
+};
 
     let data;
 
@@ -730,127 +868,174 @@ console.log("uday"+formData.buyBack);
             },
       ]
     },
-    {
+    // {
+    //   heading: "Material Details",
+    //   name: "materialDetails",
+    //   colCnt: 4,
+    //   children: [
+    //     // Update materialCode field options to be populated dynamically
+    //     {
+    //       name: "materialCode",
+    //       label: "Material Code",
+    //       type: "select",
+    //       span: 2,
+    //       required: true,
+    //     //  options: [], // Will be populated from API data
+    //       showSearch: true,
+    //       disabled: true,
+    //       filterOption: (input, option) =>
+    //         option.label.toLowerCase().includes(input.toLowerCase()),
+    //     },
+  
+    //     // Update description field to show API data
+    //     {
+    //       name: "materialDescription",
+    //       label: "Description",
+    //       type: "select",
+    //       span: 2,
+    //       options: [], // Will be populated from API data
+    //       showSearch: true,
+    //       disabled: true,
+    //       filterOption: (input, option) =>
+    //         option.label.toLowerCase().includes(input.toLowerCase()),
+    //       required: true,
+    //     },
+    //     {
+    //       name: "uom",
+    //       label: "UOM",
+    //       type: "text",
+    //       disabled: true,
+    //       required: true,
+    //       disabled: true,
+    //     },
+    //     {
+    //       name: "quantity",
+    //       label: "Quantity",
+    //       type: "text",
+    //     },
+    //     {
+    //       name: "unitPrice",
+    //       label: "Unit Price",
+    //       disabled: true,
+    //       type: "text",
+    //       span:1
+    //     },
+    //     {
+    //       name: "currency",
+    //       label: "Currency",
+    //       disabled: true,
+    //       type: "text",
+    //       required: true,
+    //       span: 1,
+    //       disabled: true,
+    //     },
+    //   ...(
+    //   (formData.materialDetails || []).some(m => m.currency && m.currency !== "INR")
+    //     ? [{
+    //         name: "conversionRate",
+    //         label: "Conversion Rate",
+    //         disabled: true,
+    //         type: "text",
+    //         span: 1,
+    //       }]
+    //     : []
+    // ),
+    //     {
+    //       name: "budgetCode",
+    //       label: "Budget Code",
+    //       type: "select",
+    //      // required: true,
+    //      disabled: true,
+    //       span: 2,
+    //       options: [],
+    //     },
+    //     {
+    //       name: "totalPrice",
+    //       label: "Total Price",
+    //       type: "text",
+    //       disabled: true,
+    //       span: 2,
+         
+    //     },
+    //     {
+    //       name: "materialCategory",
+    //       label: "Material Category",
+    //       type: "text",
+    //       disabled: true,
+    //       span: 2,
+    //     },
+    //     {
+    //       name: "materialSubCategory",
+    //       label: "Material Sub Category",
+    //       type: "text",
+    //       disabled: true,
+    //       span: 2,
+    //     },
+    //     {
+    //       name: "modeOfProcurement",
+    //       label: "Mode of Procurement",
+    //       type: "select",
+    //       disabled: true,
+    //       span: 2,
+    //       options: [],
+    //     },
+    //     {
+    //       name: "vendorNames",
+    //       label: "Vendor Codes",
+    //       disabled: true,
+    //       type: "text",
+    //       span: 2,
+    //       // required: true,
+    //     },
+    //   ],
+    // },
+    ...(formData.indentType === "job"
+  ? [{
+      heading: "Job Details",
+      name: "jobDetails",
+      colCnt: 4,
+      children: [
+        { name: "jobCode",        label: "Job Code",        type: "text", disabled: true, span: 2 },
+        { name: "jobDescription", label: "Job Description", type: "text", disabled: true, span: 2 },
+        { name: "category",       label: "Category",        type: "text", disabled: true, span: 1 },
+        { name: "subCategory",    label: "Sub Category",    type: "text", disabled: true, span: 1 },
+        { name: "uom",            label: "UOM",             type: "text", disabled: true, span: 1 },
+        { name: "quantity",       label: "Quantity",        type: "text", disabled: true, span: 1 },
+        { name: "estimatedPrice", label: "Estimated Price", type: "text", disabled: true, span: 1 },
+        { name: "currency",       label: "Currency",        type: "text", disabled: true, span: 1 },
+        { name: "totalPrice",     label: "Total Price",     type: "text", disabled: true, span: 2 },
+        { name: "briefDescription", label: "Brief Description", type: "text", disabled: true, span: 2 },
+        { name: "origin",         label: "Origin",          type: "text", disabled: true, span: 1 },
+        { name: "modeOfProcurement", label: "Mode of Procurement", type: "text", disabled: true, span: 1 },
+        { name: "budgetCode",     label: "Budget Code",     type: "text", disabled: true, span: 2 },
+        { name: "vendorNames",    label: "Vendor Codes",    type: "text", disabled: true, span: 2 },
+      ],
+    }]
+  : [{
       heading: "Material Details",
       name: "materialDetails",
       colCnt: 4,
       children: [
-        // Update materialCode field options to be populated dynamically
-        {
-          name: "materialCode",
-          label: "Material Code",
-          type: "select",
-          span: 2,
-          required: true,
-        //  options: [], // Will be populated from API data
-          showSearch: true,
-          disabled: true,
-          filterOption: (input, option) =>
-            option.label.toLowerCase().includes(input.toLowerCase()),
-        },
-  
-        // Update description field to show API data
-        {
-          name: "materialDescription",
-          label: "Description",
-          type: "select",
-          span: 2,
-          options: [], // Will be populated from API data
-          showSearch: true,
-          disabled: true,
-          filterOption: (input, option) =>
-            option.label.toLowerCase().includes(input.toLowerCase()),
-          required: true,
-        },
-        {
-          name: "uom",
-          label: "UOM",
-          type: "text",
-          disabled: true,
-          required: true,
-          disabled: true,
-        },
-        {
-          name: "quantity",
-          label: "Quantity",
-          type: "text",
-        },
-        {
-          name: "unitPrice",
-          label: "Unit Price",
-          disabled: true,
-          type: "text",
-          span:1
-        },
-        {
-          name: "currency",
-          label: "Currency",
-          disabled: true,
-          type: "text",
-          required: true,
-          span: 1,
-          disabled: true,
-        },
-      ...(
-      (formData.materialDetails || []).some(m => m.currency && m.currency !== "INR")
-        ? [{
-            name: "conversionRate",
-            label: "Conversion Rate",
-            disabled: true,
-            type: "text",
-            span: 1,
-          }]
-        : []
-    ),
-        {
-          name: "budgetCode",
-          label: "Budget Code",
-          type: "select",
-         // required: true,
-         disabled: true,
-          span: 2,
-          options: [],
-        },
-        {
-          name: "totalPrice",
-          label: "Total Price",
-          type: "text",
-          disabled: true,
-          span: 2,
-         
-        },
-        {
-          name: "materialCategory",
-          label: "Material Category",
-          type: "text",
-          disabled: true,
-          span: 2,
-        },
-        {
-          name: "materialSubCategory",
-          label: "Material Sub Category",
-          type: "text",
-          disabled: true,
-          span: 2,
-        },
-        {
-          name: "modeOfProcurement",
-          label: "Mode of Procurement",
-          type: "select",
-          disabled: true,
-          span: 2,
-          options: [],
-        },
-        {
-          name: "vendorNames",
-          label: "Vendor Codes",
-          disabled: true,
-          type: "text",
-          span: 2,
-          // required: true,
-        },
+        { name: "materialCode",        label: "Material Code",        type: "select", span: 2, disabled: true, showSearch: true, filterOption: (input, option) => option.label.toLowerCase().includes(input.toLowerCase()) },
+        { name: "materialDescription", label: "Description",          type: "select", span: 2, disabled: true, showSearch: true, options: [], filterOption: (input, option) => option.label.toLowerCase().includes(input.toLowerCase()), required: true },
+        { name: "uom",                 label: "UOM",                  type: "text",   disabled: true, required: true },
+        { name: "quantity",            label: "Quantity",             type: "text", disabled:true },
+        { name: "unitPrice",           label: "Unit Price",           type: "text",   disabled: true, span: 1 },
+        { name: "currency",            label: "Currency",             type: "text",   disabled: true, span: 1 },
+        ...((formData.materialDetails || []).some(m => m.currency && m.currency !== "INR")
+          ? [{ name: "conversionRate", label: "Conversion Rate",      type: "text",   disabled: true, span: 1 }]
+          : []),
+        { name: "origin",              label: "Origin",               type: "text",   disabled: true, span: 1 },
+        { name: "briefDescription",    label: "Brief Description",    type: "text",   disabled: true, span: 2 },
+        { name: "budgetCode",          label: "Budget Code",          type: "select", disabled: true, span: 2, options: [] },
+        { name: "totalPrice",          label: "Total Price",          type: "text",   disabled: true, span: 2 },
+        { name: "materialCategory",    label: "Material Category",    type: "text",   disabled: true, span: 2 },
+        { name: "materialSubCategory", label: "Material Sub Category",type: "text",   disabled: true, span: 2 },
+        { name: "modeOfProcurement",   label: "Mode of Procurement",  type: "select", disabled: true, span: 2, options: [] },
+        { name: "vendorNames",         label: "Vendor Codes",         type: "text",   disabled: true, span: 2 },
       ],
-    },
+    }]
+),
     {
       heading: "Tender Attachments",
       colCnt: 3,

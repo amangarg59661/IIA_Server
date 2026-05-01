@@ -504,7 +504,7 @@ setPendingGprnList(formattedPoList);
           label: "Material Photograph",
           type: "multiImage",  // changed from "image" to "multiImage"
           span: 3,
-          required: true,
+          // required: true,
           accept: "image/*",
           multiple: true  // added multiple property
         }
