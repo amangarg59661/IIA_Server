@@ -5,6 +5,7 @@ import com.astro.dto.workflow.AssignEmployeeToIndentDto;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentWorkflowStatusDto;
 import com.astro.dto.workflow.ProcurementDtos.TechnoMomReportDTO;
+import com.astro.service.BudgetService;
 
 import com.astro.entity.*;
 import com.astro.entity.ProcurementModule.IndentCreation;
@@ -53,6 +54,9 @@ public class IndentCreationServiceImpl implements IndentCreationService {
 
     @Autowired
     private JobDetailsRepository jobDetailsRepository;
+
+    @Autowired
+    private BudgetService budgetService;
 
     @Autowired
     private IndentMaterialMappingRepository indentMaterialMappingRepository;
@@ -362,6 +366,13 @@ job.setVendorNames(vendorNamesStr);
 
         indentCreation.setTotalIntentValue(totalIndentPrice);
 
+        // Hold budget on submit
+budgetService.holdBudgetForIndent(
+        indentId,
+        "material".equalsIgnoreCase(indentType) ? indentCreation.getMaterialDetails() : null,
+        "job".equalsIgnoreCase(indentType) ? indentCreation.getJobDetails() : null
+);
+
         // Use saveAndFlush to immediately commit to database
         // This is needed so that workflow initiation can find the indent
         indentCreationRepository.saveAndFlush(indentCreation);
@@ -635,6 +646,14 @@ j.setVendorNames((vn != null && !vn.isEmpty()) ? String.join(",", vn) : null);
     }
 
     newIndent.setTotalIntentValue(totalIndentPrice);
+
+    // Re-hold budget: release V1 hold, validate and place V2 hold
+    budgetService.reHoldBudgetForUpdatedIndent(
+            old.getIndentId(),
+            newIndentId,
+            "material".equalsIgnoreCase(indentType) ? newIndent.getMaterialDetails() : null,
+            "job".equalsIgnoreCase(indentType) ? newIndent.getJobDetails() : null
+    );
 
     // 10. Save new version
     indentCreationRepository.saveAndFlush(newIndent);
@@ -2482,6 +2501,8 @@ if (departmentPriceLimit== null ){
             indent.setCancelStatus(true);
             indent.setCancelRemarks(cancellationRequest.getCancellationReason());
             indentCreationRepository.save(indent);
+
+             budgetService.releaseBudgetHoldForIndent(cancellationRequest.getIndentId());
 
             // Pull indent out of the approval workflow:
             // Find all pending workflow transitions for this indent and mark them CANCELLED
