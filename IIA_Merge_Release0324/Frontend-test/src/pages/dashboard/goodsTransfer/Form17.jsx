@@ -9,15 +9,22 @@ import axios from "axios";
 import ItemGtSearch from "../../../components/ItemGtSearch";
 import ButtonContainer from "../../../components/ButtonContainer";
 import { useReactToPrint } from "react-to-print";
+
 import CustomModal from "../../../components/CustomModal";
 import dayjs from "dayjs";
 
 const Form17 = () => {
+  const { userId, role } = useSelector(state => state.auth);
   const [form] = Form.useForm();
-  const {userId} = useSelector(state => state.auth)
+  // const {userId} = useSelector(state => state.auth)
   const [modalOpen, setModalOpen] = useState(false)
-  const [formData, setFormData] = useState({materialDtlList: [], senderCustodianId: userId, senderLocationId: "BNG"});
+  const [formData, setFormData] = useState({materialDtlList: [], senderCustodianId: userId,receiverCustodianId: role === 'Store Person' ? userId : null, senderLocationId: "BNG"});
   const onFinish = async () => {
+
+    if (role === 'Store Person' && !formData.reasonForTransfer) {
+  message.error("Please provide a reason for transfer.");
+  return;
+}
     if(!formData.gtDate) {
       message.error("Please enter the Goods Transfer Date.");
       return;
@@ -123,6 +130,7 @@ const Form17 = () => {
           options: indentList,
           required: true,
           span: 2,
+          disabled: role !== 'Store Person',
         },
         {
           name: "receiverLocationId",
@@ -342,8 +350,12 @@ const Form17 = () => {
 */
 const populateData = async () => {
   try {
+     if (role === 'Store Person') {
+      const { data } = await axios.get("/api/asset/allAssetDataForStorePerson");
+      setAssetList(data.responseData || []);
+    } else {
     const { data } = await axios.get("/api/asset/assetDataForGt");
-    setAssetList(data.responseData || []);
+    setAssetList(data.responseData || []);}
   } catch (error) {
     message.error("Error fetching asset data for GT.");
   }
@@ -449,19 +461,22 @@ const populateData = async () => {
         return acc;
       }, {}) || {};
 
-    const filtered = materialList.filter((item) => {
+    const filtered = materialList.filter((item) => { 
       const locationId = locatorMap[item.locatorId];
       return (
         (!item.locatorId || locationId === formData.senderLocationId) &&
         (!item.custodianId || parseInt(item.custodianId) === parseInt(formData.senderCustodianId))
+        && parseFloat(item.quantity) > 0
       );
     });
 
     const filteredAsset = assetList.filter((item) => {
+     
       const locationId = locatorMap[item.locatorId];
       return (
         (!item.locatorId || locationId === formData.senderLocationId) &&
         (!item.custodianId || parseInt(item.custodianId) === parseInt(formData.senderCustodianId))
+         && parseFloat(item.quantity) > 0
       );
     });
 

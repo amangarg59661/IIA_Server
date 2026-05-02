@@ -27,12 +27,12 @@ const InvReportsMain = () => {
             icon: <BoxPlotOutlined />,
             path:"/reports/stock"
         },
-        {
-            id: 3,
-            title: "Goods Issue Report",
-            icon: <ExportOutlined />,
-            path:"/reports/goodsIssue"
-        },
+        // {
+        //     id: 3,
+        //     title: "Goods Issue Report",
+        //     icon: <ExportOutlined />,
+        //     path:"/reports/goodsIssue"
+        // },
         {
             id: 4,
             title: "IGP Report",
