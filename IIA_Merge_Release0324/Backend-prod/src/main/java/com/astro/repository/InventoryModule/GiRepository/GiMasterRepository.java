@@ -11,6 +11,8 @@ import java.util.Optional;
 
 @Repository
 public interface GiMasterRepository extends JpaRepository<GiMasterEntity, Integer> {
+
+    List<GiMasterEntity> findByStatus(String status);
     
     List<GiMasterEntity> findByGprnProcessId(String gprnProcessId);
     

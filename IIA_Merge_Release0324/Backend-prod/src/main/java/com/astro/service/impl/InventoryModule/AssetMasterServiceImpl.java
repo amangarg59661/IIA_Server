@@ -921,6 +921,28 @@ public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList(){
 
         return assets;
     }
+// Add this method after getAllFullAssets() at line 923
+@Override
+public List<AssetDataForGtDto> getAllFullAssetsForStorePerson() {
+    List<AssetDataForGtDto> assets = assetMasterRepository.findAllAssetFullDetails();
+
+    List<AssetDataForGtDto> result = new ArrayList<>();
+    for (AssetDataForGtDto dto : assets) {
+        // skip zero or null quantity items
+        if (dto.getQuantity() == null || dto.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
+            continue;
+        }
+        List<String> serials = assetSerialEntityRepository.findSerialNumbers(
+                dto.getAssetId(),
+                dto.getAssetCode(),
+                dto.getLocatorId(),
+                dto.getCustodianId()
+        );
+        dto.setSerialNumbers(serials);
+        result.add(dto);
+    }
+    return result;
+}
 
     @Override
     public SerialCheckResponseDto checkSerials(String assetCode, Integer assetId, String custodianId, Integer locatorId, Integer quantity) {

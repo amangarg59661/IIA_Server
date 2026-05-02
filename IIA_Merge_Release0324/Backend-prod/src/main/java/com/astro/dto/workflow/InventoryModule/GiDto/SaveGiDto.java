@@ -13,6 +13,8 @@ import java.util.List;
 public class SaveGiDto {
     private String inspectionNo;
     private String gprnNo;
+    private String spoRejectionReason;
+private Integer spoRejectionCount;
     private String installationDate;
     private String commissioningDate;
     private List<GiMaterialDtlDto> materialDtlList;

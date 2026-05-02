@@ -1348,6 +1348,8 @@ System.out.println("inspection ID " + inspectionId) ;
         SaveGiDto giRes = new SaveGiDto();
         giRes.setInspectionNo(processNo);
         giRes.setGprnNo(processNo);
+        giRes.setSpoRejectionReason(gime.getSpoRejectionReason());
+giRes.setSpoRejectionCount(gime.getSpoRejectionCount());
         giRes.setInstallationDate(CommonUtils.convertDateToString(gime.getInstallationDate()));
         giRes.setCommissioningDate(CommonUtils.convertDateToString(gime.getCommissioningDate()));
         giRes.setGprnAmount(gime.getGprnAmount());
@@ -1702,14 +1704,55 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
 }
 
 
-    @Override
-    @Transactional
-    public void rejectGi(GiApprovalDto req) {
-        // updateGiStatusAndRemarks(req, "REJECTED");
-        updateGiStatusAndRemarks(req);
+    // @Override
+    // @Transactional
+    // public void rejectGi(GiApprovalDto req) {
+    //     // updateGiStatusAndRemarks(req, "REJECTED");
+    //     updateGiStatusAndRemarks(req);
 
-        giMailSender(req.getProcessNo());
+    //     giMailSender(req.getProcessNo());
+    // }
+
+@Override
+@Transactional
+public void rejectGi(GiApprovalDto req) {
+    // Validate rejection reason is provided
+    if (req.getRejectionReason() == null || req.getRejectionReason().isBlank()) {
+        throw new InvalidInputException(new ErrorDetails(
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Rejection reason is mandatory when rejecting a Goods Inspection."));
     }
+
+    Integer inspectionId = extractSubProcessId(req.getProcessNo());
+    GiMasterEntity giMaster = gimr.findById(inspectionId)
+            .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_RESOURCE,
+                    "Goods Inspection not found")));
+
+    // Re-queue for re-inspection instead of terminating
+    giMaster.setStatus("REJECTED PENDING REINSPECTION");
+    giMaster.setSpoRejectionReason(req.getRejectionReason());
+    giMaster.setSpoRejectionCount(
+            giMaster.getSpoRejectionCount() == null ? 1 : giMaster.getSpoRejectionCount() + 1);
+    gimr.save(giMaster);
+
+    // Log to workflow history
+    String[] processNoSplit = req.getProcessNo().split("/");
+    GiWorkflowStatus history = new GiWorkflowStatus();
+    history.setProcessId(processNoSplit[0]);
+    history.setSubProcessId(inspectionId);
+    history.setAction("REJECTED PENDING REINSPECTION");
+    history.setRemarks(req.getRejectionReason());
+    history.setCreatedBy(req.getCreatedBy());
+    history.setCreateDate(LocalDateTime.now());
+    gistausRepo.save(history);
+
+    giMailSender(req.getProcessNo());
+}
 
     @Override
     @Transactional
@@ -1800,6 +1843,7 @@ Integer subProcessId = extractSubProcessId(req.getGprnNo());
         gime.setInstallationDate(CommonUtils.convertStringToDateObject(req.getInstallationDate()));
         gime.setLocationId(req.getLocationId());
         gime.setStatus("AWAITING APPROVAL");
+        gime.setSpoRejectionReason(null);
         gimr.save(gime);
 
         ModelMapper mapper = new ModelMapper();
@@ -1918,8 +1962,21 @@ Integer subProcessId = extractSubProcessId(req.getGprnNo());
     //             .collect(Collectors.toList());
     // }
 
-    public List<GprnDropdownDto> getPendingGprnsForGI(Integer userId, String role) {
-    return gprnMasterRepository.findPendingGprnsWithMaterial()
+//     public List<GprnDropdownDto> getPendingGprnsForGI(Integer userId, String role) {
+//     return gprnMasterRepository.findPendingGprnsWithMaterial()
+//             .stream()
+//             .filter(gprn -> isGprnAccessibleToUser(gprn, userId, role))
+//             .map(g -> new GprnDropdownDto(
+//                     g.getSubProcessId(),
+//                     "INV" + g.getProcessId() + "/" + g.getSubProcessId(),
+//                     g.getPoId(),
+//                     g.getVendorId(),
+//                     gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(g.getSubProcessId())))
+//             .collect(Collectors.toList());
+// }
+public List<GprnDropdownDto> getPendingGprnsForGI(Integer userId, String role) {
+    // Existing: GPRNs with no GI yet
+    List<GprnDropdownDto> pending = gprnMasterRepository.findPendingGprnsWithMaterial()
             .stream()
             .filter(gprn -> isGprnAccessibleToUser(gprn, userId, role))
             .map(g -> new GprnDropdownDto(
@@ -1929,6 +1986,25 @@ Integer subProcessId = extractSubProcessId(req.getGprnNo());
                     g.getVendorId(),
                     gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(g.getSubProcessId())))
             .collect(Collectors.toList());
+
+    // NEW: GPRNs whose GI was rejected by SPO and needs re-inspection
+    List<GiMasterEntity> rejectedGis = gimr.findByStatus("REJECTED PENDING REINSPECTION");
+    List<GprnDropdownDto> rejectedPending = rejectedGis.stream()
+            .map(gi -> {
+                GprnMasterEntity gprn = gprnMasterRepository.findBySubProcessId(gi.getGprnSubProcessId());
+                if (gprn == null || !isGprnAccessibleToUser(gprn, userId, role)) return null;
+                return new GprnDropdownDto(
+                        gprn.getSubProcessId(),
+                        "INV" + gprn.getProcessId() + "/" + gprn.getSubProcessId(),
+                        gprn.getPoId(),
+                        gprn.getVendorId(),
+                        gprnMaterialDtlRepository.findMaterialDescriptionsBySubProcessId(gprn.getSubProcessId()));
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
+    pending.addAll(rejectedPending);
+    return pending;
 }
 
 public boolean isGprnAccessibleToUser(GprnMasterEntity gprn, Integer userId, String role) {

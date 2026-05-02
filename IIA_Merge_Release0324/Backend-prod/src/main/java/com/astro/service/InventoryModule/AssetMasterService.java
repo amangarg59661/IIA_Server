@@ -34,7 +34,7 @@ public interface AssetMasterService {
     public String disposeMultipleAssets(DisposeAssetRequest request);
     public AssetsAuctionDto searchByAuctionId(String auctionId);
     public List<Integer> getPendingAuctionIds();
-
+    public List<AssetDataForGtDto> getAllFullAssetsForStorePerson();
     List<AssetSearchResponseDto> searchAssetsByKeyword(String keyword);
     public List<AssetFullResponseDto> getFullAssetDetails( Integer assetId, String assetCode, String custodianId, Integer locatorId);
     public String updateAssetSerials(AssetSerialUpdateRequestDto req);

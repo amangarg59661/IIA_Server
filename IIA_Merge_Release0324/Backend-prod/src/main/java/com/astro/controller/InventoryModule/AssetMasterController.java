@@ -1,9 +1,11 @@
 package com.astro.controller.InventoryModule;
 
 import java.util.HashMap;
-import java.util.List;
+// import java.util.List;
 import java.util.Map;
-
+// import com.astro.service.InventoryModule.AssetMasterService;
+import com.astro.dto.workflow.AssetDataForGtDto;
+import java.util.List;
 import com.astro.dto.workflow.AssetDataForGtDto;
 import com.astro.dto.workflow.AssetSearchResponseDto;
 import com.astro.dto.workflow.InventoryModule.*;
@@ -38,6 +40,11 @@ public class AssetMasterController {
         response.put("processNo", Integer.parseInt(res));
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
     }
+    @GetMapping("/allAssetDataForStorePerson")
+public ResponseEntity<Object> getAllAssetDataForStorePerson() {
+    List<AssetDataForGtDto> data = assetMasterService.getAllFullAssetsForStorePerson();
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(data), HttpStatus.OK);
+}
 
     // @PutMapping("/update")
     // public String updateAssetMaster(@RequestBody AssetMasterDto request) {
