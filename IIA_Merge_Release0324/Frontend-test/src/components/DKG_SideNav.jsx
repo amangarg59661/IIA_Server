@@ -146,12 +146,12 @@ const items = [
             label: "Asset Master",
             path: "/inventory/assetMaster",
           },
-          {
-            key: "4.6",
-            icon: <MdOutlineAddBox />,
-            label: "Goods Issue",
-            path: "/inventory/goodsIssue",
-          },
+          // {
+          //   key: "4.6",
+          //   icon: <MdOutlineAddBox />,
+          //   label: "Goods Issue",
+          //   path: "/inventory/goodsIssue",
+          // },
           {
             key: "4.7",
             icon: <BiTransferAlt />,
