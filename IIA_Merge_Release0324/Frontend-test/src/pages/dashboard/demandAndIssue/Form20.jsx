@@ -39,7 +39,7 @@ const Form17 = () => {
   }, {});
 
   const indentList = userMaster
-    ?.filter((item) => item.roleName === "Indent Creator")
+    ?.filter((item) => item.roleName.includes( "Indent Creator"))
     .map((item) => ({ label: item.userName, value: item.userId }));
 
   const formattedLocations = locationMaster?.map((item) => ({
@@ -259,7 +259,7 @@ const { data } = await axios.get(`/api/process-controller/SearchByDiId`, {
       colCnt: 4,
       fieldList: [
         { name: "senderLocationId", label: "Field Station", type: "select", options: formattedLocations, required: true, span: 2 },
-        { name: "senderCustodianId", label: "Sender Custodian", type: "select", options: indentList, required: true, span: 2 },
+        { name: "senderCustodianId", label: "Consignee Name", type: "select", options: indentList, required: true, span: 2 },
         { name: "diDate", label: "Date", type: "date", required: true, span: 1 },
       ],
     },

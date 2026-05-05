@@ -9,7 +9,7 @@ const { Option } = Select;
 
 const BudgetManagement = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);  
   const [budgets, setBudgets] = useState([]);
   const [summary, setSummary] = useState({
     totalAllocated: 0,
@@ -101,6 +101,7 @@ const BudgetManagement = () => {
       budgetName: record.budgetName,
       category: record.category,
       allocatedAmount: record.allocatedAmount,
+      onHoldAmount: record.onHoldAmount,
       spentAmount: record.spentAmount,
       fiscalYear: record.fiscalYear,
       startDate: record.startDate ? dayjs(record.startDate) : null,
@@ -130,6 +131,7 @@ const BudgetManagement = () => {
         budgetName: values.budgetName,
         category: values.category,
         allocatedAmount: parseFloat(values.allocatedAmount),
+        OnHoldAmount: parseFloat(values.onHoldAmount),
         spentAmount: parseFloat(values.spentAmount || 0),
         fiscalYear: values.fiscalYear,
         startDate: values.startDate ? values.startDate.format('YYYY-MM-DD') : null,
@@ -193,6 +195,13 @@ const BudgetManagement = () => {
       title: 'Allocated',
       dataIndex: 'allocatedAmount',
       key: 'allocatedAmount',
+      width: 130,
+      render: (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`
+    },
+    {
+      title: 'Hold',
+      dataIndex: 'onHoldAmount',
+      key: 'onHolAmount',
       width: 130,
       render: (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`
     },
@@ -307,6 +316,23 @@ const BudgetManagement = () => {
             />
           </Card>
         </Col>
+        <Col xs = {24} sm= {8}>
+          <Card>
+          <Statistic
+            title ="Total Hold"
+            value = {summary.totalOnHold}
+            prefix = "₹" 
+            precision={2}
+            />
+          </Card>
+        </Col>
+        {/* Add this alongside your existing summary cards */}
+{/* <div className="summary-card on-hold">
+  <span className="label">Total On Hold</span>
+  <span className="value">
+    ₹{summary?.totalOnHold?.toLocaleString('en-IN', { minimumFractionDigits: 2 }) ?? '0.00'}
+  </span>
+</div> */}
         <Col xs={24} sm={8}>
           <Card>
             <Statistic
@@ -408,6 +434,12 @@ const BudgetManagement = () => {
               label="Allocated Amount"
               name="allocatedAmount"
               rules={[{ required: true, message: 'Please enter allocated amount' }]}
+            >
+              <Input type="number" placeholder="0" min={0} />
+            </Form.Item>
+            <Form.Item
+              label="On Hold Amount"
+              name="onHoldAmount"
             >
               <Input type="number" placeholder="0" min={0} />
             </Form.Item>

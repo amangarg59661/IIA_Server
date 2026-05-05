@@ -575,7 +575,7 @@ const grvFields =(formData)=> [
                 type: "text",
                 span: 2,
                 disabled: true,
-                required: true
+                // required: true
             },
             {
                 name: "locatorId",

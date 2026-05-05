@@ -293,6 +293,7 @@ setPendingGprnList(formattedPoList);
           name: "project",
           label: "Project",
           type: "text",
+          disabled : true ,
           // required: true,
           span: 2 // optional
         }
@@ -308,13 +309,15 @@ setPendingGprnList(formattedPoList);
           label: "Vendor ID",
           type: "text",
           span: 2,
-          required: true
+          required: true,
+          disabled : true ,
         },
         {
           name: "vendorName",
           label: "Vendor Name",
           type: "text",
           span: 2,
+          disabled : true ,
           required: true
         },
         {
@@ -322,12 +325,14 @@ setPendingGprnList(formattedPoList);
           label: "Vendor Email",
           type: "text",
           span: 2,
+          disabled : true ,
           required: true
         },
         {
           name: "vendorContactNo",
           label: "Vendor Contact",
           type: "text",
+          disabled : true ,
           span: 2,
           required: true
         }
@@ -371,6 +376,7 @@ setPendingGprnList(formattedPoList);
           label: "Indentor Name",
           type: "text",
           required: true,
+          disabled : true ,
           span: 2
         },
       ]
@@ -401,7 +407,7 @@ setPendingGprnList(formattedPoList);
           label: "UOM",
           type: "text",
           span: 1,
-          required: true,
+          // required: true,
           disabled: true
         },
         {
@@ -489,6 +495,7 @@ setPendingGprnList(formattedPoList);
           name: "category",
           label: "Category",
           type: "text",
+          disabled : true ,
           required: true,
 
         },

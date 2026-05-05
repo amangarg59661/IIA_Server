@@ -134,20 +134,32 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
       ;
 
       // 2. Extract all material details from indentResponseDTO
-      const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
-        (indent) =>
-          (indent.materialDetails || []).map((material) => ({
-            materialCode: material.materialCode,
-            materialDescription: material.materialDescription,
-            quantity: material.quantity,
-            rate: material.unitPrice,
-            uom: material.uom,
-            currency: material.currency || "INR",
-            gst: material.gst || "",
-            duties: material.duties || "",
-            // Add other fields as needed
-          }))
-      );
+      // const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
+      //   (indent) =>
+      //     (indent.materialDetails || []).map((material) => ({
+      //       materialCode: material.materialCode,
+      //       materialDescription: material.materialDescription,
+      //       quantity: material.quantity,
+      //       rate: material.unitPrice,
+      //       uom: material.uom,
+      //       currency: material.currency || "INR",
+      //       gst: material.gst || "",
+      //       duties: material.duties || "",
+      //       budgetCode: material.budgetCode || "test",
+      //       // Add other fields as needed
+      //     }))
+      // );
+      // AFTER — spread the entire material first, then override what you need
+const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
+  (indent) =>
+    (indent.materialDetails || []).map((material) => ({
+      ...material,                          // ← captures budgetCode + everything else
+      rate: material.unitPrice,             // API uses unitPrice, form uses rate
+      currency: material.currency || "INR",
+      gst: material.gst || "",
+      duties: material.duties || "",
+    }))
+);
 
       // 3. Update state and form
       setMaterials(allMaterials);
@@ -491,6 +503,8 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
         return;
       }
       setSubmitBtnLoading(true);
+
+      console.log("materialDtlList at submit:", JSON.stringify(formData.materialDtlList, null, 2));
 
       const payload = {
         ...formData,

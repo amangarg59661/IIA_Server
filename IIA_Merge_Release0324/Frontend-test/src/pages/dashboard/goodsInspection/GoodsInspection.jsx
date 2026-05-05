@@ -289,6 +289,7 @@ const handleGISearch = async () => {
                 name: "vendorId",
                 label: "Vendor ID",
                 type: "text",
+                disabled : true ,
                 span: 2,
                 required: true
             },
@@ -298,6 +299,7 @@ const handleGISearch = async () => {
                 type: "text",
                 // Modified by Aman
                 span: 2,
+                disabled : true ,
                 // span: 3,
                 // End
                 required: true
@@ -308,6 +310,7 @@ const handleGISearch = async () => {
                 type: "text",
                 // Modified by Aman
                 span: 2,
+                disabled : true ,
                 // span: 3,
                 // End
                 required: true
@@ -316,6 +319,7 @@ const handleGISearch = async () => {
                 name: "vendorContact",
                 label: "Vendor Contact",
                 type: "text",
+                disabled : true ,
                 span: 2,
                 required: true
             }
@@ -329,6 +333,7 @@ const handleGISearch = async () => {
                 name: "challanNo",
                 label: "Challan/Invoice No.",
                 type: "text",
+                disabled : true ,
                 required: true,
                 span: 2
             },
@@ -350,6 +355,7 @@ const handleGISearch = async () => {
                 name: "fieldStation",
                 label: "Field Station",
                 type: "text",
+                disabled : true ,
                 required: true,
                 span: 2
             },
@@ -357,19 +363,22 @@ const handleGISearch = async () => {
                 name: "indentorName",
                 label: "Indentor Name",
                 type: "text",
+                disabled : true ,
                 required: true,
                 span: 2
             },
             {
               name: "gprnAmount",
-              label: "Gprn Amount",
+              label: "Gprn Amount (INR)",
               type: "text",
+              disabled : true ,
               span: 2,
             },
              {
               name: "poAmount",
-              label: "Po Amount",
+              label: "Po Amount (INR)",
               type: "text",
+              disabled : true ,
               span: 2,
             },
         ]
@@ -383,6 +392,7 @@ const handleGISearch = async () => {
                 name: "materialCode",
                 label: "Material Code",
                 type: "text",
+                disabled : true ,
                 span: 2,
                 required: true
             },
@@ -390,6 +400,7 @@ const handleGISearch = async () => {
                 name: "materialDesc",
                 label: "Material Description",
                 type: "text",
+                disabled : true ,
                 span: 3,
                 required: true
             },
@@ -397,6 +408,7 @@ const handleGISearch = async () => {
                 name: "uomId",
                 label: "UOM",
                 type: "text",
+                disabled : true ,
                 span: 1,
                 required: true
             },
@@ -564,6 +576,7 @@ const handleGISearch = async () => {
                 name: "consigneeDetail",
                 label: "Consignee Details",
                 type: "text",
+                disabled : true ,
                 required: true,
                 span: 2
             },

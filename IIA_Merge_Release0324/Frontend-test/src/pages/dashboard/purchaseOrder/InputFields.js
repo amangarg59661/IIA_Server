@@ -153,17 +153,11 @@ export const PoDetails = [
           type: "text",
           disabled: true,
           required: true,
-          span: 2
+          span: 1
         },
         {
           name: "quantity",
           label: "Quantity",
-          type: "text",
-          required: true
-        },
-        {
-          name: "rate",
-          label: "Unit Rate",
           type: "text",
           required: true
         },
@@ -175,10 +169,16 @@ export const PoDetails = [
           required: true
         },
         {
+          name: "rate",
+          label: "Unit Rate",
+          type: "text",
+          required: true
+        },
+        {
             name: "exchangeRate",
-            label: "Exchange Rate",
+            label: "Exchange Rate(INR) ",
             type: "text",
-            span: 2
+            span: 1
         },
         {
             name: "gst",

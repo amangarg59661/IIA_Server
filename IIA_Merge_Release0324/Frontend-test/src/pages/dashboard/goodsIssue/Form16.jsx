@@ -12,7 +12,7 @@ const Form16 = () => {
 
   return (
     <div className="form-container">
-      <h2>Goods Issue</h2>
+      {/* <h2>Goods Issue</h2> */}
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <h6>For Capital Goods</h6>
         <div className="form-section">
