@@ -55,6 +55,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import com.astro.service.BudgetService;
 import java.math.BigDecimal;
 
 import java.math.RoundingMode;
@@ -72,6 +73,9 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
 
     @Autowired
     private PurchaseOrderRepository purchaseOrderRepository;
+
+    @Autowired
+private BudgetService budgetService;
 
     @Autowired
     private PurchaseOrderAttributesRepository purchaseOrderAttributesRepository;
@@ -244,6 +248,8 @@ purchaseOrder.setParentPoId(null);
                 .reduce(BigDecimal.ZERO, BigDecimal::add); // Sum up values
         purchaseOrder.setTotalValueOfPo(totalTenderValue);
         System.out.println("tottalTenderValue" + totalTenderValue);*/
+         // Budget check on PO creation — does not touch hold, only validates
+        budgetService.checkBudgetForPo(poId, tenderId, purchaseOrderAttributes);
         purchaseOrderRepository.save(purchaseOrder);
         TenderRequest existing = trRepo.findById(tenderId)
                 .orElseThrow(() -> new BusinessException(
@@ -442,7 +448,8 @@ public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRe
             .filter(Objects::nonNull)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     newPO.setTotalValueOfPo(totalPoValue);
-
+   // Budget check on PO update — does not touch hold, only validates
+    budgetService.checkBudgetForPo(newPoId, newPO.getTenderId(), newAttributes);
     // 10. Save new PO version
     purchaseOrderRepository.save(newPO);
 

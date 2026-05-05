@@ -2437,6 +2437,7 @@ if (departmentPriceLimit== null ){
                 .map(this::mapToCancellationResponseDto)
                 .collect(Collectors.toList());
     }
+   
 
     @Override
     @Transactional

@@ -1074,6 +1074,10 @@ public class GiServiceImpl implements GiService {
     private MaterialDetailsRepository materialDetailsRepository;
     @Autowired
     private UserMasterRepository userMasterRepository;
+    
+    @Autowired
+private com.astro.service.BudgetService budgetService;
+
     @Autowired
     private EmailService emailService;
 
@@ -1534,17 +1538,42 @@ giRes.setSpoRejectionCount(gime.getSpoRejectionCount());
         }).collect(Collectors.toList());
     }
 
-    @Override
+    // @Override
+    // @Transactional
+    // public void approveGi(GiApprovalDto req) {
+    //     // updateGiStatusAndRemarks(req, "APPROVED");
+    //     updateGiStatusAndRemarks(req);
+
+    //     updatePoBasedonRejectionType(req);
+    //     giMailSender(req.getProcessNo());
+
+    // }
+
+@Override
     @Transactional
     public void approveGi(GiApprovalDto req) {
-        // updateGiStatusAndRemarks(req, "APPROVED");
         updateGiStatusAndRemarks(req);
-
         updatePoBasedonRejectionType(req);
+
+        // Release budget hold for permanently rejected materials
+        try {
+            Integer inspectionSubProcessId = extractSubProcessId(req.getProcessNo());
+            GiMasterEntity giMaster = gimr.findById(inspectionSubProcessId).orElse(null);
+            if (giMaster != null) {
+                GprnMasterEntity gprnMaster = gprnMasterRepository
+                        .findBySubProcessId(giMaster.getGprnSubProcessId());
+                if (gprnMaster != null && gprnMaster.getPoId() != null) {
+                    budgetService.releaseHoldForPermanentRejection(
+                            inspectionSubProcessId, gprnMaster.getPoId());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ [GI BUDGET] " + e.getMessage());
+        }
+
         giMailSender(req.getProcessNo());
-
     }
-
+    
     public String giMailSender(String processNumber) {
         try {
             String[] parts = processNumber.split("/");

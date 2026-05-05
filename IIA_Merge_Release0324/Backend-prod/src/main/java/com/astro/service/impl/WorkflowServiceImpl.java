@@ -3278,6 +3278,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import com.astro.service.BudgetService;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -3288,6 +3289,9 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     @Autowired
     WorkflowTransitionRepository workflowTransitionRepository;
+
+    @Autowired
+private BudgetService budgetService;
 
     @Autowired
     WorkflowMasterRepository workflowMasterRepository;
@@ -4865,6 +4869,15 @@ public class WorkflowServiceImpl implements WorkflowService {
                     System.out.println("✅ [REJECTION] IndentCreation " + requestId + " → REJECTED");
                 });
 
+                 // Release budget hold — indent is permanently rejected, funds go back to available
+    try {
+        budgetService.releaseHoldIfRejected(requestId, "INDENT");
+        System.out.println("✅ [REJECTION] Budget hold released for indent " + requestId);
+    } catch (Exception e) {
+        // Log but don't rethrow — workflow rejection must not roll back due to budget release failure
+        System.err.println("❌ [REJECTION] Failed to release budget hold for " + requestId + ": " + e.getMessage());
+    }
+
             } else if (requestId.startsWith("T") || workflowNameUpper.contains("TENDER")) {
                 tenderRequestRepository.findById(requestId).ifPresent(tender -> {
                     tender.setCurrentStatus("REJECTED");
@@ -4879,6 +4892,13 @@ public class WorkflowServiceImpl implements WorkflowService {
                     purchaseOrderRepository.save(po);
                     System.out.println("✅ [REJECTION] PurchaseOrder " + requestId + " → REJECTED");
                 });
+                 // Release PO hold if it exists (only present if PO was finally approved before rejection — edge case)
+                try {
+                    budgetService.releaseHoldIfRejected(requestId, "PO");
+                    System.out.println("✅ [REJECTION] Budget hold released for PO " + requestId);
+                } catch (Exception e) {
+                    System.err.println("❌ [REJECTION] Failed to release PO budget hold for " + requestId + ": " + e.getMessage());
+                }
 
             } else if (requestId.startsWith("SO") || workflowNameUpper.contains("SO")) {
                 serviceOrderRepository.findById(requestId).ifPresent(so -> {
@@ -5169,6 +5189,23 @@ public class WorkflowServiceImpl implements WorkflowService {
             System.out.println("Final approval by " + currentWorkflowTransition.getNextRole()
                     + " (Branch: " + currentWorkflowTransition.getBranchId()
                     + ") - Workflow COMPLETED");
+                      // PO final approval → finalize budget hold
+            String reqId = currentWorkflowTransition.getRequestId();
+            if (reqId != null && reqId.startsWith("PO")) {
+                try {
+                    purchaseOrderRepository.findById(reqId).ifPresent(po -> {
+                        budgetService.finalizePoHold(
+                                po.getPoId(),
+                                po.getTenderId(),
+                                po.getPurchaseOrderAttributes());
+                        System.out.println("✅ [PO FINAL APPROVAL] Budget hold finalized for PO: " + reqId);
+                    });
+                } catch (Exception e) {
+                    // Rethrow — insufficient budget must block final approval
+                    System.err.println("❌ [PO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+                    throw e;
+                }
+            }
         }
 
         workflowTransitionRepository.save(nextWorkflowTransition);

@@ -54,7 +54,7 @@ public interface IndentCreationService {
     public String approveCancellationRequest(com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCancellationApprovalDto approval);
 
     public IndentCreationResponseDTO getIndentDataForTenderById(String indentId) throws IOException;
-
+    // void releaseHoldIfRejected(String referenceId, String referenceType);
     public List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> getMaterialPurchaseHistory(String materialCode);
 
     public List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> getJobPurchaseHistory(String jobCode);

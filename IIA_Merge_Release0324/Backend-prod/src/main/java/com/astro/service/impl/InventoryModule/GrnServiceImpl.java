@@ -48,6 +48,8 @@ public class GrnServiceImpl implements GrnService {
 
     @Autowired
     private IgpService igpService;
+    @Autowired
+private com.astro.service.BudgetService budgetService;
 
     @Autowired
     private GrnMaterialDtlRepository grnmdr;
@@ -373,6 +375,12 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
         workflowStatus.setCreateDate(LocalDateTime.now());
 
         grnWorkRepo.save(workflowStatus);
+        try {
+    Integer grnSubProcessId = grnMaster.getGrnSubProcessId();
+    budgetService.convertHoldToSpentOnGrn(grnSubProcessId);
+} catch (Exception e) {
+    System.err.println("❌ [GRN BUDGET] " + e.getMessage());
+}
 
         return "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnSubProcessId();
     }
@@ -559,7 +567,19 @@ private int extractSubProcessId(String processNo) {
     public void approveGrn(GiApprovalDto req) {
         updateGrnStatusAndRemarks(req);
     }
+// @Override
+//     @Transactional
+//     public void approveGrn(GiApprovalDto req) {
+//         updateGrnStatusAndRemarks(req);
 
+//         // Convert PO hold → Spent for received materials
+//         try {
+//             Integer grnSubProcessId = extractSubProcessId(req.getProcessNo());
+//             budgetService.convertHoldToSpentOnGrn(grnSubProcessId);
+//         } catch (Exception e) {
+//             System.err.println("❌ [GRN BUDGET] " + e.getMessage());
+//         }
+//     }
     @Override
     @Transactional
     public void rejectGrn(GiApprovalDto req) {
