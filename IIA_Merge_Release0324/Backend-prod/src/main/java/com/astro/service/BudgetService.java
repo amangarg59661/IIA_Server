@@ -2,6 +2,7 @@ package com.astro.service;
 
 import com.astro.entity.ProcurementModule.JobDetails;
 import com.astro.entity.ProcurementModule.MaterialDetails;
+import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.ProcurementModule.PurchaseOrderAttributes;
 import java.util.List;
 
@@ -33,4 +34,13 @@ void convertHoldToSpentOnGrn(Integer grnSubProcessId);
 
 // Called on GI approval — release hold for permanently rejected materials
 void releaseHoldForPermanentRejection(Integer inspectionSubProcessId, String poId);
+
+// Check only — called on SO create/update
+void checkBudgetForSo(String soId, String tenderId, List<ServiceOrderMaterial> soMaterials);
+
+// Called on SO final approval — release indent holds, move directly to Spent
+void finalizeSOAsSpent(String soId, String tenderId, List<ServiceOrderMaterial> soMaterials);
+
+// Called on SO rejection — release spent (if finalized), restore indent holds
+void releaseSOSpent(String soId, String tenderId);
 }

@@ -4906,6 +4906,17 @@ private BudgetService budgetService;
                     serviceOrderRepository.save(so);
                     System.out.println("✅ [REJECTION] ServiceOrder " + requestId + " → REJECTED");
                 });
+                 // Reverse spent and restore indent holds
+                try {
+                    com.astro.entity.ProcurementModule.ServiceOrder so =
+                            serviceOrderRepository.findById(requestId).orElse(null);
+                    if (so != null) {
+                        budgetService.releaseSOSpent(requestId, so.getTenderId());
+                        System.out.println("✅ [REJECTION] SO budget reversed for: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ [REJECTION] Failed to reverse SO budget for " + requestId + ": " + e.getMessage());
+                }
 
             } else if (requestId.startsWith("CP") || workflowNameUpper.contains("CONTINGENCY")) {
                 contigencyPurchaseRepository.findById(requestId).ifPresent(cp -> {
@@ -5204,6 +5215,21 @@ private BudgetService budgetService;
                     // Rethrow — insufficient budget must block final approval
                     System.err.println("❌ [PO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
                     throw e;
+                }
+            }
+            // SO final approval → directly to Spent
+            if (reqId != null && reqId.startsWith("SO")) {
+                try {
+                    serviceOrderRepository.findById(reqId).ifPresent(so -> {
+                        budgetService.finalizeSOAsSpent(
+                                so.getSoId(),
+                                so.getTenderId(),
+                                so.getMaterials());
+                        System.out.println("✅ [SO FINAL APPROVAL] Budget spent for SO: " + reqId);
+                    });
+                } catch (Exception e) {
+                    System.err.println("❌ [SO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+                    throw e; // Block approval if budget insufficient
                 }
             }
         }

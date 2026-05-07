@@ -6,6 +6,7 @@ import com.astro.entity.InventoryModule.AssetMasterEntity;
 import com.astro.entity.InventoryModule.GrnConsumableDtlEntity;
 import com.astro.repository.InventoryModule.grn.GrnConsumableDtlRepository;
 import com.astro.entity.ProcurementModule.JobDetails;
+import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.ProcurementModule.MaterialDetails;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
@@ -843,6 +844,193 @@ public void releaseHoldForPermanentRejection(Integer inspectionSubProcessId, Str
         }
     } catch (Exception e) {
         System.err.println("❌ [GI BUDGET] Failed to release hold for permanent rejection: " + e.getMessage());
+    }
+}
+
+private Map<String, BigDecimal> computeSoTotals(List<ServiceOrderMaterial> materials) {
+    Map<String, BigDecimal> totals = new HashMap<>();
+    if (materials == null) return totals;
+    for (ServiceOrderMaterial m : materials) {
+        if (m.getBudgetCode() == null) continue;
+
+        BigDecimal rate         = m.getRate()          != null ? m.getRate()          : BigDecimal.ZERO;
+        BigDecimal exchangeRate = m.getExchangeRate()  != null ? m.getExchangeRate()  : BigDecimal.ONE;
+        BigDecimal gst          = m.getGst()           != null ? m.getGst()           : BigDecimal.ZERO;
+        BigDecimal duties       = m.getDuties()        != null ? m.getDuties()        : BigDecimal.ZERO;
+        BigDecimal qty          = m.getQuantity()      != null ? m.getQuantity()      : BigDecimal.ZERO;
+
+        boolean isForeign = m.getCurrency() != null && !"INR".equalsIgnoreCase(m.getCurrency());
+        BigDecimal effectiveExRate = isForeign ? exchangeRate : BigDecimal.ONE;
+
+        BigDecimal base     = qty.multiply(rate).multiply(effectiveExRate);
+        BigDecimal gstAmt   = base.multiply(gst).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal dutyAmt  = base.multiply(duties).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal lineTotal = base.add(gstAmt).add(dutyAmt); // no freight on SO
+
+        totals.merge(m.getBudgetCode(), lineTotal, BigDecimal::add);
+    }
+    return totals;
+}
+// ─── SO: CHECK ONLY on create/update ─────────────────────────────────────────
+
+@Override
+@Transactional
+public void checkBudgetForSo(String soId, String tenderId,
+                              List<ServiceOrderMaterial> soMaterials) {
+    Map<String, BigDecimal> soTotals      = computeSoTotals(soMaterials);
+    Map<String, BigDecimal> indentHolds   = getIndentHoldsForTender(tenderId);
+
+    Set<String> allCodes = new HashSet<>();
+    allCodes.addAll(soTotals.keySet());
+    allCodes.addAll(indentHolds.keySet());
+
+    for (String budgetCode : allCodes) {
+        BigDecimal soAmount   = soTotals.getOrDefault(budgetCode, BigDecimal.ZERO);
+        BigDecimal indentHold = indentHolds.getOrDefault(budgetCode, BigDecimal.ZERO);
+        BigDecimal diff       = soAmount.subtract(indentHold);
+
+        if (diff.compareTo(BigDecimal.ZERO) > 0) {
+            BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode)
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                            400, 4, "Budget Not Found",
+                            "Budget not found for code: " + budgetCode)));
+
+            if (budget.getRemainingAmount().compareTo(diff) < 0) {
+                throw new BusinessException(new ErrorDetails(
+                        400, 4, "Insufficient Budget",
+                        "Insufficient budget for SO on budget code: " + budgetCode
+                        + ". SO requires: " + soAmount
+                        + ", Indent hold: " + indentHold
+                        + ", Additional needed: " + diff
+                        + ", Available: " + budget.getRemainingAmount()));
+            }
+        }
+    }
+}
+
+// ─── SO: FINAL APPROVAL — indent hold → Spent directly ───────────────────────
+
+@Override
+@Transactional
+public void finalizeSOAsSpent(String soId, String tenderId,
+                               List<ServiceOrderMaterial> soMaterials) {
+
+    Map<String, BigDecimal> soTotals    = computeSoTotals(soMaterials);
+    Map<String, BigDecimal> indentHolds = getIndentHoldsForTender(tenderId);
+
+    Set<String> allCodes = new HashSet<>();
+    allCodes.addAll(soTotals.keySet());
+    allCodes.addAll(indentHolds.keySet());
+
+    // ── VALIDATION PASS ──
+    for (String budgetCode : allCodes) {
+        BigDecimal soAmount   = soTotals.getOrDefault(budgetCode, BigDecimal.ZERO);
+        BigDecimal indentHold = indentHolds.getOrDefault(budgetCode, BigDecimal.ZERO);
+        BigDecimal diff       = soAmount.subtract(indentHold);
+
+        if (diff.compareTo(BigDecimal.ZERO) > 0) {
+            BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode)
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                            400, 4, "Budget Not Found",
+                            "Budget not found for code: " + budgetCode)));
+
+            BigDecimal effectiveAvailable = budget.getRemainingAmount().add(indentHold);
+            if (effectiveAvailable.compareTo(soAmount) < 0) {
+                throw new BusinessException(new ErrorDetails(
+                        400, 4, "Insufficient Budget",
+                        "Cannot finalize SO approval. Insufficient budget for code: " + budgetCode
+                        + ". SO requires: " + soAmount
+                        + ", Effective available: " + effectiveAvailable));
+            }
+        }
+    }
+
+    // ── APPLY PASS ──
+    // 1. Release all indent holds for this tender
+    releaseIndentHoldsForTender(tenderId);
+
+    // 2. Move SO amount directly to Spent (skip hold)
+    for (Map.Entry<String, BigDecimal> entry : soTotals.entrySet()) {
+        String budgetCode = entry.getKey();
+        BigDecimal amount = entry.getValue();
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+        BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        400, 4, "Budget Not Found",
+                        "Budget not found for code: " + budgetCode)));
+
+        // Directly to spent — no hold step
+        budget.setSpentAmount(
+                (budget.getSpentAmount() != null ? budget.getSpentAmount() : BigDecimal.ZERO)
+                .add(amount));
+        budgetMasterRepository.save(budget);
+
+        // Ledger entry — straight to CONVERTED_TO_SPEND
+        BudgetLedger ledger = new BudgetLedger();
+        ledger.setBudgetCode(budgetCode);
+        ledger.setReferenceId(soId);
+        ledger.setReferenceType("SO");
+        ledger.setHoldAmount(BigDecimal.ZERO);
+        ledger.setSpentAmount(amount);
+        ledger.setStatus("CONVERTED_TO_SPEND");
+        budgetLedgerRepository.save(ledger);
+
+        System.out.println("✅ [SO FINAL APPROVAL] Budget " + budgetCode
+                + " → Spent↑ by " + amount + " (SO: " + soId + ")");
+    }
+}
+
+// ─── SO: REJECTION — reverse spent, restore indent holds ─────────────────────
+
+@Override
+@Transactional
+public void releaseSOSpent(String soId, String tenderId) {
+    try {
+        // Find SO ledger entries (CONVERTED_TO_SPEND)
+        List<BudgetLedger> soLedgers = budgetLedgerRepository
+                .findByReferenceIdAndTypeAndStatus(soId, "SO", "CONVERTED_TO_SPEND");
+
+        // Reverse spent for each
+        for (BudgetLedger ledger : soLedgers) {
+            BudgetMaster budget = budgetMasterRepository
+                    .findByBudgetCode(ledger.getBudgetCode()).orElse(null);
+            if (budget != null) {
+                budget.setSpentAmount(
+                        (budget.getSpentAmount() != null ? budget.getSpentAmount() : BigDecimal.ZERO)
+                        .subtract(ledger.getSpentAmount()).max(BigDecimal.ZERO));
+                budgetMasterRepository.save(budget);
+            }
+            ledger.setStatus("RELEASED");
+            budgetLedgerRepository.save(ledger);
+        }
+
+        // Restore indent holds for this tender
+        Map<String, BigDecimal> indentOriginalHolds = getReleasedIndentHoldsForTender(tenderId);
+        for (Map.Entry<String, BigDecimal> entry : indentOriginalHolds.entrySet()) {
+            String budgetCode = entry.getKey();
+            BigDecimal amt    = entry.getValue();
+            if (amt.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+            BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode).orElse(null);
+            if (budget != null) {
+                budget.setOnHoldAmount(budget.getOnHoldAmount().add(amt));
+                budgetMasterRepository.save(budget);
+            }
+
+            BudgetLedger restored = new BudgetLedger();
+            restored.setBudgetCode(budgetCode);
+            restored.setReferenceId(tenderId + "_RESTORED");
+            restored.setReferenceType("INDENT");
+            restored.setHoldAmount(amt);
+            restored.setStatus("ACTIVE_HOLD");
+            budgetLedgerRepository.save(restored);
+        }
+
+        System.out.println("✅ [SO REJECTION] Spent reversed and indent holds restored for SO: " + soId);
+    } catch (Exception e) {
+        System.err.println("❌ [SO REJECTION] releaseSOSpent failed: " + e.getMessage());
+        e.printStackTrace();
     }
 }
 }

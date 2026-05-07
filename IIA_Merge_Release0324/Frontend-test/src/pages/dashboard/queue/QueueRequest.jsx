@@ -11582,6 +11582,39 @@ const fetchEmployees = () => {
     }
   };
 
+  // Handle cancellation request approve/reject (Purchase Head only)
+const handleCancellationApprove = async (record, approvalStatus) => {
+  if (approvalStatus === 'REJECTED' && !rejectComment.trim()) {
+    message.warning('Please enter a reject comment.');
+    return;
+  }
+
+  try {
+    await axios.post('/api/indents/cancellation/approve', {
+      requestId: record.cancellationRequestId,
+      approvalStatus,
+      approvedBy: auth.userId,
+      approvedByName: auth.name,
+      approvalRemarks: approvalStatus === 'APPROVED' ? 'Approved' : rejectComment,
+    });
+
+    message.success(
+      approvalStatus === 'APPROVED'
+        ? `Indent ${record.requestId} cancellation approved.`
+        : `Cancellation request for ${record.requestId} rejected.`
+    );
+    setRejectComment('');
+    refetchData?.();
+  } catch (err) {
+    // Backend sends "Cancel the Tender first" — surface it directly
+    const errMsg =
+      err?.response?.data?.responseStatus?.message ||
+      err?.response?.data?.message ||
+      'Action failed.';
+    message.error(errMsg);
+  }
+};
+
   // Handle request change submit
   const handleRequestChangeSubmit = async (record) => {
     if (!requestChangeComment.trim()) {
@@ -12059,7 +12092,7 @@ const fetchEmployees = () => {
           <span>
             ₹{amount}
             {isTender && isHighValue && (
-              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>Enhanced</Tag>
+              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>High Value</Tag>
             )}
           </span>
         );
@@ -12976,10 +13009,78 @@ const fetchEmployees = () => {
         ]),
   ];
 
-  const columnsToRender = requestType === "PV" ? pvColumns : columns;
+  const cancellationColumns = [
+  {
+    title: 'Indent ID',
+    dataIndex: 'requestId',
+    key: 'requestId',
+    fixed: 'left',
+  },
+  {
+    title: 'Requested By',
+    dataIndex: 'requestedByName',
+    key: 'requestedByName',
+  },
+  {
+    title: 'Reason for Cancellation',
+    dataIndex: 'cancellationReason',
+    key: 'cancellationReason',
+  },
+  {
+    title: 'Requested On',
+    dataIndex: 'createdDate',
+    key: 'createdDate',
+    render: (val) => val ? new Date(val).toLocaleDateString('en-IN') : '-',
+  },
+  {
+    title: 'Actions',
+    key: 'actions',
+    fixed: 'right',
+    render: (_, record) => (
+      <Space>
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => handleCancellationApprove(record, 'APPROVED')}
+        >
+          Approve
+        </Button>
+        <Popover
+          content={
+            <div style={{ padding: 12 }}>
+              <Input.TextArea
+                placeholder="Reject reason"
+                rows={3}
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+              />
+              <Button
+                type="primary"
+                danger
+                style={{ marginTop: 8 }}
+                onClick={() => handleCancellationApprove(record, 'REJECTED')}
+              >
+                Submit
+              </Button>
+            </div>
+          }
+          title="Reject Cancellation Request"
+          trigger="click"
+        >
+          <Button danger size="small">Reject</Button>
+        </Popover>
+      </Space>
+    ),
+  },
+];
+const columnsToRender =
+  requestType === 'CR' ? cancellationColumns :
+  requestType === 'PV' ? pvColumns :
+  columns;
+//   const columnsToRender = requestType === "PV" ? pvColumns : columns;
 
   const filteredData = data.filter((item) =>
-    item.requestId.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    item.requestId?.toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSearch = useCallback((value) => {
@@ -12998,7 +13099,7 @@ const fetchEmployees = () => {
         onReset={handleReset}
       />
       <Space style={{ marginBottom: 16 }}>
-        {auth.role !== "Purchase Head" && (
+        {auth.role !== "Purchase Head" && requestType !== 'CR' && (
           <Button
             type="primary"
             onClick={handleApproveAll}
@@ -13007,7 +13108,7 @@ const fetchEmployees = () => {
             Approve All
           </Button>
         )}
-        {auth.role === "Purchase Head" && (
+        {auth.role === "Purchase Head" && requestType !== 'CR' && (
           <Button
             type="primary"
             disabled={selectedRows.length === 0}

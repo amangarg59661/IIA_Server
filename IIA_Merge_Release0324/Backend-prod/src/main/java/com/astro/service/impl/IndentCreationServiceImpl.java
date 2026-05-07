@@ -1232,11 +1232,16 @@ jobResponse.setVendorNames(vendorNamesList);
                 // Check if an approver sent it back to the Indent Creator for changes
                 boolean isChangeRequested = "Change requested".equalsIgnoreCase(pendingTransition.getAction())
                         && "Indent Creator".equalsIgnoreCase(pendingTransition.getNextRole());
+                        boolean isCancelled = "CANCELLED".equalsIgnoreCase(pendingTransition.getStatus());
                 if (isChangeRequested) {
                     response.setCurrentStatus("CHANGE_REQUESTED");
                     response.setStatusMessage("Change requested by approver. Please review, edit and resubmit.");
                     response.setIsEditable(true);
-                } else {
+                } else if (isCancelled) {
+                    response.setCurrentStatus("CANCELLED");
+                    response.setStatusMessage("Indent has been cancelled successfully.");
+                    response.setIsEditable(false);
+                } else{
                     response.setCurrentStatus("IN_PROGRESS");
                     response.setStatusMessage("Indent is currently in approval workflow. Completed " + approvalsDone + " of " + totalLevels + " approvals.");
                     response.setIsEditable(false);

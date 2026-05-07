@@ -39,6 +39,9 @@ import org.springframework.context.annotation.Lazy; // added by abhinav
 public class ServiceOrderServiceImpl implements ServiceOrderService {
 
     @Autowired
+private com.astro.service.BudgetService budgetService;
+
+    @Autowired
     private ServiceOrderRepository serviceOrderRepository;
     @Autowired
     private WorkflowTransitionRepository workflowTransitionRepository;
@@ -137,6 +140,7 @@ serviceOrder.setParentSoId(null);
 
 
         serviceOrder.setMaterials(serviceOrderMaterials);
+        budgetService.checkBudgetForSo(soId, tenderId, serviceOrderMaterials);
         serviceOrderRepository.save(serviceOrder);
 
         return mapToResponseDTO(serviceOrder);
@@ -245,7 +249,7 @@ public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderReque
             })
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     newSO.setTotalValueOfSo(totalValue);
-
+ budgetService.checkBudgetForSo(newSoId, newSO.getTenderId(), newMaterials);
     // 8. Save new version
     serviceOrderRepository.save(newSO);
 

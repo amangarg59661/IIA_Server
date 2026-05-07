@@ -112,6 +112,7 @@ const Queue1 = () => {
   const { userId } = useSelector((state) => state.auth);
 
   const [allData, setAllData] = useState([]);
+  const [cancellationRequests, setCancellationRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -130,17 +131,74 @@ const Queue1 = () => {
       params.append('roleName', roleName);
       if (userId) params.append('userId', userId);
 
-      if (isPurchaseHead) {
-        // Fetch both: completed indents + cancelled indents in parallel
-        const [mainRes, cancelRes] = await Promise.all([
-          axios.get(`/completedIndentWorkflowTransition?${params.toString()}`),
-          axios.get('/allCancledIndents'),
-        ]);
-        // Merge; cancelled ones will be filtered into the 'C' tab later
-        responseData = [
-          ...(mainRes.data.responseData || []),
-          ...(cancelRes.data.responseData || []),
-        ];
+  //     if (isPurchaseHead) {
+  //       const [mainRes, cancelRes, cancellationRequestsRes] = await Promise.all([
+  //   axios.get(`/completedIndentWorkflowTransition?${params.toString()}`),
+  //   // axios.get('/allCancledIndents'),
+  //   axios.get('/api/indents/cancellation/pending'),
+  // ]);
+
+  // // Tag cancellation request items so Queue1 and QueueRequest can handle them separately
+  // const cancellationRequests = (cancellationRequestsRes.data.responseData || []).map((item) => ({
+  //   key: `CANCEL-${item.id}`,
+  //   requestId: item.indentId,
+  //   cancellationRequestId: item.id,               // IndentCancellationRequest PK — needed for approve API
+  //   workflowId: 'CANCEL',                         // special identifier — not a real workflowId
+  //   workflowName: 'Indent Cancellation',
+  //   action: 'Cancellation Requested',
+  //   isCancellationRequest: true,                  // flag for QueueRequest to branch on
+  //   requestedBy: item.requestedBy,
+  //   requestedByName: item.requestedByName,
+  //   cancellationReason: item.cancellationReason,
+  //   createdDate: item.createdDate,
+  //   requestStatus: item.requestStatus,
+  // }));
+
+  // responseData = [
+  //   ...(mainRes.data.responseData || []),
+  //   ...(cancelRes.data.responseData || []),
+  // ];
+
+  // // Store cancellation requests separately — don't mix into main responseData
+  // // because the formatting .map() below will break on them
+  // setCancellationRequests(cancellationRequests);
+  //       // // Fetch both: completed indents + cancelled indents in parallel
+  //       // const [mainRes, cancelRes] = await Promise.all([
+  //       //   axios.get(`/completedIndentWorkflowTransition?${params.toString()}`),
+  //       //   axios.get('/allCancledIndents'),
+  //       // ]);
+  //       // // Merge; cancelled ones will be filtered into the 'C' tab later
+  //       // responseData = [
+  //       //   ...(mainRes.data.responseData || []),
+  //       //   ...(cancelRes.data.responseData || []),
+  //       // ];
+  if (isPurchaseHead) {
+  const [mainRes, cancellationRequestsRes] = await Promise.all([
+    axios.get(`/completedIndentWorkflowTransition?${params.toString()}`),
+    axios.get('/api/indents/cancellation/pending'),
+  ]);
+
+  // Main queue data — completed indents for Purchase Head
+  responseData = mainRes.data.responseData || [];
+
+  // Cancellation requests — kept separate, not run through the formatter below
+  const mappedCancellationRequests = (cancellationRequestsRes.data.responseData || []).map((item) => ({
+    key: `CANCEL-${item.id}`,
+    requestId: item.indentId,
+    cancellationRequestId: item.id,
+    workflowId: 'CANCEL',
+    workflowName: 'Indent Cancellation',
+    action: 'Cancellation Requested',
+    isCancellationRequest: true,
+    requestedBy: item.requestedBy,
+    requestedByName: item.requestedByName,
+    cancellationReason: item.cancellationReason,
+    createdDate: item.createdDate,
+    requestStatus: item.requestStatus,
+  }));
+
+  setCancellationRequests(mappedCancellationRequests);
+
       } else {
         const response = await axios.get(`/pendingWorkflowTransitionQueue?${params.toString()}`);
         responseData = response.data.responseData || [];
@@ -295,6 +353,12 @@ const Queue1 = () => {
       data: cancelledData,
       props: { requestType: 'C' },
     },
+    ...(auth.role === 'Purchase Head' ? [{
+  key: 'CR',
+  label: `Cancellation Requests (${cancellationRequests.length})`,
+  data: cancellationRequests,
+  props: { requestType: 'CR' },
+}] : []),
     {
       key: 'PV',
       label: `Payment Voucher (${pvData.length})`,

@@ -196,13 +196,13 @@ const items = [
             activeTab: 17,
             path: "/inventory/assetMaster",
           },
-          {
-            key: "4.6",
-            icon: <MdOutlineAddBox />,
-            label: "Goods Issue",
-            activeTab: 18,
-            path: "/inventory/goodsIssue",
-          },
+          // {
+          //   key: "4.6",
+          //   icon: <MdOutlineAddBox />,
+          //   label: "Goods Issue",
+          //   activeTab: 18,
+          //   path: "/inventory/goodsIssue",
+          // },
           {
             key: "4.7",
             icon: <BiTransferAlt />,
