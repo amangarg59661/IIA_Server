@@ -1205,41 +1205,53 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
                     // Log error
                 }
 
-                if (shouldCreateAsset) {
-                    // Create one asset (and one GiMaterialDtlEntity row) per accepted unit
-                    int qty = gmdd.getAcceptedQuantity().intValue();
-                    for (int i = 0; i < qty; i++) {
-                        NewAssetResponseDto asset = createNewAsset(gmdd, req.getCreatedBy(), gprnDto.getPoId(), gprnDto.getLocationId());
-                        System.out.println("Created asset for unit " + (i + 1) + ": " + asset);
+                // if (shouldCreateAsset) {
+                //     // Create one asset (and one GiMaterialDtlEntity row) per accepted unit
+                //     int qty = gmdd.getAcceptedQuantity().intValue();
+                //     for (int i = 0; i < qty; i++) {
+                //         NewAssetResponseDto asset = createNewAsset(gmdd, req.getCreatedBy(), gprnDto.getPoId(), gprnDto.getLocationId());
+                //         System.out.println("Created asset for unit " + (i + 1) + ": " + asset);
 
-                        GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
-                        mapper.map(gmdd, gimde);
-                        gimde.setAcceptedQuantity(BigDecimal.ONE); 
-                        gimde.setAssetId(asset.getAssetId());
-                        gimde.setAssetCode(asset.getAssetCode());
-                        gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                        // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                        // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
-                        gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+                //         GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
+                //         mapper.map(gmdd, gimde);
+                //         gimde.setAcceptedQuantity(BigDecimal.ONE); 
+                //         gimde.setAssetId(asset.getAssetId());
+                //         gimde.setAssetCode(asset.getAssetCode());
+                //         gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
+                //         // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
+                //         // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
+                //         gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
                         
-                        gimde.setInstallationReportFileName(instlRepFileName);
-                        gimdeList.add(gimde);
-                    }
-                } 
-                // else {
-                //     // assetFlag is false/null — save a single row with no asset linked
-                //     GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
-                //     mapper.map(gmdd, gimde);
-                //     gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
-                //     gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
-                //         gimde.setGprnProcessId(extractProcessId(req.getGprnNo()));
-                //     // gimde.setGprnSubProcessId(Integer.parseInt(req.getGprnNo().split("/")[1]));
-                //     // gimde.setGprnProcessId(Integer.parseInt(req.getGprnNo().split("/")[0].substring(3)));
-                //     gimde.setInstallationReportFileName(instlRepFileName);
-                //     gimdeList.add(gimde);
-                // }
-                else {
-    // assetFlag is false/null — no asset created, flows like consumable through GRN/OHQ/ISN
+                //         gimde.setInstallationReportFileName(instlRepFileName);
+                //         gimdeList.add(gimde);
+                //     }
+                if (shouldCreateAsset) {
+    int qty = gmdd.getAcceptedQuantity().intValue();
+    for (int i = 0; i < qty; i++) {
+        NewAssetResponseDto asset = createNewAsset(gmdd, req.getCreatedBy(), gprnDto.getPoId(), gprnDto.getLocationId());
+        System.out.println("Created asset for unit " + (i + 1) + ": " + asset);
+
+        GiMaterialDtlEntity gimde = new GiMaterialDtlEntity();
+        mapper.map(gmdd, gimde);
+        gimde.setAcceptedQuantity(BigDecimal.ONE);
+
+        // First row carries the rejected quantity, all subsequent rows get null
+        if (i == 0) {
+            gimde.setRejectedQuantity(gmdd.getRejectedQuantity());
+        } else {
+            gimde.setRejectedQuantity(BigDecimal.ZERO);
+        }
+
+        gimde.setAssetId(asset.getAssetId());
+        gimde.setAssetCode(asset.getAssetCode());
+        gimde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
+        gimde.setGprnSubProcessId(extractSubProcessId(req.getGprnNo()));
+        gimde.setGprnProcessId(extractProcessId(req.getGprnNo()));
+        gimde.setInstallationReportFileName(instlRepFileName);
+        gimdeList.add(gimde);
+    }
+} else {
+    // assetFlag is false/null — no asset created, flows like consumable
     GoodsInspectionConsumableDetailEntity gicde = new GoodsInspectionConsumableDetailEntity();
     mapper.map(gmdd, gicde);
     gicde.setInspectionSubProcessId(gime.getInspectionSubProcessId());
@@ -1247,14 +1259,13 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
     gicde.setGprnProcessId(extractProcessId(req.getGprnNo()));
     gicde.setInstallationReportFilename(instlRepFileName);
 
-    // ✅ Save UOM — mandatory for downstream processes
     if (gmdd.getUomId() != null) {
         gicde.setUomId(gmdd.getUomId());
     } else if (materialMaster != null && materialMaster.getUom() != null) {
         gicde.setUomId(materialMaster.getUom());
     }
 
-    gicdeList.add(gicde); // ← consumable list, not gimdeList
+    gicdeList.add(gicde);
 }
             }
         }
@@ -1660,13 +1671,11 @@ giRes.setSpoRejectionCount(gime.getSpoRejectionCount());
         }
     }
 */
+
 private void updatePoBasedonRejectionType(GiApprovalDto req) {
 
-    // String[] processNoSplit = req.getProcessNo().split("/");
-    // String poId = "PO" + processNoSplit[0].substring(3);
-    // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
     Integer inspectionId = extractSubProcessId(req.getProcessNo());
-    // Derive poId via GI master → GPRN master
+
     GiMasterEntity giMaster = gimr.findById(inspectionId)
         .orElseThrow(() -> new BusinessException(new ErrorDetails(
             AppConstant.ERROR_CODE_RESOURCE,
@@ -1676,61 +1685,134 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
 
     GprnMasterEntity gprnMaster = gprnMasterRepository.findBySubProcessId(giMaster.getGprnSubProcessId());
     String poId = gprnMaster.getPoId();
+
     List<GiMaterialDtlEntity> gimdeList = gimdr.findByInspectionSubProcessId(inspectionId);
     List<GoodsInspectionConsumableDetailEntity> gicdeList = gicdr.findByInspectionSubProcessId(inspectionId);
 
-    for (GiMaterialDtlEntity gimde : gimdeList) {
+    // FIX 2: aggregate rejected qty by materialCode first, then subtract once per material
+    Map<String, BigDecimal> rejectedByMaterial = gimdeList.stream()
+        .filter(g -> "replacement".equalsIgnoreCase(g.getRejectionType())
+                  && g.getRejectedQuantity() != null
+                  && g.getRejectedQuantity().compareTo(BigDecimal.ZERO) > 0)
+        .collect(Collectors.groupingBy(
+            GiMaterialDtlEntity::getMaterialCode,
+            Collectors.reducing(BigDecimal.ZERO, GiMaterialDtlEntity::getRejectedQuantity, BigDecimal::add)
+        ));
 
-        if ("replacement".equalsIgnoreCase(gimde.getRejectionType())) {
+    rejectedByMaterial.forEach((materialCode, totalRejected) -> {
+        PurchaseOrderAttributes poa = poar
+            .findByPurchaseOrder_PoIdAndMaterialCode(poId, materialCode)
+            .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_RESOURCE,
+                "Purchase Order not found")));
 
-            PurchaseOrderAttributes poa = poar
-                    .findByPurchaseOrder_PoIdAndMaterialCode(poId, gimde.getMaterialCode())
-                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
-                            AppConstant.ERROR_CODE_RESOURCE,
-                            AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                            AppConstant.ERROR_TYPE_RESOURCE,
-                            "Purchase Order not found")));
+        BigDecimal receivedQty = poa.getReceivedQuantity() != null
+            ? poa.getReceivedQuantity()
+            : BigDecimal.ZERO;
 
-            BigDecimal receivedQty = poa.getReceivedQuantity() != null
-                    ? poa.getReceivedQuantity()
-                    : BigDecimal.ZERO;
+        poa.setReceivedQuantity(receivedQty.subtract(totalRejected));
+        poar.save(poa);
+    });
 
-            BigDecimal rejectedQty = gimde.getRejectedQuantity() != null
-                    ? gimde.getRejectedQuantity()
-                    : BigDecimal.ZERO;
-
-            poa.setReceivedQuantity(receivedQty.subtract(rejectedQty));
-
-            poar.save(poa);
-        }
-    }
-
+    // Consumable loop — unchanged, was already correct (one row per material)
     for (GoodsInspectionConsumableDetailEntity gicde : gicdeList) {
 
         if ("replacement".equalsIgnoreCase(gicde.getRejectionType())) {
 
             PurchaseOrderAttributes poa = poar
-                    .findByPurchaseOrder_PoIdAndMaterialCode(poId, gicde.getMaterialCode())
-                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
-                            AppConstant.ERROR_CODE_RESOURCE,
-                            AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                            AppConstant.ERROR_TYPE_RESOURCE,
-                            "Purchase Order not found")));
+                .findByPurchaseOrder_PoIdAndMaterialCode(poId, gicde.getMaterialCode())
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_RESOURCE,
+                    "Purchase Order not found")));
 
             BigDecimal receivedQty = poa.getReceivedQuantity() != null
-                    ? poa.getReceivedQuantity()
-                    : BigDecimal.ZERO;
+                ? poa.getReceivedQuantity()
+                : BigDecimal.ZERO;
 
             BigDecimal rejectedQty = gicde.getRejectedQuantity() != null
-                    ? gicde.getRejectedQuantity()
-                    : BigDecimal.ZERO;
+                ? gicde.getRejectedQuantity()
+                : BigDecimal.ZERO;
 
             poa.setReceivedQuantity(receivedQty.subtract(rejectedQty));
-
             poar.save(poa);
         }
     }
 }
+// private void updatePoBasedonRejectionType(GiApprovalDto req) {
+
+//     // String[] processNoSplit = req.getProcessNo().split("/");
+//     // String poId = "PO" + processNoSplit[0].substring(3);
+//     // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+//     Integer inspectionId = extractSubProcessId(req.getProcessNo());
+//     // Derive poId via GI master → GPRN master
+//     GiMasterEntity giMaster = gimr.findById(inspectionId)
+//         .orElseThrow(() -> new BusinessException(new ErrorDetails(
+//             AppConstant.ERROR_CODE_RESOURCE,
+//             AppConstant.ERROR_TYPE_CODE_RESOURCE,
+//             AppConstant.ERROR_TYPE_RESOURCE,
+//             "GI not found")));
+
+//     GprnMasterEntity gprnMaster = gprnMasterRepository.findBySubProcessId(giMaster.getGprnSubProcessId());
+//     String poId = gprnMaster.getPoId();
+//     List<GiMaterialDtlEntity> gimdeList = gimdr.findByInspectionSubProcessId(inspectionId);
+//     List<GoodsInspectionConsumableDetailEntity> gicdeList = gicdr.findByInspectionSubProcessId(inspectionId);
+
+//     for (GiMaterialDtlEntity gimde : gimdeList) {
+
+//         if ("replacement".equalsIgnoreCase(gimde.getRejectionType())) {
+
+//             PurchaseOrderAttributes poa = poar
+//                     .findByPurchaseOrder_PoIdAndMaterialCode(poId, gimde.getMaterialCode())
+//                     .orElseThrow(() -> new BusinessException(new ErrorDetails(
+//                             AppConstant.ERROR_CODE_RESOURCE,
+//                             AppConstant.ERROR_TYPE_CODE_RESOURCE,
+//                             AppConstant.ERROR_TYPE_RESOURCE,
+//                             "Purchase Order not found")));
+
+//             BigDecimal receivedQty = poa.getReceivedQuantity() != null
+//                     ? poa.getReceivedQuantity()
+//                     : BigDecimal.ZERO;
+
+//             BigDecimal rejectedQty = gimde.getRejectedQuantity() != null
+//                     ? gimde.getRejectedQuantity()
+//                     : BigDecimal.ZERO;
+
+//             poa.setReceivedQuantity(receivedQty.subtract(rejectedQty));
+
+//             poar.save(poa);
+//         }
+//     }
+
+//     for (GoodsInspectionConsumableDetailEntity gicde : gicdeList) {
+
+//         if ("replacement".equalsIgnoreCase(gicde.getRejectionType())) {
+
+//             PurchaseOrderAttributes poa = poar
+//                     .findByPurchaseOrder_PoIdAndMaterialCode(poId, gicde.getMaterialCode())
+//                     .orElseThrow(() -> new BusinessException(new ErrorDetails(
+//                             AppConstant.ERROR_CODE_RESOURCE,
+//                             AppConstant.ERROR_TYPE_CODE_RESOURCE,
+//                             AppConstant.ERROR_TYPE_RESOURCE,
+//                             "Purchase Order not found")));
+
+//             BigDecimal receivedQty = poa.getReceivedQuantity() != null
+//                     ? poa.getReceivedQuantity()
+//                     : BigDecimal.ZERO;
+
+//             BigDecimal rejectedQty = gicde.getRejectedQuantity() != null
+//                     ? gicde.getRejectedQuantity()
+//                     : BigDecimal.ZERO;
+
+//             poa.setReceivedQuantity(receivedQty.subtract(rejectedQty));
+
+//             poar.save(poa);
+//         }
+//     }
+// }
 
 
     // @Override

@@ -37,14 +37,14 @@ public class GrvServiceImpl implements GrvService {
         ModelMapper mapper = new ModelMapper();
 
         System.out.println("GI SUB PROC:"+ Integer.parseInt(req.getGiNo().split("/")[1]));
-
+String giProcessId = req.getGiNo().substring(3, req.getGiNo().lastIndexOf("/"));
         GrvMasterEntity grvMaster = new GrvMasterEntity();
         grvMaster.setDate(CommonUtils.convertStringToDateObject(req.getDate()));
         grvMaster.setCreatedBy(req.getCreatedBy());
         grvMaster.setCreateDate(LocalDateTime.now());
-        grvMaster.setGiProcessId(req.getGiNo().split("/")[0].substring(3));
-        grvMaster.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
-        grvMaster.setGrvProcessId(req.getGiNo().split("/")[0].substring(3));
+        grvMaster.setGiProcessId(giProcessId);
+        grvMaster.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
+        grvMaster.setGrvProcessId(giProcessId);
         grvMaster.setLocationId(req.getLocationId());
 
         grvMaster = grvMasterRepository.save(grvMaster);
@@ -77,7 +77,7 @@ public class GrvServiceImpl implements GrvService {
             mapper.map(materialDtl, grvMaterialDtl);
             grvMaterialDtl.setGrvProcessId(grvMaster.getGrvProcessId());
             grvMaterialDtl.setGrvSubProcessId(grvMaster.getGrvSubProcessId());
-            grvMaterialDtl.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+            grvMaterialDtl.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
 
             grvMaterialDtlList.add(grvMaterialDtl);
         }
@@ -94,7 +94,10 @@ public class GrvServiceImpl implements GrvService {
 
         return "INV" + grvMaster.getGrvProcessId() + "/" + grvMaster.getGrvSubProcessId();
     }
-
+// Add this helper to GrvServiceImpl
+private int extractSubProcessId(String processNo) {
+    return Integer.parseInt(processNo.substring(processNo.lastIndexOf("/") + 1));
+}
     @Override
     public Map<String, Object> getGrvDtls(String processNo) {
         ModelMapper mapper = new ModelMapper();
