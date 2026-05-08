@@ -59,4 +59,9 @@ public interface IndentCreationService {
 
     public List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> getJobPurchaseHistory(String jobCode);
 
+    IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto);
+IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreationRequestDTO dto);
+IndentCreationResponseDTO submitIndentDraft(String indentId, IndentCreationRequestDTO dto);
+List<IndentCreationResponseDTO> getUserDrafts(Integer userId);
+
     }

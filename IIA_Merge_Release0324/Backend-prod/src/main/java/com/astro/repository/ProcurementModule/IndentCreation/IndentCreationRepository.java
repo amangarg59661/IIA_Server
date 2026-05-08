@@ -388,5 +388,48 @@ List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryType(@
 """)
    List<ApprovedIndentsDto> findApprovedIndents(@Param("approvedIndentIds") List<String> approvedIndentIds);
 
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCurrentStatusNot(String value, String status);
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
+List<SearchIndentIdDto> findByCreatedDateBetweenAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String status);
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String status);
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String materialCategoryType, String status);
+List<SearchIndentIdDto> findByIndentorNameAndCurrentStatusNot(String value, String status);
+List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
+List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
+// List<SearchIndentIdDto> findByMaterialDescriptionAndCurrentStatusNot(String value, String status);
+List<IndentCreation> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
 
+
+
+// ─── DRAFT-INCLUSIVE search methods (no status filter) ───────────────────────
+
+// processid search — all statuses including DRAFT
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCreatedBy(
+    String indentId, Integer createdBy);
+
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCreatedBy(
+    String indentId, String indentType, Integer createdBy);
+
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCreatedBy(
+    String indentId, String indentType, String materialCategoryType, Integer createdBy);
+
+// submitteddate search — all statuses
+// List<SearchIndentIdDto> findByCreatedDateBetween(
+//     LocalDateTime start, LocalDateTime end);
+
+// List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentType(
+//     LocalDateTime start, LocalDateTime end, String indentType);
+
+// List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(
+//     LocalDateTime start, LocalDateTime end, String indentType, String materialCategoryType);
+
+// indentorname search — all statuses
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCase(String name);
+
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentType(
+    String name, String indentType);
+
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
+    String name, String indentType, String materialCategoryType);
 }

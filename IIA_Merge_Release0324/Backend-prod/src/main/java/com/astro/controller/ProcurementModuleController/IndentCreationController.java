@@ -226,6 +226,37 @@ public ResponseEntity<Object> getIndentDataForTenderById(@RequestParam String in
 
     // }
 
+    @PostMapping("/draft")
+public ResponseEntity<Object> saveIndentDraft(
+        @RequestBody IndentCreationRequestDTO dto) {
+    IndentCreationResponseDTO response = indentCreationService.saveIndentDraft(dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@PutMapping("/draft")
+public ResponseEntity<Object> updateIndentDraft(
+        @RequestParam String indentId,
+        @RequestBody IndentCreationRequestDTO dto) {
+    IndentCreationResponseDTO response = indentCreationService.updateIndentDraft(indentId, dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@PostMapping("/draft/submit")
+public ResponseEntity<Object> submitIndentDraft(
+        @RequestParam String indentId,
+        @RequestBody IndentCreationRequestDTO dto) throws JsonProcessingException {
+    IndentCreationResponseDTO response = indentCreationService.submitIndentDraft(indentId, dto);
+    // Initiate workflow only on actual submit — same as createIndent
+    workflowService.initiateWorkflow(response.getIndentId(), "Indent Workflow", dto.getCreatedBy());
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@GetMapping("/drafts")
+public ResponseEntity<Object> getUserDrafts(@RequestParam Integer userId) {
+    List<IndentCreationResponseDTO> drafts = indentCreationService.getUserDrafts(userId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(drafts), HttpStatus.OK);
+}
+
     @GetMapping("/material/purchase-history/{materialCode}")
     public ResponseEntity<Object> getMaterialPurchaseHistory(@PathVariable String materialCode) {
         List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> purchaseHistory =
