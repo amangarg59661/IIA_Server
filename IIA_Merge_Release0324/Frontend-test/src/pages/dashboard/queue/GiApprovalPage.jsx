@@ -561,7 +561,7 @@ const GiApprovalPage = () => {
 
             <Button danger onClick={() => openReject(record)}>Reject</Button>
 
-            <Button type="link" onClick={() => openChange(record)}>Change Request</Button>
+            {/* <Button type="link" onClick={() => openChange(record)}>Change Request</Button> */}
           </Space>
         );
       },

@@ -21,10 +21,10 @@ const Form17 = () => {
   const [formData, setFormData] = useState({materialDtlList: [], senderCustodianId: userId,receiverCustodianId: role === 'Store Person' ? userId : null, senderLocationId: "BNG"});
   const onFinish = async () => {
 
-    if (role === 'Store Person' && !formData.reasonForTransfer) {
-  message.error("Please provide a reason for transfer.");
-  return;
-}
+//     if (role === 'Store Person' && !formData.reasonForTransfer) {
+//   message.error("Please provide a reason for transfer.");
+//   return;
+// }
     if(!formData.gtDate) {
       message.error("Please enter the Goods Transfer Date.");
       return;

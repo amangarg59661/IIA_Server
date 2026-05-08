@@ -2422,10 +2422,11 @@
                     const indentList = data?.responseData || [];
     
                     const dropdownOptions = indentList.map((item) => ({
-                        label: item.indentId,
-                        value: item.indentId
-                    }));
-    
+    label: item.currentStatus === 'DRAFT'
+        ? `${item.indentId}  [DRAFT]`
+        : item.indentId,
+    value: item.indentId
+}));
                     setIndentIdDropdown(dropdownOptions);
     
                     if (dropdownOptions.length === 0) {
@@ -2437,7 +2438,56 @@
                     message.error("Error fetching indent IDs.");
                 }
             };
-    
+    const [draftBtnLoading, setDraftBtnLoading] = useState(false);
+
+    const handleSaveDraft = async () => {
+    const payload = {
+        ...formData,
+        indentType,
+        materialCategoryType: materialCategoryType !== "all" ? materialCategoryType : null,
+        fileType: "Indent",
+        createdBy: userId,
+        employeeDepartment: formData.indentorDepartment,
+        materialDetails: indentType === "material" ? formData.materialDetails : null,
+        jobDetails: indentType === "job" ? formData.jobDetails : null,
+        modeOfProcurement: selectedModeOfProcurement || formData.modeOfProcurement,
+        isUnderProject: formData.isUnderProject === true || formData.isUnderProject === "true",
+        projectCode: (formData.isUnderProject === true || formData.isUnderProject === "true") ? formData.projectCode : null,
+    };
+    delete payload.singleAndMultipleJob;
+
+    try {
+        setDraftBtnLoading(true);
+        let response;
+
+        if (formData?.indentId && formData?.currentStatus === "DRAFT") {
+            // Update existing draft
+            response = await axios.put(`/api/indents/draft`, payload, {
+                params: { indentId: formData.indentId }
+            });
+            message.success("Draft updated successfully");
+        } else if (!formData?.indentId) {
+            // Save new draft
+            response = await axios.post(`/api/indents/draft`, payload);
+            message.success("Draft saved successfully");
+        } else {
+            message.warning("This indent is already submitted and cannot be saved as a draft.");
+            return;
+        }
+
+        const savedData = response?.data?.responseData;
+        setFormData(prev => ({
+            ...prev,
+            indentId: savedData?.indentId,
+            currentStatus: "DRAFT"
+        }));
+
+    } catch (error) {
+        message.error(error.response?.data?.responseStatus?.message || "Error saving draft.");
+    } finally {
+        setDraftBtnLoading(false);
+    }
+};
             const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
 const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
@@ -4024,26 +4074,54 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                 // Remove old field that's no longer used
                 delete payload.singleAndMultipleJob;
     
+                // try {
+                //     setSubmitBtnLoading(true);
+                //     let response;
+    
+                //     if (formData?.indentId) {
+                //         response = await axios.put(`/api/indents` ,payload, {params:{indentId : formData.indentId}} );
+                //         const newIndentId = response?.data?.responseData?.indentId; // e.g. IND1111/2
+                //         setFormData(prev => ({ ...prev, indentId: newIndentId }));
+                //         message.success("Indent updated successfully");
+                //         navigate("/queue");
+                //     } else {
+                //         response = await axios.post("/api/indents", payload);
+                //     }
+    
+                //     setFormData({
+                //         ...formData,
+                //         indentId: response?.data?.responseData?.indentId
+                //     });
+    
+                //     setModalOpen(true);
                 try {
-                    setSubmitBtnLoading(true);
-                    let response;
-    
-                    if (formData?.indentId) {
-                        response = await axios.put(`/api/indents` ,payload, {params:{indentId : formData.indentId}} );
-                        const newIndentId = response?.data?.responseData?.indentId; // e.g. IND1111/2
-                        setFormData(prev => ({ ...prev, indentId: newIndentId }));
-                        message.success("Indent updated successfully");
-                        navigate("/queue");
-                    } else {
-                        response = await axios.post("/api/indents", payload);
-                    }
-    
-                    setFormData({
-                        ...formData,
-                        indentId: response?.data?.responseData?.indentId
-                    });
-    
-                    setModalOpen(true);
+    setSubmitBtnLoading(true);
+    let response;
+
+    if (formData?.indentId && formData?.currentStatus === "DRAFT") {
+        // Submit a saved draft — runs full validation + budget + workflow on backend
+        response = await axios.post(`/api/indents/draft/submit`, payload, {
+            params: { indentId: formData.indentId }
+        });
+        message.success("Indent submitted successfully");
+        navigate("/queue");
+
+    } else if (formData?.indentId && formData?.currentStatus !== "DRAFT") {
+        // Version update on an already-submitted indent
+        response = await axios.put(`/api/indents`, payload, {
+            params: { indentId: formData.indentId }
+        });
+        const newIndentId = response?.data?.responseData?.indentId;
+        setFormData(prev => ({ ...prev, indentId: newIndentId }));
+        message.success("Indent updated successfully");
+        navigate("/queue");
+
+    } else {
+        // Fresh submit with no prior draft
+        response = await axios.post("/api/indents", payload);
+        setFormData({ ...formData, indentId: response?.data?.responseData?.indentId });
+        setModalOpen(true);
+    }
                 } catch (error) {
                     // Handle file size error specifically
                     if (error.response?.status === 413 ||
@@ -4159,6 +4237,16 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                     {/* Bug Fix: Show lock status, approval status, and version information */}
                     {formData?.indentId && (
                         <Space direction="vertical" style={{ width: '100%', marginTop: '16px', marginBottom: '16px' }}>
+
+                        {formData?.currentStatus === "DRAFT" && (
+    <Alert
+        message="Saved Draft"
+        description="This indent is a saved draft. It has not been submitted and is not visible to any approver."
+        type="warning"
+        showIcon
+        closable={false}
+    />
+)}
                             {/* SUCCESS Banner: Show when indent is fully approved */}
                             {formData.isFullyApproved && (
                                 <Alert
@@ -4267,7 +4355,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
     
                     <CustomForm formData={formData} onFinish={onFinish}>
                         {renderFormFields(inputFields, handleChange, formData, "", null, setFormData, handleSearch, additionalFunc)}
-                        <ButtonContainer
+                        {/* <ButtonContainer
                             onFinish={onFinish}
                             formData={formData}
                             draftDataName="indentDraft"
@@ -4279,7 +4367,21 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             showCancel={searchDone}
                             onCancel={handleCancel}
                             cancelButtonText="Request Cancellation"
-                        />
+                        /> */}
+                        <ButtonContainer
+    onFinish={onFinish}
+    formData={formData}
+    onDraft={handleSaveDraft}
+    draftBtnLoading={draftBtnLoading}
+    submitBtnLoading={submitBtnLoading}
+    submitBtnEnabled
+    printBtnEnabled
+    draftBtnEnabled
+    handlePrint={handlePrint}
+    showCancel={searchDone}
+    onCancel={handleCancel}
+    cancelButtonText="Request Cancellation"
+/>
                     </CustomForm>
                     <CustomModal isOpen={modalOpen} setIsOpen={setModalOpen} title="Indent" processNo={formData?.indentId} />
                     <PurchaseHistoryModal
