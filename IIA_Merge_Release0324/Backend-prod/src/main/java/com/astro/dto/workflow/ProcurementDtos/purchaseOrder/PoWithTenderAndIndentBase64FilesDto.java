@@ -58,4 +58,16 @@ public class PoWithTenderAndIndentBase64FilesDto {
 
         private List<PoFormateApprovalHistory> poHistory;
 
+        private String currentStatus;
+private Boolean isActive;
+private Integer poVersion;
+
+public String getCurrentStatus() { return currentStatus; }
+public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
+public Boolean getIsActive() { return isActive; }
+public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+public Integer getPoVersion() { return poVersion; }
+public void setPoVersion(Integer poVersion) { this.poVersion = poVersion; }
+        
+
 }

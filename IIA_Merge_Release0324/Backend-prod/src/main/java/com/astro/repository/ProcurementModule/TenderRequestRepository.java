@@ -75,4 +75,9 @@ List<SearchTenderIdDto> findTenderIdsBySubmittedDate(@Param("startDate") LocalDa
                                                       @Param("endDate") LocalDateTime endDate);
 
     //  TenderRequest getByTenderId(String tenderId);
+
+    @Query("SELECT t FROM TenderRequest t WHERE t.createdBy = :userId AND t.currentStatus = 'DRAFT'")
+List<TenderRequest> findDraftsByCreatedBy(@Param("userId") Integer userId);
+
+List<TenderRequest> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
 }

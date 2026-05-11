@@ -43,4 +43,8 @@ private Integer poVersion;
     private Integer updatedBy; // updated by abhinav
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
+
+    private String currentStatus;
+public String getCurrentStatus() { return currentStatus; }
+public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
 }

@@ -28,7 +28,10 @@ public interface TenderRequestService {
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForGemTenderEvaluation();
     public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
 
-
+TenderResponseDto saveTenderDraft(TenderRequestDto dto);
+TenderResponseDto updateTenderDraft(String tenderId, TenderRequestDto dto);
+TenderResponseDto submitTenderDraft(String tenderId, TenderRequestDto dto);
+List<TenderResponseDto> getUserTenderDrafts(Integer userId);
 
     //TenderWithIndentResponseDTO getTendersRequestById(String tenderId);
 }

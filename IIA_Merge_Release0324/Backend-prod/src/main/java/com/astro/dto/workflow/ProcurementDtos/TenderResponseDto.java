@@ -72,4 +72,8 @@ private String parentTenderId;
     private String lockedReason;
     private String lockedForPO;
     private LocalDateTime lockedDate;
+
+    private String currentStatus;
+public String getCurrentStatus() { return currentStatus; }
+public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
 }

@@ -2412,75 +2412,41 @@ boolean isRejected = lastTransition != null
 
 
 @Override
+
 public List<SearchIndentIdDto> searchIndentIds(String type, String value,
         String indentType, String materialCategoryType) {
 
     List<SearchIndentIdDto> result = new ArrayList<>();
-    boolean filterByType     = indentType != null && !indentType.isBlank();
-    boolean filterByCategory = materialCategoryType != null && !materialCategoryType.isBlank();
 
     switch (type.toLowerCase()) {
 
         case "processid":
-            // ✅ FIX: No longer excludes DRAFT — uses non-status-filtered methods
-            if (filterByType && filterByCategory) {
-                result = indentCreationRepository
-                    .findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
-                        value, indentType, materialCategoryType);
-            } else if (filterByType) {
-                result = indentCreationRepository
-                    .findByIndentIdContainingIgnoreCaseAndIndentType(value, indentType);
-            } else {
-                result = indentCreationRepository
-                    .findByIndentIdContainingIgnoreCase(value);
-            }
+            result = indentCreationRepository
+                .findByIndentIdContainingIgnoreCase(value);
             break;
 
         case "submitteddate":
             try {
-                LocalDate date       = LocalDate.parse(value);
-                LocalDateTime start  = date.atStartOfDay();
-                LocalDateTime end    = date.plusDays(1).atStartOfDay();
-
-                // ✅ FIX: Uses uncommented non-status-filtered methods
-                if (filterByType && filterByCategory) {
-                    result = indentCreationRepository
-                        .findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(
-                            start, end, indentType, materialCategoryType);
-                } else if (filterByType) {
-                    result = indentCreationRepository
-                        .findByCreatedDateBetweenAndIndentType(start, end, indentType);
-                } else {
-                    result = indentCreationRepository
-                        .findByCreatedDateBetween(start, end);
-                }
+                LocalDate date      = LocalDate.parse(value);
+                LocalDateTime start = date.atStartOfDay();
+                LocalDateTime end   = date.plusDays(1).atStartOfDay();
+                result = indentCreationRepository
+                    .findByCreatedDateBetween(start, end);
             } catch (Exception e) {
                 // bad date format — return empty
             }
             break;
 
         case "indentorname":
-            // ✅ FIX: Uses ContainingIgnoreCase variant (no status filter)
-            if (filterByType && filterByCategory) {
-                result = indentCreationRepository
-                    .findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
-                        value, indentType, materialCategoryType);
-            } else if (filterByType) {
-                result = indentCreationRepository
-                    .findByIndentorNameContainingIgnoreCaseAndIndentType(value, indentType);
-            } else {
-                result = indentCreationRepository
-                    .findByIndentorNameContainingIgnoreCase(value);
-            }
+            result = indentCreationRepository
+                .findByIndentorNameContainingIgnoreCase(value);
             break;
 
         case "materialdescription":
-            // ✅ FIX: Removed .filter(d -> !"DRAFT".equals(d.getCurrentStatus()))
             result = indentCreationRepository.findByMaterialDescription(value);
             break;
 
         case "vendorname":
-            // ✅ FIX: Removed .filter(d -> !"DRAFT".equals(d.getCurrentStatus()))
             result = new ArrayList<>(vendorNameRepository.findIndentIdsByVendorName(value));
             break;
 
@@ -2490,6 +2456,84 @@ public List<SearchIndentIdDto> searchIndentIds(String type, String value,
 
     return result;
 }
+// public List<SearchIndentIdDto> searchIndentIds(String type, String value,
+//         String indentType, String materialCategoryType) {
+
+//     List<SearchIndentIdDto> result = new ArrayList<>();
+//     boolean filterByType     = indentType != null && !indentType.isBlank();
+//     boolean filterByCategory = materialCategoryType != null && !materialCategoryType.isBlank();
+
+//     switch (type.toLowerCase()) {
+
+//         case "processid":
+//             // ✅ FIX: No longer excludes DRAFT — uses non-status-filtered methods
+//             if (filterByType && filterByCategory) {
+//                 result = indentCreationRepository
+//                     .findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
+//                         value, indentType, materialCategoryType);
+//             } else if (filterByType) {
+//                 result = indentCreationRepository
+//                     .findByIndentIdContainingIgnoreCaseAndIndentType(value, indentType);
+//             } else {
+//                 result = indentCreationRepository
+//                     .findByIndentIdContainingIgnoreCase(value);
+//             }
+//             break;
+
+//         case "submitteddate":
+//             try {
+//                 LocalDate date       = LocalDate.parse(value);
+//                 LocalDateTime start  = date.atStartOfDay();
+//                 LocalDateTime end    = date.plusDays(1).atStartOfDay();
+
+//                 // ✅ FIX: Uses uncommented non-status-filtered methods
+//                 if (filterByType && filterByCategory) {
+//                     result = indentCreationRepository
+//                         .findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryType(
+//                             start, end, indentType, materialCategoryType);
+//                 } else if (filterByType) {
+//                     result = indentCreationRepository
+//                         .findByCreatedDateBetweenAndIndentType(start, end, indentType);
+//                 } else {
+//                     result = indentCreationRepository
+//                         .findByCreatedDateBetween(start, end);
+//                 }
+//             } catch (Exception e) {
+//                 // bad date format — return empty
+//             }
+//             break;
+
+//         case "indentorname":
+//             // ✅ FIX: Uses ContainingIgnoreCase variant (no status filter)
+//             if (filterByType && filterByCategory) {
+//                 result = indentCreationRepository
+//                     .findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
+//                         value, indentType, materialCategoryType);
+//             } else if (filterByType) {
+//                 result = indentCreationRepository
+//                     .findByIndentorNameContainingIgnoreCaseAndIndentType(value, indentType);
+//             } else {
+//                 result = indentCreationRepository
+//                     .findByIndentorNameContainingIgnoreCase(value);
+//             }
+//             break;
+
+//         case "materialdescription":
+//             // ✅ FIX: Removed .filter(d -> !"DRAFT".equals(d.getCurrentStatus()))
+//             result = indentCreationRepository.findByMaterialDescription(value);
+//             break;
+
+//         case "vendorname":
+//             // ✅ FIX: Removed .filter(d -> !"DRAFT".equals(d.getCurrentStatus()))
+//             result = new ArrayList<>(vendorNameRepository.findIndentIdsByVendorName(value));
+//             break;
+
+//         default:
+//             break;
+//     }
+
+//     return result;
+// }
 //     @Override
 //     public List<SearchIndentIdDto> searchIndentIds(String type, String value, String indentType, String materialCategoryType) {
 //         List<SearchIndentIdDto> result= new ArrayList<>();

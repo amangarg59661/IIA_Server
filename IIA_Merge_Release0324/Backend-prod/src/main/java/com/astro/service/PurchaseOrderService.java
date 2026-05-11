@@ -46,4 +46,9 @@ public interface PurchaseOrderService {
     public List<performanceWarrsntySecurityReportDto> getPerformanceSecurityReport(String startDate, String endDate);
     public PoFormateDto getPoFormatDetails(String poId) throws IOException;
 
+    PurchaseOrderResponseDTO savePoDraft(PurchaseOrderRequestDTO dto);
+PurchaseOrderResponseDTO updatePoDraft(String poId, PurchaseOrderRequestDTO dto);
+PurchaseOrderResponseDTO submitPoDraft(String poId, PurchaseOrderRequestDTO dto);
+List<PurchaseOrderResponseDTO> getUserPoDrafts(Integer userId);
+
 }

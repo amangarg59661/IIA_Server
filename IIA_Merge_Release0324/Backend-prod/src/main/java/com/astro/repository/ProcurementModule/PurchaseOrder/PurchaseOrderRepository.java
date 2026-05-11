@@ -438,4 +438,10 @@ List<SearchPOIdDto> findByCreatedDateBetweenAndIsActive(@Param("start") LocalDat
 
 
     // PurchaseOrder getByPoId(String poId);
+
+    // Add inside the interface, just before the closing }
+
+// Draft support
+List<PurchaseOrder> findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(
+        Integer createdBy, String currentStatus);
 }
