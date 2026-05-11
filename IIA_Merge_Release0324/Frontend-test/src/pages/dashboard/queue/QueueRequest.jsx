@@ -12092,7 +12092,7 @@ const handleCancellationApprove = async (record, approvalStatus) => {
           <span>
             ₹{amount}
             {isTender && isHighValue && (
-              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>High Value</Tag>
+              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>High    </Tag>
             )}
           </span>
         );
@@ -12110,7 +12110,7 @@ const handleCancellationApprove = async (record, approvalStatus) => {
       dataIndex: "budgetName",
       key: "budgetName",
       render: (_, record) =>
-        getCommonField(record.workflowId, record, "budget") || "-",
+        getCommonField(record.workflowId, record, "budgetName") || "-",
     },
     // {
     //   title: "Indentor Title",
@@ -12137,7 +12137,7 @@ const handleCancellationApprove = async (record, approvalStatus) => {
       title: "Assigned To",
       dataIndex: "assignedToEmployeeName",
       key: "assignedTo",
-      render: (text) => text || "-",
+      render: (_,record) => record.nextRole || "-",
     },
     {
       title: "Status",
@@ -13215,35 +13215,75 @@ const columnsToRender =
           const workflowId = curr.workflowId || versionHistoryList[0]?.workflowId;
           const wId = parseInt(workflowId, 10);
 
-          // Generic header fields — common across most workflows
           const HEADER_FIELDS = [
-            { key: 'indentorName',       label: 'Created By / Indentor' },
-            { key: 'createdBy',          label: 'Created By' },
-            { key: 'modeOfProcurement',  label: 'Mode of Procurement' },
-            { key: 'projectName',        label: 'Project' },
-            { key: 'consignesLocation',  label: 'Consignee Location' },
-            { key: 'consignee',          label: 'Consignee' },
-            { key: 'purpose',            label: 'Purpose' },
-            { key: 'justification',      label: 'Justification' },
-            { key: 'budgetCode',         label: 'Budget Code' },
-            { key: 'procurementType',    label: 'Procurement Type' },
+            { key: 'indentorName',                     label: 'Indentor' },
+            { key: 'indentorMobileNo',                 label: 'Mobile No.' },
+            { key: 'indentorEmailAddress',             label: 'Email' },
+            { key: 'createdBy',                        label: 'Created By' },
+            { key: 'modeOfProcurement',                label: 'Mode of Procurement' },
+            { key: 'projectName',                      label: 'Project' },
+            { key: 'projectCode',                      label: 'Project Code' },
+            { key: 'isUnderProject',                   label: 'Under Project' },
+            { key: 'consignesLocation',                label: 'Consignee Location' },
+            { key: 'consignee',                        label: 'Consignee' },
+            { key: 'indentType',                       label: 'Indent Type' },
+            { key: 'materialCategoryType',             label: 'Material Category' },
+            { key: 'purpose',                          label: 'Purpose' },
+            { key: 'justification',                    label: 'Justification' },
+            { key: 'quarter',                          label: 'Quarter' },
+            { key: 'budgetCode',                       label: 'Budget Code' },
+            { key: 'procurementType',                  label: 'Procurement Type' },
+            { key: 'isPreBidMeetingRequired',          label: 'Pre-Bid Meeting Required' },
+            { key: 'preBidMeetingDate',                label: 'Pre-Bid Meeting Date' },
+            { key: 'preBidMeetingVenue',               label: 'Pre-Bid Meeting Venue' },
+            { key: 'isItARateContractIndent',          label: 'Rate Contract Indent' },
+            { key: 'estimatedRate',                    label: 'Estimated Rate' },
+            { key: 'periodOfContract',                 label: 'Period of Contract' },
+            { key: 'rateContractJobCodes',             label: 'Rate Contract Job Codes' },
+            { key: 'brandPac',                         label: 'Brand PAC' },
+            { key: 'brandAndModel',                    label: 'Brand & Model' },
+            { key: 'proprietaryJustification',         label: 'Proprietary Justification' },
+            { key: 'proprietaryAndLimitedDeclaration', label: 'Proprietary Declaration' },
+            { key: 'reason',                           label: 'Reason' },
+            { key: 'buyBack',                          label: 'Buy Back' },
+            { key: 'buyBackAmount',                    label: 'Buy Back Amount' },
+            { key: 'serialNumber',                     label: 'Serial Number' },
+            { key: 'modelNumber',                      label: 'Model Number' },
+            { key: 'technicalSpecificationsFileName',  label: 'Technical Specs File' },
+            { key: 'uploadingPriorApprovalsFileName',  label: 'Prior Approvals File' },
+            { key: 'draftEOIOrRFPFileName',            label: 'Draft EOI/RFP File' },
+            { key: 'uploadPACOrBrandPACFileName',      label: 'PAC/Brand PAC File' },
+            { key: 'uploadBuyBackFileNames',           label: 'Buy Back File' },
           ].filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
 
-          // Line item fields
           const MAT_FIELDS = [
+            { key: 'materialCode',        label: 'Material Code' },
             { key: 'materialDescription', label: 'Description' },
             { key: 'quantity',            label: 'Qty' },
             { key: 'unitPrice',           label: 'Unit Price' },
+            { key: 'totalPrice',          label: 'Total Price' },
             { key: 'uom',                 label: 'UOM' },
             { key: 'budgetCode',          label: 'Budget Code' },
             { key: 'currency',            label: 'Currency' },
+            { key: 'conversionRate',      label: 'Conversion Rate' },
+            { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
+            { key: 'materialCategory',    label: 'Category' },
+            { key: 'materialSubCategory', label: 'Sub-Category' },
           ];
           const JOB_FIELDS = [
-            { key: 'jobDescription', label: 'Description' },
-            { key: 'quantity',       label: 'Qty' },
-            { key: 'estimatedPrice', label: 'Est. Price' },
-            { key: 'uom',            label: 'UOM' },
-            { key: 'budgetCode',     label: 'Budget Code' },
+            { key: 'jobCode',           label: 'Job Code' },
+            { key: 'jobDescription',    label: 'Description' },
+            { key: 'briefDescription',  label: 'Brief Description' },
+            { key: 'quantity',          label: 'Qty' },
+            { key: 'estimatedPrice',    label: 'Est. Price' },
+            { key: 'totalPrice',        label: 'Total Price' },
+            { key: 'uom',               label: 'UOM' },
+            { key: 'budgetCode',        label: 'Budget Code' },
+            { key: 'currency',          label: 'Currency' },
+            { key: 'category',          label: 'Category' },
+            { key: 'subCategory',       label: 'Sub-Category' },
+            { key: 'origin',            label: 'Origin' },
+            { key: 'modeOfProcurement', label: 'Mode of Procurement' },
           ];
 
           const isJob = (curr.indentType || '').toLowerCase() === 'job';

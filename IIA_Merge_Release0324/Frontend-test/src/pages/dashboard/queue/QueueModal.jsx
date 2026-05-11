@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useRef} from "react";
 import {
   Modal,
   Typography,
@@ -31,7 +31,9 @@ import QueueHistory from "./QueueHistory";
 import MaterialHistory from "./MaterialIndentHistory";
 import { baseURL } from '../../../App';
 import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
-
+// Add after: import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
+import PrintFormate from '../../../utils/PrintFormate';
+import { useReactToPrint } from 'react-to-print';
 
 
 const QueueModal = ({
@@ -48,7 +50,11 @@ const QueueModal = ({
    fetchVersionHistory,        // ADD
   versionHistoryLoading,
 }) => {
-
+ const printComponentRef = useRef();
+  const handlePrint = useReactToPrint({
+    content: () => printComponentRef.current,
+    documentTitle: `Indent - ${detailsData?.indentId || selectedRecord?.requestId || "Draft"}`,
+  });
   return (
     <Modal
       title={
@@ -66,6 +72,14 @@ const QueueModal = ({
 >
   View Version History
 </Button>
+<Button
+            type="link"
+            icon={<FilePdfOutlined />}
+            onClick={handlePrint}
+            disabled={!detailsData}
+          >
+            Print
+          </Button>
           <Button
             type="link"
             icon={<HistoryOutlined />}
@@ -1724,7 +1738,9 @@ const QueueModal = ({
         onCancel={() => setMaterialHistoryVisible(false)}
         historyType={detailsData?.indentType === 'job' ? 'job' : 'material'}
       />
-
+ <div style={{ display: "none" }}>
+        <PrintFormate ref={printComponentRef} data={detailsData} />
+      </div>
     </Modal>
   );
 };
