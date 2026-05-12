@@ -2681,6 +2681,46 @@ public List<SearchIndentIdDto> searchIndentIds(String type, String value,
 //         return result;
 //     }
 
+@Override
+public List<IndentAssignmentResponseDto> getMyAssignments(Integer assignedByUserId) {
+    // Step 1: resolve userId → employeeId
+    String assignedByEmpId = null;
+    UserMaster phUser = userMasterRepository.findByUserId(assignedByUserId);
+    if (phUser != null && phUser.getEmployeeId() != null) {
+        assignedByEmpId = phUser.getEmployeeId();
+    }
+
+    if (assignedByEmpId == null) {
+        return Collections.emptyList();
+    }
+
+    // Step 2: fetch all ACTIVE assignments by this PH
+    List<IndentAssignment> assignments =
+        indentAssignmentRepository.findByAssignedByEmployeeIdAndStatus(assignedByEmpId, "ACTIVE");
+
+    // Step 3: map to response DTO
+    return assignments.stream().map(a -> {
+        IndentAssignmentResponseDto dto = new IndentAssignmentResponseDto();
+        dto.setIndentId(a.getIndentId());
+        dto.setAssignedToEmployeeId(a.getAssignedToEmployeeId());
+        dto.setAssignedDate(a.getAssignedDate());
+
+        // Resolve assignee name from employee master
+        employeeDepartmentMasterRepository
+            .findByEmployeeId(a.getAssignedToEmployeeId())
+            .ifPresent(emp -> dto.setAssignedToEmployeeName(emp.getEmployeeName()));
+
+        // Enrich with indent details
+        IndentCreation indent = indentCreationRepository.findByIndentId(a.getIndentId());
+        if (indent != null) {
+            dto.setIndentorName(indent.getIndentorName());
+            dto.setSubject(indent.getPurpose()); // or whichever field is the description
+        }
+
+        return dto;
+    }).collect(Collectors.toList());
+}
+
     // updated assigning part bellow
     @Override
     @Transactional
@@ -2711,8 +2751,15 @@ public List<SearchIndentIdDto> searchIndentIds(String type, String value,
         newAssignment.setIndentId(dto.getIndentId());
         newAssignment.setAssignedToEmployeeId(dto.getEmployeeId());
 
-        newAssignment.setAssignedByEmployeeId("SYSTEM");
-
+        // newAssignment.setAssignedByEmployeeId("SYSTEM");
+    String assignedByEmpId = "SYSTEM"; // fallback
+if (dto.getAssignedByUserId() != null) {
+    UserMaster phUser = userMasterRepository.findByUserId(dto.getAssignedByUserId());
+    if (phUser != null && phUser.getEmployeeId() != null) {
+        assignedByEmpId = phUser.getEmployeeId();
+    }
+}
+newAssignment.setAssignedByEmployeeId(assignedByEmpId);
         newAssignment.setAssignedDate(LocalDateTime.now());
         newAssignment.setStatus("ACTIVE");
 

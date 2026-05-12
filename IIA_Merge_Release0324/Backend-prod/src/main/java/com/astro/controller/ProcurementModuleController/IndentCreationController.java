@@ -7,6 +7,7 @@ import com.astro.dto.workflow.ProcurementDtos.IndentDto.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentWorkflowStatusDto;
 import com.astro.dto.workflow.WorkflowTransitionDto;
 import com.astro.entity.ProcurementModule.IndentCreation;
+import com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentAssignmentResponseDto;
 import com.astro.entity.UserMaster;
 import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
 import com.astro.repository.UserMasterRepository;
@@ -250,7 +251,11 @@ public ResponseEntity<Object> submitIndentDraft(
     workflowService.initiateWorkflow(response.getIndentId(), "Indent Workflow", dto.getCreatedBy());
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
 }
-
+@GetMapping("/my-assignments")
+public ResponseEntity<Object> getMyAssignments(@RequestParam Integer assignedByUserId) {
+    List<IndentAssignmentResponseDto> result = indentCreationService.getMyAssignments(assignedByUserId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(result), HttpStatus.OK);
+}
 @GetMapping("/drafts")
 public ResponseEntity<Object> getUserDrafts(@RequestParam Integer userId) {
     List<IndentCreationResponseDTO> drafts = indentCreationService.getUserDrafts(userId);

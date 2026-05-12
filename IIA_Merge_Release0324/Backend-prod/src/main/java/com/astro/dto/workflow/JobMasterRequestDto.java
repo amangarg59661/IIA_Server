@@ -23,4 +23,5 @@ public class JobMasterRequestDto {
    // private List<String> vendorNames;
     private String updatedBy;
     private Integer createdBy;
+private String origin;
 }

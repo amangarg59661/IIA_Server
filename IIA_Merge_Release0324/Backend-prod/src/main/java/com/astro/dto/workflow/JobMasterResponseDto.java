@@ -32,6 +32,7 @@ public class JobMasterResponseDto {
     private String approvalStatus;
 
     private String comments;
+    private String origin;
 
 
 }

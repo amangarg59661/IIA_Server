@@ -63,5 +63,5 @@ public interface IndentCreationService {
 IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreationRequestDTO dto);
 IndentCreationResponseDTO submitIndentDraft(String indentId, IndentCreationRequestDTO dto);
 List<IndentCreationResponseDTO> getUserDrafts(Integer userId);
-
+public List<IndentAssignmentResponseDto> getMyAssignments(Integer assignedByUserId);
     }

@@ -60,6 +60,7 @@ public class JobMasterServiceImpl implements JobMasterService {
         jobMaster.setSubCategory(jobMasterRequestDto.getSubCategory());
         jobMaster.setCreatedBy(jobMasterRequestDto.getCreatedBy());
         jobMaster.setUpdatedBy(jobMasterRequestDto.getUpdatedBy());
+        jobMaster.setOrigin(jobMasterRequestDto.getOrigin());
         jobMasterRepository.save(jobMaster);
      /*   // Saveing Vendornames in different table
         if (jobMasterRequestDto.getVendorNames() != null && !jobMasterRequestDto.getVendorNames().isEmpty()) {
@@ -106,6 +107,7 @@ public class JobMasterServiceImpl implements JobMasterService {
         jobMaster.setEstimatedPriceWithCcy(jobMasterRequestDto.getEstimatedPriceWithCcy());
         jobMaster.setCreatedBy(jobMasterRequestDto.getCreatedBy());
         jobMaster.setUpdatedBy(jobMasterRequestDto.getUpdatedBy());
+        jobMaster.setOrigin(jobMasterRequestDto.getOrigin());
         // After Indent Creator edits a CHANGE_REQUEST job, reset to AWAITING_APPROVAL
         // so it reappears in the SPO queue for re-approval
         if ("CHANGE_REQUEST".equals(jobMaster.getApprovalStatus())) {
