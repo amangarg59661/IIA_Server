@@ -772,6 +772,7 @@ options={Array.isArray(materialList) ? materialList : []}
     setUploadedFiles([]);
     setExistingData(null);
     setIsEditMode(false);
+    setSelectedMaterialCode(null); 
     form.setFieldsValue({
       materialCode: "",
       status: "",

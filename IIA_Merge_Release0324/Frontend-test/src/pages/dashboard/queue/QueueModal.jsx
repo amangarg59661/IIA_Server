@@ -1742,6 +1742,8 @@ const QueueModal = ({
         <PrintFormate ref={printComponentRef} data={detailsData} />
       </div>
     </Modal>
+
+    
   );
 };
 

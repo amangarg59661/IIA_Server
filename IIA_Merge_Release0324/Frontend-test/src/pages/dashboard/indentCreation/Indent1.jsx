@@ -2456,31 +2456,30 @@
     };
     delete payload.singleAndMultipleJob;
 
-    try {
-        setDraftBtnLoading(true);
-        let response;
+   try {
+    setDraftBtnLoading(true);
+    let response;
 
-        if (formData?.indentId && formData?.currentStatus === "DRAFT") {
-            // Update existing draft
-            response = await axios.put(`/api/indents/draft`, payload, {
-                params: { indentId: formData.indentId }
-            });
-            message.success("Draft updated successfully");
-        } else if (!formData?.indentId) {
-            // Save new draft
-            response = await axios.post(`/api/indents/draft`, payload);
-            message.success("Draft saved successfully");
-        } else {
-            message.warning("This indent is already submitted and cannot be saved as a draft.");
-            return;
-        }
+    if (formData?.indentId && formData?.currentStatus === "DRAFT") {
+        response = await axios.put(`/api/indents/draft`, payload, {
+            params: { indentId: formData.indentId }
+        });
+        message.success("Draft updated successfully");
+    } else if (!formData?.indentId) {
+        response = await axios.post(`/api/indents/draft`, payload);
+        message.success("Draft saved successfully");
+    } else {
+        message.warning("This indent is already submitted and cannot be saved as a draft.");
+        return;
+    }
 
-        const savedData = response?.data?.responseData;
-        setFormData(prev => ({
-            ...prev,
-            indentId: savedData?.indentId,
-            currentStatus: "DRAFT"
-        }));
+    const savedData = response?.data?.responseData;
+    setFormData(prev => ({
+        ...prev,
+        indentId: savedData?.indentId,
+        currentStatus: "DRAFT"
+    }));
+    setModalOpen(true);
 
     } catch (error) {
         message.error(error.response?.data?.responseStatus?.message || "Error saving draft.");
@@ -2916,7 +2915,8 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             name: "conversionRate",
                             label: "Conversion Rate (to INR)",
                             type: "text",
-                            required: false,
+                            required:true,
+                            // required: false,
                             shouldShow: (data, index) => {
                                 const currency = data.materialDetails?.[index]?.currency;
                                 return currency && currency !== "INR";
@@ -3944,6 +3944,11 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 proprietaryInvalid = true;
                                 return;
                             }
+                            if (!item.vendorNames || item.vendorNames.length < 1) {
+                                message.error(`Material ${index + 1}: Proprietary Purchase allows exact 1 vendor name.`);
+                                proprietaryInvalid = true;
+                                return;
+                            }
                         });
     
                         if (proprietaryInvalid) return;
@@ -4117,11 +4122,15 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
         navigate("/queue");
 
     } else {
-        // Fresh submit with no prior draft
-        response = await axios.post("/api/indents", payload);
-        setFormData({ ...formData, indentId: response?.data?.responseData?.indentId });
-        setModalOpen(true);
-    }
+    // Fresh submit with no prior draft
+    response = await axios.post("/api/indents", payload);
+    setFormData({
+        ...formData,
+        indentId: response?.data?.responseData?.indentId,
+        currentStatus: "SUBMITTED"   // ← clears the DRAFT banner
+    });
+    setModalOpen(true);
+}
                 } catch (error) {
                     // Handle file size error specifically
                     if (error.response?.status === 413 ||

@@ -147,6 +147,7 @@ const JobForm = ({ jobCode }) => {
           subCategory: jobData.subCategory,
           description: jobData.jobDescription,
           uom: jobData.uom,
+          indigenousOrImported: jobData.origin,
           briefDescription: jobData.briefDescription,
           estimatedPrice: jobData.estimatedPriceWithCcy,
           currency: jobData.currency,
@@ -171,7 +172,7 @@ const JobForm = ({ jobCode }) => {
         createdBy: actionPerformer,
         currency: values.currency,
         jobDescription: values.description,
-        indigenousOrImported: values.indigenousOrImported,
+        origin: values.indigenousOrImported,
         subCategory: values.subCategory,
         uom: values.uom,
         assetId: values.assetId,
@@ -252,6 +253,7 @@ reasonForDeactive: values.reasonForDeactive || null,
               filterOption={false}
               onSearch={searchJobs}
               options={jobSearchList}
+              value={selectedJobCode}
               onChange={async (selectedCode) => {
                 if (!selectedCode) return;
                 setSelectedJobCode(selectedCode);
@@ -266,6 +268,7 @@ reasonForDeactive: values.reasonForDeactive || null,
                       subCategory: jobData.subCategory,
                       description: jobData.jobDescription,
                       uom: jobData.uom,
+                      indigenousOrImported: jobData.origin,
                       briefDescription: jobData.briefDescription,
                       estimatedPrice: jobData.estimatedPriceWithCcy,
                       currency: jobData.currency,
@@ -399,9 +402,18 @@ reasonForDeactive: values.reasonForDeactive || null,
             margin: "20px",
           }}
         >
-          <Button type="default" htmlType="reset">
-            <ReloadOutlined /> Reset
-          </Button>
+          <Button
+  type="default"
+  htmlType="button"
+  onClick={() => {
+    form.resetFields();
+    setIsEditMode(false);
+    setSelectedJobCode(null);
+    setApprovalStatus("");
+  }}
+>
+  <ReloadOutlined /> Reset
+</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
             <SendOutlined /> {isEditMode ? "Update" : "Create"}
           </Button>
