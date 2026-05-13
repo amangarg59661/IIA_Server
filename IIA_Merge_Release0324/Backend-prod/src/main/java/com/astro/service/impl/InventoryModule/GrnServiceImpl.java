@@ -1304,9 +1304,10 @@ dto.setMaterialsList(mergedMaterials);
         BigDecimal totalAmount = dto.getMaterialsList().stream()
                 .map(m -> {
                     BigDecimal amount = m.getAmount() != null ? m.getAmount() : BigDecimal.ZERO;
+                    BigDecimal ExchangeRate =m.getExchangeRate() != null ? m.getExchangeRate() : BigDecimal.ZERO;
                     BigDecimal gst = m.getGst() != null ? m.getGst() : BigDecimal.ZERO;
                     BigDecimal gstAmount = amount.multiply(gst).divide(BigDecimal.valueOf(100));
-                    return amount.add(gstAmount);
+                    return amount.multiply(ExchangeRate).add(gstAmount);
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 

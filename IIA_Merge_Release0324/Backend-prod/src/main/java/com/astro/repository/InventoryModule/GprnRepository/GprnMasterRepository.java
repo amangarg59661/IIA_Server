@@ -59,6 +59,7 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
         po.created_date,
         ic.indentor_name,              -- Fetch from indent_creation
 
+        poa.material_code,
         poa.material_description,
         poa.quantity AS order_qty,
 

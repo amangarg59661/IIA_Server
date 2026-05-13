@@ -277,12 +277,13 @@ return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
             if (dto.getMaterials() == null) dto.setMaterials(new ArrayList<>());
 
             MaterialDto material = new MaterialDto();
-            material.setMaterialDesc((String) r[5]);
+            material.setMaterialCode((String) r[5]);
+            material.setMaterialDesc((String) r[6]);
 
             // Safely convert all quantities using BigDecimal
-            BigDecimal orderQty   = toBigDecimal(r[6]);
-            BigDecimal receivedQty = toBigDecimal(r[7]);
-            BigDecimal pendingQty  = toBigDecimal(r[8]);
+            BigDecimal orderQty   = toBigDecimal(r[7]);
+            BigDecimal receivedQty = toBigDecimal(r[8]);
+            BigDecimal pendingQty  = toBigDecimal(r[9]);
 
             material.setOrderQty(orderQty);
             material.setReceivedQty(receivedQty);

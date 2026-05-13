@@ -3888,6 +3888,8 @@ private BudgetService budgetService;
                 transition.setCurrentRole("Tender Creator");
             } else if (workflowDto.getWorkflowName().toUpperCase().contains("INDENT")) {
                 transition.setCurrentRole("Indent Creator");
+            } else if (workflowDto.getWorkflowName().toUpperCase().contains("PO") || workflowDto.getWorkflowName().toUpperCase().contains("PURCHASE") ) {
+                transition.setCurrentRole("PO Creator");
             } else {
                 transition.setCurrentRole("Request Creator");
             }
@@ -4657,11 +4659,14 @@ private BudgetService budgetService;
             // updated by abhinav
             String assignmentRole = transitionActionReqDto.getAssignmentRole();
 
-            if ("Request Creator".equalsIgnoreCase(assignmentRole)
+            if ("PO Creator".equalsIgnoreCase(assignmentRole)
                     && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")) {
 
                 nextWorkflowTransition.setNextRole("PO Creator");
 
+            } else if("Request Creator".equalsIgnoreCase(assignmentRole)
+                    && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")){
+                nextWorkflowTransition.setNextRole(assignmentRole);
             } else {
                 nextWorkflowTransition.setNextRole(assignmentRole);
             }
