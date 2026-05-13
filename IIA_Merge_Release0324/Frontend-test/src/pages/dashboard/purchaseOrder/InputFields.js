@@ -206,7 +206,14 @@ export const PoDetails = [
         },
         {
             name: "inrEquivalent",
-            label: "Equivalent INR",
+            label: "Unit Price in INR",
+            type: "text",
+            disabled: true,
+            span: 3
+        },
+        {
+            name: "estimatedItemTotal",
+            label: "Total Amount",
             type: "text",
             disabled: true,
             span: 3
@@ -293,13 +300,16 @@ export const PoDetails = [
                     name: "comparativeStatementFileName",
                     label: "Comparative Statement",
                     type: "multiImage",
+                    accept: ".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.doc,.docx",
                     span:2,
                     //required: true,
         },
          {
                     name: "gemContractFileName",
                     label: "Gem Contract Upload",
+                    // type: "multiImage",
                     type: "multiImage",
+                    accept: ".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.doc,.docx",
                     span:2,
                     //required: true,
         }
@@ -365,21 +375,21 @@ export const PoDetails = [
           label: "Vendor A/C No.",
           type: "text",
           required: true,
-        //  disabled: true,
+         disabled: true,
         },
         {
             name: "vendorsIfscCode",
             label: "Vendor IFSC Code",
             type: "text",
             required: true,
-           // disabled: true,
+           disabled: true,
         },
         {
             name: "vendorAccountName",
             label: "Vendor A/C Name",
             type: "text",
             required: true,
-          //  disabled: true,
+           disabled: true,
         }
       ]
     }

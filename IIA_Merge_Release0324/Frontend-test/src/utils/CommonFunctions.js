@@ -248,7 +248,8 @@ export const apiCall = async (method, url, token, payload = null) => {
             onChange={handleChange}
             value={formData[field.name]}
             multiple={true}
-            accept="image/*"
+            // accept="image/*"
+            accept={field.accept || "image/*"} 
           />
         );
       case "files":
@@ -260,7 +261,8 @@ export const apiCall = async (method, url, token, payload = null) => {
       disabled={field?.disabled}
       onChange={handleChange}
       value={formData[field.name]}
-      accept="image/*"
+      // accept="image/*"
+      accept={field.accept || "image/*"} 
     />
   ); 
   case "customDropdown":
@@ -603,7 +605,9 @@ export const renderFormFields = (detail, handleChange, formData, parentName = ""
       };
     });
 
-    additionalFunc["materialDeselect"](childIndex)
+    if (additionalFunc && typeof additionalFunc["materialDeselect"] === "function") {
+  additionalFunc["materialDeselect"](childIndex);
+}
   };
 
   return (

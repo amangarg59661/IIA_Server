@@ -22,7 +22,7 @@ const Asset = () => {
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
   });
-
+const debounceTimer = useRef(null); // add this alongside existing useRef(printRef)
   const [assetIdList, setAssetIdList] = useState([]);
 const [searchParams, setSearchParams] = useState({ keyword: "" });
 
@@ -533,7 +533,7 @@ useEffect(() => {
       <Heading title="Asset Master" />
       {/* 🔍 Search Filters */}
       {/* 🔍 Single Search Field (auto search) */}
-<Row gutter={16} style={{ marginBottom: 20 }}>
+{/* <Row gutter={16} style={{ marginBottom: 20 }}>
   <Col span={8}>
     <Input
       placeholder="Search Asset..."
@@ -547,8 +547,50 @@ useEffect(() => {
       allowClear
     />
   </Col>
-</Row>
+</Row> */}
 
+<Row gutter={16} style={{ marginBottom: 20 }}>
+  <Col span={8}>
+    <Input.Search
+      placeholder="Search Asset..."
+      value={searchParams.keyword}
+      onChange={(e) => {
+        const keyword = e.target.value;
+        setSearchParams({ keyword });
+
+        // Debounce: filter/fetch in background, don't open modal
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(async () => {
+          if (keyword.length >= 2) {
+            try {
+              const { data } = await axios.get("/api/asset/search", {
+                params: { keyword },
+              });
+              setSearchResults(data.responseData || []);
+            } catch (error) {
+              message.error("Failed to search assets");
+            }
+          } else {
+            setSearchResults([]);
+          }
+        }, 500);
+      }}
+      onSearch={() => {
+        // Only open modal on search icon click or Enter
+        if (searchParams.keyword.length >= 2) {
+          setIsSearchModalOpen(true);
+        } else {
+          message.warning("Enter at least 2 characters to search");
+        }
+      }}
+      allowClear
+      onClear={() => {
+        setSearchParams({ keyword: "" });
+        setSearchResults([]);
+      }}
+    />
+  </Col>
+</Row>
       
       <CustomForm formData={formData} onFinish={onFinish}>
         {/*renderFormFields(assetFields, handleChange, handleSearch, formData)*/}

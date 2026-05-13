@@ -81,7 +81,10 @@ const GPRN = () => {
   setErrorField(null);
 
   const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
-  prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty).toFixed(2);
+  // AFTER
+const exchangeRate = parseFloat(prevMaterialDtlList[fieldName[1]].exchangeRate || 0);
+prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty * (exchangeRate > 0 ? exchangeRate : 1)).toFixed(2);
+  // prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty).toFixed(2);
 }
 
         let totQuant = 0
@@ -455,6 +458,13 @@ setPendingGprnList(formattedPoList);
         {
           name: "unitPrice",
           label: "Unit Price",
+          type: "text",
+          // required: true,
+          disabled: true
+        },
+        {
+          name: "exchangeRate",
+          label: "Exchange Rate",
           type: "text",
           required: true,
           disabled: true

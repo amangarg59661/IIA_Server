@@ -134,7 +134,7 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
         span: 2,
       },  {
         name: "totalAmount",
-        label: "Total Amount Payable",
+        label: "Total Amount Payable (INR)",
         type: "text",
         disabled: true,
         span: 2,

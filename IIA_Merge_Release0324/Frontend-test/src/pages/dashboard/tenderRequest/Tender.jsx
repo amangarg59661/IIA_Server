@@ -1689,6 +1689,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
     materialDetails: [],
     billingAddress: "Koramangala, 2nd Block, Bangalore -560034",
     buyBack: false,
+    tenderVersion: 1,
 
   });
   useEffect(() => {
@@ -2419,24 +2420,40 @@ useEffect(() => {
             onSearch: () => handleSearchTenderIds(),
       // formData.searchType === "submittedDate" ? "date" : "text"
         },
-    ]
-    },
-    {
-      heading: "Tender Search",
-      colCnt: 1,
-      fieldList: [{
+        {
         name: "tenderId",
         label: "Tender Id",
         //type: "search",
         type: "select",
         options: tenderIdOptions || [],
         span: 1
-      }]
+        }
+    ]
     },
+    // {
+    //   heading: "Tender Search",
+    //   colCnt: 1,
+    //   fieldList: [{
+    //     name: "tenderId",
+    //     label: "Tender Id",
+    //     //type: "search",
+    //     type: "select",
+    //     options: tenderIdOptions || [],
+    //     span: 1
+    //   }]
+    // },
      {
         heading: "Status & Version",
         colCnt:4,
         fieldList:[
+          {
+        name: "tenderVersion",
+        label: "Tender Version",
+        type: "text",
+        disabled: true,
+        defaultValue: 1,
+        span: 1
+    },
             ...(searchDone ? [
     {
         name: "processStage",
@@ -2452,13 +2469,7 @@ useEffect(() => {
         disabled: true,
         span: 1
     },
-    {
-        name: "tenderVersion",
-        label: "Tender Version",
-        type: "text",
-        disabled: true,
-        span: 1
-    },
+    
     {
         name: "isLocked",
         label: "Locked Status",

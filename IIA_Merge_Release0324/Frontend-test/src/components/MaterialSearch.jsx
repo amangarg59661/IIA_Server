@@ -1,5 +1,5 @@
 import { Button, Popover, Table, Input } from 'antd';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { convertToCurrency, handleSearch, updateFormData } from '../utils/CommonFunctions';
 
@@ -18,7 +18,7 @@ const MaterialSearch = ({ customCols, itemsArray, setFormData }) => {
     acc[value] = label;
     return acc;
   }, {});
-
+const debounceTimer = useRef(null);
   const handleSelectItem = (record) => {
     setTableOpen(false);
 
@@ -157,18 +157,27 @@ const MaterialSearch = ({ customCols, itemsArray, setFormData }) => {
         placement="right"
       >
         <Search
-          placeholder="Search materials"
-          onChange={(e) =>
-            handleSearch(
-              e.target?.value || "",
-              itemsArray,
-              setFilteredData,
-              setSearchText
-            )
-          }
-          value={searchText}
-          style={{ width: 200 }}
-        />
+  placeholder="Search materials"
+  value={searchText}
+  onChange={(e) => {
+    const value = e.target.value;
+    setSearchText(value);
+
+    // Debounce: filter in background, don't open popover
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
+      handleSearch(value, itemsArray, setFilteredData, setSearchText);
+    }, 500);
+  }}
+  onSearch={() => setTableOpen(true)} // open only on icon click or Enter
+  style={{ width: 200 }}
+  allowClear
+  onClear={() => {
+    setSearchText("");
+    setFilteredData(itemsArray);
+    setTableOpen(false);
+  }}
+/>
       </Popover>
     </div>
   );

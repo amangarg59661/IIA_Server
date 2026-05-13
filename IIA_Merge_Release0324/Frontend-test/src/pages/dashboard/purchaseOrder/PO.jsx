@@ -1368,6 +1368,19 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
       } else {
         updated[index].inrEquivalent = "";
       }
+      // Per-item estimated total in INR
+const baseRate   = item.currency && item.currency !== "INR"
+  ? parseFloat(item.rate || 0) * parseFloat(item.exchangeRate || 1)
+  : parseFloat(item.rate || 0);
+const baseAmount = baseRate * parseFloat(item.quantity || 0);
+updated[index].estimatedItemTotal = (
+  baseAmount
+  + baseAmount * parseFloat(item.gst    || 0) / 100
+  + baseAmount * parseFloat(item.duties || 0) / 100
+  + parseFloat(item.freightCharge || 0)
+).toFixed(2);
+
+     
           return { ...prev, materialDtlList: updated };
         });
       }
@@ -1691,6 +1704,7 @@ vendorNameOptions = completedVendorsData.map((vendor) => ({
           setFormData,
           handleSearch
         )}
+        
         {/* [DRAFT] onDraft + draftBtnLoading replace the old draftDataName="poDraft" */}
         <ButtonContainer
           onFinish={onFinish}
