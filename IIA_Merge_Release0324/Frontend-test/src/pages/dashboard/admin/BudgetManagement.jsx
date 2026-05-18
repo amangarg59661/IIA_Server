@@ -192,21 +192,21 @@ const BudgetManagement = () => {
       width: 200
     },
     {
-      title: 'Allocated',
+      title: 'Allocated Amount',
       dataIndex: 'allocatedAmount',
       key: 'allocatedAmount',
       width: 130,
       render: (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`
     },
     {
-      title: 'Hold',
+      title: 'Hold Amount',
       dataIndex: 'onHoldAmount',
       key: 'onHolAmount',
       width: 130,
       render: (amount) => `₹${parseFloat(amount || 0).toLocaleString()}`
     },
     {
-      title: 'Spent',
+      title: 'Spent Amount',
       dataIndex: 'spentAmount',
       key: 'spentAmount',
       width: 130,
@@ -217,7 +217,7 @@ const BudgetManagement = () => {
       )
     },
     {
-      title: 'Remaining',
+      title: 'Remaining Amount',
       dataIndex: 'remainingAmount',
       key: 'remainingAmount',
       width: 130,
@@ -232,6 +232,20 @@ const BudgetManagement = () => {
       dataIndex: 'fiscalYear',
       key: 'fiscalYear',
       width: 100
+    },
+    {
+      title: 'Created Date',
+      dataIndex: 'createdDate',
+      key: 'fiscalYear',
+      width: 100,
+      render: (date) => date && dayjs(date).isValid() ? dayjs(date).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: 'Last Updated Date',
+      dataIndex: 'updatedDate',
+      key: 'fiscalYear',
+      width: 100,
+      render: (date) => date && dayjs(date).isValid() ? dayjs(date).format('YYYY-MM-DD') : '-'
     },
     {
       title: 'Status',

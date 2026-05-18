@@ -389,8 +389,8 @@ reasonForDeactive: values.reasonForDeactive || null,
             rules={[{ required: true, message: "Please select origin!" }]}
           >
             <Radio.Group>
-              <Radio value="indigenous">Indigenous</Radio>
-              <Radio value="imported">Imported</Radio>
+              <Radio value="1">Indigenous</Radio>
+              <Radio value="0">Imported</Radio>
             </Radio.Group>
           </Form.Item>
         </div>

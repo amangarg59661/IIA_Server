@@ -507,17 +507,10 @@ const grvFields =(formData)=> [
               disabled: true,
             },
               
-         ...(formData?.grnType === "GI" &&
-    formData?.gprnDtls?.materialDtlList?.some(m => m.category === "Consumable")
-    ? [
-        {
-          name: "storesStock",
-          label: "Stores Stock",
-          type: "checkbox",
-        }
-      ]
-    : []
-)
+       ...(formData?.grnType === "GI" &&
+    formData?.materialDtlList?.some(m => m.assetFlag === false || m.assetFlag === 0)
+    ? [{ name: "storesStock", label: "Stores Stock", type: "checkbox" }]
+    : [])
 
 
         ]

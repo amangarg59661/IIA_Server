@@ -72,6 +72,7 @@ import ApprovalLimitsConfig from "../dashboard/admin/ApprovalLimitsConfig";
 import DepartmentApproverMapping from "../dashboard/admin/DepartmentApproverMapping";
 import FieldStationApproverConfig from "../dashboard/admin/FieldStationApproverConfig";
 import FullWorkflowConfig from "../dashboard/admin/FullWorkflowConfig";
+import CommitteeManagement from "../dashboard/admin/CommitteeManagement";
 /*
 const RoutesComponent = () => {
   return (
@@ -227,7 +228,17 @@ const purchasePersonnelRoutes = (
 
   </>
 );
+const committeeMemberRoutes = (
+  <>
+    <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
+  </>
+);
 
+const directorRoutes = (
+  <>
+    <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
+  </>
+);
 const tenderCreatorRoutes = (
   <>
 
@@ -273,6 +284,7 @@ const adminRoutes = (
     <Route path="/admin/budget" element={<BudgetManagement />} />
     <Route path="/admin/employee" element={<EmployeeRegistration />} />
     <Route path="/admin/user" element={<UserCreation />} />
+     <Route path="/admin/committee" element={<CommitteeManagement />} />
   </>
 );
 
@@ -305,6 +317,15 @@ const generateRoutes = (roleName) => {
     case "Tender Creator":
       console.log("➡ using tenderCreatorRoutes");
       return tenderCreatorRoutes;
+      case "Committee Member":
+      console.log("➡ using committeeMemberRoutes");
+      return committeeMemberRoutes;
+    case "Committee Chairman":
+      console.log("➡ using committeeMemberRoutes (Chairman)");
+      return committeeMemberRoutes;
+    case "Director":
+      console.log("➡ using directorRoutes");
+      return directorRoutes;
     default:
       console.log("⚠ no routes for this role");
       return null;

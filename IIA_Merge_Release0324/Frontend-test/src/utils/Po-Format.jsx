@@ -300,6 +300,8 @@ const PoFormat = forwardRef(({ po = {} }, ref) => {
               <th>UOM</th>
               <th>Unit Price ({(materialDetails[0] && materialDetails[0].currency) || ""})</th>
               <th>GST Rate</th>
+              <th>Duties</th>
+              <th>Frieght Charges</th>
               <th>Total Price ({(materialDetails[0] && materialDetails[0].currency) || ""})</th>
             </tr>
           </thead>
@@ -312,31 +314,33 @@ const PoFormat = forwardRef(({ po = {} }, ref) => {
                 <td>{mat.uom}</td>
                 <td>{mat.unitPrice}</td>
                 <td>{mat.gstRate}</td>
+                <td>{mat.duties}</td>
+                <td> {mat.freightCharge}</td>
                 <td>{mat.totalMaterialPrice}</td>
               </tr>
             ))}
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan="6" style={{ textAlign: "right" }}>
+              <td colSpan="8" style={{ textAlign: "right" }}>
                 Total
               </td>
               <td>{data.totalAmount || ""}</td>
             </tr>
             <tr>
-              <td colSpan="6" style={{ textAlign: "right" }}>
+              <td colSpan="8" style={{ textAlign: "right" }}>
                 (+) GST Amount
               </td>
               <td>{data.totalGst || ""}</td>
             </tr>
             <tr>
-              <td colSpan="6" style={{ textAlign: "right" }}>
+              <td colSpan="8" style={{ textAlign: "right" }}>
                 (-) Buyback Amount
               </td>
               <td>{data.buyBackAmount || ""}</td>
             </tr>
             <tr>
-              <td colSpan="6" style={{ textAlign: "right" }}>
+              <td colSpan="8" style={{ textAlign: "right" }}>
                 Grand Total
               </td>
               <td>{data.grandTotal || ""}</td>

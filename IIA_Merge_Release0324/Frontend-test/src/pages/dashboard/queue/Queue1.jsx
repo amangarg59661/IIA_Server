@@ -1,104 +1,3 @@
-// import { Tabs } from 'antd'
-// import React , {useState, useEffect} from 'react'
-// import QueueRequest from './QueueRequest'
-// import axios from "axios";
-
-// const Queue1 = () => {
-
-//   const [data, setData] = useState([]);
-// const [counts, setCounts] = useState({});
-// useEffect(() => {
-//   fetchData();
-// }, []);
-
-// const fetchData = async () => {
-//   try {
-//     const response = await axios.get(`/pendingWorkflowTransitionQueue`);
-
-//     const responseData = response.data.responseData;
-
-//     const formattedData = responseData.map((item) => ({
-//       ...item,
-//     }));
-
-//     setData(formattedData);
-
-//     // ✅ calculate counts
-//     const workflowCounts = {};
-//     formattedData.forEach((item) => {
-//       const id = item.workflowId;
-//       workflowCounts[id] = (workflowCounts[id] || 0) + 1;
-//     });
-
-//     setCounts(workflowCounts);
-
-//   } catch (error) {
-//     console.error(error);
-//   }
-// };
-
-
-
-// return (
-//     <Tabs
-//       items={[
-//         {
-//           key: 'IND',
-//           label: `Indent (${counts[1] || 0})`,
-//           children: <QueueRequest workflowId={1} data={data} />,
-//         },
-//         {
-//           key: 'T',
-//           label: `Tender (${counts[1] || 0})`,
-//           children: <QueueRequest requestType="Tender" data={data} />,
-//         },
-//         {
-//           key: 'CP',
-//           label: `Contingency Purchase (${counts[1] || 0})`,
-//           children: <QueueRequest workflowId={2} data={data} />,
-//         },
-//         {
-//           key: 'PO',
-//           label: `Purchase Order (${counts[1] || 0})`,
-//           children: <QueueRequest workflowId={3} data={data} />,
-//         },
-//         {
-//           key: 'SO',
-//           label: `Service Order(${counts[1] || 0})`,
-//           children: <QueueRequest workflowId={5} data={data} />,
-//         },
-//         {
-//           key: 'M',
-//           label: `Material (${counts[1] || 0})`,
-//           children: <QueueRequest requestType="M" data={data} />,
-//         },
-//         {
-//           key: 'J',
-//           label: `Job (${counts[1] || 0})`,
-//           children: <QueueRequest requestType="J" data={data} />,
-//         },
-//         {
-//           key: 'V',
-//           label: `Vendor (${counts[1] || 0})`,
-//           children: <QueueRequest requestType="V" data={data} />,
-//         },
-//         {
-//           key: 'C',
-//           label: `Cancelled Indents (${counts[1] || 0})`,
-//           children: <QueueRequest requestType="C" data={data} />,
-//         },
-//         {
-//           key: 'PV',
-//           label: `Payment Voucher(${counts[1] || 0})`,
-//           children: <QueueRequest requestType="PV" data={data} />,
-//         },
-//       ]}
-//     />
-//   )
-// }
-
-// export default Queue1
-
 
 
 import { Tabs, Spin } from 'antd';
@@ -215,6 +114,7 @@ const Queue1 = () => {
           remarks: item.transitionHistory?.[0]?.remarks || 'No remarks',
           status: item.nextAction,
           action: item.action,
+          materialDesc: item.materialDesc,
           amount: item.amount,
           paymentType: item.paymentType,
           poNo: item.poNO,
@@ -265,6 +165,10 @@ const Queue1 = () => {
           }),
           ...(item.workflowId === 9 && {
             indentorName: item.indentorName,
+            status: item.status,
+            materialDesc: item.materialDesc,
+            // materialDesc = item.materialDesc,
+            action: item.action,
             amount: item.amount,
           }),
           ...(item.workflowId === 10 && {
@@ -273,6 +177,14 @@ const Queue1 = () => {
             poNo: item.poNo,
             vendorName: item.vendorName,
             paymentType: item.paymentType,
+          }),
+          
+          ...(item.workflowId === 11 && {
+             indentorName: item.indentorName,
+            status: item.status,
+            materialDesc: item.materialDesc,
+            action: item.action,
+            amount: item.amount,
           }),
         }))
         .sort((a, b) => b.createdDate - a.createdDate);
