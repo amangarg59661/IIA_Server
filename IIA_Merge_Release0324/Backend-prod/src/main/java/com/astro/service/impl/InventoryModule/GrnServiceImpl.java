@@ -775,7 +775,8 @@ private int extractSubProcessId(String processNo) {
         List<GrnConsumableDtlEntity> existingConsumableList = gcdr.findByGrnSubProcessId(subProcessId);
 
         for (GrnMaterialDtlDto materialDtl : req.getMaterialDtlList()) {
-            if (Objects.nonNull(materialDtl.getAssetId())) {
+            // if (Objects.nonNull(materialDtl.getAssetId())) {
+            if (Boolean.TRUE.equals(materialDtl.getAssetFlag())) {
                 existingMaterialList.stream()
                         .filter(existing -> existing.getAssetId().equals(materialDtl.getAssetId()))
                         .findFirst()

@@ -122,4 +122,10 @@ public interface VendorQuotationAgainstTenderRepository extends JpaRepository<Ve
 
 
     List<VendorQuotationAgainstTender> findAllLatestByTenderId(String tenderId);
+
+    
+    // ── Added for TenderEvaluationApprovalService ──
+    List<VendorQuotationAgainstTender> findByTenderIdAndIsLatestTrue(String tenderId);
+
+    Optional<VendorQuotationAgainstTender> findByTenderIdAndVendorIdAndIsLatestTrue(String tenderId, String vendorId);
 }

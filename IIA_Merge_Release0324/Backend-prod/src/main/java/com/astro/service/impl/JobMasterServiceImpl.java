@@ -297,6 +297,7 @@ public class JobMasterServiceImpl implements JobMasterService {
         responseDto.setUpdatedDate(jobMaster.getUpdatedDate());
         responseDto.setApprovalStatus(jobMaster.getApprovalStatus());
         responseDto.setComments(jobMaster.getComments());
+        responseDto.setOrigin(jobMaster.getOrigin());
       /*  List<String> vendorNames = vendorNameRepository.findByJobCode(jobMaster.getJobCode())
                 .stream()
                 .map(VendorNamesForJobWorkMaterial::getVendorName)

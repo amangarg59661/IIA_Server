@@ -688,7 +688,27 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
 
         mailSender.send(message);
     }
-
+ /**
+     * Sends vendor portal login credentials after auto-registration triggered by tender evaluation approval.
+     */
+    public void sendVendorPortalCredentials(String toEmail, String vendorName,
+                                            String vendorId, String tempPassword) {
+        try {
+            String subject = "IIA Vendor Portal – Your Login Credentials";
+            String html = "<html><body style='font-family:Arial,sans-serif;'>"
+                    + "<h2>Welcome to the IIA Vendor Portal</h2>"
+                    + "<p>Dear <b>" + vendorName + "</b>,</p>"
+                    + "<p>Your vendor account has been approved and registered on the IIA Vendor Portal.</p>"
+                    + "<p><b>Vendor ID:</b> " + vendorId + "<br/>"
+                    + "<b>Temporary Password:</b> " + tempPassword + "</p>"
+                    + "<p>Please log in and change your password immediately.</p>"
+                    + "<p>Thank you,<br/>IIA Procurement Team</p>"
+                    + "</body></html>";
+            sendHtmlEmail(toEmail, subject, html);
+        } catch (Exception e) {
+            System.err.println("Failed to send vendor portal credentials email to " + toEmail + ": " + e.getMessage());
+        }
+    }
 }
 
 

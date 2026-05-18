@@ -27,11 +27,12 @@ public interface TenderRequestService {
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluation();
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForGemTenderEvaluation();
     public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
+    public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByUser(Integer userId);
 
-TenderResponseDto saveTenderDraft(TenderRequestDto dto);
-TenderResponseDto updateTenderDraft(String tenderId, TenderRequestDto dto);
-TenderResponseDto submitTenderDraft(String tenderId, TenderRequestDto dto);
-List<TenderResponseDto> getUserTenderDrafts(Integer userId);
+    public TenderResponseDto saveTenderDraft(TenderRequestDto dto);
+    public TenderResponseDto updateTenderDraft(String tenderId, TenderRequestDto dto);  
+    public TenderResponseDto submitTenderDraft(String tenderId, TenderRequestDto dto);
+    public List<TenderResponseDto> getUserTenderDrafts(Integer userId);
 
     //TenderWithIndentResponseDTO getTendersRequestById(String tenderId);
 }

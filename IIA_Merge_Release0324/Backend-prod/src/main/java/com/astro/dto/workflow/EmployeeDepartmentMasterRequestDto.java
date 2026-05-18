@@ -30,7 +30,8 @@ public class EmployeeDepartmentMasterRequestDto {
     private String designation;
 
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be exactly 10 digits")
+    // @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be exactly 10 digits")
+     @Pattern(regexp = "^[0-9]{7,15}$", message = "Phone number must be 7 to 15 digits")
     private String phoneNumber;
 
     @NotBlank(message = "Email address is required")
@@ -64,6 +65,8 @@ public class EmployeeDepartmentMasterRequestDto {
     private LocalDate endDate;
 
     private String employmentType; // Full-time, Part-time, Contract
+
+     private String jobTitle;
 
     private String status = "Active";
     

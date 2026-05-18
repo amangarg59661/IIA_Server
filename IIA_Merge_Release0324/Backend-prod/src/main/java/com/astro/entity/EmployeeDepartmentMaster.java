@@ -38,7 +38,8 @@ public class EmployeeDepartmentMaster {
     private String designation;
     
     // Separate contact detail fields
-    @Column(name = "phone_number", nullable = false, length = 10)
+    @Column(name = "phone_number", nullable = false, length = 20)
+    // @Column(name = "phone_number", nullable = false, length = 10)
     private String phoneNumber;
     
     @Column(name = "email_address", nullable = false)
@@ -73,6 +74,9 @@ public class EmployeeDepartmentMaster {
 
     @Column(name = "employment_type", length = 50)
     private String employmentType; // Full-time, Part-time, Contract
+
+    @Column(name = "job_title", length = 100)
+    private String jobTitle;
 
     @Column(name = "hire_date")
     private LocalDate hireDate;

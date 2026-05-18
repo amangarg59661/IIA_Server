@@ -80,4 +80,21 @@ List<SearchTenderIdDto> findTenderIdsBySubmittedDate(@Param("startDate") LocalDa
 List<TenderRequest> findDraftsByCreatedBy(@Param("userId") Integer userId);
 
 List<TenderRequest> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
+
+
+ @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) " +
+            "AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so) " +
+            "AND wt.requestId IN (" +
+            "  SELECT ii.tenderRequest.tenderId FROM IndentId ii " +
+            "  WHERE ii.indentId IN (" +
+            "    SELECT ic.indentId FROM IndentCreation ic WHERE ic.createdBy = :userId" +
+            "  )" +
+            ")")
+    List<ApprovedTenderIdDtos> findApprovedTenderIdsAndTitlesForPOANDSOByCreator(@Param("userId") Integer userId);
 }

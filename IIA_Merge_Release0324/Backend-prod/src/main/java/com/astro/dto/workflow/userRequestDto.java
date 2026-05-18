@@ -28,9 +28,11 @@ public class userRequestDto {
     @NotBlank(message = "Email is required")
     private String email;
     
-    @Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be 10 digits")
-    @NotBlank(message = "Mobile number is required")
-    private String mobileNumber;
+     @Pattern(regexp = "^[0-9]{7,15}$", message = "Mobile/phone number must be 7 to 15 digits")
+    private String mobileNumber; 
+    // @Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be 10 digits")
+    // @NotBlank(message = "Mobile number is required")
+    // private String mobileNumber;
 
     // Employee ID is optional - user may or may not be linked to an employee
     private String employeeId;

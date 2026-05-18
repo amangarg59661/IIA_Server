@@ -49,28 +49,52 @@ private UserService userService;
 @Override
 @Transactional
 public EmployeeDepartmentMasterResponseDto createEmployeeDepartmentWithUser(EmployeeDepartmentMasterRequestDto employeeRequestDto) {
-    // Modified by Aman
+   
     // Validate phone number
-   /* if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+    // if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+     if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{7,15}$")) {
         throw new BusinessException(
             new ErrorDetails(
                 AppConstant.ERROR_CODE_RESOURCE,
                 AppConstant.ERROR_TYPE_CODE_RESOURCE,
                 AppConstant.ERROR_TYPE_VALIDATION,
-                "Phone number must be exactly 10 digits"
+                // "Phone number must be exactly 10 digits"
+                "Phone number must be 7 to 15 digits"
             )
         );
-    }*/
-    // End
+    }
 
     // Create employee first
-    Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
-    int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
-    String employeeId = "E" + nextNumber;
+    // Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
+    // int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
+    // String employeeId = "E" + nextNumber;
 
-    EmployeeIdSequence em = new EmployeeIdSequence();
-    em.setEmployeeId(nextNumber);
-    employeeIdSequenceRepository.save(em);
+    // EmployeeIdSequence em = new EmployeeIdSequence();
+    // em.setEmployeeId(nextNumber);
+    // employeeIdSequenceRepository.save(em);
+
+      String employeeId = employeeRequestDto.getEmployeeId();
+    if (employeeId == null || employeeId.trim().isEmpty()) {
+        throw new BusinessException(
+            new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Employee ID is required"
+            )
+        );
+    }
+    if (employeeRepository.existsById(employeeId.trim())) {
+        throw new BusinessException(
+            new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Employee ID '" + employeeId + "' already exists. Please use a unique Employee ID."
+            )
+        );
+    }
+    employeeId = employeeId.trim();
     
     EmployeeDepartmentMaster employee = new EmployeeDepartmentMaster();
     employee.setEmployeeId(employeeId);
@@ -83,6 +107,7 @@ public EmployeeDepartmentMasterResponseDto createEmployeeDepartmentWithUser(Empl
     employee.setPhoneNumber(employeeRequestDto.getPhoneNumber());
     employee.setEmailAddress(employeeRequestDto.getEmailAddress());
     employee.setAddress(employeeRequestDto.getAddress());
+     employee.setJobTitle(employeeRequestDto.getJobTitle());
 
     // New address fields
     employee.setStreetAddress(employeeRequestDto.getStreetAddress());
@@ -178,6 +203,16 @@ public String getDepartmentByEmployeeName(String employeeName) {
         // em.setEmployeeId(nextNumber);
         // employeeIdSequenceRepository.save(em);
         // ✅ Check if employeeId already exists in DB
+        if (employeeRequestDto.getEmployeeId() == null || employeeRequestDto.getEmployeeId().trim().isEmpty()) {
+            throw new BusinessException(
+                new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Employee ID is required"
+                )
+            );
+        }
     if (employeeRequestDto.getEmployeeId() != null && !employeeRequestDto.getEmployeeId().trim().isEmpty()) {
         boolean exists = employeeRepository.existsById(employeeRequestDto.getEmployeeId().trim());
         if (exists) {
@@ -194,7 +229,7 @@ public String getDepartmentByEmployeeName(String employeeName) {
     // ENd
         
         EmployeeDepartmentMaster employee = new EmployeeDepartmentMaster();
-        employee.setEmployeeId(employeeRequestDto.getEmployeeId());
+        employee.setEmployeeId(employeeRequestDto.getEmployeeId().trim());
         
         employee.setEmployeeName(employeeRequestDto.getEmployeeName());
         employee.setFirstName(employeeRequestDto.getFirstName());
@@ -240,7 +275,11 @@ public String getDepartmentByEmployeeName(String employeeName) {
         responseDto.setPhoneNumber(employee.getPhoneNumber());
         responseDto.setEmailAddress(employee.getEmailAddress());
         responseDto.setAddress(employee.getAddress());
-
+        responseDto.setDateOfBirth(employee.getDateOfBirth());
+        responseDto.setHireDate(employee.getHireDate());
+        responseDto.setEndDate(employee.getEndDate());
+        responseDto.setEmploymentType(employee.getEmploymentType());
+        responseDto.setJobTitle(employee.getJobTitle());
         // New fields - split name
         responseDto.setFirstName(employee.getFirstName());
         responseDto.setLastName(employee.getLastName());
@@ -269,13 +308,14 @@ public String getDepartmentByEmployeeName(String employeeName) {
     public EmployeeDepartmentMasterResponseDto updateEmployeeDepartmentMaster(String employeeId, EmployeeDepartmentMasterRequestDto employeeRequestDto) {
         
         // Validate phone number
-        if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+        // if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{10}$")) {
+         if (!employeeRequestDto.getPhoneNumber().matches("^[0-9]{7,15}$")) {
             throw new BusinessException(
                 new ErrorDetails(
                     AppConstant.ERROR_CODE_RESOURCE,
                     AppConstant.ERROR_TYPE_CODE_RESOURCE,
                     AppConstant.ERROR_TYPE_VALIDATION,
-                    "Phone number must be exactly 10 digits"
+                    "Phone number must be 7 to 15 digits"
                 )
             );
         }
@@ -314,7 +354,7 @@ public String getDepartmentByEmployeeName(String employeeName) {
         if (employeeRequestDto.getHireDate() != null) employee.setHireDate(employeeRequestDto.getHireDate());
         if (employeeRequestDto.getEndDate() != null) employee.setEndDate(employeeRequestDto.getEndDate());
         if (employeeRequestDto.getEmploymentType() != null) employee.setEmploymentType(employeeRequestDto.getEmploymentType());
-
+        if (employeeRequestDto.getJobTitle() != null) employee.setJobTitle(employeeRequestDto.getJobTitle());
         if (employeeRequestDto.getStatus() != null) {
             employee.setStatus(employeeRequestDto.getStatus());
         }
@@ -460,29 +500,56 @@ public EmployeeDepartmentMasterResponseDto saveAsDraft(EmployeeDepartmentMasterR
     
     // Check if updating existing draft or creating new
     if (requestDto.getEmployeeId() != null && !requestDto.getEmployeeId().isEmpty()) {
-        // Update existing draft
-        employee = employeeRepository.findById(requestDto.getEmployeeId())
-            .orElseThrow(() -> new BusinessException(
-                new ErrorDetails(
-                    AppConstant.ERROR_CODE_RESOURCE,
-                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                    AppConstant.ERROR_TYPE_RESOURCE,
-                    "Draft not found for the provided employee id."
-                )
-            ));
+        // // Update existing draft
+        // employee = employeeRepository.findById(requestDto.getEmployeeId())
+        //     .orElseThrow(() -> new BusinessException(
+        //         new ErrorDetails(
+        //             AppConstant.ERROR_CODE_RESOURCE,
+        //             AppConstant.ERROR_TYPE_CODE_RESOURCE,
+        //             AppConstant.ERROR_TYPE_RESOURCE,
+        //             "Draft not found for the provided employee id."
+        //         )
+        //     ));
+        String draftId = requestDto.getEmployeeId().trim();
+        // Try to find existing draft to update
+        if (employeeRepository.existsById(draftId)) {
+            employee = employeeRepository.findById(draftId)
+                .orElseThrow(() -> new BusinessException(
+                    new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_RESOURCE,
+                        "Draft not found for the provided employee id."
+                    )
+                ));
+        } else {
+            // New draft with manually provided ID
+            employee = new EmployeeDepartmentMaster();
+            employee.setEmployeeId(draftId);
+            employee.setCreatedDate(LocalDateTime.now());
+        }
     } else {
-        // Create new draft with generated ID
-        Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
-        int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
-        String employeeId = "E" + nextNumber;
+        // // Create new draft with generated ID
+        // Integer maxNumber = employeeIdSequenceRepository.findMaxEmployeeId();
+        // int nextNumber = (maxNumber == null) ? 1100 : maxNumber + 1;
+        // String employeeId = "E" + nextNumber;
 
-        EmployeeIdSequence em = new EmployeeIdSequence();
-        em.setEmployeeId(nextNumber);
-        employeeIdSequenceRepository.save(em);
+        // EmployeeIdSequence em = new EmployeeIdSequence();
+        // em.setEmployeeId(nextNumber);
+        // employeeIdSequenceRepository.save(em);
 
-        employee = new EmployeeDepartmentMaster();
-        employee.setEmployeeId(employeeId);
-        employee.setCreatedDate(LocalDateTime.now());
+        // employee = new EmployeeDepartmentMaster();
+        // employee.setEmployeeId(employeeId);
+        // employee.setCreatedDate(LocalDateTime.now());
+
+        throw new BusinessException(
+            new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Employee ID is required to save a draft."
+            )
+        );
     }
 
     // Set fields - allowing partial/empty values for drafts
@@ -510,6 +577,7 @@ public EmployeeDepartmentMasterResponseDto saveAsDraft(EmployeeDepartmentMasterR
     employee.setHireDate(requestDto.getHireDate());
     employee.setEndDate(requestDto.getEndDate());
     employee.setEmploymentType(requestDto.getEmploymentType());
+     employee.setJobTitle(requestDto.getJobTitle());
     employee.setStatus(requestDto.getStatus() != null ? requestDto.getStatus() : "Active");
     employee.setIsDraft(true);
     employee.setCreatedBy(requestDto.getCreatedBy());
@@ -574,6 +642,7 @@ public EmployeeDepartmentMasterResponseDto submitDraft(String employeeId, Employ
     employee.setHireDate(requestDto.getHireDate());
     employee.setEndDate(requestDto.getEndDate());
     employee.setEmploymentType(requestDto.getEmploymentType());
+     employee.setJobTitle(requestDto.getJobTitle());
     employee.setStatus(requestDto.getStatus() != null ? requestDto.getStatus() : "Active");
     employee.setIsDraft(false); // Mark as submitted
     employee.setUpdatedBy(requestDto.getUpdatedBy());

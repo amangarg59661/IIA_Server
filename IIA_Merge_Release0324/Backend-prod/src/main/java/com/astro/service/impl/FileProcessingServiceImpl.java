@@ -217,17 +217,34 @@ public Resource downloadFile(String fileType, String fileName) {
 
     // Business logic to determine content type
     public String getContentType(String fileName) {
-        if (fileName.endsWith(".pdf")) {
+        if (fileName == null) return MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".pdf")) {
+        // if (fileName.endsWith(".pdf")) {
             return MediaType.APPLICATION_PDF_VALUE;
-        } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+            } else if (lower.endsWith(".png")) {
+            return MediaType.IMAGE_PNG_VALUE;
+        } else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+        // } else if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
             return MediaType.IMAGE_JPEG_VALUE;
-        } else if (fileName.endsWith(".txt")) {
+        // } else if (fileName.endsWith(".txt")) {
+        } else if (lower.endsWith(".xlsx")) {
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        } else if (lower.endsWith(".xls")) {
+            return "application/vnd.ms-excel";
+        } else if (lower.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else if (lower.endsWith(".doc")) {
+            return "application/msword";
+        } else if (lower.endsWith(".txt")) {
             return MediaType.TEXT_PLAIN_VALUE;
         } else {
             return MediaType.APPLICATION_OCTET_STREAM_VALUE; // Default
         }
     }
-
+ public String getDecodedFileName(String fileName) {
+        return isBase64Encoded(fileName) ? decodeBase64(fileName) : fileName;
+    }
 
 
 }
