@@ -51,12 +51,9 @@ public class TenderEvaluationController {
 
     }
 
-    @PutMapping(value = "/{tenderId}")
+    @PutMapping
     public ResponseEntity<Object> updateTenderEvaluation(
-        //     @PathVariable String tenderId,@RequestBody TenderEvaluationRequestDto tenderEvaluationRequestDto){
-        // TenderEvaluationResponseDto response =tenderEvaluationService.updateTenderEvaluation(tenderId, tenderEvaluationRequestDto);
-        // return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
-         @PathVariable String tenderId,
+         @RequestParam String tenderId,
             @RequestBody TenderEvaluationRequestDto tenderEvaluationRequestDto) {
         TenderEvaluationResponseDto response = tenderEvaluationService.updateTenderEvaluation(tenderId, tenderEvaluationRequestDto);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
@@ -67,16 +64,15 @@ public class TenderEvaluationController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
     }
 
-    @GetMapping("/{tenderId}")
-    public ResponseEntity<Object> getTenderEvaluationById(@PathVariable String tenderId) {
+    @GetMapping("/byId")
+    public ResponseEntity<Object> getTenderEvaluationById(@RequestParam String tenderId) {
         TenderEvaluationResponseWithBitTypeAndValueDto response = tenderEvaluationService.getTenderEvaluationById(tenderId);
         // return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
     }
 
-    @DeleteMapping("/{tenderId}")
-    // public ResponseEntity<String> deleteProjectMaster(@PathVariable String tenderId) {
-    public ResponseEntity<String> deleteTenderEvaluation(@PathVariable String tenderId) {
+    @DeleteMapping
+    public ResponseEntity<String> deleteTenderEvaluation(@RequestParam String tenderId) {
         tenderEvaluationService.deleteTenderEvaluation(tenderId);
         return ResponseEntity.ok("Tender Evaluation deleted successfully. tenderId: " + tenderId);
         // return ResponseEntity.ok("Tender Evalulation deleted successfully. projectCode:"+" " + tenderId);
@@ -89,9 +85,9 @@ public class TenderEvaluationController {
      * Determines bid type, amount category, indent category.
      * POST /api/tender-evaluation/{tenderId}/initiate?userId=123
      */
-    @PostMapping("/{tenderId}/initiate")
+    @PostMapping("/initiate")
     public ResponseEntity<Object> initiateEvaluation(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestParam Integer userId) {
         TenderEvaluationStatusDto status = approvalService.initiateTenderEvaluation(tenderId, userId);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
@@ -101,9 +97,9 @@ public class TenderEvaluationController {
      * Get full evaluation status (respects financial bid visibility rules).
      * GET /api/tender-evaluation/{tenderId}/status?userId=123&role=Purchase+personnel
      */
-    @GetMapping("/{tenderId}/status")
+    @GetMapping("/status")
     public ResponseEntity<Object> getEvaluationStatus(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestParam(required = false) Integer userId,
             @RequestParam(required = false) String role) {
         TenderEvaluationStatusDto status = approvalService.getEvaluationStatus(tenderId, userId, role);
@@ -115,10 +111,10 @@ public class TenderEvaluationController {
      * PUT /api/tender-evaluation/{tenderId}/technical/{vendorId}
      * Body: { "vendorId":"V001", "decision":"APPROVED", "remarks":"...", "evaluatedByUserId":5 }
      */
-    @PutMapping("/{tenderId}/technical/{vendorId}")
+    @PutMapping("/technical")
     public ResponseEntity<Object> evaluateTechnicalBid(
-            @PathVariable String tenderId,
-            @PathVariable String vendorId,
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
             @RequestBody VendorTechnicalDecisionDto dto) {
         dto.setVendorId(vendorId);
         approvalService.evaluateTechnicalBid(tenderId, vendorId, dto);
@@ -130,9 +126,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/select-vendor
      * Body: { "vendorId":"V001", "remarks":"L1 vendor", "actionByUserId":5 }
      */
-    @PostMapping("/{tenderId}/select-vendor")
+    @PostMapping("/select-vendor")
     public ResponseEntity<Object> selectApprovedVendor(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String vendorId = (String) body.get("vendorId");
         String remarks = (String) body.get("remarks");
@@ -146,9 +142,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/approve/indentor-purchase
      * Body: { "decision":"APPROVED", "remarks":"...", "approverUserId":5 }
      */
-    @PostMapping("/{tenderId}/approve/indentor-purchase")
+    @PostMapping("/approve/indentor-purchase")
     public ResponseEntity<Object> approveByIndentorOrPurchaseDept(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String decision = (String) body.get("decision");
         String remarks = (String) body.get("remarks");
@@ -162,9 +158,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/approve/spo
      * Body: { "decision":"APPROVED", "remarks":"...", "spoUserId":5 }
      */
-    @PostMapping("/{tenderId}/approve/spo")
+    @PostMapping("/approve/spo")
     public ResponseEntity<Object> approveByStorePurchaseOfficer(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String decision = (String) body.get("decision");
         String remarks = (String) body.get("remarks");
@@ -178,9 +174,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/committee/vote
      * Body: { "vote":"APPROVED", "remarks":"...", "committeeUserId":10 }
      */
-    @PostMapping("/{tenderId}/committee/vote")
+    @PostMapping("/committee/vote")
     public ResponseEntity<Object> castCommitteeVote(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String vote = (String) body.get("vote");
         String remarks = (String) body.get("remarks");
@@ -194,9 +190,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/committee/expert
      * Body: { "expertUserId":15, "expertName":"Dr. XYZ", "chairmanUserId":12 }
      */
-    @PostMapping("/{tenderId}/committee/expert")
+    @PostMapping("/committee/expert")
     public ResponseEntity<Object> assignExpert(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         Integer expertUserId = (Integer) body.get("expertUserId");
         String expertName = (String) body.get("expertName");
@@ -210,9 +206,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/committee/chairman-decision
      * Body: { "decision":"APPROVED", "remarks":"...", "chairmanUserId":12, "isOverride":false }
      */
-    @PostMapping("/{tenderId}/committee/chairman-decision")
+    @PostMapping("/committee/chairman-decision")
     public ResponseEntity<Object> chairmanDecide(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody TenderCommitteeDecisionDto dto) {
         dto.setTenderId(tenderId);
         TenderEvaluationStatusDto status = approvalService.chairmanDecide(tenderId, dto);
@@ -224,9 +220,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/director/approve
      * Body: { "decision":"APPROVED", "remarks":"...", "directorUserId":20 }
      */
-    @PostMapping("/{tenderId}/director/approve")
+    @PostMapping("/director/approve")
     public ResponseEntity<Object> directorApprove(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String decision = (String) body.get("decision");
         String remarks = (String) body.get("remarks");
@@ -262,9 +258,9 @@ public class TenderEvaluationController {
      *   SPECIFIC_MEMBER     → only that committee member re-votes
      *   ALL_MEMBERS         → all committee members re-vote
      */
-    @PostMapping("/{tenderId}/seek-clarification")
+    @PostMapping("/seek-clarification")
     public ResponseEntity<Object> seekClarification(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody SeekClarificationDto dto) {
         dto.setTenderId(tenderId);
         TenderEvaluationStatusDto status = approvalService.seekClarification(tenderId, dto);
@@ -277,9 +273,9 @@ public class TenderEvaluationController {
      * Body: { "respondedByRole":"VENDOR", "respondedById":"V001",
      *         "responseText":"Delivery will be within 30 days", "responseFileName":"clarif_V001.pdf" }
      */
-    @PostMapping("/{tenderId}/respond-clarification")
+    @PostMapping("/respond-clarification")
     public ResponseEntity<Object> respondToClarification(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody RespondClarificationDto dto) {
         dto.setTenderId(tenderId);
         TenderEvaluationStatusDto status = approvalService.respondToClarification(tenderId, dto);
@@ -292,9 +288,9 @@ public class TenderEvaluationController {
      * POST /api/tender-evaluation/{tenderId}/confirm-by-indentor
      * Body: { "indentorUserId": 5 }
      */
-    @PostMapping("/{tenderId}/confirm-by-indentor")
+    @PostMapping("/confirm-by-indentor")
     public ResponseEntity<Object> confirmByIndentor(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         Integer userId = (Integer) body.get("indentorUserId");
         TenderEvaluationStatusDto status = approvalService.confirmByIndentor(tenderId, userId);
@@ -310,9 +306,9 @@ public class TenderEvaluationController {
      *         "coChairmanUserId":13, "coChairmanName":"ABC",
      *         "members":[ {"userId":14,"memberName":"PQR","designation":"Mgr"}, ... ] }
      */
-    @PostMapping("/{tenderId}/director/form-committee")
+    @PostMapping("/director/form-committee")
     public ResponseEntity<Object> directorFormCommittee(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody DirectorFormCommitteeDto dto) {
         dto.setTenderId(tenderId);
         TenderEvaluationStatusDto status = approvalService.directorFormCommittee(tenderId, dto);
@@ -323,8 +319,8 @@ public class TenderEvaluationController {
      * GET /api/tender-evaluation/{tenderId}/clarification-history
      * Returns all seek-clarification rounds with questions and responses.
      */
-    @GetMapping("/{tenderId}/clarification-history")
-    public ResponseEntity<Object> getClarificationHistory(@PathVariable String tenderId) {
+    @GetMapping("/clarification-history")
+    public ResponseEntity<Object> getClarificationHistory(@RequestParam String tenderId) {
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(approvalService.getClarificationHistory(tenderId)),
                 HttpStatus.OK);
@@ -336,8 +332,8 @@ public class TenderEvaluationController {
      * Only available when evaluationStatus = APPROVED.
      * Frontend must call this instead of the general vendor list when creating a PO.
      */
-    @GetMapping("/{tenderId}/approved-vendors")
-    public ResponseEntity<Object> getApprovedVendorsForPO(@PathVariable String tenderId) {
+    @GetMapping("/approved-vendors")
+    public ResponseEntity<Object> getApprovedVendorsForPO(@RequestParam String tenderId) {
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(approvalService.getApprovedVendorsForPO(tenderId)),
                 HttpStatus.OK);

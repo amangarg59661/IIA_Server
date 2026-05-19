@@ -1113,10 +1113,10 @@ const canPerformActions = showActionButtons;
    console.log("Inside fetchQuotationsAndPending:", tenderId);
   try {
     const [qRes, nsvRes] = await Promise.all([
-      axios.get(`/api/vendor-quotation/${tid}`, {
-        params: { userRole: role } 
+      axios.get(`/api/vendor-quotation`, {
+        params: { userRole: role , tenderId : tid } 
       }),
-      axios.get(`/api/vendor-quotation/NotSubmitVendors/${tid}`)
+      axios.get(`/api/vendor-quotation/NotSubmitVendors`,{params: {tenderId : tid}})
     ]);
     setQuotationData(qRes.data?.responseData || []);
     setNotSubmittedVendors(nsvRes.data?.responseData || []);
@@ -1134,15 +1134,15 @@ const handleSearchTender = async () => {
   try {
     setLoadingTender(true);
 
-     const baseQuotationResp = await axios.get(`/api/vendor-quotation/${tenderId}`, {
-      params: { userRole: role } // send role if backend expects it
+     const baseQuotationResp = await axios.get(`/api/vendor-quotation`, {
+      params: { userRole: role, tenderId:tenderId } // send role if backend expects it
     });
     const baseQuotationList = baseQuotationResp.data?.responseData || [];
     setQuotationData(baseQuotationList);
 
     // flow for Store Purchase Officer: require comparison sheet
     if (role === 'Store Purchase Officer') {
-      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations/${tenderId}`);
+      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations`,{params:{tenderId:tenderId}});
       const { vendor = [], uploadQualifiedVendorsFileName } = compResp.data?.responseData || {};
 
      /* if (!uploadQualifiedVendorsFileName) {
@@ -1234,7 +1234,7 @@ useEffect(() => {
   const fetchVendorHistory = async (vendorId) => {
     try {
       setHistoryLoading(true);
-      const res = await axios.get(`/api/vendor-quotation/vendorHistory/${tenderId}/${vendorId}`);
+      const res = await axios.get(`/api/vendor-quotation/vendorHistory`,{params :{tenderId :tenderId , vendorId :vendorId}});
       setHistoryData(res.data?.responseData || []);
     } catch (error) {
       message.error("Failed to fetch quotation history");
@@ -1375,8 +1375,8 @@ const fetchEvalStatus = async (tid) => {
   if (!tid) return;
   try {
     setEvalLoading(true);
-    const res = await axios.get(`/api/tender-evaluation/${tid}/status`, {
-      params: { userId, role }
+    const res = await axios.get(`/api/tender-evaluation/status`, {
+      params: { tenderId: tid, userId, role }
     });
     setEvalStatus(res.data?.responseData || null);
   } catch (e) {
@@ -1403,8 +1403,8 @@ const handleInitiateEvaluation = async () => {
         fileType: 'Tender',
       });
     }
-    const res = await axios.post(`/api/tender-evaluation/${tenderId}/initiate`, null, {
-      params: { userId }
+    const res = await axios.post(`/api/tender-evaluation/initiate`, null, {
+      params: { tenderId, userId }
     });
     setEvalStatus(res.data?.responseData);
     message.success('Evaluation initiated successfully.');
@@ -1437,9 +1437,9 @@ const handleConfirmByIndentor = async () => {
   if (!tenderId) return message.warning('Select a tender first.');
   try {
     setIsSubmitting(true);
-    const res = await axios.post(`/api/tender-evaluation/${tenderId}/confirm-by-indentor`, {
+    const res = await axios.post(`/api/tender-evaluation/confirm-by-indentor`, {
       indentorUserId: userId,
-    });
+    }, { params: { tenderId } });
     setEvalStatus(res.data?.responseData);
     message.success('Evaluation confirmed. Forwarded to Store Purchase Officer for approval.');
   } catch (e) {
@@ -1452,12 +1452,12 @@ const handleConfirmByIndentor = async () => {
 const handleSaveTechnicalEval = async () => {
   if (!techVendor) return;
   try {
-    await axios.put(`/api/tender-evaluation/${tenderId}/technical/${techVendor.vendorId}`, {
+    await axios.put(`/api/tender-evaluation/technical`, {
       vendorId: techVendor.vendorId,
       decision: techDecision,
       remarks: techRemarks,
       evaluatedByUserId: userId,
-    });
+    }, { params: { tenderId, vendorId: techVendor.vendorId } });
     message.success('Technical evaluation saved.');
     setTechModal(false);
     setTechRemarks('');
@@ -1470,11 +1470,11 @@ const handleSaveTechnicalEval = async () => {
 const handleSelectVendorSubmit = async () => {
   if (!selectedApprovedVendorId) return message.warning('Select a vendor.');
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/select-vendor`, {
+    await axios.post(`/api/tender-evaluation/select-vendor`, {
       vendorId: selectedApprovedVendorId,
       remarks: selectVendorRemarks,
       actionByUserId: userId,
-    });
+    }, { params: { tenderId } });
     message.success('Approved vendor selected. Forwarded for approval.');
     setSelectVendorModal(false);
     await fetchEvalStatus(tenderId);
@@ -1488,13 +1488,13 @@ const handleApprovalSubmit = async () => {
     const body = { decision: approvalDecision, remarks: approvalRemarks };
     if (approvalType === 'indentor-purchase') {
       body.approverUserId = userId;
-      await axios.post(`/api/tender-evaluation/${tenderId}/approve/indentor-purchase`, body);
+      await axios.post(`/api/tender-evaluation/approve/indentor-purchase`, body, { params: { tenderId } });
     } else if (approvalType === 'spo') {
       body.spoUserId = userId;
-      await axios.post(`/api/tender-evaluation/${tenderId}/approve/spo`, body);
+      await axios.post(`/api/tender-evaluation/approve/spo`, body, { params: { tenderId } });
     } else if (approvalType === 'director') {
       body.directorUserId = userId;
-      await axios.post(`/api/tender-evaluation/${tenderId}/director/approve`, body);
+      await axios.post(`/api/tender-evaluation/director/approve`, body, { params: { tenderId } });
     }
     message.success(`${approvalDecision === 'APPROVED' ? 'Approved' : 'Rejected'} successfully.`);
     setApprovalModal(false);
@@ -1507,11 +1507,11 @@ const handleApprovalSubmit = async () => {
 
 const handleCastVote = async () => {
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/committee/vote`, {
+    await axios.post(`/api/tender-evaluation/committee/vote`, {
       vote: myVote,
       remarks: myVoteRemarks,
       committeeUserId: userId,
-    });
+    }, { params: { tenderId } });
     message.success('Vote cast successfully.');
     setVoteModal(false);
     setMyVoteRemarks('');
@@ -1524,11 +1524,11 @@ const handleCastVote = async () => {
 const handleAssignExpertSubmit = async () => {
   if (!expertUserId || !expertName) return message.warning('Enter expert details.');
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/committee/expert`, {
+    await axios.post(`/api/tender-evaluation/committee/expert`, {
       expertUserId: parseInt(expertUserId),
       expertName,
       chairmanUserId: userId,
-    });
+    }, { params: { tenderId } });
     message.success('Expert assigned.');
     setExpertModal(false);
     await fetchEvalStatus(tenderId);
@@ -1540,13 +1540,13 @@ const handleAssignExpertSubmit = async () => {
 const handleChairmanDecisionSubmit = async () => {
   if (!chairmanRemarks) return message.warning('Please enter remarks.');
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/committee/chairman-decision`, {
+    await axios.post(`/api/tender-evaluation/committee/chairman-decision`, {
       decision: chairmanDecision,
       remarks: chairmanRemarks,
       chairmanUserId: userId,
       isOverride: chairmanIsOverride,
       overrideReason: chairmanIsOverride ? chairmanRemarks : null,
-    });
+    }, { params: { tenderId } });
     message.success('Chairman decision submitted.');
     setChairmanModal(false);
     await fetchEvalStatus(tenderId);
@@ -1599,7 +1599,7 @@ const openRevisionModal = () => {
 const handleSeekClarification = async () => {
   if (!clarifRemarks.trim()) return message.warning('Please enter clarification remarks.');
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/seek-clarification`, {
+    await axios.post(`/api/tender-evaluation/seek-clarification`, {
       requestedByRole: clarifRequestedByRole,
       requestedByUserId: userId,
       clarificationTarget: clarifTarget,
@@ -1607,7 +1607,7 @@ const handleSeekClarification = async () => {
       targetUserId: clarifTargetUserId ? parseInt(clarifTargetUserId) : null,
       targetUserName: clarifTargetUserName || null,
       remarks: clarifRemarks,
-    });
+    }, { params: { tenderId } });
     message.success('Clarification request sent successfully.');
     setClarificationModal(false);
     setClarifRemarks('');
@@ -1623,12 +1623,12 @@ const handleSeekClarification = async () => {
 const handleRespondClarification = async () => {
   if (!respondText.trim()) return message.warning('Please enter your response.');
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/respond-clarification`, {
+    await axios.post(`/api/tender-evaluation/respond-clarification`, {
       respondedByRole: respondRole,
       respondedById: String(userId),
       responseText: respondText,
       responseFileName: null,
-    });
+    }, { params: { tenderId } });
     message.success('Clarification response submitted.');
     setRespondModal(false);
     setRespondText('');
@@ -1647,12 +1647,12 @@ const handleAcknowledgeVendorClarification = async () => {
       : role === 'Committee Chairman'   ? 'CHAIRMAN'
       : role === 'Director'             ? 'DIRECTOR'
       : 'PURCHASE_PERSONNEL';
-    await axios.post(`/api/tender-evaluation/${tenderId}/respond-clarification`, {
+    await axios.post(`/api/tender-evaluation/respond-clarification`, {
       respondedByRole,
       respondedById: String(userId),
       responseText: 'Vendor clarification acknowledged.',
       responseFileName: null,
-    });
+    }, { params: { tenderId } });
     message.success('Vendor clarification acknowledged. Evaluation resumed.');
     await fetchEvalStatus(tenderId);
     await fetchQuotationsAndPending(tenderId);
@@ -1666,7 +1666,7 @@ const handleDirectorFormCommittee = async () => {
   if (!adHocChairmanId || !adHocChairmanName) return message.warning('Chairman details are required.');
   const validMembers = adHocMembers.filter(m => m.userId && m.memberName);
   try {
-    await axios.post(`/api/tender-evaluation/${tenderId}/director/form-committee`, {
+    await axios.post(`/api/tender-evaluation/director/form-committee`, {
       directorUserId: userId,
       chairmanUserId: parseInt(adHocChairmanId),
       chairmanName: adHocChairmanName,
@@ -1677,7 +1677,7 @@ const handleDirectorFormCommittee = async () => {
         memberName: m.memberName,
         designation: m.designation || '',
       })),
-    });
+    }, { params: { tenderId } });
     message.success('Ad-hoc committee formed. Committee members can now cast their votes.');
     setCommitteeFormModal(false);
     await fetchEvalStatus(tenderId);
@@ -1691,7 +1691,7 @@ const fetchClarificationHistory = async (tid) => {
   if (!tid) return;
   setClarifHistoryLoading(true);
   try {
-    const res = await axios.get(`/api/tender-evaluation/${tid}/clarification-history`);
+    const res = await axios.get(`/api/tender-evaluation/clarification-history`, { params: { tenderId: tid } });
     setClarificationHistory(res.data?.responseData || []);
   } catch (e) {
     setClarificationHistory([]);

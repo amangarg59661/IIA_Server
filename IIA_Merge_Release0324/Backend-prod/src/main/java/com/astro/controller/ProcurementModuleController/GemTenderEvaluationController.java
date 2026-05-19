@@ -25,8 +25,8 @@ public class GemTenderEvaluationController {
      * GET /api/gem-tender-evaluation/{tenderId}
      * Returns all GeM vendor entries for a tender.
      */
-    @GetMapping("/{tenderId}")
-    public ResponseEntity<Object> getByTender(@PathVariable String tenderId) {
+    @GetMapping("")
+    public ResponseEntity<Object> getByTender(@RequestParam String tenderId) {
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(gemService.getByTenderId(tenderId)),
                 HttpStatus.OK);
@@ -37,9 +37,9 @@ public class GemTenderEvaluationController {
      * Body: { "vendorName":"ABC Ltd", "technicalDocFileName":"tech.pdf",
      *         "financialDocFileName":"fin.pdf", "addedByUserId":5 }
      */
-    @PostMapping("/{tenderId}/add-vendor")
+    @PostMapping("/add-vendor")
     public ResponseEntity<Object> addVendor(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         String vendorName          = (String)  body.get("vendorName");
         String technicalDocFile    = (String)  body.get("technicalDocFileName");
@@ -86,9 +86,9 @@ public class GemTenderEvaluationController {
      * Promotes all pending GeM entries into VendorQuotationAgainstTender.
      * Body: { "actionByUserId": 5 }
      */
-    @PostMapping("/{tenderId}/send-for-evaluation")
+    @PostMapping("/send-for-evaluation")
     public ResponseEntity<Object> sendForEvaluation(
-            @PathVariable String tenderId,
+            @RequestParam String tenderId,
             @RequestBody Map<String, Object> body) {
         Integer userId = (Integer) body.get("actionByUserId");
         return new ResponseEntity<>(

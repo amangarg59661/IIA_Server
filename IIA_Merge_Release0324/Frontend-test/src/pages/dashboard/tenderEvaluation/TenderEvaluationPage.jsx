@@ -100,7 +100,7 @@ const TenderEvaluationPage = () => {
       const enriched = await Promise.all(
         tenders.map(async (t) => {
           try {
-            const evalRes = await axios.get(`/api/tender-evaluation/${t.tenderId}/status`);
+            const evalRes = await axios.get(`/api/tender-evaluation/status`, { params: { tenderId: t.tenderId } });
             const evalData = evalRes.data?.responseData;
             return {
               ...t,
@@ -126,8 +126,8 @@ const TenderEvaluationPage = () => {
   const loadEval = async (tenderId) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/tender-evaluation/${tenderId}/status`, {
-        params: { userId: auth.userId, role: auth.role },
+      const res = await axios.get(`/api/tender-evaluation/status`, {
+        params: { tenderId, userId: auth.userId, role: auth.role },
       });
       setSelectedEval(res.data?.responseData);
     } catch {
@@ -187,8 +187,8 @@ const TenderEvaluationPage = () => {
   const doInitiate = async (tenderId) => {
     setActionLoading(true);
     try {
-      await axios.post(`/api/tender-evaluation/${tenderId}/initiate`, null, {
-        params: { userId: auth.userId },
+      await axios.post(`/api/tender-evaluation/initiate`, null, {
+        params: { tenderId, userId: auth.userId },
       });
       message.success("Evaluation initiated.");
       setNoSheetDlgOpen(false);
@@ -204,18 +204,18 @@ const TenderEvaluationPage = () => {
   const handleAccept = async (tenderId, vendorId) => {
     setActionLoading(true);
     try {
-      await axios.post(`/api/tender-evaluation/${tenderId}/select-vendor`, {
+      await axios.post(`/api/tender-evaluation/select-vendor`, {
         vendorId,
         remarks: "Accepted by evaluator",
         actionByUserId: auth.userId,
-      });
+      }, { params: { tenderId } });
 
       // Optimistically mark indentor/pp status
-      await axios.post(`/api/tender-evaluation/${tenderId}/approve/indentor-purchase`, {
+      await axios.post(`/api/tender-evaluation/approve/indentor-purchase`, {
         decision: "APPROVED",
         remarks: "Accepted",
         approverUserId: auth.userId,
-      });
+      }, { params: { tenderId } });
 
       message.success("Vendor accepted.");
       await loadEval(tenderId);
@@ -234,12 +234,13 @@ const TenderEvaluationPage = () => {
     setActionLoading(true);
     try {
       await axios.post(
-        `/api/tender-evaluation/${selectedEval.tenderId}/approve/indentor-purchase`,
+        `/api/tender-evaluation/approve/indentor-purchase`,
         {
           decision:       "REJECTED",
           remarks:        rejectRemarks,
           approverUserId: auth.userId,
-        }
+        },
+        { params: { tenderId: selectedEval.tenderId } }
       );
       message.success("Vendor rejected.");
       setRejectDlgOpen(false);
@@ -255,11 +256,11 @@ const TenderEvaluationPage = () => {
   const handleSPOConfirm = async (decision) => {
     setActionLoading(true);
     try {
-      await axios.post(`/api/tender-evaluation/${selectedEval.tenderId}/approve/spo`, {
+      await axios.post(`/api/tender-evaluation/approve/spo`, {
         decision,
         remarks: decision === "APPROVED" ? "SPO Confirmed" : "SPO Rejected",
         spoUserId: auth.userId,
-      });
+      }, { params: { tenderId: selectedEval.tenderId } });
       message.success(decision === "APPROVED" ? "Evaluation Confirmed." : "Rejected.");
       await loadEval(selectedEval.tenderId);
       await loadTenderList();
@@ -278,14 +279,15 @@ const TenderEvaluationPage = () => {
     setActionLoading(true);
     try {
       await axios.post(
-        `/api/tender-evaluation/${selectedEval.tenderId}/seek-clarification`,
+        `/api/tender-evaluation/seek-clarification`,
         {
           requestedByRole:   auth.role,
           requestedByUserId: auth.userId,
           clarificationTarget: clarTarget,
           targetVendorId:    clarVendorId,
           remarks:           clarRemarks,
-        }
+        },
+        { params: { tenderId: selectedEval.tenderId } }
       );
       message.success("Clarification sent.");
       setClarDlgOpen(false);
@@ -302,10 +304,10 @@ const TenderEvaluationPage = () => {
     const base64 = await fileToBase64(file);
     const fieldName = isFinancial ? "uploadCommeriallyQualifiedVendorsFileName" : "uploadQualifiedVendorsFileName";
     try {
-      await axios.put(`/api/tender-evaluation/${selectedEval.tenderId}`, {
+      await axios.put(`/api/tender-evaluation`, {
         [fieldName]: base64,
         updatedBy:   String(auth.userId),
-      });
+      }, { params: { tenderId: selectedEval.tenderId } });
       message.success(`${isFinancial ? "Financial" : "Technical"} Comparison Sheet uploaded.`);
       await loadEval(selectedEval.tenderId);
     } catch (e) {
@@ -318,7 +320,7 @@ const TenderEvaluationPage = () => {
     setClarHistoryTender(tenderId);
     setClarHistoryOpen(true);
     try {
-      const res = await axios.get(`/api/tender-evaluation/${tenderId}/clarification-history`);
+      const res = await axios.get(`/api/tender-evaluation/clarification-history`, { params: { tenderId } });
       setClarHistoryData(res.data?.responseData || []);
     } catch {
       setClarHistoryData([]);

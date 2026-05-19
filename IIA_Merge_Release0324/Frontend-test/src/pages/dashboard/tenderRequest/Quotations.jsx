@@ -1,6 +1,7 @@
 import React, { useEffect, useState} from 'react'
 import { Modal, Spin, Tag } from 'antd';
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useSelector } from 'react-redux'
 import FormContainer from '../../../components/DKG_FormContainer'
 import FormBody from '../../../components/DKG_FormBody'
 import Heading from '../../../components/DKG_Heading'
@@ -16,6 +17,7 @@ const Quotations =  ()  => {
 
 const location = useLocation();
 const { tenderId, bidType } = location.state || {};
+const auth = useSelector((s) => s.auth);
 
  const navigate = useNavigate();
  
@@ -50,7 +52,7 @@ const { tenderId, bidType } = location.state || {};
 
   const fetchQuotations = async () => {
     try {
-      const response = await axios.get(`/api/vendor-quotation/${tenderId}`);
+      const response = await axios.get(`/api/vendor-quotation`, { params: { tenderId, userRole: auth?.role || '' } }); // userRole required by backend
       const data = response.data?.responseData || [];
       setQuotationData(data);
     } catch (error) {

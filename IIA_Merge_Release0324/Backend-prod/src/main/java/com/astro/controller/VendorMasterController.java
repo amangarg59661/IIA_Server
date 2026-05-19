@@ -71,6 +71,13 @@ public class VendorMasterController {
         RegisteredVendorsDataDto response = vendorMasterService.getVendorPurchaseOrders(tenderId);
         return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
     }
+
+    // Request-param variant for vendor portal (tenderId may contain '/' making path-variable unsafe)
+    @GetMapping("/approvedVendorData")
+    public ResponseEntity<Object> getAllVendorDataByParam(@RequestParam String tenderID) {
+        RegisteredVendorsDataDto response = vendorMasterService.getVendorPurchaseOrders(tenderID);
+        return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
+    }
     // Modified by Aman
     @GetMapping("/approvedtenderIDs/{vendorId}")
 public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendorId) {

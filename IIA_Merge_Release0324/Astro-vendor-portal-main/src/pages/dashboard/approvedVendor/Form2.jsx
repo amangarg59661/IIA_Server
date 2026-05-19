@@ -3,13 +3,14 @@ import { Card, Row, Col, message, Spin, Button, Tag, Select, Space } from "antd"
 import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-const { Option } = Select;
 import TenderEvaluator from "../../../components/Tender_Evaluator";
 import PurchaseOrderDetails from "../../../components/Purchaseorder_details";
 import { Modal } from "antd";
 import QuotationHistoryModal from '../../../components/QuotationHistoryModal';
 import { HistoryOutlined } from '@ant-design/icons';
 import AllVendorsQuotationsstatus from '../../../components/AllVendorsQuotationstatus';
+
+const { Option } = Select;
 
 // import React, { useEffect, useState } from "react";
 // import { Form, Input, Button, Row, Col, message } from "antd";

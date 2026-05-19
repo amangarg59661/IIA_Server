@@ -158,7 +158,7 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
       let completedVendorsData = [];
       try {
         const evalApprovedResp = await axios.get(
-          `/api/tender-evaluation/${tenderId}/approved-vendors`
+          `/api/tender-evaluation/approved-vendors`, { params: { tenderId } }
         );
         completedVendorsData = evalApprovedResp.data?.responseData || [];
       } catch (evalErr) {

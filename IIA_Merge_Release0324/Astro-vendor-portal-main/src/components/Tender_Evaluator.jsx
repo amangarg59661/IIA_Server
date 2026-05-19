@@ -38,6 +38,8 @@ const TenderEvaluator = ({ tenderId, actionStatus }) => {
  // const [quotationFile, setQuotationFile] = useState(null);
   const [priceBidFile, setPriceBidFile] = useState(null);
   const [bidType, setBidType] = useState(''); // new
+  // Split tenderId "1234/2" → tenderNumber="1234", tenderVersion="2"
+  const [tenderNumber, tenderVersion] = tenderId ? tenderId.split('/') : ['', '1'];
   const [clarificationFile, setClarificationFile] = useState(null);
   const [clarificationResponse, setClarificationResponse] = useState('');
 
@@ -49,7 +51,7 @@ const TenderEvaluator = ({ tenderId, actionStatus }) => {
   // ─── NEW EFFECT: FETCH AND COMPARE CLOSING DATE ──────────────────────────────
  useEffect(() => {
   axios
-    .get(`/api/tender-requests/data/byId`, {param : {tenderId:tenderId}})
+    .get(`/api/tender-requests/data/byId`, {params: {tenderId: tenderNumber, version: tenderVersion}})
     .then(res => {
       const cdString = res.data.responseData.closingDate; // e.g., "10/05/2025"
       if (!cdString) return;
@@ -152,7 +154,8 @@ const handleFileChange = (docName, fileData) => {
 
       // Now call the API to submit quotation details
       const quotationBody = {
-        tenderId: tenderId,
+        tenderId: tenderNumber,
+        version: tenderVersion,
         vendorId: vendorId,  // assuming vendorId = userId or you can try with V1001
         quotationFileName: serverFileName,
         fileType: "Tender",
@@ -253,7 +256,8 @@ const handleFileChange = (docName, fileData) => {
 
 
     const quotationBody = {
-      tenderId: tenderId,
+      tenderId: tenderNumber,
+      version: tenderVersion,
       vendorId: vendorId,
       quotationFileName: quotationFileName,
       fileType: 'Tender',
@@ -311,7 +315,7 @@ const handleFileChange = (docName, fileData) => {
     </FormContainer>
   );*/
   const handleOpenTenderFormat = () => {
-  const url = `${baseURL}/data/tender-format?tenderId=${tenderId}&vendorId=${vendorId}`;
+  const url = `${baseURL}/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
   window.open(url, "_blank");
 };
 
@@ -346,7 +350,7 @@ const handleFileChange = (docName, fileData) => {
         setSelectedRecord({ requestId: tenderId, workflowId: 4 });
 
         try {
-          const response = await axios.get(`/api/tender-requests/byid`,{param :{tenderId:tenderId}});
+          const response = await axios.get(`/api/tender-requests/byid`,{params: {tenderId: tenderNumber, version: tenderVersion}});
           setDetailsData(response.data.responseData);
         } catch (err) {
           console.error("Failed to fetch tender details:", err);

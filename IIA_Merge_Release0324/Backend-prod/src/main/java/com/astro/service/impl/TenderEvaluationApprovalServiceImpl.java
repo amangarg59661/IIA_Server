@@ -209,7 +209,16 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     public TenderEvaluationStatusDto getEvaluationStatus(String tenderId,
                                                           Integer requestingUserId,
                                                           String requestingRole) {
-        TenderEvaluation eval = requireEval(tenderId);
+        // If evaluation has not been initiated yet, return a minimal DTO with null evaluationStatus.
+        // Frontend checks !selectedEval.evaluationStatus to show the Initiate button, so null is correct.
+        java.util.Optional<TenderEvaluation> evalOpt = tenderEvaluationRepository.findById(tenderId);
+        if (evalOpt.isEmpty()) {
+            TenderEvaluationStatusDto notInitiated = new TenderEvaluationStatusDto();
+            notInitiated.setTenderId(tenderId);
+            notInitiated.setEvaluationStatus(null); // null → frontend shows "Initiate" button
+            return notInitiated;
+        }
+        TenderEvaluation eval = evalOpt.get();
         TenderRequest tender = requireTender(tenderId);
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -968,6 +977,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // 16. GET CLARIFICATION HISTORY
     // ─────────────────────────────────────────────────────────────────
     @Override
+    @Transactional(value = Transactional.TxType.REQUIRES_NEW)
     public List<TenderClarificationHistory> getClarificationHistory(String tenderId) {
         try {
             return clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId);

@@ -51,7 +51,7 @@ const GemTenderEvaluationPage = () => {
     if (!tenderId) return;
     setLoading(true);
     try {
-      const res = await axios.get(`/api/gem-tender-evaluation/${tenderId}`);
+      const res = await axios.get(`/api/gem-tender-evaluation`, { params: { tenderId } });
       setEntries(res.data?.responseData || []);
     } catch {
       message.error("Failed to load vendor entries.");
@@ -79,12 +79,12 @@ const GemTenderEvaluationPage = () => {
     const finB64  = finDoc  ? await fileToBase64(finDoc)  : null;
 
     try {
-      await axios.post(`/api/gem-tender-evaluation/${selectedTender}/add-vendor`, {
+      await axios.post(`/api/gem-tender-evaluation/add-vendor`, {
         vendorName:           values.vendorName,
         technicalDocFileName: techB64,
         financialDocFileName: finB64,
         addedByUserId:        auth.userId,
-      });
+      }, { params: { tenderId: selectedTender } });
       message.success("Vendor added.");
       setAddDlgOpen(false);
       addForm.resetFields();
@@ -119,8 +119,9 @@ const GemTenderEvaluationPage = () => {
     setSendLoading(true);
     try {
       const res = await axios.post(
-        `/api/gem-tender-evaluation/${selectedTender}/send-for-evaluation`,
-        { actionByUserId: auth.userId }
+        `/api/gem-tender-evaluation/send-for-evaluation`,
+        { actionByUserId: auth.userId },
+        { params: { tenderId: selectedTender } }
       );
       message.success(res.data?.responseData?.message || "Sent for evaluation.");
       loadEntries(selectedTender);
