@@ -55,6 +55,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import com.astro.service.BudgetService;
 import java.math.BigDecimal;
 
 import java.math.RoundingMode;
@@ -72,6 +73,9 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
 
     @Autowired
     private PurchaseOrderRepository purchaseOrderRepository;
+
+    @Autowired
+private BudgetService budgetService;
 
     @Autowired
     private PurchaseOrderAttributesRepository purchaseOrderAttributesRepository;
@@ -150,6 +154,9 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
 
         //  purchaseOrder.setPoId(purchaseOrderRequestDTO.getPoId());
         purchaseOrder.setPoId(poId);
+        purchaseOrder.setPoVersion(1);
+purchaseOrder.setIsActive(true);
+purchaseOrder.setParentPoId(null);
         purchaseOrder.setTenderId(purchaseOrderRequestDTO.getTenderId());
         purchaseOrder.setIndentId(purchaseOrderRequestDTO.getIndentId());
         purchaseOrder.setWarranty(purchaseOrderRequestDTO.getWarranty());
@@ -241,6 +248,8 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add); // Sum up values
         purchaseOrder.setTotalValueOfPo(totalTenderValue);
         System.out.println("tottalTenderValue" + totalTenderValue);*/
+         // Budget check on PO creation — does not touch hold, only validates
+        budgetService.checkBudgetForPo(poId, tenderId, purchaseOrderAttributes);
         purchaseOrderRepository.save(purchaseOrder);
         TenderRequest existing = trRepo.findById(tenderId)
                 .orElseThrow(() -> new BusinessException(
@@ -285,149 +294,308 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                     "Error while uploading files."));
         }
     }
+@Override
+public List<PurchaseOrderResponseDTO> getPoVersionHistory(String poId) {
+    String baseId = extractBasePoId(poId);
+    return purchaseOrderRepository.findAllVersionsByBaseId(baseId)
+            .stream()
+            .map(this::mapToResponseDTO)
+            .collect(Collectors.toList());
+}
+@Override
+public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO dto) {
 
+    // 1. Load existing active PO
+    PurchaseOrder old = purchaseOrderRepository.findById(poId)
+            .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Purchase order not found for the provided ID.")));
 
-    public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
-        PurchaseOrder purchaseOrder = purchaseOrderRepository.findById(poId)
-                .orElseThrow(() -> new BusinessException(
-                        new ErrorDetails(
-                                AppConstant.ERROR_CODE_RESOURCE,
-                                AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                                AppConstant.ERROR_TYPE_VALIDATION,
-                                "Purchase order not found for the provided asset ID.")
-                ));
-        // added by abhinav starts
-        PurchaseOrderHistory history = new PurchaseOrderHistory();
-
-        history.setPoId(purchaseOrder.getPoId());
-        history.setVersion(purchaseOrder.getPoVersion());
-        history.setModifiedBy(purchaseOrderRequestDTO.getUpdatedBy());
-        history.setModifiedDate(new java.util.Date());
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            history.setSnapshotJson(mapper.writeValueAsString(purchaseOrder));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        purchaseOrderHistoryRepository.save(history);
-
-        // INCREMENT VERSION
-        if (purchaseOrder.getPoVersion() == null) {
-            purchaseOrder.setPoVersion(1);
-        } else {
-            purchaseOrder.setPoVersion(purchaseOrder.getPoVersion() + 1);
-        }
-        //  LOCK CHECK
-        // if (purchaseOrder.getIsLocked() != null && purchaseOrder.getIsLocked()) {
-        //     throw new RuntimeException("PO is locked and cannot be edited.");
-        // }
-        //added by abhinav ends
-
-        // Update basic fields
-        purchaseOrder.setTenderId(purchaseOrderRequestDTO.getTenderId());
-        purchaseOrder.setIndentId(purchaseOrderRequestDTO.getIndentId());
-        purchaseOrder.setWarranty(purchaseOrderRequestDTO.getWarranty());
-        purchaseOrder.setConsignesAddress(purchaseOrderRequestDTO.getConsignesAddress());
-        purchaseOrder.setBillingAddress(purchaseOrderRequestDTO.getBillingAddress());
-        purchaseOrder.setDeliveryPeriod(purchaseOrderRequestDTO.getDeliveryPeriod());
-        purchaseOrder.setIfLdClauseApplicable(purchaseOrderRequestDTO.getIfLdClauseApplicable());
-        purchaseOrder.setIncoTerms(purchaseOrderRequestDTO.getIncoTerms());
-        purchaseOrder.setPaymentTerms(purchaseOrderRequestDTO.getPaymentTerms());
-        purchaseOrder.setVendorName(purchaseOrderRequestDTO.getVendorName());
-        purchaseOrder.setVendorAddress(purchaseOrderRequestDTO.getVendorAddress());
-        purchaseOrder.setApplicablePbgToBeSubmitted(purchaseOrderRequestDTO.getApplicablePbgToBeSubmitted());
-        purchaseOrder.setTransporterAndFreightForWarderDetails(purchaseOrderRequestDTO.getTransporterAndFreightForWarderDetails());
-        purchaseOrder.setVendorAccountNumber(purchaseOrderRequestDTO.getVendorAccountNumber());
-        purchaseOrder.setVendorsZfscCode(purchaseOrderRequestDTO.getVendorsIfscCode());
-        purchaseOrder.setVendorAccountName(purchaseOrderRequestDTO.getVendorAccountName());
-        purchaseOrder.setProjectName(purchaseOrderRequestDTO.getProjectName());
-        purchaseOrder.setVendorId(purchaseOrderRequestDTO.getVendorId());
-        purchaseOrder.setUpdatedBy(purchaseOrderRequestDTO.getUpdatedBy());
-        purchaseOrder.setCreatedBy(purchaseOrderRequestDTO.getCreatedBy());
-        if (purchaseOrderRequestDTO.getComparativeStatementFileName() == null || purchaseOrderRequestDTO.getComparativeStatementFileName().isEmpty()) {
-            purchaseOrder.setComparativeStatementFileName(null);
-        } else {
-            String saved = saveBase64Files(purchaseOrderRequestDTO.getComparativeStatementFileName(), basePath);
-            purchaseOrder.setComparativeStatementFileName(saved);
-        }
-        if (purchaseOrderRequestDTO.getGemContractFileName() == null || purchaseOrderRequestDTO.getGemContractFileName().isEmpty()) {
-            purchaseOrder.setGemContractUpload(null);
-        } else {
-            String saved = saveBase64Files(purchaseOrderRequestDTO.getGemContractFileName(), basePath);
-            purchaseOrder.setGemContractUpload(saved);
-        }
-        purchaseOrder.setTypeOfSecurity(purchaseOrderRequestDTO.getTypeOfSecurity());
-        purchaseOrder.setSecurityNumber(purchaseOrderRequestDTO.getSecurityNumber());
-        String Date = purchaseOrderRequestDTO.getSecurityDate();
-        if (Date != null) {
-            purchaseOrder.setSecurityDate(CommonUtils.convertStringToDateObject(Date));
-        } else {
-            purchaseOrder.setSecurityDate(null);
-        }
-        String expiryDate = purchaseOrderRequestDTO.getExpiryDate();
-        if(Date != null){
-            purchaseOrder.setExpiryDate(CommonUtils.convertStringToDateObject(expiryDate));
-        } else {
-            purchaseOrder.setExpiryDate(null);
-        }
-
-
-        String date = purchaseOrderRequestDTO.getDeliveryDate();
-        purchaseOrder.setDeliveryDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
-
-        // Remove old attributes
-        purchaseOrder.getPurchaseOrderAttributes().clear();
-
-        // Add new attributes
-        List<PurchaseOrderAttributes> newAttributes = purchaseOrderRequestDTO.getPurchaseOrderAttributes().stream()
-                .map(dto -> {
-                    PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
-                    attr.setMaterialCode(dto.getMaterialCode());
-                    attr.setMaterialDescription(dto.getMaterialDescription());
-                    attr.setQuantity(dto.getQuantity());
-                    attr.setRate(dto.getRate());
-                    attr.setCurrency(dto.getCurrency());
-                    attr.setExchangeRate(dto.getExchangeRate());
-                    attr.setGst(dto.getGst());
-                    attr.setDuties(dto.getDuties());
-                    attr.setFreightCharge(dto.getFreightCharge());
-                    attr.setBudgetCode(dto.getBudgetCode());
-                    attr.setPurchaseOrder(purchaseOrder);  // Associate back
-                    BigDecimal total = calculateTotalPriceInInr(
-                            dto.getRate(),
-                            dto.getExchangeRate(),
-                            dto.getCurrency(),
-                            dto.getQuantity(),
-                            dto.getGst(),
-                            dto.getDuties(),
-                            dto.getFreightCharge()
-                    );
-                    attr.setTotalPoMaterialPriceInInr(total);
-                    return attr;
-                })
-                .collect(Collectors.toList());
-
-        purchaseOrder.getPurchaseOrderAttributes().addAll(newAttributes);
-      //  List<String> indentIds = indentIdRepository.findTenderWithIndent(purchaseOrder.getTenderId());
-/*
-        BigDecimal totalTenderValue = indentIds.stream()
-                .map(indentCreationService::getIndentById)
-                .map(IndentCreationResponseDTO::getTotalPriceOfAllMaterials)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        purchaseOrder.setTotalValueOfPo(totalTenderValue);*/
-        BigDecimal totalPoValue = newAttributes.stream()
-                .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        purchaseOrder.setTotalValueOfPo(totalPoValue);
-
-        // Save
-        purchaseOrderRepository.save(purchaseOrder);
-
-        return mapToResponseDTO(purchaseOrder);
+    // 2. Guard: only original creator can edit
+    if (!old.getCreatedBy().equals(dto.getCreatedBy())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION, "Only the original PO Creator can edit this Purchase Order."));
     }
+
+    // 3. Guard: locked PO cannot be edited
+    if (Boolean.TRUE.equals(old.getIsLocked())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION, "Purchase Order is locked and cannot be edited."));
+    }
+
+    // 4. Save history snapshot of old version
+    PurchaseOrderHistory history = new PurchaseOrderHistory();
+    history.setPoId(old.getPoId());
+    history.setVersion(old.getPoVersion());
+    history.setModifiedBy(dto.getUpdatedBy());
+    history.setModifiedDate(new java.util.Date());
+    try {
+        ObjectMapper mapper = new ObjectMapper();
+        history.setSnapshotJson(mapper.writeValueAsString(old));
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    purchaseOrderHistoryRepository.save(history);
+
+    // 5. Deactivate old version
+    old.setIsActive(false);
+    purchaseOrderRepository.save(old);
+
+    // 6. Supersede old version's pending workflow transitions
+    List<WorkflowTransition> pendingTransitions =
+            workflowTransitionRepository.findPendingTransitionsByRequestId(old.getPoId());
+    for (WorkflowTransition wt : pendingTransitions) {
+        wt.setStatus("SUPERSEDED");
+        wt.setNextAction(null);
+        wt.setRemarks("Superseded by new version: " + extractBasePoId(old.getPoId()) + "/" + (old.getPoVersion() + 1));
+        workflowTransitionRepository.save(wt);
+    }
+
+    // 7. Compute new PO ID e.g. PO1001 -> PO1001/2, PO1001/2 -> PO1001/3
+    String baseId = extractBasePoId(old.getPoId());
+    int newVersion = old.getPoVersion() + 1;
+    String newPoId = baseId + "/" + newVersion;
+
+    // 8. Build new PurchaseOrder (copy-new pattern)
+    PurchaseOrder newPO = new PurchaseOrder();
+    newPO.setPoId(newPoId);
+    newPO.setPoVersion(newVersion);
+    newPO.setIsActive(true);
+    newPO.setParentPoId(old.getPoId());
+    newPO.setCreatedBy(old.getCreatedBy());
+    newPO.setUpdatedBy(dto.getUpdatedBy());
+    newPO.setIsLocked(false);
+    newPO.setIsCancelled(false);
+    newPO.setCurrentStatus("DRAFT");
+
+    // Copy all fields from request
+    newPO.setTenderId(dto.getTenderId());
+    newPO.setIndentId(dto.getIndentId());
+    newPO.setWarranty(dto.getWarranty());
+    newPO.setConsignesAddress(dto.getConsignesAddress());
+    newPO.setBillingAddress(dto.getBillingAddress());
+    newPO.setDeliveryPeriod(dto.getDeliveryPeriod());
+    newPO.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+    newPO.setIncoTerms(dto.getIncoTerms());
+    newPO.setPaymentTerms(dto.getPaymentTerms());
+    newPO.setVendorName(dto.getVendorName());
+    newPO.setVendorAddress(dto.getVendorAddress());
+    newPO.setApplicablePbgToBeSubmitted(dto.getApplicablePbgToBeSubmitted());
+    newPO.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+    newPO.setVendorAccountNumber(dto.getVendorAccountNumber());
+    newPO.setVendorsZfscCode(dto.getVendorsIfscCode());
+    newPO.setVendorAccountName(dto.getVendorAccountName());
+    newPO.setVendorId(dto.getVendorId());
+    newPO.setProjectName(dto.getProjectName());
+    newPO.setQuotationNumber(dto.getQuotationNumber());
+    newPO.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+    newPO.setBuyBackAmount(dto.getBuyBackAmount());
+    newPO.setTypeOfSecurity(dto.getTypeOfSecurity());
+    newPO.setSecurityNumber(dto.getSecurityNumber());
+
+    String deliveryDate = dto.getDeliveryDate();
+    newPO.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+
+    String securityDate = dto.getSecurityDate();
+    newPO.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+
+    String expiryDate = dto.getExpiryDate();
+    newPO.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+    String quotationDate = dto.getQuotationDate();
+    newPO.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+
+    // Files
+    if (dto.getComparativeStatementFileName() == null || dto.getComparativeStatementFileName().isEmpty()) {
+        newPO.setComparativeStatementFileName(null);
+    } else {
+        newPO.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+    }
+    if (dto.getGemContractFileName() == null || dto.getGemContractFileName().isEmpty()) {
+        newPO.setGemContractUpload(null);
+    } else {
+        newPO.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+    }
+
+    // 9. Build new attributes
+    List<PurchaseOrderAttributes> newAttributes = dto.getPurchaseOrderAttributes().stream()
+            .map(attrDto -> {
+                PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
+                attr.setMaterialCode(attrDto.getMaterialCode());
+                attr.setMaterialDescription(attrDto.getMaterialDescription());
+                attr.setQuantity(attrDto.getQuantity());
+                attr.setRate(attrDto.getRate());
+                attr.setCurrency(attrDto.getCurrency());
+                attr.setExchangeRate(attrDto.getExchangeRate());
+                attr.setGst(attrDto.getGst());
+                attr.setDuties(attrDto.getDuties());
+                attr.setFreightCharge(attrDto.getFreightCharge());
+                attr.setBudgetCode(attrDto.getBudgetCode());
+                attr.setPurchaseOrder(newPO);
+                BigDecimal total = calculateTotalPriceInInr(
+                        attrDto.getRate(), attrDto.getExchangeRate(), attrDto.getCurrency(),
+                        attrDto.getQuantity(), attrDto.getGst(), attrDto.getDuties(), attrDto.getFreightCharge());
+                attr.setTotalPoMaterialPriceInInr(total);
+                return attr;
+            }).collect(Collectors.toList());
+
+    newPO.setPurchaseOrderAttributes(newAttributes);
+
+    BigDecimal totalPoValue = newAttributes.stream()
+            .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
+            .filter(Objects::nonNull)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    newPO.setTotalValueOfPo(totalPoValue);
+   // Budget check on PO update — does not touch hold, only validates
+    budgetService.checkBudgetForPo(newPoId, newPO.getTenderId(), newAttributes);
+    // 10. Save new PO version
+    purchaseOrderRepository.save(newPO);
+
+    return mapToResponseDTO(newPO);
+}
+//     public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
+//         PurchaseOrder purchaseOrder = purchaseOrderRepository.findById(poId)
+//                 .orElseThrow(() -> new BusinessException(
+//                         new ErrorDetails(
+//                                 AppConstant.ERROR_CODE_RESOURCE,
+//                                 AppConstant.ERROR_TYPE_CODE_RESOURCE,
+//                                 AppConstant.ERROR_TYPE_VALIDATION,
+//                                 "Purchase order not found for the provided asset ID.")
+//                 ));
+//         // added by abhinav starts
+//         PurchaseOrderHistory history = new PurchaseOrderHistory();
+
+//         history.setPoId(purchaseOrder.getPoId());
+//         history.setVersion(purchaseOrder.getPoVersion());
+//         history.setModifiedBy(purchaseOrderRequestDTO.getUpdatedBy());
+//         history.setModifiedDate(new java.util.Date());
+
+//         try {
+//             ObjectMapper mapper = new ObjectMapper();
+//             history.setSnapshotJson(mapper.writeValueAsString(purchaseOrder));
+//         } catch (Exception e) {
+//             e.printStackTrace();
+//         }
+
+//         purchaseOrderHistoryRepository.save(history);
+
+//         // INCREMENT VERSION
+//         if (purchaseOrder.getPoVersion() == null) {
+//             purchaseOrder.setPoVersion(1);
+//         } else {
+//             purchaseOrder.setPoVersion(purchaseOrder.getPoVersion() + 1);
+//         }
+//         //  LOCK CHECK
+//         // if (purchaseOrder.getIsLocked() != null && purchaseOrder.getIsLocked()) {
+//         //     throw new RuntimeException("PO is locked and cannot be edited.");
+//         // }
+//         //added by abhinav ends
+
+//         // Update basic fields
+//         purchaseOrder.setTenderId(purchaseOrderRequestDTO.getTenderId());
+//         purchaseOrder.setIndentId(purchaseOrderRequestDTO.getIndentId());
+//         purchaseOrder.setWarranty(purchaseOrderRequestDTO.getWarranty());
+//         purchaseOrder.setConsignesAddress(purchaseOrderRequestDTO.getConsignesAddress());
+//         purchaseOrder.setBillingAddress(purchaseOrderRequestDTO.getBillingAddress());
+//         purchaseOrder.setDeliveryPeriod(purchaseOrderRequestDTO.getDeliveryPeriod());
+//         purchaseOrder.setIfLdClauseApplicable(purchaseOrderRequestDTO.getIfLdClauseApplicable());
+//         purchaseOrder.setIncoTerms(purchaseOrderRequestDTO.getIncoTerms());
+//         purchaseOrder.setPaymentTerms(purchaseOrderRequestDTO.getPaymentTerms());
+//         purchaseOrder.setVendorName(purchaseOrderRequestDTO.getVendorName());
+//         purchaseOrder.setVendorAddress(purchaseOrderRequestDTO.getVendorAddress());
+//         purchaseOrder.setApplicablePbgToBeSubmitted(purchaseOrderRequestDTO.getApplicablePbgToBeSubmitted());
+//         purchaseOrder.setTransporterAndFreightForWarderDetails(purchaseOrderRequestDTO.getTransporterAndFreightForWarderDetails());
+//         purchaseOrder.setVendorAccountNumber(purchaseOrderRequestDTO.getVendorAccountNumber());
+//         purchaseOrder.setVendorsZfscCode(purchaseOrderRequestDTO.getVendorsIfscCode());
+//         purchaseOrder.setVendorAccountName(purchaseOrderRequestDTO.getVendorAccountName());
+//         purchaseOrder.setProjectName(purchaseOrderRequestDTO.getProjectName());
+//         purchaseOrder.setVendorId(purchaseOrderRequestDTO.getVendorId());
+//         purchaseOrder.setUpdatedBy(purchaseOrderRequestDTO.getUpdatedBy());
+//         purchaseOrder.setCreatedBy(purchaseOrderRequestDTO.getCreatedBy());
+//         if (purchaseOrderRequestDTO.getComparativeStatementFileName() == null || purchaseOrderRequestDTO.getComparativeStatementFileName().isEmpty()) {
+//             purchaseOrder.setComparativeStatementFileName(null);
+//         } else {
+//             String saved = saveBase64Files(purchaseOrderRequestDTO.getComparativeStatementFileName(), basePath);
+//             purchaseOrder.setComparativeStatementFileName(saved);
+//         }
+//         if (purchaseOrderRequestDTO.getGemContractFileName() == null || purchaseOrderRequestDTO.getGemContractFileName().isEmpty()) {
+//             purchaseOrder.setGemContractUpload(null);
+//         } else {
+//             String saved = saveBase64Files(purchaseOrderRequestDTO.getGemContractFileName(), basePath);
+//             purchaseOrder.setGemContractUpload(saved);
+//         }
+//         purchaseOrder.setTypeOfSecurity(purchaseOrderRequestDTO.getTypeOfSecurity());
+//         purchaseOrder.setSecurityNumber(purchaseOrderRequestDTO.getSecurityNumber());
+//         String Date = purchaseOrderRequestDTO.getSecurityDate();
+//         if (Date != null) {
+//             purchaseOrder.setSecurityDate(CommonUtils.convertStringToDateObject(Date));
+//         } else {
+//             purchaseOrder.setSecurityDate(null);
+//         }
+//         String expiryDate = purchaseOrderRequestDTO.getExpiryDate();
+//         if(Date != null){
+//             purchaseOrder.setExpiryDate(CommonUtils.convertStringToDateObject(expiryDate));
+//         } else {
+//             purchaseOrder.setExpiryDate(null);
+//         }
+
+
+//         String date = purchaseOrderRequestDTO.getDeliveryDate();
+//         purchaseOrder.setDeliveryDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
+
+//         // Remove old attributes
+//         purchaseOrder.getPurchaseOrderAttributes().clear();
+
+//         // Add new attributes
+//         List<PurchaseOrderAttributes> newAttributes = purchaseOrderRequestDTO.getPurchaseOrderAttributes().stream()
+//                 .map(dto -> {
+//                     PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
+//                     attr.setMaterialCode(dto.getMaterialCode());
+//                     attr.setMaterialDescription(dto.getMaterialDescription());
+//                     attr.setQuantity(dto.getQuantity());
+//                     attr.setRate(dto.getRate());
+//                     attr.setCurrency(dto.getCurrency());
+//                     attr.setExchangeRate(dto.getExchangeRate());
+//                     attr.setGst(dto.getGst());
+//                     attr.setDuties(dto.getDuties());
+//                     attr.setFreightCharge(dto.getFreightCharge());
+//                     attr.setBudgetCode(dto.getBudgetCode());
+//                     attr.setPurchaseOrder(purchaseOrder);  // Associate back
+//                     BigDecimal total = calculateTotalPriceInInr(
+//                             dto.getRate(),
+//                             dto.getExchangeRate(),
+//                             dto.getCurrency(),
+//                             dto.getQuantity(),
+//                             dto.getGst(),
+//                             dto.getDuties(),
+//                             dto.getFreightCharge()
+//                     );
+//                     attr.setTotalPoMaterialPriceInInr(total);
+//                     return attr;
+//                 })
+//                 .collect(Collectors.toList());
+
+//         purchaseOrder.getPurchaseOrderAttributes().addAll(newAttributes);
+//       //  List<String> indentIds = indentIdRepository.findTenderWithIndent(purchaseOrder.getTenderId());
+// /*
+//         BigDecimal totalTenderValue = indentIds.stream()
+//                 .map(indentCreationService::getIndentById)
+//                 .map(IndentCreationResponseDTO::getTotalPriceOfAllMaterials)
+//                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+//         purchaseOrder.setTotalValueOfPo(totalTenderValue);*/
+//         BigDecimal totalPoValue = newAttributes.stream()
+//                 .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
+//                 .filter(Objects::nonNull)
+//                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+//         purchaseOrder.setTotalValueOfPo(totalPoValue);
+
+//         // Save
+//         purchaseOrderRepository.save(purchaseOrder);
+
+//         return mapToResponseDTO(purchaseOrder);
+//     }
 
 
     @Autowired
@@ -506,20 +674,35 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                 .map(attribute -> {
                     PurchaseOrderAttributesResponseDTO attributeDTO = new PurchaseOrderAttributesResponseDTO();
                     attributeDTO.setMaterialCode(attribute.getMaterialCode());
-                    attributeDTO.setMaterialDescription(attribute.getMaterialDescription());
+attributeDTO.setMaterialDescription(attribute.getMaterialDescription());
 
-                    // Get sum of GPRN quantities for this material
-                  /*  BigDecimal gprnQuantity = gprnMaterialDtlRepository
-                            .findByPoIdAndMaterialCode(poId, attribute.getMaterialCode())
-                            .stream()
-                            .map(gprn -> gprn.getReceivedQuantity())
-                            .reduce(BigDecimal.ZERO, BigDecimal::add);
-*/
-                    // Set remaining quantity
-                  //  attributeDTO.setQuantity(attribute.getQuantity().subtract(gprnQuantity));
+// Get sum of GPRN quantities for this material
+BigDecimal gprnQuantity = gprnMaterialDtlRepository
+        .findByPoIdAndMaterialCode(poId, attribute.getMaterialCode())
+        .stream()
+        .map(gprn -> gprn.getReceivedQuantity())
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    attributeDTO.setTotalQuantity(attribute.getQuantity());
-                    attributeDTO.setReceivedQuantity(attribute.getReceivedQuantity());
+attributeDTO.setTotalQuantity(attribute.getQuantity());
+attributeDTO.setQuantity(attribute.getQuantity() != null
+        ? attribute.getQuantity().subtract(gprnQuantity)
+        : BigDecimal.ZERO);
+attributeDTO.setReceivedQuantity(attribute.getReceivedQuantity());
+//                     attributeDTO.setMaterialCode(attribute.getMaterialCode());
+//                     attributeDTO.setMaterialDescription(attribute.getMaterialDescription());
+
+//                     // Get sum of GPRN quantities for this material
+//                   /*  BigDecimal gprnQuantity = gprnMaterialDtlRepository
+//                             .findByPoIdAndMaterialCode(poId, attribute.getMaterialCode())
+//                             .stream()
+//                             .map(gprn -> gprn.getReceivedQuantity())
+//                             .reduce(BigDecimal.ZERO, BigDecimal::add);
+// */
+//                     // Set remaining quantity
+//                   //  attributeDTO.setQuantity(attribute.getQuantity().subtract(gprnQuantity));
+
+//                     attributeDTO.setTotalQuantity(attribute.getQuantity());
+//                     attributeDTO.setReceivedQuantity(attribute.getReceivedQuantity());
                     attributeDTO.setRate(attribute.getRate());
                     attributeDTO.setCurrency(attribute.getCurrency());
                     attributeDTO.setExchangeRate(attribute.getExchangeRate());
@@ -561,13 +744,18 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                                 "Purchase order not found for the provided asset ID.")
                 ));
 
-        // Fetch related Tender & Indent
-        TenderWithIndentResponseDTO tenderWithIndent = tenderRequestService.getTenderRequestById(purchaseOrder.getTenderId());
+        // [DRAFT] Guard: tenderId may be null for a draft PO that has not selected a tender yet
+        TenderWithIndentResponseDTO tenderWithIndent = null;
         Map<String, MaterialDetailsResponseDTO> indentMaterialMap = new HashMap<>();
-
-        for (IndentCreationResponseDTO indent : tenderWithIndent.getIndentResponseDTO()) {
-            for (MaterialDetailsResponseDTO material : indent.getMaterialDetails()) {
-                indentMaterialMap.put(material.getMaterialCode(), material);
+        if (purchaseOrder.getTenderId() != null) {
+            tenderWithIndent = tenderRequestService.getTenderRequestById(purchaseOrder.getTenderId());
+            for (IndentCreationResponseDTO indent : tenderWithIndent.getIndentResponseDTO()) {
+                List<MaterialDetailsResponseDTO> materialDetails = indent.getMaterialDetails();
+if (materialDetails != null) {
+                for (MaterialDetailsResponseDTO material : indent.getMaterialDetails()) {
+                    indentMaterialMap.put(material.getMaterialCode(), material);
+                }
+            }
             }
         }
 
@@ -625,9 +813,16 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         responseDTO.setUpdatedBy(purchaseOrder.getUpdatedBy());
         responseDTO.setCreatedDate(purchaseOrder.getCreatedDate());
         responseDTO.setUpdatedDate(purchaseOrder.getUpdatedDate());
-        List<String> indentIds = indentIdRepository.findTenderWithIndent(purchaseOrder.getTenderId());
+        // [DRAFT] Guard: tenderId may be null
+        List<String> indentIds = purchaseOrder.getTenderId() != null
+                ? indentIdRepository.findTenderWithIndent(purchaseOrder.getTenderId())
+                : Collections.emptyList();
 
         responseDTO.setIndentIds(indentIds);
+        // [DRAFT] Expose status/version/active for the frontend draft banner
+        responseDTO.setCurrentStatus(purchaseOrder.getCurrentStatus());
+        responseDTO.setIsActive(purchaseOrder.getIsActive());
+        responseDTO.setPoVersion(purchaseOrder.getPoVersion());
 
         responseDTO.setPurchaseOrderAttributes(purchaseOrder.getPurchaseOrderAttributes().stream()
                 .map(attribute -> {
@@ -643,7 +838,9 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     // Set remaining quantity
-                    attributeDTO.setQuantity(attribute.getQuantity().subtract(gprnQuantity));
+                    attributeDTO.setQuantity(attribute.getQuantity() != null
+                            ? attribute.getQuantity().subtract(gprnQuantity)
+                            : BigDecimal.ZERO);
                     attributeDTO.setReceivedQuantity(attribute.getReceivedQuantity());
                     attributeDTO.setRate(attribute.getRate());
                     attributeDTO.setCurrency(attribute.getCurrency());
@@ -652,49 +849,62 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
                     attributeDTO.setDuties(attribute.getDuties());
                     attributeDTO.setFreightCharge(attribute.getFreightCharge());
                     attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                    // [DRAFT] indentMaterialMap is empty when there is no tender; guard null
                     MaterialDetailsResponseDTO indentMaterial = indentMaterialMap.get(attribute.getMaterialCode());
-                    attributeDTO.setUnitPrice(indentMaterial.getUnitPrice());
-                    attributeDTO.setUom(indentMaterial.getUom());
-                    attributeDTO.setCategory(indentMaterial.getMaterialCategory());
+                    if (indentMaterial != null) {
+                        attributeDTO.setUnitPrice(indentMaterial.getUnitPrice());
+                        attributeDTO.setUom(indentMaterial.getUom());
+                        attributeDTO.setCategory(indentMaterial.getMaterialCategory());
+                    }
                     return attributeDTO;
                 })
                 .collect(Collectors.toList()));
-        String projectName = tenderWithIndent.getIndentResponseDTO()
-                .stream()
-                .findFirst()
-                .map(IndentCreationResponseDTO::getProjectName)
-                .orElse(null);
-        BigDecimal projectLimit = tenderWithIndent.getIndentResponseDTO()
-                .stream()
-                .findFirst()
-                .map(IndentCreationResponseDTO::getProjectLimit)
-                .orElse(null);
+        // [DRAFT] tenderWithIndent is null when tenderId is absent
+        String projectName = null;
+        BigDecimal projectLimit = null;
+        if (tenderWithIndent != null) {
+            projectName = tenderWithIndent.getIndentResponseDTO()
+                    .stream()
+                    .findFirst()
+                    .map(IndentCreationResponseDTO::getProjectName)
+                    .orElse(null);
+            projectLimit = tenderWithIndent.getIndentResponseDTO()
+                    .stream()
+                    .findFirst()
+                    .map(IndentCreationResponseDTO::getProjectLimit)
+                    .orElse(null);
+        }
         responseDTO.setProjectName(projectName);
         responseDTO.setProjectLimit(projectLimit);
+        // [DRAFT] Workflow transition does not exist yet for a draft PO — guard null
         WorkflowTransition wt = workflowTransitionRepository.findTopByRequestIdOrderByWorkflowSequenceDesc(poId);
-        responseDTO.setStatus(wt.getStatus());
-        responseDTO.setProcessStage(wt.getNextRole());
+        if (wt != null) {
+            responseDTO.setStatus(wt.getStatus());
+            responseDTO.setProcessStage(wt.getNextRole());
+        }
 
-        // Set Tender & Indent details
+        // Set Tender & Indent details (null for draft without tender)
         responseDTO.setTenderDetails(tenderWithIndent);
-       PoFormateDto dtp = getPoFormatDetails(poId);
-       responseDTO.setPoFormateData(dtp);
-     List<WorkflowTransitionDto> wtd =workflowTransitionHistory(poId);
-        List<PoFormateApprovalHistory> historyList = wtd.stream().map(dto -> {
-            PoFormateApprovalHistory history = new PoFormateApprovalHistory();
-            history.setStatus(dto.getStatus());
-            history.setNextAction(dto.getNextAction());
-            history.setAction(dto.getAction());
-            history.setRemarks(dto.getRemarks());
-            history.setCreatedBy(dto.getCreatedBy());
-            history.setCreatedRole(dto.getCreatedRole());
-            history.setModifiedBy(dto.getModifiedBy());
-            history.setModificationDate(dto.getModificationDate());
-            history.setCreatedDate(dto.getCreatedDate());
-            return history;
-        }).toList();
-
-        responseDTO.setPoHistory(historyList);
+        // [DRAFT] Only load PO format and workflow history for non-draft POs (tender required)
+        if (purchaseOrder.getTenderId() != null && !"DRAFT".equals(purchaseOrder.getCurrentStatus())) {
+            PoFormateDto dtp = getPoFormatDetails(poId);
+            responseDTO.setPoFormateData(dtp);
+            List<WorkflowTransitionDto> wtd = workflowTransitionHistory(poId);
+            List<PoFormateApprovalHistory> historyList = wtd.stream().map(dto -> {
+                PoFormateApprovalHistory history = new PoFormateApprovalHistory();
+                history.setStatus(dto.getStatus());
+                history.setNextAction(dto.getNextAction());
+                history.setAction(dto.getAction());
+                history.setRemarks(dto.getRemarks());
+                history.setCreatedBy(dto.getCreatedBy());
+                history.setCreatedRole(dto.getCreatedRole());
+                history.setModifiedBy(dto.getModifiedBy());
+                history.setModificationDate(dto.getModificationDate());
+                history.setCreatedDate(dto.getCreatedDate());
+                return history;
+            }).toList();
+            responseDTO.setPoHistory(historyList);
+        }
 
         return responseDTO;
     }
@@ -750,6 +960,11 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         return base64List;
     }
 
+    private String extractBasePoId(String poId) {
+    if (poId == null) return null;
+    int slashIdx = poId.indexOf('/');
+    return slashIdx >= 0 ? poId.substring(0, slashIdx) : poId;
+}
 
     @Override
     public List<PurchaseOrderResponseDTO> getAllPurchaseOrders() {
@@ -808,6 +1023,10 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         responseDTO.setVendorId(purchaseOrder.getVendorId());
         responseDTO.setProjectName(purchaseOrder.getProjectName());
         responseDTO.setComparativeStatementFileName(purchaseOrder.getComparativeStatementFileName());
+        // [DRAFT] Expose status/version/active so the frontend draft banner and version history work correctly
+        responseDTO.setCurrentStatus(purchaseOrder.getCurrentStatus());
+        responseDTO.setIsActive(purchaseOrder.getIsActive());
+        responseDTO.setPoVersion(purchaseOrder.getPoVersion());
         //  responseDTO.setTotalValueOfPo(purchaseOrder.getTotalValueOfPo());
         LocalDate date = purchaseOrder.getDeliveryDate();
         if (date != null) {
@@ -820,7 +1039,10 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         responseDTO.setCreatedDate(purchaseOrder.getCreatedDate());
         responseDTO.setUpdatedDate(purchaseOrder.getUpdatedDate());
 
-        responseDTO.setPurchaseOrderAttributes(purchaseOrder.getPurchaseOrderAttributes().stream()
+        // [DRAFT] Null-safe: draft rows may have an empty attributes collection
+        List<PurchaseOrderAttributes> _attrs = purchaseOrder.getPurchaseOrderAttributes();
+        if (_attrs == null) _attrs = Collections.emptyList();
+        responseDTO.setPurchaseOrderAttributes(_attrs.stream()
                 .map(attribute -> {
                     PurchaseOrderAttributesResponseDTO attributeDTO = new PurchaseOrderAttributesResponseDTO();
                     attributeDTO.setMaterialCode(attribute.getMaterialCode());
@@ -847,7 +1069,11 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         System.out.println("tottalTenderValue" + totalTenderValue);*/
         responseDTO.setTotalValue(purchaseOrder.getTotalValueOfPo());
 
-        Optional<TenderRequest> tenderRequest = tenderRequestRepository.findByTenderId(purchaseOrder.getTenderId());
+        // Optional<TenderRequest> tenderRequest = tenderRequestRepository.findByTenderId(purchaseOrder.getTenderId());
+        // AFTER (null-safe for draft rows where tenderId may be absent):
+Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
+        ? tenderRequestRepository.findByTenderId(purchaseOrder.getTenderId())
+        : Optional.empty();
 
         String projectName = tenderRequest.map(TenderRequest::getProjectName).orElse(null);
         responseDTO.setProjectName(projectName);
@@ -1377,7 +1603,7 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
         BigDecimal grandTotal = totalAmount.add(totalGst).setScale(2, RoundingMode.HALF_UP);
         PoFormateDto dto = new PoFormateDto();
         if (po.getVendorId() != null) {
-            if (po.getVendorId().startsWith("V")) {
+            if (!po.getVendorId().startsWith("GEM")) {
                 VendorMaster vendor = vendorMasterRepository.findById(po.getVendorId())
                         .orElseThrow(() -> new BusinessException(
                                 new ErrorDetails(
@@ -1532,6 +1758,341 @@ public class PurchaseOrderImpl implements PurchaseOrderService {
 
         return dto;
     }
+    // ─────────────────────────────────────────────────────────────────
+    // DRAFT LIFECYCLE  (mirrors Indent draft pattern — Section 7)
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Save a new PO draft.
+     * Skips all business validation and budget checks.
+     * Generates a real PO ID immediately so the draft is a proper DB row.
+     * Does NOT lock the tender and does NOT initiate workflow.
+     */
+    public PurchaseOrderResponseDTO savePoDraft(PurchaseOrderRequestDTO dto) {
+        PurchaseOrder draft = new PurchaseOrder();
+
+        // Generate PO ID: use tenderId-based ID if available, fall back to timestamp
+        // so the user can save a draft even before selecting a tender.
+        String tenderId = dto.getTenderId();
+        String poId;
+        if (tenderId != null && !tenderId.isBlank()) {
+            String base = generatePoId(tenderId);
+            // If a real PO already exists for this tender, suffix the draft ID to avoid collision
+            poId = purchaseOrderRepository.existsById(base) ? base + "D" : base;
+        } else {
+            poId = "PO" + (System.currentTimeMillis() % 1000000);
+        }
+
+        draft.setPoId(poId);
+        draft.setPoVersion(1);
+        draft.setIsActive(true);
+        draft.setParentPoId(null);
+        draft.setCurrentStatus("DRAFT");
+        draft.setIsLocked(false);
+        draft.setIsCancelled(false);
+
+        // Map all header fields (same mapping as createPurchaseOrder)
+        draft.setTenderId(tenderId);
+        draft.setIndentId(dto.getIndentId());
+        draft.setWarranty(dto.getWarranty());
+        draft.setConsignesAddress(dto.getConsignesAddress());
+        draft.setBillingAddress(dto.getBillingAddress());
+        draft.setDeliveryPeriod(dto.getDeliveryPeriod());
+        draft.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        draft.setIncoTerms(dto.getIncoTerms());
+        draft.setPaymentTerms(dto.getPaymentTerms());
+        draft.setVendorName(dto.getVendorName());
+        draft.setVendorAddress(dto.getVendorAddress());
+        draft.setApplicablePbgToBeSubmitted(dto.getApplicablePbgToBeSubmitted());
+        draft.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        draft.setVendorAccountNumber(dto.getVendorAccountNumber());
+        draft.setVendorsZfscCode(dto.getVendorsIfscCode());
+        draft.setVendorAccountName(dto.getVendorAccountName());
+        draft.setVendorId(dto.getVendorId());
+        draft.setQuotationNumber(dto.getQuotationNumber());
+        draft.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        draft.setBuyBackAmount(dto.getBuyBackAmount());
+        draft.setProjectName(dto.getProjectName());
+        draft.setTypeOfSecurity(dto.getTypeOfSecurity());
+        draft.setSecurityNumber(dto.getSecurityNumber());
+        draft.setCreatedBy(dto.getCreatedBy());
+        draft.setUpdatedBy(dto.getUpdatedBy());
+
+        String deliveryDate = dto.getDeliveryDate();
+        draft.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        draft.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        draft.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        draft.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            draft.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            draft.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        // Build attributes — NULL-SAFE totals (rate/qty may be absent in a partial draft)
+        List<PurchaseOrderAttributes> attrs = dto.getPurchaseOrderAttributes() == null
+                ? Collections.emptyList()
+                : dto.getPurchaseOrderAttributes().stream().map(a -> {
+                    PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
+                    attr.setMaterialCode(a.getMaterialCode());
+                    attr.setMaterialDescription(a.getMaterialDescription());
+                    attr.setQuantity(a.getQuantity());
+                    attr.setRate(a.getRate());
+                    attr.setCurrency(a.getCurrency());
+                    attr.setExchangeRate(a.getExchangeRate());
+                    attr.setGst(a.getGst());
+                    attr.setDuties(a.getDuties());
+                    attr.setFreightCharge(a.getFreightCharge());
+                    attr.setBudgetCode(a.getBudgetCode());
+                    BigDecimal total = (a.getRate() != null && a.getQuantity() != null)
+                            ? calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
+                                    a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge())
+                            : BigDecimal.ZERO;
+                    attr.setTotalPoMaterialPriceInInr(total);
+                    attr.setPurchaseOrder(draft);
+                    return attr;
+                }).collect(Collectors.toList());
+
+        draft.setPurchaseOrderAttributes(attrs);
+        draft.setTotalValueOfPo(attrs.stream()
+                .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
+                .map(p -> p != null ? p : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        // No BudgetService call — draft skips budget
+        // No WorkflowService call — draft skips workflow
+        purchaseOrderRepository.saveAndFlush(draft);
+        return mapToResponseDTO(draft);
+    }
+
+    /**
+     * Update an existing DRAFT PO in-place (same poId, no versioning).
+     * Clears and re-saves purchaseOrderAttributes via orphanRemoval=true.
+     * Guards: status must be DRAFT and createdBy must match.
+     */
+    public PurchaseOrderResponseDTO updatePoDraft(String poId, PurchaseOrderRequestDTO dto) {
+        PurchaseOrder existing = purchaseOrderRepository.findById(poId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Purchase Order not found: " + poId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT POs can be updated via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        if (!existing.getCreatedBy().equals(dto.getCreatedBy()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Only the original creator can update this draft."));
+
+        // Update all header fields in-place (same ID, no versioning)
+        existing.setTenderId(dto.getTenderId());
+        existing.setIndentId(dto.getIndentId());
+        existing.setWarranty(dto.getWarranty());
+        existing.setConsignesAddress(dto.getConsignesAddress());
+        existing.setBillingAddress(dto.getBillingAddress());
+        existing.setDeliveryPeriod(dto.getDeliveryPeriod());
+        existing.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        existing.setIncoTerms(dto.getIncoTerms());
+        existing.setPaymentTerms(dto.getPaymentTerms());
+        existing.setVendorName(dto.getVendorName());
+        existing.setVendorAddress(dto.getVendorAddress());
+        existing.setApplicablePbgToBeSubmitted(dto.getApplicablePbgToBeSubmitted());
+        existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        existing.setVendorAccountNumber(dto.getVendorAccountNumber());
+        existing.setVendorsZfscCode(dto.getVendorsIfscCode());
+        existing.setVendorAccountName(dto.getVendorAccountName());
+        existing.setVendorId(dto.getVendorId());
+        existing.setQuotationNumber(dto.getQuotationNumber());
+        existing.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        existing.setBuyBackAmount(dto.getBuyBackAmount());
+        existing.setProjectName(dto.getProjectName());
+        existing.setTypeOfSecurity(dto.getTypeOfSecurity());
+        existing.setSecurityNumber(dto.getSecurityNumber());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String deliveryDate = dto.getDeliveryDate();
+        existing.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        existing.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        existing.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        existing.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            existing.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            existing.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        // Clear child collection (triggers orphanRemoval on flush) then re-add from DTO
+        existing.getPurchaseOrderAttributes().clear();
+        List<PurchaseOrderAttributes> newAttrs = dto.getPurchaseOrderAttributes() == null
+                ? Collections.emptyList()
+                : dto.getPurchaseOrderAttributes().stream().map(a -> {
+                    PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
+                    attr.setMaterialCode(a.getMaterialCode());
+                    attr.setMaterialDescription(a.getMaterialDescription());
+                    attr.setQuantity(a.getQuantity());
+                    attr.setRate(a.getRate());
+                    attr.setCurrency(a.getCurrency());
+                    attr.setExchangeRate(a.getExchangeRate());
+                    attr.setGst(a.getGst());
+                    attr.setDuties(a.getDuties());
+                    attr.setFreightCharge(a.getFreightCharge());
+                    attr.setBudgetCode(a.getBudgetCode());
+                    BigDecimal total = (a.getRate() != null && a.getQuantity() != null)
+                            ? calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
+                                    a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge())
+                            : BigDecimal.ZERO;
+                    attr.setTotalPoMaterialPriceInInr(total);
+                    attr.setPurchaseOrder(existing);
+                    return attr;
+                }).collect(Collectors.toList());
+
+        existing.getPurchaseOrderAttributes().addAll(newAttrs);
+        existing.setTotalValueOfPo(newAttrs.stream()
+                .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
+                .map(p -> p != null ? p : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        // No BudgetService — still a draft
+        purchaseOrderRepository.saveAndFlush(existing);
+        return mapToResponseDTO(existing);
+    }
+
+    /**
+     * Promote a DRAFT PO to submitted.
+     * Runs the same full validation + budget check as createPurchaseOrder.
+     * Locks the tender on success.
+     * The CONTROLLER must call WorkflowService.initiateWorkflow after this returns.
+     */
+    public PurchaseOrderResponseDTO submitPoDraft(String poId, PurchaseOrderRequestDTO dto) {
+        PurchaseOrder existing = purchaseOrderRepository.findById(poId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Purchase Order not found: " + poId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT POs can be submitted via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        if (dto.getTenderId() == null || dto.getTenderId().isBlank())
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Tender ID is required to submit a Purchase Order."));
+
+        // Update all header fields from the final submitted DTO
+        existing.setTenderId(dto.getTenderId());
+        existing.setIndentId(dto.getIndentId());
+        existing.setWarranty(dto.getWarranty());
+        existing.setConsignesAddress(dto.getConsignesAddress());
+        existing.setBillingAddress(dto.getBillingAddress());
+        existing.setDeliveryPeriod(dto.getDeliveryPeriod());
+        existing.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        existing.setIncoTerms(dto.getIncoTerms());
+        existing.setPaymentTerms(dto.getPaymentTerms());
+        existing.setVendorName(dto.getVendorName());
+        existing.setVendorAddress(dto.getVendorAddress());
+        existing.setApplicablePbgToBeSubmitted(dto.getApplicablePbgToBeSubmitted());
+        existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        existing.setVendorAccountNumber(dto.getVendorAccountNumber());
+        existing.setVendorsZfscCode(dto.getVendorsIfscCode());
+        existing.setVendorAccountName(dto.getVendorAccountName());
+        existing.setVendorId(dto.getVendorId());
+        existing.setQuotationNumber(dto.getQuotationNumber());
+        existing.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        existing.setBuyBackAmount(dto.getBuyBackAmount());
+        existing.setProjectName(dto.getProjectName());
+        existing.setTypeOfSecurity(dto.getTypeOfSecurity());
+        existing.setSecurityNumber(dto.getSecurityNumber());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String deliveryDate = dto.getDeliveryDate();
+        existing.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        existing.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        existing.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        existing.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            existing.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            existing.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        // Rebuild attributes from the final submitted payload
+        existing.getPurchaseOrderAttributes().clear();
+        List<PurchaseOrderAttributes> finalAttrs = dto.getPurchaseOrderAttributes() == null
+                ? Collections.emptyList()
+                : dto.getPurchaseOrderAttributes().stream().map(a -> {
+                    PurchaseOrderAttributes attr = new PurchaseOrderAttributes();
+                    attr.setMaterialCode(a.getMaterialCode());
+                    attr.setMaterialDescription(a.getMaterialDescription());
+                    attr.setQuantity(a.getQuantity());
+                    attr.setRate(a.getRate());
+                    attr.setCurrency(a.getCurrency());
+                    attr.setExchangeRate(a.getExchangeRate());
+                    attr.setGst(a.getGst());
+                    attr.setDuties(a.getDuties());
+                    attr.setFreightCharge(a.getFreightCharge());
+                    attr.setBudgetCode(a.getBudgetCode());
+                    BigDecimal total = calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
+                            a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge());
+                    attr.setTotalPoMaterialPriceInInr(total);
+                    attr.setPurchaseOrder(existing);
+                    return attr;
+                }).collect(Collectors.toList());
+
+        existing.getPurchaseOrderAttributes().addAll(finalAttrs);
+        existing.setTotalValueOfPo(finalAttrs.stream()
+                .map(PurchaseOrderAttributes::getTotalPoMaterialPriceInInr)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        // Full budget check — same as createPurchaseOrder, blocks if insufficient
+        budgetService.checkBudgetForPo(poId, dto.getTenderId(), finalAttrs);
+
+        // Promote: clear DRAFT status so workflow takes over
+        existing.setCurrentStatus(null);
+        purchaseOrderRepository.saveAndFlush(existing);
+
+        // Lock the tender — same side-effect as createPurchaseOrder
+        TenderRequest tender = trRepo.findById(dto.getTenderId())
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Tender not found for the provided ID.")));
+        tender.setVendorId(dto.getVendorId());
+        tender.setIsLocked(true);
+        tender.setLockedReason("Purchase Order " + poId + " has been submitted for this tender");
+        tender.setLockedForPO(poId);
+        tender.setLockedDate(LocalDateTime.now());
+        trRepo.save(tender);
+
+        return mapToResponseDTO(existing);
+    }
+
+    /**
+     * Return all DRAFT POs created by a given user, newest first.
+     */
+    public List<PurchaseOrderResponseDTO> getUserPoDrafts(Integer userId) {
+        return purchaseOrderRepository
+                .findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(userId, "DRAFT")
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+
     public static String convertImageToBase64(String fileName, String basePath) throws IOException {
         String filePath = basePath + File.separator + fileName;
         File file = new File(filePath);

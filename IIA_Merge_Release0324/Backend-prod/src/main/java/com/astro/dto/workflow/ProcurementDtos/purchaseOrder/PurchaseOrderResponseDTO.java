@@ -21,6 +21,9 @@ public class PurchaseOrderResponseDTO {
     private String incoTerms;
     private String paymentTerms;
     private String vendorName;
+    private Boolean isActive;
+private String parentPoId;
+private Integer poVersion;
     private String vendorAddress;
     private String applicablePbgToBeSubmitted;
     private String transporterAndFreightForWarderDetails;
@@ -40,4 +43,8 @@ public class PurchaseOrderResponseDTO {
     private Integer updatedBy; // updated by abhinav
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
+
+    private String currentStatus;
+public String getCurrentStatus() { return currentStatus; }
+public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
 }

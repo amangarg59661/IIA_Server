@@ -167,8 +167,8 @@ public class GtServiceImpl implements GtService {
         if (um != null && um.getEmail() != null) {
             recipients.add(um.getEmail());
         }
-        recipients.add("udaychowdhary743@gmail.com");
-        recipients.add("kudaykiran.9949@gmail.com");
+        // recipients.add("udaychowdhary743@gmail.com");
+        // recipients.add("kudaykiran.9949@gmail.com");
 
 
 
@@ -202,7 +202,7 @@ public class GtServiceImpl implements GtService {
 
         List<GtDtlEntity> gtDtlEntityList = gtdr.findByGtId(id);
 
-        if(gtMasterEntity.getSenderLocationId().equalsIgnoreCase(gtMasterEntity.getReceiverLocationId())){
+        // if(gtMasterEntity.getSenderLocationId().equalsIgnoreCase(gtMasterEntity.getReceiverLocationId())){
             System.out.println("CAME INNNN");
             for (GtDtlEntity gtDtlEntity : gtDtlEntityList) {
                 if (Objects.isNull(gtDtlEntity.getAssetId())) {
@@ -215,7 +215,7 @@ public class GtServiceImpl implements GtService {
                 
             }
             
-        }
+        // }
         gtmr.save(gtMasterEntity);
     }
     @Override

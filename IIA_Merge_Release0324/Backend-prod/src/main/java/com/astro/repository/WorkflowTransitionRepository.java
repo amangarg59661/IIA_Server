@@ -186,6 +186,7 @@ LEFT JOIN MaterialDetails md ON md.indentCreation = ic AND md.id = (
 )
 WHERE wt.workflowId = :workflowId
   AND wt.status = :status
+  AND wt.action <> 'Rejected'
   AND ic.employeeId IS NULL
   AND wt.workflowTransitionId = (
         SELECT MAX(wt2.workflowTransitionId)
@@ -244,5 +245,9 @@ ORDER BY wt.requestId, wt.createdDate
             @Param("pendingType") String pendingType,
             @Param("roleName") String roleName,
             @Param("userId") Integer userId);
+
+// Get the latest active (PENDING) transition row for a given requestId
+@Query("SELECT wt FROM WorkflowTransition wt WHERE wt.requestId = :requestId AND wt.nextAction = 'Pending' ORDER BY wt.workflowTransitionId DESC")
+List<WorkflowTransition> findPendingTransitionsByRequestId(@Param("requestId") String requestId);
 
 }

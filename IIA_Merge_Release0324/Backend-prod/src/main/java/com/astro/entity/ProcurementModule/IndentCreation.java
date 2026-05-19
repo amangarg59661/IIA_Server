@@ -186,6 +186,9 @@ public class IndentCreation {
     // Add this column
 @Column(name = "indentor_department")
 private String indentorDepartment;
+// ADD this field - the only new addition needed
+@Column(name = "is_active")
+private Boolean isActive = true;
 
     // Dynamic Workflow Fields - Project classification
     @Column(name = "is_under_project")

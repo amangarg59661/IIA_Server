@@ -37,14 +37,14 @@ public class GrvServiceImpl implements GrvService {
         ModelMapper mapper = new ModelMapper();
 
         System.out.println("GI SUB PROC:"+ Integer.parseInt(req.getGiNo().split("/")[1]));
-
+String giProcessId = req.getGiNo().substring(3, req.getGiNo().lastIndexOf("/"));
         GrvMasterEntity grvMaster = new GrvMasterEntity();
         grvMaster.setDate(CommonUtils.convertStringToDateObject(req.getDate()));
         grvMaster.setCreatedBy(req.getCreatedBy());
         grvMaster.setCreateDate(LocalDateTime.now());
-        grvMaster.setGiProcessId(req.getGiNo().split("/")[0].substring(3));
-        grvMaster.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
-        grvMaster.setGrvProcessId(req.getGiNo().split("/")[0].substring(3));
+        grvMaster.setGiProcessId(giProcessId);
+        grvMaster.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
+        grvMaster.setGrvProcessId(giProcessId);
         grvMaster.setLocationId(req.getLocationId());
 
         grvMaster = grvMasterRepository.save(grvMaster);
@@ -77,7 +77,7 @@ public class GrvServiceImpl implements GrvService {
             mapper.map(materialDtl, grvMaterialDtl);
             grvMaterialDtl.setGrvProcessId(grvMaster.getGrvProcessId());
             grvMaterialDtl.setGrvSubProcessId(grvMaster.getGrvSubProcessId());
-            grvMaterialDtl.setGiSubProcessId(Integer.parseInt(req.getGiNo().split("/")[1]));
+            grvMaterialDtl.setGiSubProcessId(extractSubProcessId(req.getGiNo()));
 
             grvMaterialDtlList.add(grvMaterialDtl);
         }
@@ -94,21 +94,38 @@ public class GrvServiceImpl implements GrvService {
 
         return "INV" + grvMaster.getGrvProcessId() + "/" + grvMaster.getGrvSubProcessId();
     }
-
+// Add this helper to GrvServiceImpl
+private int extractSubProcessId(String processNo) {
+    return Integer.parseInt(processNo.substring(processNo.lastIndexOf("/") + 1));
+}
     @Override
     public Map<String, Object> getGrvDtls(String processNo) {
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
         
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        //     throw new InvalidInputException(new ErrorDetails(
+        //             AppConstant.USER_INVALID_INPUT,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Invalid process ID"));
+        // }
+
+                Integer grvSubProcessId ;
+
+        if (3 == processNoSplit.length ){
+             grvSubProcessId = Integer.parseInt(processNoSplit[2]);
+        }else if(2 == processNoSplit.length) {
+             grvSubProcessId = Integer.parseInt(processNoSplit[1]);
+        }else {
             throw new InvalidInputException(new ErrorDetails(
-                    AppConstant.USER_INVALID_INPUT,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Invalid process ID"));
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Invalid process ID"));
         }
 
-        Integer grvSubProcessId = Integer.parseInt(processNoSplit[1]);
+        // Integer grvSubProcessId = Integer.parseInt(processNoSplit[1]);
 
         GrvMasterEntity grvMaster = grvMasterRepository.findById(grvSubProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(

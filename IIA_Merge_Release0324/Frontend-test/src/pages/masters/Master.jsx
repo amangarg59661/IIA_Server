@@ -13,10 +13,10 @@ const masterDropDown = [
         value: "Job",
         label: "Job"
     },
-    {
-        value: "Work",
-        label: "Work"
-    },
+    // {
+    //     value: "Work",
+    //     label: "Work"
+    // },
     {
         value: "Material",
         label: "Material"

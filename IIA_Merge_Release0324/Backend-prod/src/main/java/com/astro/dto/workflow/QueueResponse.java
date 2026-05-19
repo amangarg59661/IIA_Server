@@ -17,7 +17,7 @@ public class QueueResponse {
     private String indentTitle;
     private String modeOfProcurement;
     private String consignee;
-
+    private String materialDesc;
 
     private Integer workflowTransitionId;
     private Integer workflowId;

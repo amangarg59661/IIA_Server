@@ -111,6 +111,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Disposal Quantity",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
              {
@@ -118,6 +119,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Serial No",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
              {
@@ -125,6 +127,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Model No",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
              {
@@ -132,6 +135,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Book Value",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
              {
@@ -139,6 +143,7 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Po Id",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
              {
@@ -146,15 +151,17 @@ export const assetDisposalFields =(locations, isEditable)=> [
                 label: "Po Value",
                 type: "text",
                 span: 1,
+                disabled: true,
                 required: true
             },
-             {
-                name: "poDate",
-                label: "Po Delivery Date",
-                type: "date",
-                span: 1,
-                required: true
-            },
+            //  {
+            //     name: "poDate",
+            //     label: "Po Delivery Date",
+            //     type: "date",
+            //     span: 1,
+            //     disabled: true,
+            //     required: true
+            // },
             {
                 name: "disposalCategory",
                 label: "Disposal Category",

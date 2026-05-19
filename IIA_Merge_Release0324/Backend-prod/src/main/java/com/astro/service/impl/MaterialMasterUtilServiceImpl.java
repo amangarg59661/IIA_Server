@@ -416,6 +416,12 @@ private void saveMaterialTracking(String materialCode, String status, String act
         material.setUpdatedBy(dto.getUpdatedBy());
         // Added by Aman 
         material.setAssetFlag(dto.getAsset_Flag());
+        if (dto.getUploadImageFileName() == null || dto.getUploadImageFileName().isEmpty()) {
+            material.setUploadImageName(null);
+        } else {
+            String fileName = saveBase64Files(dto.getUploadImageFileName(), basePath);
+            material.setUploadImageName(fileName);
+        }
         // End
 
         materialMasterUtilRepository.save(material);

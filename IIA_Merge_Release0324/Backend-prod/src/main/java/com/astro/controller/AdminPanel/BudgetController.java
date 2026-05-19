@@ -71,6 +71,19 @@ public class BudgetController {
         BudgetMaster existing = budgetRepository.findByBudgetCode(budgetCode)
                 .orElseThrow(() -> new RuntimeException("Budget not found"));
 
+                // Block reduction below already committed (hold + spent)
+    BigDecimal alreadyCommitted =
+        (existing.getOnHoldAmount() != null ? existing.getOnHoldAmount() : BigDecimal.ZERO)
+        .add(existing.getSpentAmount() != null ? existing.getSpentAmount() : BigDecimal.ZERO);
+
+    if (budget.getAllocatedAmount().compareTo(alreadyCommitted) < 0) {
+        throw new RuntimeException(
+            "Cannot reduce allocated amount below committed amount. " +
+            "On Hold: " + existing.getOnHoldAmount() +
+            ", Spent: " + existing.getSpentAmount() +
+            ", Minimum allowed: " + alreadyCommitted);
+    }
+
         existing.setBudgetName(budget.getBudgetName());
         existing.setCategory(budget.getCategory());
         existing.setAllocatedAmount(budget.getAllocatedAmount());

@@ -26,8 +26,9 @@ public class GiMaterialDtlEntity {
     private Integer gprnSubProcessId;
 
     @Column(name = "gprn_process_id")
-    private Integer gprnProcessId;
-    
+    // private Integer gprnProcessId;
+    private String gprnProcessId;
+        
     @Column(name = "material_code", nullable = false)
     private String materialCode;
     

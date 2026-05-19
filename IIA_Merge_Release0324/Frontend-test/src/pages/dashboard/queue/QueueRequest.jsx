@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+
+
+import React, { useState, useCallback } from "react";
 import {
   Table,
   Input,
@@ -14,7 +16,7 @@ import {
   Badge,
   Modal
 } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined, HistoryOutlined, TeamOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import QueueModal from "./QueueModal";
@@ -39,7 +41,7 @@ const MaterialDetailModal = ({ visible, setVisible, materialData }) => {
       ]}
       width={700}
     >
-      <Descriptions bordered column={2}>
+      <Descriptions bordered column={1}>
         <Descriptions.Item label="Material Code" span={2}>
           {materialData.materialCode}
         </Descriptions.Item>
@@ -332,16 +334,17 @@ const FilterComponent = ({ onSearch, searchTerm, onReset }) => (
   </div>
 );
 
-const QueueRequest = ({ workflowId, requestType }) => {
+// data, loading, and refetchData are now provided by the parent Queue1.
+// QueueRequest no longer fetches from the API itself.
+const QueueRequest = ({ workflowId, requestType, data = [], loading = false, refetchData }) => {
   const auth = useSelector((state) => state.auth);
-  const { userId } = useSelector((state) => state.auth);
+  const { userId } = auth;
   const actionPerformer = auth.userId;
   const navigate = useNavigate();
 
-  // State declarations
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // State declarations (fetch-related state removed — owned by Queue1 now)
   const [error, setError] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false); // for the detail modal fetch only
   const [rejectComment, setRejectComment] = useState("");
   const [requestChangeComment, setRequestChangeComment] = useState("");
   const [detailsData, setDetailsData] = useState(null);
@@ -355,7 +358,7 @@ const QueueRequest = ({ workflowId, requestType }) => {
   const [queueData, setQueueData] = useState([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
-  const [workflowCounts, setWorkflowCounts] = useState({});
+  const [workflowCounts] = useState({});
   const [materialHistoryVisible, setMaterialHistoryVisible] = useState(false);
   const [selectedMaterialCode, setSelectedMaterialCode] = useState(null);
   const [employees, setEmployees] = useState([]);
@@ -367,13 +370,18 @@ const QueueRequest = ({ workflowId, requestType }) => {
   const [vendorDtl, setVendorDtl] = useState(null);
   const [jobModalOpen, setJobModalOpen] = useState(false);
   const [jobDtl, setJobDtl] = useState(null);
-
-  // Fetch data when component mounts or role changes
-  useEffect(() => {
-    if (auth && auth.role) {
-      fetchData(auth.role);
-    }
-  }, [auth.role, workflowId]);
+// My Assignments modal
+const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+const [assignedIndents, setAssignedIndents] = useState([]);
+const [assignmentLoading, setAssignmentLoading] = useState(false);
+const [reassignTarget, setReassignTarget] = useState(null); // { indentId, assignedToEmployeeName }
+const [reassignEmployee, setReassignEmployee] = useState(null);
+const [reassignLoading, setReassignLoading] = useState(false);
+  // Version History state
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionHistoryList, setVersionHistoryList] = useState([]);
+  const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
+  const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
 
   // Fetch employees for assignment
 const fetchEmployees = () => {
@@ -387,7 +395,43 @@ const fetchEmployees = () => {
       .finally(() => setLoadingEmployees(false));
   }
 };
-
+const fetchMyAssignments = async () => {
+  setAssignmentLoading(true);
+  try {
+    const res = await axios.get("/api/indents/my-assignments", {
+      params: { assignedByUserId: userId },
+    });
+    setAssignedIndents(res.data.responseData || []);
+  } catch {
+    message.error("Failed to load assignments.");
+  } finally {
+    setAssignmentLoading(false);
+  }
+};
+const handleReassign = async () => {
+  if (!reassignEmployee) {
+    message.warning("Please select an employee.");
+    return;
+  }
+  const emp = employees.find((e) => e.employeeId === reassignEmployee);
+  setReassignLoading(true);
+  try {
+    await axios.post("/api/indents/assign-employee", {
+      indentId: reassignTarget.indentId,
+      employeeId: reassignEmployee,
+      employeeName: emp ? emp.employeeName : "",
+      assignedByUserId: userId,
+    });
+    message.success("Reassigned successfully.");
+    setReassignTarget(null);
+    setReassignEmployee(null);
+    fetchMyAssignments(); // refresh the list
+  } catch {
+    message.error("Reassignment failed.");
+  } finally {
+    setReassignLoading(false);
+  }
+};
   // Handle employee assignment
   const handleAssign = (indentId) => {
     if (!selectedEmployee) {
@@ -503,18 +547,9 @@ const fetchEmployees = () => {
       }
 
       message.success("All selected records approved.");
-      const updatedData = data.filter((item) => !selectedRowKeys.includes(item.key));
-      setData(updatedData);
-
-      const updatedCounts = {};
-      updatedData.forEach((item) => {
-        const id = item.workflowId;
-        updatedCounts[id] = (updatedCounts[id] || 0) + 1;
-      });
-      setWorkflowCounts(updatedCounts);
-
       setSelectedRowKeys([]);
       setSelectedRows([]);
+      refetchData?.();
     } catch (error) {
       console.error("Bulk approval error:", error);
       message.error("Failed to approve selected records.");
@@ -574,18 +609,73 @@ const fetchEmployees = () => {
       }
 
       message.success(`Request ${record.requestId} processed`);
-      const updatedData = data.filter((item) => item.key !== record.key);
-      setData(updatedData);
-
-      const updatedCounts = {};
-      updatedData.forEach((item) => {
-        const id = item.workflowId;
-        updatedCounts[id] = (updatedCounts[id] || 0) + 1;
-      });
-      setWorkflowCounts(updatedCounts);
+      refetchData?.();
     } catch (error) {
       message.error("Failed to approve");
       console.error("Approval error:", error);
+    }
+  };
+
+  // Fetch version history based on workflow type
+  const fetchVersionHistory = async (record) => {
+    if (!record?.requestId) {
+      message.error("No Request ID found.");
+      return;
+    }
+
+    setVersionHistoryLoading(true);
+    const workflowIdNum = parseInt(record.workflowId, 10);
+
+    let endpoint = null;
+    let paramKey = null;
+
+    // Map workflow to the correct version-history API
+    switch (workflowIdNum) {
+      case 1: // Indent
+        endpoint = `/api/indents/version-history`;
+        paramKey = "indentId";
+        break;
+      case 4: // Tender
+      case 7: // Tender (enhanced)
+        endpoint = `/api/tender-requests/version-history`;
+        paramKey = "tenderId";
+        break;
+      case 3: // Purchase Order
+        endpoint = `/api/purchase-orders/version-history`;
+        paramKey = "poId";
+        break;
+      case 5: // Service Order
+        endpoint = `/api/service-orders/version-history`;
+        paramKey = "soId";
+        break;
+      case 2: // Contingency Purchase
+        endpoint = `/api/contigency-purchase/version-history`;
+        paramKey = "cpId";
+        break;
+      default:
+        message.warning("Version history is not available for this workflow type.");
+        setVersionHistoryLoading(false);
+        return;
+    }
+
+    try {
+      const { data } = await axios.get(endpoint, {
+        params: { [paramKey]: record.requestId },
+      });
+      const list = data?.responseData || [];
+      if (list.length === 0) {
+        message.info("No version history found for this request.");
+        setVersionHistoryLoading(false);
+        return;
+      }
+      setVersionHistoryList(list);
+      setSelectedVersionIdx(list.length - 1); // default to latest
+      setVersionHistoryOpen(true);
+    } catch (error) {
+      message.error("Could not load version history.");
+      console.error("Version history fetch error:", error);
+    } finally {
+      setVersionHistoryLoading(false);
     }
   };
 
@@ -645,18 +735,18 @@ const fetchEmployees = () => {
         const previousApprovals = history.filter(
           (entry) => entry.action === "APPROVED"
         );
-        if (previousApprovals.length === 0) {
-          message.error("No previous approval found to revert to.");
-          return;
-        }
+        // if (previousApprovals.length === 0) {
+        //   message.error("No previous approval found to revert to.");
+        //   return;
+        // }
 
-        const lastApproval = previousApprovals[previousApprovals.length - 1];
+        // const lastApproval = previousApprovals[previousApprovals.length - 1];
         const currentTransition = history[0];
 
         const payload = {
           action: "REJECTED",
           actionBy: actionPerformer,
-          assignmentRole: lastApproval.assignmentRole,
+          // assignmentRole: lastApproval.assignmentRole,
           remarks: rejectComment,
           requestId: record.requestId,
           workflowTransitionId: currentTransition.workflowTransitionId,
@@ -668,16 +758,8 @@ const fetchEmployees = () => {
       }
 
       message.success(`Request ${record.requestId} rejected and out of queue`);
-      const updatedData = data.filter((item) => item.key !== record.key);
-      setData(updatedData);
       setRejectComment("");
-
-      const updatedCounts = {};
-      updatedData.forEach((item) => {
-        const id = item.workflowId;
-        updatedCounts[id] = (updatedCounts[id] || 0) + 1;
-      });
-      setWorkflowCounts(updatedCounts);
+      refetchData?.();
     } catch (error) {
       let backendMessage = "Failed to reject";
 
@@ -693,6 +775,39 @@ const fetchEmployees = () => {
       console.error("Rejection error:", error);
     }
   };
+
+  // Handle cancellation request approve/reject (Purchase Head only)
+const handleCancellationApprove = async (record, approvalStatus) => {
+  if (approvalStatus === 'REJECTED' && !rejectComment.trim()) {
+    message.warning('Please enter a reject comment.');
+    return;
+  }
+
+  try {
+    await axios.post('/api/indents/cancellation/approve', {
+      requestId: record.cancellationRequestId,
+      approvalStatus,
+      approvedBy: auth.userId,
+      approvedByName: auth.name,
+      approvalRemarks: approvalStatus === 'APPROVED' ? 'Approved' : rejectComment,
+    });
+
+    message.success(
+      approvalStatus === 'APPROVED'
+        ? `Indent ${record.requestId} cancellation approved.`
+        : `Cancellation request for ${record.requestId} rejected.`
+    );
+    setRejectComment('');
+    refetchData?.();
+  } catch (err) {
+    // Backend sends "Cancel the Tender first" — surface it directly
+    const errMsg =
+      err?.response?.data?.responseStatus?.message ||
+      err?.response?.data?.message ||
+      'Action failed.';
+    message.error(errMsg);
+  }
+};
 
   // Handle request change submit
   const handleRequestChangeSubmit = async (record) => {
@@ -753,19 +868,10 @@ const fetchEmployees = () => {
       }
 
       message.success("Request change submitted successfully.");
-      const updatedData = data.filter((item) => item.key !== record.key);
-      setData(updatedData);
-
-      const updatedCounts = {};
-      updatedData.forEach((item) => {
-        const id = item.workflowId;
-        updatedCounts[id] = (updatedCounts[id] || 0) + 1;
-      });
-      setWorkflowCounts(updatedCounts);
-
       setRequestChangeComment("");
       setSelectedRole(null);
       setPreviousRoles([]);
+      refetchData?.();
     } catch (error) {
       message.error("Failed to submit request change.");
       console.error("Request change error:", error);
@@ -825,41 +931,49 @@ const fetchEmployees = () => {
     }
 
     setSelectedRecord(record);
-    setLoading(true);
+    setDetailLoading(true);
 
     let endpoint = "";
+    let config = {};
     const workflowIdNum = parseInt(record.workflowId, 10);
 
     switch (workflowIdNum) {
       case 1:
-        endpoint = `/api/indents/${record.requestId}`;
-        break;
+       endpoint = `/api/indents/byId`;
+    config = { params: { indentId: record.requestId } };
+    break;
       case 2:
         endpoint = `/api/contigency-purchase/${record.requestId}`;
         break;
       case 3:
-        endpoint = `/api/purchase-orders/${record.requestId}`;
+        endpoint = `/api/purchase-orders/byId`;
+        config = { params: { poId: record.requestId } };
         break;
       case 4:
-        endpoint = `/api/tender-requests/${record.requestId}`;
+         endpoint = `/api/tender-requests/byId`;
+        config = { params: { tenderId: record.requestId } };
         break;
       case 5:
-        endpoint = `/api/service-orders/${record.requestId}`;
+        endpoint = `/api/service-orders/byId`;
+        config = { params: { soId: record.requestId } };
         break;
       case 7:
-        endpoint = `/api/tender-requests/${record.requestId}`;
+        endpoint = `/api/tender-requests/byId`;
+        config = { params: { tenderId: record.requestId } };
         break;
       case 10:
-        endpoint = `/api/process-controller/VoucherData?processNo=${record.requestId}`;
+        // endpoint = `/api/process-controller/VoucherData?processNo=${record.requestId}`;
+        endpoint = `/api/process-controller/VoucherData`;
+    config = { params: { processNo: record.requestId } };
         break;
       default:
         message.error("Invalid workflow ID.");
-        setLoading(false);
+        setDetailLoading(false);
         return;
     }
 
     try {
-      const response = await axios.get(endpoint);
+      const response = await axios.get(endpoint,config);
       setDetailsData(response.data.responseData);
       setQueueData(response.data.responseData);
       setModalVisible(true);
@@ -867,153 +981,12 @@ const fetchEmployees = () => {
       message.error("Failed to fetch details.");
       console.error("Fetch details error:", err);
     } finally {
-      setLoading(false);
+      setDetailLoading(false);
     }
   };
 
-  // Fetch data
-  const fetchData = async (roleName) => {
-    if (!roleName) return;
-    setLoading(true);
-    try {
-      const isPurchaseHead = roleName === "Purchase Head";
-
-      let responseData = [];
-      if (isPurchaseHead && requestType === "C") {
-        const cancelResponse = await axios.get("/allCancledIndents");
-        responseData = cancelResponse.data.responseData;
-      } else {
-        const params = new URLSearchParams();
-        params.append("roleName", roleName);
-        if (userId) {
-          params.append("userId", userId);
-        }
-        const response = await axios.get(
-          isPurchaseHead
-            ? `/completedIndentWorkflowTransition?${params.toString()}`
-            : `/pendingWorkflowTransitionQueue?${params.toString()}`
-        );
-        responseData = response.data.responseData;
-      }
-
-      const formattedData = responseData
-        .map((item) => ({
-          key: item.requestId,
-          requestId: item.requestId,
-          workflowId: item.workflowId,
-          workflowName: item.workflowName,
-          createdDate: new Date(item.createdDate),
-          remarks: item.transitionHistory?.[0]?.remarks || "No remarks",
-          status: item.status,
-          action: item.action,
-          amount: item.amount,
-          paymentType: item.paymentType,
-          poNo: item.poNO,
-          vendorName: item.vendorName,
-
-          ...(item.workflowId === 1 && {
-            indentorName: item.indentorName,
-            amount: item.amount,
-            projectName: item.projectName,
-            budgetName: item.budgetName,
-            modeOfProcurement: item.modeOfProcurement,
-            consignee: item.consignee,
-            status: item.status,
-            action: item.action,
-          }),
-          ...(item.workflowId === 2 && {
-            createdBy: item.createdBy,
-            amount: item.amount,
-            projectName: item.projectName,
-            consignee: item.deliveryLocation,
-          }),
-          ...(item.workflowId === 3 && {
-            createdBy: item.createdBy,
-            amount: item.amount,
-            projectName: item.projectName,
-            budgetCode: item.budgetCode,
-            procurementType: item.procurementType,
-            modeOfProcurement: item.modeOfProcurement,
-            consignee: item.consignee,
-          }),
-          ...((item.workflowId === 4 || item.workflowId === 7) && {
-            createdBy: item.createdBy,
-            projectName: item.projectName,
-            budgetCode: item.budgetCode,
-            modeOfProcurement: item.modeOfProcurement,
-            consignee: item.consignee,
-            amount: item.amount,
-          }),
-          ...(item.workflowId === 5 && {
-            createdBy: item.createdBy,
-            projectName: item.projectName,
-            budgetCode: item.budgetCode,
-            procurementType: item.procurementType,
-            consignee: item.consignee,
-          }),
-          ...(item.workflowId === 9 && {
-            indentorName: item.indentorName,
-            amount: item.amount,
-          }),
-          ...(item.workflowId === 10 && {
-            indentorName: item.indentorName,
-            amount: item.amount,
-            poNo: item.poNo,
-            vendorName: item.vendorName,
-            paymentType: item.paymentType,
-          }),
-          status: item.nextAction,
-          workflowTransitionId: item.workflowTransitionId,
-          assignedToUserId: item.assignedToUserId,
-          assignedToEmployeeName: item.assignedToEmployeeName,
-        }))
-        .sort((a, b) => b.createdDate - a.createdDate);
-
-      let filteredData = [];
-
-      if (workflowId != null) {
-        filteredData = formattedData.filter((item) => item.workflowId === workflowId);
-      } else if (requestType === "V") {
-        filteredData = formattedData.filter(
-          (item) => item.workflowName === "Vendor Workflow"
-        );
-      } else if (requestType === "M") {
-        filteredData = formattedData.filter(
-          (item) => item.workflowName === "Material Workflow"
-        );
-      } else if (requestType === "J") {
-        filteredData = formattedData.filter(
-          (item) => item.workflowName === "Job Workflow"
-        );
-      } else if (requestType === "Tender") {
-        filteredData = formattedData.filter(
-          (item) => item.workflowId === 4 || item.workflowId === 7
-        );
-      } else if (requestType === "C") {
-        filteredData = formattedData.filter(
-          (item) => item.action === "Indentor Cancelled"
-        );
-      } else if (requestType === "PV") {
-        filteredData = formattedData.filter((item) => item.workflowId === 10);
-      }
-
-      setData(filteredData);
-
-      const workflowCounts = {};
-      filteredData.forEach((item) => {
-        const id = item.workflowId;
-        workflowCounts[id] = (workflowCounts[id] || 0) + 1;
-      });
-
-      setWorkflowCounts(workflowCounts);
-    } catch (err) {
-      setError(err.message);
-      message.error("Failed to fetch queue data from the API.");
-      console.error("fetchData error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // fetchData removed — Queue1 (parent) owns the API call.
+  // Use refetchData() prop to trigger a parent re-fetch after actions.
 
   // Get common field helper
   const getCommonField = (workflowId, apiData, field) => {
@@ -1104,6 +1077,14 @@ const fetchEmployees = () => {
           amount: apiData.amount,
         }[field];
 
+        case 11:
+        return {
+          indentor: apiData.indentorName,
+          budgetName: apiData.budgetCode,
+          indentTitle: "JOB",
+          amount: apiData.amount,
+        }[field];
+
       default:
         return "-";
     }
@@ -1116,9 +1097,19 @@ const fetchEmployees = () => {
       dataIndex: "requestId",
       key: "requestId",
       render: (text, record) => (
-        <Button type="link" onClick={() => fetchWorkflowDetails(record)}>
-          {text}
-        </Button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+          <Button type="link" style={{ padding: 0, height: "auto" }} onClick={() => fetchWorkflowDetails(record)}>
+            {text}
+          </Button>
+          {(record.action === "Change requested" ||
+  record.status === "CHANGE_REQUEST" ||
+  record.approvalStatus === "CHANGE_REQUEST" ||
+  String(record.status).toUpperCase() === "CHANGE_REQUEST") && (
+            <Tag color="orange" style={{ fontSize: 11, lineHeight: "16px", margin: 0 }}>
+              Clarification Requested
+            </Tag>
+          )}
+        </div>
       ),
       fixed: "left",
     },
@@ -1263,7 +1254,8 @@ const fetchEmployees = () => {
       },
     },
   ];
-
+const WORKFLOW_IDS_WITH_Mat = [9, 11];
+const WORKFLOW_IDS_WITHOUT_Mat = [1,2,3,4,5,6,7,8,10];
   // Main columns
   const columns = [
     {
@@ -1271,14 +1263,32 @@ const fetchEmployees = () => {
       dataIndex: "requestId",
       key: "requestId",
       render: (text, record) => (
-        <Button type="link" onClick={() => fetchWorkflowDetails(record)}>
-          {text}
-        </Button>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2 }}>
+          <Button type="link" style={{ padding: 0, height: "auto" }} onClick={() => fetchWorkflowDetails(record)}>
+            {text}
+          </Button>
+          {(record.action === "Change requested" ||
+  record.status === "CHANGE_REQUEST" ||
+  record.approvalStatus === "CHANGE_REQUEST" ||
+  String(record.status).toUpperCase() === "CHANGE_REQUEST") && (
+            <Tag color="orange" style={{ fontSize: 11, lineHeight: "16px", margin: 0 }}>
+              Clarification Requested
+            </Tag>
+          )}
+        </div>
       ),
       fixed: "left",
     },
+    ...(WORKFLOW_IDS_WITH_Mat.includes(Number(workflowId)) ? [
     {
-      title: "Indentor",
+        title: 'Description',
+        dataIndex: 'materialDesc',
+        key: "materialDesc",
+        render: (_,record) => 
+            record.materialDesc || "-",
+    }] : []),
+    {
+      title: "Created by",
       dataIndex: "indentor",
       key: "indentor",
       render: (_, record) =>
@@ -1299,12 +1309,13 @@ const fetchEmployees = () => {
           <span>
             ₹{amount}
             {isTender && isHighValue && (
-              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>Enhanced</Tag>
+              <Tag color="purple" style={{marginLeft: 4, fontSize: 10}}>High    </Tag>
             )}
           </span>
         );
       },
     },
+    ...(WORKFLOW_IDS_WITHOUT_Mat.includes(Number(workflowId)) ? [
     {
       title: "Project",
       dataIndex: "projectName",
@@ -1317,15 +1328,15 @@ const fetchEmployees = () => {
       dataIndex: "budgetName",
       key: "budgetName",
       render: (_, record) =>
-        getCommonField(record.workflowId, record, "budget") || "-",
+        getCommonField(record.workflowId, record, "budgetName") || "-",
     },
-    {
-      title: "Indentor Title",
-      dataIndex: "workflowName",
-      key: "indentTitle",
-      render: (_, record) =>
-        getCommonField(record.workflowId, record, "indentTitle") || "-",
-    },
+    // {
+    //   title: "Indentor Title",
+    //   dataIndex: "workflowName",
+    //   key: "indentTitle",
+    //   render: (_, record) =>
+    //     getCommonField(record.workflowId, record, "indentTitle") || "-",
+    // },
     {
       title: "Mode of Procurement",
       dataIndex: "modeOfProcurement",
@@ -1344,8 +1355,8 @@ const fetchEmployees = () => {
       title: "Assigned To",
       dataIndex: "assignedToEmployeeName",
       key: "assignedTo",
-      render: (text) => text || "-",
-    },
+      render: (_,record) => record.nextRole || "-",
+    }] :[]),
     {
       title: "Status",
       dataIndex: "status",
@@ -1411,6 +1422,7 @@ const fetchEmployees = () => {
               }
 
               return (
+                <Space>
                 <Popover
                   content={
                     <div style={{ padding: 12, width: 300 }}>
@@ -1450,10 +1462,23 @@ const fetchEmployees = () => {
                 >
                   <Button type="link">Assign Indent</Button>
                 </Popover>
-              );
-            },
+
+                {/* View Version History for Purchase Head */}
+                {[1, 2, 3, 4, 5, 7].includes(parseInt(record.workflowId, 10)) && (
+                  <Button
+                    type="link"
+                    icon={<HistoryOutlined />}
+                    loading={versionHistoryLoading}
+                    onClick={() => fetchVersionHistory(record)}
+                  >
+                    View Version History
+                  </Button>
+                )}
+              </Space>
+            );
           },
-        ]
+        },
+      ]
       : [
           {
             title: "Actions",
@@ -1552,9 +1577,9 @@ const fetchEmployees = () => {
                     >
                       Edit
                     </Button>
-                    <Button type="link" onClick={() => handleApprove(record)}>
+                    {/* <Button type="link" onClick={() => handleApprove(record)}>
                       Approve
-                    </Button>
+                    </Button> */}
                   </Space>
                 );
               }
@@ -1917,6 +1942,18 @@ const fetchEmployees = () => {
                           <Button type="link">Request Change</Button>
                         </Popover>
                       )}
+
+                  {/* View Version History - for Store Purchase Officer */}
+                  {[1, 2, 3, 4, 5, 7].includes(parseInt(record.workflowId, 10)) && (
+                    <Button
+                      type="link"
+                      icon={<HistoryOutlined />}
+                      loading={versionHistoryLoading}
+                      onClick={() => fetchVersionHistory(record)}
+                    >
+                      View Version History
+                    </Button>
+                  )}
                   </Space>
                 );
               }
@@ -2171,6 +2208,18 @@ const fetchEmployees = () => {
                         <Button type="link">Seek Clarification</Button>
                       </Popover>
                     )}
+
+                  {/* View Version History - available for Indent, Tender, PO, SO workflows */}
+                  {[1, 2, 3, 4, 5, 7].includes(parseInt(record.workflowId, 10)) && (
+                    <Button
+                      type="link"
+                      icon={<HistoryOutlined />}
+                      loading={versionHistoryLoading}
+                      onClick={() => fetchVersionHistory(record)}
+                    >
+                      View Version History
+                    </Button>
+                  )}
                 </Space>
               );
             },
@@ -2178,10 +2227,78 @@ const fetchEmployees = () => {
         ]),
   ];
 
-  const columnsToRender = requestType === "PV" ? pvColumns : columns;
+  const cancellationColumns = [
+  {
+    title: 'Indent ID',
+    dataIndex: 'requestId',
+    key: 'requestId',
+    fixed: 'left',
+  },
+  {
+    title: 'Requested By',
+    dataIndex: 'requestedByName',
+    key: 'requestedByName',
+  },
+  {
+    title: 'Reason for Cancellation',
+    dataIndex: 'cancellationReason',
+    key: 'cancellationReason',
+  },
+  {
+    title: 'Requested On',
+    dataIndex: 'createdDate',
+    key: 'createdDate',
+    render: (val) => val ? new Date(val).toLocaleDateString('en-IN') : '-',
+  },
+  {
+    title: 'Actions',
+    key: 'actions',
+    fixed: 'right',
+    render: (_, record) => (
+      <Space>
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => handleCancellationApprove(record, 'APPROVED')}
+        >
+          Approve
+        </Button>
+        <Popover
+          content={
+            <div style={{ padding: 12 }}>
+              <Input.TextArea
+                placeholder="Reject reason"
+                rows={3}
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+              />
+              <Button
+                type="primary"
+                danger
+                style={{ marginTop: 8 }}
+                onClick={() => handleCancellationApprove(record, 'REJECTED')}
+              >
+                Submit
+              </Button>
+            </div>
+          }
+          title="Reject Cancellation Request"
+          trigger="click"
+        >
+          <Button danger size="small">Reject</Button>
+        </Popover>
+      </Space>
+    ),
+  },
+];
+const columnsToRender =
+  requestType === 'CR' ? cancellationColumns :
+  requestType === 'PV' ? pvColumns :
+  columns;
+//   const columnsToRender = requestType === "PV" ? pvColumns : columns;
 
   const filteredData = data.filter((item) =>
-    item.requestId.toString().toLowerCase().includes(searchTerm.toLowerCase())
+    item.requestId?.toString().toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleSearch = useCallback((value) => {
@@ -2200,7 +2317,7 @@ const fetchEmployees = () => {
         onReset={handleReset}
       />
       <Space style={{ marginBottom: 16 }}>
-        {auth.role !== "Purchase Head" && (
+        {auth.role !== "Purchase Head" && requestType !== 'CR' && (
           <Button
             type="primary"
             onClick={handleApproveAll}
@@ -2209,7 +2326,7 @@ const fetchEmployees = () => {
             Approve All
           </Button>
         )}
-        {auth.role === "Purchase Head" && (
+        {auth.role === "Purchase Head" && requestType !== 'CR' && (
           <Button
             type="primary"
             disabled={selectedRows.length === 0}
@@ -2232,9 +2349,24 @@ const fetchEmployees = () => {
           >
             Multiple Indent Ids Tender Creation
           </Button>
+          
         )}
+        {auth.role === "Purchase Head" && (
+  <Button
+    icon={<TeamOutlined />}
+    style={{ marginBottom: 12 }}
+    onClick={() => {
+      setAssignmentModalOpen(true);
+      fetchMyAssignments();
+      fetchEmployees(); // pre-load employee list for reassign
+    }}
+  >
+    My Assignments
+  </Button>
+)}
         {Object.entries(workflowCounts).map(([id, count]) => (
           <Tag key={id} color="blue">
+          {id.replace(" Workflow", "").toUpperCase()} ({count})
             Pending RequestIds Count: {count}
           </Tag>
         ))}
@@ -2253,7 +2385,7 @@ const fetchEmployees = () => {
         />
       )}
 
-      <QueueModal
+      {/* <QueueModal
         modalVisible={modalVisible}
         setModalVisible={setModalVisible}
         selectedRecord={selectedRecord}
@@ -2264,7 +2396,31 @@ const fetchEmployees = () => {
         setMaterialHistoryVisible={setMaterialHistoryVisible}
         selectedMaterialCode={selectedMaterialCode}
         setSelectedMaterialCode={setSelectedMaterialCode}
-      />
+        fetchVersionHistory={fetchVersionHistory}        
+  versionHistoryLoading={versionHistoryLoading}
+      /> */}
+
+      <QueueModal
+              modalVisible={modalVisible}
+              setModalVisible={setModalVisible}
+              selectedRecord={selectedRecord}
+              detailsData={detailsData}
+              historyVisible={historyVisible}
+              setHistoryVisible={setHistoryVisible}
+              materialHistoryVisible={materialHistoryVisible}
+              setMaterialHistoryVisible={setMaterialHistoryVisible}
+              selectedMaterialCode={selectedMaterialCode}
+              setSelectedMaterialCode={setSelectedMaterialCode}
+              fetchVersionHistory={fetchVersionHistory}
+              versionHistoryLoading={versionHistoryLoading}
+              // ── new props for the version history Modal now living in QueueModal ──
+              versionHistoryOpen={versionHistoryOpen}
+              setVersionHistoryOpen={setVersionHistoryOpen}
+              versionHistoryList={versionHistoryList}
+              selectedVersionIdx={selectedVersionIdx}
+              setSelectedVersionIdx={setSelectedVersionIdx}
+            />
+      
       <MaterialDetailModal
         visible={materialModalOpen}
         setVisible={setMaterialModalOpen}
@@ -2280,6 +2436,448 @@ const fetchEmployees = () => {
         setVisible={setJobModalOpen}
         jobData={jobDtl}
       />
+
+      {/* ── Version History Modal ── */}
+      <Modal
+        open={versionHistoryOpen}
+        onCancel={() => { setVersionHistoryOpen(false); setVersionHistoryList([]); }}
+        title="Version History"
+        footer={null}
+        width={960}
+        destroyOnClose
+      >
+        {(() => {
+          if (versionHistoryList.length === 0) {
+            return (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>
+                No version history found.
+              </div>
+            );
+          }
+
+          // Sort ASC so index 0 = V1, last = latest
+          const sorted = [...versionHistoryList].sort(
+            (a, b) => (a.version || 0) - (b.version || 0)
+          );
+          const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
+          const curr = sorted[selIdx];
+          const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
+
+          if (!curr) return null;
+
+          // ── Field definitions per workflow type ──
+          const workflowId = curr.workflowId || versionHistoryList[0]?.workflowId;
+          const wId = parseInt(workflowId, 10);
+
+          const HEADER_FIELDS = [
+            { key: 'indentorName',                     label: 'Indentor' },
+            { key: 'indentorMobileNo',                 label: 'Mobile No.' },
+            { key: 'indentorEmailAddress',             label: 'Email' },
+            { key: 'createdBy',                        label: 'Created By' },
+            { key: 'modeOfProcurement',                label: 'Mode of Procurement' },
+            { key: 'projectName',                      label: 'Project' },
+            { key: 'projectCode',                      label: 'Project Code' },
+            { key: 'isUnderProject',                   label: 'Under Project' },
+            { key: 'consignesLocation',                label: 'Consignee Location' },
+            { key: 'consignee',                        label: 'Consignee' },
+            { key: 'indentType',                       label: 'Indent Type' },
+            { key: 'materialCategoryType',             label: 'Material Category' },
+            { key: 'purpose',                          label: 'Purpose' },
+            { key: 'justification',                    label: 'Justification' },
+            { key: 'quarter',                          label: 'Quarter' },
+            { key: 'budgetCode',                       label: 'Budget Code' },
+            { key: 'procurementType',                  label: 'Procurement Type' },
+            { key: 'isPreBidMeetingRequired',          label: 'Pre-Bid Meeting Required' },
+            { key: 'preBidMeetingDate',                label: 'Pre-Bid Meeting Date' },
+            { key: 'preBidMeetingVenue',               label: 'Pre-Bid Meeting Venue' },
+            { key: 'isItARateContractIndent',          label: 'Rate Contract Indent' },
+            { key: 'estimatedRate',                    label: 'Estimated Rate' },
+            { key: 'periodOfContract',                 label: 'Period of Contract' },
+            { key: 'rateContractJobCodes',             label: 'Rate Contract Job Codes' },
+            { key: 'brandPac',                         label: 'Brand PAC' },
+            { key: 'brandAndModel',                    label: 'Brand & Model' },
+            { key: 'proprietaryJustification',         label: 'Proprietary Justification' },
+            { key: 'proprietaryAndLimitedDeclaration', label: 'Proprietary Declaration' },
+            { key: 'reason',                           label: 'Reason' },
+            { key: 'buyBack',                          label: 'Buy Back' },
+            { key: 'buyBackAmount',                    label: 'Buy Back Amount' },
+            { key: 'serialNumber',                     label: 'Serial Number' },
+            { key: 'modelNumber',                      label: 'Model Number' },
+            { key: 'technicalSpecificationsFileName',  label: 'Technical Specs File' },
+            { key: 'uploadingPriorApprovalsFileName',  label: 'Prior Approvals File' },
+            { key: 'draftEOIOrRFPFileName',            label: 'Draft EOI/RFP File' },
+            { key: 'uploadPACOrBrandPACFileName',      label: 'PAC/Brand PAC File' },
+            { key: 'uploadBuyBackFileNames',           label: 'Buy Back File' },
+          ].filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
+
+          const MAT_FIELDS = [
+            { key: 'materialCode',        label: 'Material Code' },
+            { key: 'materialDescription', label: 'Description' },
+            { key: 'quantity',            label: 'Qty' },
+            { key: 'unitPrice',           label: 'Unit Price' },
+            { key: 'totalPrice',          label: 'Total Price' },
+            { key: 'uom',                 label: 'UOM' },
+            { key: 'budgetCode',          label: 'Budget Code' },
+            { key: 'currency',            label: 'Currency' },
+            { key: 'conversionRate',      label: 'Conversion Rate' },
+            { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
+            { key: 'materialCategory',    label: 'Category' },
+            { key: 'materialSubCategory', label: 'Sub-Category' },
+          ];
+          const JOB_FIELDS = [
+            { key: 'jobCode',           label: 'Job Code' },
+            { key: 'jobDescription',    label: 'Description' },
+            { key: 'briefDescription',  label: 'Brief Description' },
+            { key: 'quantity',          label: 'Qty' },
+            { key: 'estimatedPrice',    label: 'Est. Price' },
+            { key: 'totalPrice',        label: 'Total Price' },
+            { key: 'uom',               label: 'UOM' },
+            { key: 'budgetCode',        label: 'Budget Code' },
+            { key: 'currency',          label: 'Currency' },
+            { key: 'category',          label: 'Category' },
+            { key: 'subCategory',       label: 'Sub-Category' },
+            { key: 'origin',            label: 'Origin' },
+            { key: 'modeOfProcurement', label: 'Mode of Procurement' },
+          ];
+
+          const isJob = (curr.indentType || '').toLowerCase() === 'job';
+          const lineLabel = isJob ? 'Job' : 'Item';
+          const lineFields = isJob ? JOB_FIELDS : MAT_FIELDS;
+          const descKey = isJob ? 'jobDescription' : 'materialDescription';
+
+          // Determine line items key based on workflow
+          let currLines = [];
+          let prevLines = [];
+          if ([1].includes(wId)) {
+            currLines = isJob ? (curr.jobDetails || []) : (curr.materialDetails || []);
+            prevLines = prev ? (isJob ? (prev.jobDetails || []) : (prev.materialDetails || [])) : [];
+          } else if ([3].includes(wId)) {
+            currLines = curr.purchaseOrderDetails || curr.poItems || [];
+            prevLines = prev ? (prev.purchaseOrderDetails || prev.poItems || []) : [];
+          } else if ([4, 7].includes(wId)) {
+            currLines = curr.tenderItems || curr.items || [];
+            prevLines = prev ? (prev.tenderItems || prev.items || []) : [];
+          } else if ([5].includes(wId)) {
+            currLines = curr.serviceOrderDetails || curr.items || [];
+            prevLines = prev ? (prev.serviceOrderDetails || prev.items || []) : [];
+          } else if ([2].includes(wId)) {
+            currLines = curr.contingencyItems || curr.items || [];
+            prevLines = prev ? (prev.contingencyItems || prev.items || []) : [];
+          }
+
+          // Compute header diffs
+          const headerDiffs = prev
+            ? HEADER_FIELDS
+                .filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
+                .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
+            : [];
+
+          // Compute line item diffs
+          const lineDiffs = [];
+          const maxLen = Math.max(prevLines.length, currLines.length);
+          for (let i = 0; i < maxLen; i++) {
+            const p = prevLines[i];
+            const c = currLines[i];
+            if (!p) {
+              lineDiffs.push({ idx: i, type: 'added', item: c });
+            } else if (!c) {
+              lineDiffs.push({ idx: i, type: 'removed', item: p });
+            } else {
+              const changed = lineFields
+                .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
+                .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
+              if (changed.length)
+                lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c[descKey] || `Item ${i + 1}` });
+            }
+          }
+
+          const prevTotal = prev != null ? Number(prev.totalAmount || prev.totalPriceOfAllMaterials || 0) : null;
+          const currTotal = Number(curr.totalAmount || curr.totalPriceOfAllMaterials || 0);
+          const totalChanged = prev && prevTotal !== currTotal;
+          const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
+
+          const fmtCurrency = val =>
+            val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+          const fmtVal = val => (val == null || val === '') ? '—' : String(val);
+
+          return (
+            <div style={{ display: 'flex', minHeight: '450px' }}>
+
+              {/* Left: version selector */}
+              <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
+                <div style={{
+                  padding: '8px 12px',
+                  fontWeight: 600,
+                  fontSize: '11px',
+                  color: '#aaa',
+                  letterSpacing: '1px',
+                  borderBottom: '1px solid #f0f0f0',
+                }}>
+                  VERSIONS
+                </div>
+                {sorted.map((v, idx) => {
+                  const isSel = idx === selIdx;
+                  return (
+                    <div
+                      key={v.id || v.indentId || v.tenderId || v.poId || v.soId || idx}
+                      onClick={() => setSelectedVersionIdx(idx)}
+                      style={{
+                        padding: '10px 14px',
+                        cursor: 'pointer',
+                        borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
+                        background: isSel ? '#e6f7ff' : 'transparent',
+                        borderBottom: '1px solid #f5f5f5',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.version}</span>
+                        {v.isActive
+                          ? <Tag color="green" style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
+                          : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>
+                        }
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>
+                        {v.updatedBy || v.createdBy || '—'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
+                        {v.updatedDate
+                          ? new Date(v.updatedDate).toLocaleDateString('en-IN')
+                          : v.createdDate
+                          ? new Date(v.createdDate).toLocaleDateString('en-IN')
+                          : '—'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Right: diff panel */}
+              <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '540px' }}>
+
+                {/* Comparison heading */}
+                <div style={{
+                  padding: '12px 0',
+                  borderBottom: '1px solid #f0f0f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                }}>
+                  {prev ? (
+                    <>
+                      <span style={{ fontWeight: 600, color: '#888' }}>V{prev.version}</span>
+                      <span style={{ color: '#ccc' }}>→</span>
+                      <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.version}</span>
+                      {totalChanges === 0
+                        ? <Tag>No changes</Tag>
+                        : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>
+                      }
+                    </>
+                  ) : (
+                    <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.version} — Initial Version</span>
+                  )}
+                </div>
+
+                {/* Initial version */}
+                {!prev && (
+                  <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
+                    This is the first version. No previous version to compare against.
+                    <div style={{ marginTop: '12px' }}>
+                      {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
+                        <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
+                          <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
+                          <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No changes */}
+                {prev && totalChanges === 0 && (
+                  <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
+                    No field-level changes detected compared to V{prev.version}.
+                  </div>
+                )}
+
+                {/* Diff sections */}
+                {prev && totalChanges > 0 && (
+                  <>
+                    {/* Total value change */}
+                    {totalChanged && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
+                          TOTAL VALUE
+                        </div>
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          padding: '10px 14px', background: '#fffbe6',
+                          border: '1px solid #ffe58f', borderRadius: '6px',
+                        }}>
+                          <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total Value</span>
+                          <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>
+                            {fmtCurrency(prevTotal)}
+                          </span>
+                          <span style={{ color: '#bbb' }}>→</span>
+                          <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>
+                            {fmtCurrency(currTotal)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Header field changes */}
+                    {headerDiffs.length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
+                          GENERAL FIELDS
+                        </div>
+                        {headerDiffs.map(f => (
+                          <div key={f.key} style={{
+                            display: 'flex', alignItems: 'flex-start', gap: '10px',
+                            padding: '9px 14px', marginBottom: '4px',
+                            background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px',
+                          }}>
+                            <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>
+                              {f.label}
+                            </span>
+                            <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>
+                              {fmtVal(f.oldVal)}
+                            </span>
+                            <span style={{ color: '#bbb' }}>→</span>
+                            <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>
+                              {fmtVal(f.newVal)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Line item changes */}
+                    {lineDiffs.length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
+                          {lineLabel.toUpperCase()} DETAILS
+                        </div>
+                        {lineDiffs.map((diff, i) => {
+                          const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
+                          const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
+                          const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
+                          const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
+                          return (
+                            <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+                              <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
+                                {prefix}{lineLabel} {diff.idx + 1}
+                                {diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}
+                                {diff.type !== 'modified' && diff.item?.[descKey] ? ` — ${diff.item[descKey]}` : ''}
+                              </div>
+                              <div style={{ padding: '8px 12px', background: '#fff' }}>
+                                {diff.type === 'modified'
+                                  ? diff.changes.map(c => (
+                                      <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                        <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
+                                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
+                                        <span style={{ color: '#bbb' }}>→</span>
+                                        <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
+                                      </div>
+                                    ))
+                                  : lineFields.map(f => (
+                                      <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                        <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
+                                        <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
+                                      </div>
+                                    ))
+                                }
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+      {auth.role === "Purchase Head" && (
+        <Modal
+          title="My Assignments"
+          open={assignmentModalOpen}
+          onCancel={() => {
+            setAssignmentModalOpen(false);
+            setReassignTarget(null);
+            setReassignEmployee(null);
+          }}
+          footer={null}
+          width={820}
+          destroyOnClose
+        >
+          <Table
+            loading={assignmentLoading}
+            dataSource={assignedIndents}
+            rowKey="indentId"
+            size="small"
+            pagination={{ pageSize: 8 }}
+            columns={[
+              { title: "Indent ID", dataIndex: "indentId", key: "indentId", width: 130 },
+              { title: "Indentor", dataIndex: "indentorName", key: "indentorName" },
+              { title: "Subject", dataIndex: "subject", key: "subject", ellipsis: true },
+              { title: "Assigned To", dataIndex: "assignedToEmployeeName", key: "assignedToEmployeeName" },
+              {
+                title: "Assigned On",
+                dataIndex: "assignedDate",
+                key: "assignedDate",
+                width: 130,
+                render: (val) => val ? new Date(val).toLocaleDateString() : "-",
+              },
+              {
+                title: "Action",
+                key: "action",
+                width: 90,
+                render: (_, record) => (
+                  <Button size="small" onClick={() => { setReassignTarget(record); setReassignEmployee(null); }}>
+                    Change
+                  </Button>
+                ),
+              },
+            ]}
+          />
+
+          {reassignTarget && (
+            <div style={{ marginTop: 16, padding: "12px 16px", background: "#f5f5f5", borderRadius: 6, borderLeft: "3px solid #1677ff" }}>
+              <p style={{ marginBottom: 8 }}>
+                Reassigning <strong>{reassignTarget.indentId}</strong>
+                {" — currently: "}
+                <strong>{reassignTarget.assignedToEmployeeName}</strong>
+              </p>
+              <Space>
+                <Select
+                  placeholder={loadingEmployees ? "Loading..." : "Select new employee"}
+                  style={{ width: 240 }}
+                  onChange={setReassignEmployee}
+                  value={reassignEmployee}
+                  showSearch
+                  optionFilterProp="children"
+                >
+                  {employees.map((emp) => (
+                    <Option key={emp.employeeId} value={emp.employeeId}>
+                      {emp.employeeName}
+                    </Option>
+                  ))}
+                </Select>
+                <Button type="primary" loading={reassignLoading} onClick={handleReassign}>
+                  Confirm
+                </Button>
+                <Button onClick={() => { setReassignTarget(null); setReassignEmployee(null); }}>
+                  Cancel
+                </Button>
+              </Space>
+            </div>
+          )}
+        </Modal>
+      )}
     </div>
   );
 };

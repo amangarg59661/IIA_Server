@@ -23,6 +23,12 @@ public class GiMasterEntity {
     
     @Column(name = "gprn_sub_process_id", nullable = false)
     private Integer gprnSubProcessId;
+
+    @Column(name = "spo_rejection_reason")
+private String spoRejectionReason;
+
+@Column(name = "spo_rejection_count", nullable = false)
+private Integer spoRejectionCount = 0;
     
     @Column(name = "installation_date")
     private LocalDate installationDate;

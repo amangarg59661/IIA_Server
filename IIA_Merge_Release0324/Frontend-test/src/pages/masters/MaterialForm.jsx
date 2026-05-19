@@ -447,6 +447,7 @@ const searchMaterials = async (searchText) => {
     showSearch
     placeholder="Type to search material..."
     filterOption={false}
+    value={selectedMaterialCode}
     onSearch={async (value) => {
   const results = await searchMaterials(value);
   setMaterialList(Array.isArray(results) ? results : []);
@@ -772,6 +773,7 @@ options={Array.isArray(materialList) ? materialList : []}
     setUploadedFiles([]);
     setExistingData(null);
     setIsEditMode(false);
+    setSelectedMaterialCode(null); 
     form.setFieldsValue({
       materialCode: "",
       status: "",

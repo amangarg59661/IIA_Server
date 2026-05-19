@@ -19,15 +19,20 @@ public interface TenderRequestService {
     public List<TenderResponseDto> getAllTenderRequests();
     public void deleteTenderRequest(String tenderId);
     public TenderResponseDto updateTender(String tenderId, tenderUpdateDto dto);
-
+       // public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
     public VendorQualificationResponseDto  vendorCheck(String tenderId, String vendorId);
     public TenderResponseBase64FilesDto getTenderDataWithBase64Files(String tenderId) throws IOException;
     public List<SearchTenderIdDto> searchTenderIds(String type, String value);
 
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluation();
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForGemTenderEvaluation();
+    public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
+    public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByUser(Integer userId);
 
-
+    public TenderResponseDto saveTenderDraft(TenderRequestDto dto);
+    public TenderResponseDto updateTenderDraft(String tenderId, TenderRequestDto dto);  
+    public TenderResponseDto submitTenderDraft(String tenderId, TenderRequestDto dto);
+    public List<TenderResponseDto> getUserTenderDrafts(Integer userId);
 
     //TenderWithIndentResponseDTO getTendersRequestById(String tenderId);
 }

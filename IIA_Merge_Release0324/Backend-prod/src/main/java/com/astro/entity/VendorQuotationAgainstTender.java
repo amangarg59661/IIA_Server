@@ -74,6 +74,31 @@ public class VendorQuotationAgainstTender {
     @Column(name = "vendor_response", columnDefinition = "TEXT")
     private String vendorResponse;
 
+      
+    @Column(name = "technical_status", length = 20)
+    private String technicalStatus = "PENDING";
+
+    @Column(name = "technical_remarks", length = 1000)
+    private String technicalRemarks;
+
+    @Column(name = "technical_evaluated_by")
+    private Integer technicalEvaluatedBy;
+
+    @Column(name = "technical_evaluated_date")
+    private LocalDateTime technicalEvaluatedDate;
+
+    /**
+     * Controls whether the financial (price) bid is visible to the evaluator.
+     * For SINGLE_BID: always true after submission.
+     * For DOUBLE_BID: true only after technical approval.
+     */
+    @Column(name = "financial_bid_visible")
+    private Boolean financialBidVisible = false;
+
+    /** Rank assigned after financial evaluation (L1, L2, L3...) */
+    @Column(name = "`rank`")
+    private Integer rank;
+
    public enum WorkflowActorRole {
       VENDOR,
       INDENTOR,

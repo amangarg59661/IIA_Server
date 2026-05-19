@@ -14,6 +14,7 @@ public interface FileProcessingService {
 
     public Resource viewFile(String fileType, String fileName);
     public String getContentType(String fileName);
+     public String getDecodedFileName(String fileName);
 
 
 }

@@ -2,7 +2,7 @@
  export const grvFields =  [
     {
         heading: "GRV Details",
-        colCnt: 5,
+        colCnt: 4,
         fieldList: [
             {
                 name: "giNo",
@@ -31,13 +31,13 @@
     {
         heading: "Material Details",
         name: "materialDtlList",
-        colCnt: 8,
+        colCnt: 4,
         children: [
             {
                 name: "materialCode",
                 label: "Material Code",
                 type: "text",
-                span: 2,
+                span: 1,
                 disabled: true,
                 required: true
             },
@@ -45,7 +45,7 @@
                 name: "materialDesc",
                 label: "Material Description",
                 type: "text",
-                span: 3,
+                span: 2,
                 disabled: true,
                 required: true
             },
@@ -53,7 +53,7 @@
                 name: "uomId",
                 label: "UOM",
                 type: "text",
-                span: 3,
+                span: 1,
                 disabled: true,
                 required: true
             },
@@ -69,7 +69,7 @@
                 name: "returnQuantity",
                 label: "Return Quantity",
                 type: "text",
-                span: 1,
+                span: 3,
                 // disabled: true,
                 required: true
             },
@@ -84,14 +84,15 @@
                     { value: "Quality Issue", label: "Quality Issue" },
                     { value: "Other", label: "Other" }
                 ],
-                span: 2,
+                span: 1,
                 required: true
             },
             {
                 name: "rejectReason",
                 label: "Reason for Return",
                 type: "text",
-                span: 4,
+                disabled:true,
+                span: 2,
                 required: true
             }
         ]

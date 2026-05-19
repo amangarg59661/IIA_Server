@@ -222,7 +222,8 @@ const ProjectManagement = () => {
       title: 'Budget Code',
       dataIndex: 'projectCode',
       key: 'projectCode',
-      width: 150
+      width: 150,
+      
     },
     {
       title: 'Project Head',
@@ -245,6 +246,21 @@ const ProjectManagement = () => {
       width: 120,
       render: (date) => date && dayjs(date).isValid() ? dayjs(date).format('YYYY-MM-DD') : '-'
     },
+    {
+      title: 'Created Date',
+      dataIndex: 'createdDate',
+      key: 'endDate',
+      width: 120,
+      render: (date) => date && dayjs(date).isValid() ? dayjs(date).format('YYYY-MM-DD') : '-'
+    },
+    {
+      title: 'Last Updated Date',
+      dataIndex: 'updatedDate',
+      key: 'endDate',
+      width: 120,
+      render: (date) => date && dayjs(date).isValid() ? dayjs(date).format('YYYY-MM-DD') : '-'
+    },
+
     {
       title: 'Status',
       dataIndex: 'status',

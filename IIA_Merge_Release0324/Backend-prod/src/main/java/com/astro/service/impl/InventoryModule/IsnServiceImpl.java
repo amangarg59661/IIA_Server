@@ -109,15 +109,27 @@ public class IsnServiceImpl implements IsnService {
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
         
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        //     throw new InvalidInputException(new ErrorDetails(
+        //             AppConstant.USER_INVALID_INPUT,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //             AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Invalid process ID"));
+        // }
+Integer isnSubProcessId;
+        if (3 == processNoSplit.length ){
+             isnSubProcessId = Integer.parseInt(processNoSplit[2]);
+        }else if(2 == processNoSplit.length) {
+             isnSubProcessId = Integer.parseInt(processNoSplit[1]);
+        }else {
             throw new InvalidInputException(new ErrorDetails(
-                    AppConstant.USER_INVALID_INPUT,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Invalid process ID"));
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Invalid process ID"));
         }
 
-        Integer isnSubProcessId = Integer.parseInt(processNoSplit[1]);
+        // Integer isnSubProcessId = Integer.parseInt(processNoSplit[1]);
 
         IsnMasterEntity isnMaster = isnmr.findById(isnSubProcessId)
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -185,7 +197,7 @@ public class IsnServiceImpl implements IsnService {
             for (OhqMasterEntity ohq : ohqList) {
                 if (ohq.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
                     IsnOhqDtlsDto ohqDto = new IsnOhqDtlsDto();
-                    ohqDto.setLocatorId(ohq.getLocatorId().toString());
+                    ohqDto.setLocatorId(ohq.getLocatorId());
                     ohqDto.setQuantity(ohq.getQuantity());
                     try {
                         ohqDto.setCustodianId(ohq.getCustodianId() != null

@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useRef} from "react";
 import {
   Modal,
   Typography,
@@ -31,7 +31,9 @@ import QueueHistory from "./QueueHistory";
 import MaterialHistory from "./MaterialIndentHistory";
 import { baseURL } from '../../../App';
 import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
-
+// Add after: import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
+import PrintFormate from '../../../utils/PrintFormate';
+import { useReactToPrint } from 'react-to-print';
 
 
 const QueueModal = ({
@@ -45,9 +47,22 @@ const QueueModal = ({
   setMaterialHistoryVisible,
   selectedMaterialCode,
   setSelectedMaterialCode,
+  fetchVersionHistory,
+  versionHistoryLoading,
+  // ── version history modal (owned here now) ──
+  versionHistoryOpen,
+  setVersionHistoryOpen,
+  versionHistoryList,
+  selectedVersionIdx,
+  setSelectedVersionIdx,
 }) => {
-
+ const printComponentRef = useRef();
+  const handlePrint = useReactToPrint({
+    content: () => printComponentRef.current,
+    documentTitle: `Indent - ${detailsData?.indentId || selectedRecord?.requestId || "Draft"}`,
+  });
   return (
+    <>
     <Modal
       title={
         <div className="flex items-center justify-between">
@@ -56,6 +71,22 @@ const QueueModal = ({
               selectedRecord?.requestId || "N/A"
             }`}
           </span>
+          <Button
+  type="link"
+  icon={<HistoryOutlined />}
+  onClick={() => fetchVersionHistory(selectedRecord)}
+  loading={versionHistoryLoading}
+>
+  View Version History
+</Button>
+<Button
+            type="link"
+            icon={<FilePdfOutlined />}
+            onClick={handlePrint}
+            disabled={!detailsData}
+          >
+            Print
+          </Button>
           <Button
             type="link"
             icon={<HistoryOutlined />}
@@ -337,7 +368,7 @@ const QueueModal = ({
                       title: "Unit Price",
                       dataIndex: "unitPrice",
                       align: "right",
-                      render: (text) => `₹${text?.toFixed(2)}`,
+                      render: (text) => `${text?.toFixed(2)}`,
                     },
                     {
                       title: "Currency",
@@ -413,6 +444,9 @@ const QueueModal = ({
                         : detailsData.proprietaryAndLimitedDeclaration === false
                         ? "No"
                         : "N/A"}
+                    </div>
+                    <div className="detail-item">
+                      <strong>Justification:</strong> {detailsData.proprietaryJustification || "N/A"}
                     </div>
                     </Col>
                     </Row>
@@ -670,7 +704,7 @@ const QueueModal = ({
                       title: "Unit Price",
                       dataIndex: "unitPrice",
                       align: "right",
-                      render: (text) => `₹${text?.toFixed(2)}`,
+                      render: (text) => `${text?.toFixed(2)}`,
                     },
                     { title: "UOM", dataIndex: "uom", width: 100 },
                     {
@@ -741,6 +775,18 @@ const QueueModal = ({
                         ? `${detailsData.deliveryPeriod} days`
                         : "N/A"}
                     </div>
+                    <div className="detail-item">
+                    <strong>PBG Applicable:</strong>{" "}
+                    {detailsData.applicablePbgToBeSubmitted? "Yes" : "No"}
+                    </div>
+                    <div className="detail-item">
+                    <strong>INCO Terms:</strong>{" "}
+                    {detailsData.incoTerms}
+                    </div>
+                    <div className="detail-item">
+                    <strong>Consignee Address:</strong>{" "}
+                    {detailsData.consignesAddress}
+                    </div>
                   </Col>
                   <Col span={12}>
                     <div className="detail-item">
@@ -755,13 +801,26 @@ const QueueModal = ({
                       <strong>Payment Terms:</strong>{" "}
                       {detailsData.paymentTerms || "N/A"}
                     </div>
+                     <div className="detail-item">
+                    <strong>Delivery Date:</strong>{" "}
+                    {detailsData.deliveryDate || "NA"}
+                    </div>
                     <div className="detail-item">
                       <strong>LD Clause:</strong>{" "}
                       {detailsData.ifLdClauseApplicable ? "Yes" : "No"}
                     </div>
+                    <div className="detail-item">
+                    <strong>Freight Forwarder:</strong>{" "}
+                    {detailsData.transporterAndFreightForWarderDetails || "NA"}
+                    </div>
+                     <div className="detail-item">
+                    <strong>Waranty:</strong>{" "}
+                    {detailsData.warranty || "NA"}
+                    </div>
                   </Col>
                 </Row>
               </div>
+              
                <div className="detail-section">
                 <Typography.Title level={5} className="section-title">
                   <FilePdfOutlined /> Document Details
@@ -808,6 +867,10 @@ const QueueModal = ({
                       <strong>Account Number:</strong>{" "}
                       {detailsData.vendorAccountNumber || "N/A"}
                     </div>
+                    <div className="detail-item">
+                      <strong>Address:</strong>{" "}
+                      {detailsData.vendorAddress || "N/A"}
+                    </div>
                   </Col>
                   <Col span={12}>
                     <div className="detail-item">
@@ -815,7 +878,7 @@ const QueueModal = ({
                       {detailsData.vendorsIfscCode || "N/A"}
                     </div>
                     <div className="detail-item">
-                      <strong>Account Name:</strong>{" "}
+                      <strong>Bank Name:</strong>{" "}
                       {detailsData.vendorAccountName || "N/A"}
                     </div>
                   </Col>
@@ -844,12 +907,17 @@ const QueueModal = ({
                       ellipsis: true,
                     },
                     {
+                      title: "UOM",
+                      dataIndex: "uom",
+                      align: "right",
+                    },
+                    {
                       title: "Quantity",
                       dataIndex: "quantity",
                       align: "right",
                     },
                     {
-                      title: "Rate",
+                      title: "Unit Rate",
                       dataIndex: "rate",
                       align: "right",
                       render: (text) => `₹${text?.toFixed(2)}`,
@@ -860,6 +928,12 @@ const QueueModal = ({
                       dataIndex: "gst",
                       render: (text) => `${text}%`,
                       align: "right",
+                    },
+                    {
+                      title: "Duties",
+                      dataIndex: "duties",
+                      align: "right",
+                      render: (text) => `${text}%`,
                     },
                     {
                       title: "Freight",
@@ -1258,7 +1332,7 @@ const QueueModal = ({
                       ))}
                     </div>
 
-                    <Collapse accordion defaultActiveKey={["0"]}>
+                    <Collapse accordion defaultActiveKey={["0"]}style={{ overflow: 'hidden' }}>
                       {detailsData.indentResponseDTO.map((indent, index) => (
                         <Collapse.Panel
                           key={index}
@@ -1271,7 +1345,7 @@ const QueueModal = ({
                             </Tag>
                           }
                         >
-                          <div style={{ padding: "16px 0" }}>
+                          <div style={{ padding: "16px 0",  overflowX: 'auto' }}>
                             <Row gutter={24}>
                               <Col span={12}>
                                 <div className="detail-item">
@@ -1281,6 +1355,10 @@ const QueueModal = ({
                                 <div className="detail-item">
                                   <strong>Indentor:</strong>{" "}
                                   {indent.indentorName || "N/A"}
+                                </div>
+                                <div className="detail-item">
+                                  <strong>Indentor Department:</strong> 
+                                  {indent.employeeDept || "N/A"}
                                 </div>
                                 <div className="detail-item">
                                   <strong>Contact:</strong>{" "}
@@ -1309,13 +1387,10 @@ const QueueModal = ({
                                   {indent.employeeId || "N/A"}
                                 </div>
                                 <div className="detail-item">
-                                  <strong>Employee Name:</strong>{" "}
+                                  <strong>Created By:</strong>{" "}
                                   {indent.employeeName || "N/A"}
                                 </div>
-                                <div className="detail-item">
-                                  <strong>Employee Department:</strong> ₹
-                                  {indent.employeeDept || "N/A"}
-                                </div>
+                                
                               </Col>
                             </Row>
 
@@ -1373,7 +1448,19 @@ const QueueModal = ({
                                     title: "Unit Price",
                                     dataIndex: "unitPrice",
                                     align: "right",
-                                    render: (text) => `₹${text?.toFixed(2)}`,
+                                    render: (text) => `${text?.toFixed(2)}`,
+                                  },
+                                  {
+                                    title: "Currency",
+                                    dataIndex: "currency",
+                                    align: "right",
+                                    // render: (text) => `₹${text?.toFixed(2)}`,
+                                  },
+                                  {
+                                    title: "Conversion Rate",
+                                    dataIndex: "conversionRate",
+                                    align: "right",
+                                    // render: (text) => `₹${text?.toFixed(2)}`,
                                   },
                                   {
                                     title: "Total Price",
@@ -1698,9 +1785,350 @@ const QueueModal = ({
         onCancel={() => setMaterialHistoryVisible(false)}
         historyType={detailsData?.indentType === 'job' ? 'job' : 'material'}
       />
+ <div style={{ display: "none" }}>
+        <PrintFormate ref={printComponentRef} data={detailsData} />
+      </div>
+    {/* </Modal> */}
 
+    
+  {/* ); */}
+{/* }; */}
+ </Modal>
+
+    
+    <Modal
+      open={versionHistoryOpen}
+      onCancel={() => { setVersionHistoryOpen(false); setSelectedVersionIdx?.(0); }}
+      title="Version History"
+      footer={null}
+      width={960}
+      destroyOnClose
+    >
+      {(() => {
+        if (!versionHistoryList || versionHistoryList.length === 0) {
+          return <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>No version history found.</div>;
+        }
+
+        const sorted = [...versionHistoryList].sort((a, b) => (a.version || 0) - (b.version || 0));
+        const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
+        const curr = sorted[selIdx];
+        const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
+        if (!curr) return null;
+
+        const wId = parseInt(curr.workflowId || versionHistoryList[0]?.workflowId, 10);
+
+        // ── Header fields — covers every field a user can change ──
+        const HEADER_FIELDS = [
+          { key: 'indentorName',                     label: 'Indentor' },
+          { key: 'indentorMobileNo',                 label: 'Mobile No.' },
+          { key: 'indentorEmailAddress',             label: 'Email' },
+          { key: 'createdBy',                        label: 'Created By' },
+          { key: 'modeOfProcurement',                label: 'Mode of Procurement' },
+          { key: 'procurementType',                  label: 'Procurement Type' },
+          { key: 'projectName',                      label: 'Project' },
+          { key: 'projectCode',                      label: 'Project Code' },
+          { key: 'isUnderProject',                   label: 'Under Project' },
+          { key: 'consignesLocation',                label: 'Consignee Location' },
+          { key: 'consignee',                        label: 'Consignee' },
+          { key: 'indentType',                       label: 'Indent Type' },
+          { key: 'materialCategoryType',             label: 'Material Category' },
+          { key: 'purpose',                          label: 'Purpose' },
+          { key: 'justification',                    label: 'Justification' },
+          { key: 'quarter',                          label: 'Quarter' },
+          { key: 'budgetCode',                       label: 'Budget Code' },
+          { key: 'isPreBidMeetingRequired',          label: 'Pre-Bid Meeting Required' },
+          { key: 'preBidMeetingDate',                label: 'Pre-Bid Meeting Date' },
+          { key: 'preBidMeetingVenue',               label: 'Pre-Bid Meeting Venue' },
+          { key: 'isItARateContractIndent',          label: 'Rate Contract Indent' },
+          { key: 'estimatedRate',                    label: 'Estimated Rate' },
+          { key: 'periodOfContract',                 label: 'Period of Contract' },
+          { key: 'rateContractJobCodes',             label: 'Rate Contract Job Codes' },
+          { key: 'brandPac',                         label: 'Brand PAC' },
+          { key: 'brandAndModel',                    label: 'Brand & Model' },
+          { key: 'proprietaryJustification',         label: 'Proprietary Justification' },
+          { key: 'proprietaryAndLimitedDeclaration', label: 'Proprietary Declaration' },
+          { key: 'reason',                           label: 'Reason' },
+          { key: 'buyBack',                          label: 'Buy Back' },
+          { key: 'buyBackAmount',                    label: 'Buy Back Amount' },
+          { key: 'serialNumber',                     label: 'Serial Number' },
+          { key: 'modelNumber',                      label: 'Model Number' },
+          { key: 'technicalSpecificationsFileName',  label: 'Technical Specs File' },
+          { key: 'uploadingPriorApprovalsFileName',  label: 'Prior Approvals File' },
+          { key: 'draftEOIOrRFPFileName',            label: 'Draft EOI/RFP File' },
+          { key: 'uploadPACOrBrandPACFileName',      label: 'PAC/Brand PAC File' },
+          { key: 'uploadBuyBackFileNames',           label: 'Buy Back File' },
+        ].filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
+
+        const MAT_FIELDS = [
+          { key: 'materialCode',        label: 'Material Code' },
+          { key: 'materialDescription', label: 'Description' },
+          { key: 'quantity',            label: 'Qty' },
+          { key: 'unitPrice',           label: 'Unit Price' },
+          { key: 'totalPrice',          label: 'Total Price' },
+          { key: 'uom',                 label: 'UOM' },
+          { key: 'budgetCode',          label: 'Budget Code' },
+          { key: 'currency',            label: 'Currency' },
+          { key: 'conversionRate',      label: 'Conversion Rate' },
+          { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
+          { key: 'materialCategory',    label: 'Category' },
+          { key: 'materialSubCategory', label: 'Sub-Category' },
+        ];
+        const JOB_FIELDS = [
+          { key: 'jobCode',           label: 'Job Code' },
+          { key: 'jobDescription',    label: 'Description' },
+          { key: 'briefDescription',  label: 'Brief Description' },
+          { key: 'quantity',          label: 'Qty' },
+          { key: 'estimatedPrice',    label: 'Est. Price' },
+          { key: 'totalPrice',        label: 'Total Price' },
+          { key: 'uom',               label: 'UOM' },
+          { key: 'budgetCode',        label: 'Budget Code' },
+          { key: 'currency',          label: 'Currency' },
+          { key: 'category',          label: 'Category' },
+          { key: 'subCategory',       label: 'Sub-Category' },
+          { key: 'modeOfProcurement', label: 'Mode of Procurement' },
+        ];
+        const PO_FIELDS = [
+          { key: 'materialCode',   label: 'Material Code' },
+          { key: 'description',    label: 'Description' },
+          { key: 'quantity',       label: 'Qty' },
+          { key: 'unitPrice',      label: 'Unit Price' },
+          { key: 'totalPrice',     label: 'Total Price' },
+          { key: 'uom',            label: 'UOM' },
+          { key: 'currency',       label: 'Currency' },
+        ];
+        const TENDER_FIELDS = [
+          { key: 'materialCode',   label: 'Material Code' },
+          { key: 'description',    label: 'Description' },
+          { key: 'quantity',       label: 'Qty' },
+          { key: 'unitPrice',      label: 'Unit Price' },
+          { key: 'totalPrice',     label: 'Total Price' },
+          { key: 'uom',            label: 'UOM' },
+        ];
+        const SO_FIELDS = [
+          { key: 'jobCode',        label: 'Job Code' },
+          { key: 'description',    label: 'Description' },
+          { key: 'quantity',       label: 'Qty' },
+          { key: 'unitPrice',      label: 'Unit Price' },
+          { key: 'totalPrice',     label: 'Total Price' },
+        ];
+
+        const isJob = (curr.indentType || '').toLowerCase() === 'job';
+        let lineLabel = 'Item';
+        let lineFields = MAT_FIELDS;
+        let descKey = 'materialDescription';
+        let currLines = [];
+        let prevLines = [];
+
+        if (wId === 1) {
+          lineLabel = isJob ? 'Job' : 'Material';
+          lineFields = isJob ? JOB_FIELDS : MAT_FIELDS;
+          descKey = isJob ? 'jobDescription' : 'materialDescription';
+          currLines = isJob ? (curr.jobDetails || []) : (curr.materialDetails || []);
+          prevLines = prev ? (isJob ? (prev.jobDetails || []) : (prev.materialDetails || [])) : [];
+        } else if (wId === 3) {
+          lineLabel = 'PO Item';
+          lineFields = PO_FIELDS;
+          descKey = 'description';
+          currLines = curr.purchaseOrderDetails || curr.poItems || [];
+          prevLines = prev ? (prev.purchaseOrderDetails || prev.poItems || []) : [];
+        } else if ([4, 7].includes(wId)) {
+          lineLabel = 'Tender Item';
+          lineFields = TENDER_FIELDS;
+          descKey = 'description';
+          currLines = curr.tenderItems || curr.items || [];
+          prevLines = prev ? (prev.tenderItems || prev.items || []) : [];
+        } else if (wId === 5) {
+          lineLabel = 'SO Item';
+          lineFields = SO_FIELDS;
+          descKey = 'description';
+          currLines = curr.serviceOrderDetails || curr.items || [];
+          prevLines = prev ? (prev.serviceOrderDetails || prev.items || []) : [];
+        } else if (wId === 2) {
+          lineLabel = 'Item';
+          lineFields = MAT_FIELDS;
+          descKey = 'description';
+          currLines = curr.contingencyItems || curr.items || [];
+          prevLines = prev ? (prev.contingencyItems || prev.items || []) : [];
+        }
+
+        const headerDiffs = prev
+          ? HEADER_FIELDS
+              .filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
+              .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
+          : [];
+
+        const lineDiffs = [];
+        const maxLen = Math.max(prevLines.length, currLines.length);
+        for (let i = 0; i < maxLen; i++) {
+          const p = prevLines[i];
+          const c = currLines[i];
+          if (!p) {
+            lineDiffs.push({ idx: i, type: 'added', item: c });
+          } else if (!c) {
+            lineDiffs.push({ idx: i, type: 'removed', item: p });
+          } else {
+            const changed = lineFields
+              .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
+              .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
+            if (changed.length)
+              lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c[descKey] || `Item ${i + 1}` });
+          }
+        }
+
+        const prevTotal = prev != null ? Number(prev.totalAmount || prev.totalPriceOfAllMaterials || 0) : null;
+        const currTotal = Number(curr.totalAmount || curr.totalPriceOfAllMaterials || 0);
+        const totalChanged = prev && prevTotal !== currTotal;
+        const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
+
+        const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
+        const fmtVal = val => (val == null || val === '') ? '—' : String(val);
+
+        return (
+          <div style={{ display: 'flex', minHeight: '450px' }}>
+            {/* Left: version selector */}
+            <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
+              <div style={{ padding: '8px 12px', fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', borderBottom: '1px solid #f0f0f0' }}>
+                VERSIONS
+              </div>
+              {sorted.map((v, idx) => {
+                const isSel = idx === selIdx;
+                return (
+                  <div
+                    key={v.indentId || v.tenderId || v.poId || v.soId || idx}
+                    onClick={() => setSelectedVersionIdx(idx)}
+                    style={{
+                      padding: '10px 14px', cursor: 'pointer',
+                      borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
+                      background: isSel ? '#e6f7ff' : 'transparent',
+                      borderBottom: '1px solid #f5f5f5',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.version}</span>
+                      {v.isActive
+                        ? <Tag color="green" style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
+                        : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>{v.updatedBy || v.createdBy || '—'}</div>
+                    <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
+                      {(v.updatedDate || v.createdDate) ? new Date(v.updatedDate || v.createdDate).toLocaleDateString('en-IN') : '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Right: diff panel */}
+            <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '540px' }}>
+              <div style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {prev ? (
+                  <>
+                    <span style={{ fontWeight: 600, color: '#888' }}>V{prev.version}</span>
+                    <span style={{ color: '#ccc' }}>→</span>
+                    <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.version}</span>
+                    {totalChanges === 0
+                      ? <Tag>No changes</Tag>
+                      : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>}
+                  </>
+                ) : (
+                  <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.version} — Initial Version</span>
+                )}
+              </div>
+
+              {!prev && (
+                <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
+                  This is the first version. No previous version to compare against.
+                  <div style={{ marginTop: '12px' }}>
+                    {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
+                      <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
+                        <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
+                        <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {prev && totalChanges === 0 && (
+                <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
+                  No field-level changes detected compared to V{prev.version}.
+                </div>
+              )}
+
+              {prev && totalChanges > 0 && (
+                <>
+                  {totalChanged && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>TOTAL VALUE</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '6px' }}>
+                        <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total Value</span>
+                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtCurrency(prevTotal)}</span>
+                        <span style={{ color: '#bbb' }}>→</span>
+                        <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>{fmtCurrency(currTotal)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {headerDiffs.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>GENERAL FIELDS</div>
+                      {headerDiffs.map(f => (
+                        <div key={f.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '9px 14px', marginBottom: '4px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px' }}>
+                          <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>{f.label}</span>
+                          <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(f.oldVal)}</span>
+                          <span style={{ color: '#bbb' }}>→</span>
+                          <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(f.newVal)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {lineDiffs.length > 0 && (
+                    <div style={{ marginTop: '16px' }}>
+                      <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>{lineLabel.toUpperCase()} DETAILS</div>
+                      {lineDiffs.map((diff, i) => {
+                        const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
+                        const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
+                        const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
+                        const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
+                        return (
+                          <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+                            <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
+                              {prefix}{lineLabel} {diff.idx + 1}
+                              {diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}
+                              {diff.type !== 'modified' && diff.item?.[descKey] ? ` — ${diff.item[descKey]}` : ''}
+                            </div>
+                            <div style={{ padding: '8px 12px', background: '#fff' }}>
+                              {diff.type === 'modified'
+                                ? diff.changes.map(c => (
+                                    <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                      <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
+                                      <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
+                                      <span style={{ color: '#bbb' }}>→</span>
+                                      <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
+                                    </div>
+                                  ))
+                                : lineFields.map(f => (
+                                    <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                      <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
+                                      <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
+                                    </div>
+                                  ))
+                              }
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </Modal>
+</>
   );
 };
-
 export default QueueModal;

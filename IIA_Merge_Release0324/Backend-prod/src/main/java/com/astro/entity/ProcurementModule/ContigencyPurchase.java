@@ -50,6 +50,8 @@ public class ContigencyPurchase {
     private String projectName;
     @Column(name="file_type")
     private String fileType;
+    @Column(name="current_status")
+    private String currentStatus;
 
     private String paymentTo;
     private String paymentToVendor;

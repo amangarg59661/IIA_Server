@@ -112,11 +112,21 @@ public class FileProcessingController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
 
-        // Get content type from service
-        String contentType = fileProcessingService.getContentType(fileName);
+        // // Get content type from service
+        // String contentType = fileProcessingService.getContentType(fileName);
+
+        // Use decoded filename for accurate content-type detection
+        String decodedFileName = fileProcessingService.getDecodedFileName(fileName);
+        String contentType = fileProcessingService.getContentType(decodedFileName);
+
+        // Inline for PDF/images so browser can display them; attachment for Office docs
+        String disposition = (contentType.startsWith("image/") || contentType.equals(MediaType.APPLICATION_PDF_VALUE))
+                ? "inline; filename=\"" + decodedFileName + "\""
+                : "attachment; filename=\"" + decodedFileName + "\"";
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION,disposition)
                 .body(file);
     }
 

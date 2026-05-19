@@ -51,6 +51,9 @@ const JobForm = ({ jobCode }) => {
   // ✅ Fetch dropdown values from LOV system (Form ID: 5 - JobMaster)
   const { lovValues: jobCategoryLOV, loading: loadingJobCategory } = useLOVValues(5, 'jobCategory');
   const { lovValues: jobSubcategoryLOV, loading: loadingJobSubcategory } = useLOVValues(5, 'jobSubcategory');
+  // Added by aman 
+ const [approvalStatus, setApprovalStatus] = useState("");
+  // End
   const { lovValues: uomLOV, loading: loadingUom } = useLOVValues(5, 'uom');
   const { lovValues: currencyLOV, loading: loadingCurrency } = useLOVValues(5, 'currency');
 
@@ -144,16 +147,20 @@ const JobForm = ({ jobCode }) => {
           subCategory: jobData.subCategory,
           description: jobData.jobDescription,
           uom: jobData.uom,
+          indigenousOrImported: jobData.origin,
           briefDescription: jobData.briefDescription,
           estimatedPrice: jobData.estimatedPriceWithCcy,
           currency: jobData.currency,
+          approvalStatus: jobData.approvalStatus,  
         });
+       setApprovalStatus(jobData.approvalStatus);
       } catch (error) {
         message.error("Failed to load job data for editing.");
         console.error("Job load error:", error);
       }
     };
     loadJobData();
+    
   }, [jobCode]);
 
   // Submit job data with Axios
@@ -165,7 +172,7 @@ const JobForm = ({ jobCode }) => {
         createdBy: actionPerformer,
         currency: values.currency,
         jobDescription: values.description,
-        indigenousOrImported: values.indigenousOrImported,
+        origin: values.indigenousOrImported,
         subCategory: values.subCategory,
         uom: values.uom,
         assetId: values.assetId,
@@ -173,6 +180,8 @@ const JobForm = ({ jobCode }) => {
         estimatedPriceWithCcy: values.estimatedPrice,
         briefDescription: values.briefDescription,
         updatedBy: String(actionPerformer),
+        jobStatus: values.jobStatus || null,
+reasonForDeactive: values.reasonForDeactive || null,
       };
 
       const activeJobCode = selectedJobCode || jobCode;
@@ -244,6 +253,7 @@ const JobForm = ({ jobCode }) => {
               filterOption={false}
               onSearch={searchJobs}
               options={jobSearchList}
+              value={selectedJobCode}
               onChange={async (selectedCode) => {
                 if (!selectedCode) return;
                 setSelectedJobCode(selectedCode);
@@ -258,11 +268,14 @@ const JobForm = ({ jobCode }) => {
                       subCategory: jobData.subCategory,
                       description: jobData.jobDescription,
                       uom: jobData.uom,
+                      indigenousOrImported: jobData.origin,
                       briefDescription: jobData.briefDescription,
                       estimatedPrice: jobData.estimatedPriceWithCcy,
                       currency: jobData.currency,
+                       approvalStatus: jobData.approvalStatus,
                     });
                   }
+                  setApprovalStatus(jobData.approvalStatus);
                 } catch (error) {
                   message.error("Failed to load job details.");
                 }
@@ -276,8 +289,18 @@ const JobForm = ({ jobCode }) => {
             />
           </Form.Item>
           <FormInputItem label="Job Code" name="jobCode" disabled />
+          {isEditMode && (
+  <FormInputItem
+    label="Approval Status"
+    name="approvalStatus"
+    disabled
+  />
+)}
+          
+        </div>
 
-          <Form.Item
+        <div className="form-section">
+<Form.Item
             name="category"
             label="Job Category"
             rules={[
@@ -306,9 +329,8 @@ const JobForm = ({ jobCode }) => {
               ))}
             </Select>
           </Form.Item>
-        </div>
-
-        <div className="form-section">
+        
+        
           <Form.Item
             label="Job Description"
             name="description"
@@ -316,7 +338,8 @@ const JobForm = ({ jobCode }) => {
           >
             <Input />
           </Form.Item>
-
+              </div>
+              <div className="form-section">
           <Form.Item
             name="uom"
             label="UOM"
@@ -336,15 +359,16 @@ const JobForm = ({ jobCode }) => {
             name="briefDescription"
             required
           />
-        </div>
-
-        <div className="form-section">
           <FormInputItem
             type="number"
             name="estimatedPrice"
             label="Estimated Price"
             required
           />
+        </div>
+
+        <div className="form-section">
+          
           <Form.Item
             name="currency"
             label="Currency"
@@ -365,8 +389,8 @@ const JobForm = ({ jobCode }) => {
             rules={[{ required: true, message: "Please select origin!" }]}
           >
             <Radio.Group>
-              <Radio value="indigenous">Indigenous</Radio>
-              <Radio value="imported">Imported</Radio>
+              <Radio value="1">Indigenous</Radio>
+              <Radio value="0">Imported</Radio>
             </Radio.Group>
           </Form.Item>
         </div>
@@ -378,9 +402,18 @@ const JobForm = ({ jobCode }) => {
             margin: "20px",
           }}
         >
-          <Button type="default" htmlType="reset">
-            <ReloadOutlined /> Reset
-          </Button>
+          <Button
+  type="default"
+  htmlType="button"
+  onClick={() => {
+    form.resetFields();
+    setIsEditMode(false);
+    setSelectedJobCode(null);
+    setApprovalStatus("");
+  }}
+>
+  <ReloadOutlined /> Reset
+</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
             <SendOutlined /> {isEditMode ? "Update" : "Create"}
           </Button>

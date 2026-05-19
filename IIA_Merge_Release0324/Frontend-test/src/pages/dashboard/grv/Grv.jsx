@@ -72,14 +72,29 @@ const Grv = () => {
     const { data } = await axios.get(apiUrl);
 
     // Update formData based on the response
+    // if (isGiSearch) {
+    //   // Update formData with GI details
+    //   setFormData(prev => ({
+    //     ...data?.responseData?.giDtls,
+    //     giNo: data?.responseData?.giDtls?.inspectionNo,
+    //     date: data?.responseData?.giDtls?.date, // If you want to set date
+    //      materialDtlList: (data?.responseData?.giDtls?.materialDtlList || [])
+    //   .filter(item => Number(item.rejectedQuantity) > 0),
+    //   }));
+    // }
     if (isGiSearch) {
-      // Update formData with GI details
-      setFormData(prev => ({
-        ...data?.responseData?.giDtls,
-        giNo: data?.responseData?.giDtls?.inspectionNo,
-        date: data?.responseData?.giDtls?.date, // If you want to set date
-      }));
-    } else if (formData.grvNo) {
+  const list = data?.responseData?.giDtls?.materialDtlList || [];
+  console.log("materialDtlList before filter:", list);
+  console.log("after filter:", list.filter(item => Number(item.rejectedQuantity) > 0));
+
+  setFormData(prev => ({
+    ...data?.responseData?.giDtls,
+    giNo: data?.responseData?.giDtls?.inspectionNo,
+    date: data?.responseData?.giDtls?.date,
+    materialDtlList: list.filter(item => Number(item.rejectedQuantity) > 0),
+  }));
+}
+     else if (formData.grvNo) {
       // Update formData with GRV details
       setFormData(prev => ({
         ...data?.responseData?.grvDtls,

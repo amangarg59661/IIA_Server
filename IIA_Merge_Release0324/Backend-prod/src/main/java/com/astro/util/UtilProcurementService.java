@@ -68,7 +68,11 @@ public class UtilProcurementService {
                 ));
 
         // TC_50: Check if there is an active Purchase Order for this tender
-        String poRequestId = request.getTenderId().replace("T", "PO");
+        // String poRequestId = request.getTenderId().replace("T", "PO");
+        String baseTenderId = request.getTenderId().contains("/")
+        ? request.getTenderId().substring(0, request.getTenderId().indexOf('/'))
+        : request.getTenderId();
+String poRequestId = baseTenderId.replace("T", "PO");
         WorkflowTransition poWorkflow = workflowTransitionRepository
                 .findTopByRequestIdOrderByWorkflowSequenceDesc(poRequestId);
 

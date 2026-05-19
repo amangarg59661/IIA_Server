@@ -36,6 +36,9 @@ public class GrnMasterEntity {
     @Column(name = "grn_date")
     private LocalDate grnDate;
     
+    @Column(name = "consignee_name")
+    private String consigneeName;
+
     @Column(name = "installation_date")
     private LocalDate installationDate;
     

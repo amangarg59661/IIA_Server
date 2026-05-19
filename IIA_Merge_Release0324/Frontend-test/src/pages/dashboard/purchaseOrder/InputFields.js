@@ -129,7 +129,7 @@ export const PoDetails = [
     {
       heading: "Material Details",
       name: "materialDtlList",
-      colCnt: 6,
+      colCnt: 4,
       children: [
         {
           name: "materialCode",
@@ -148,14 +148,16 @@ export const PoDetails = [
           span: 2
         },
         {
-          name: "quantity",
-          label: "Quantity",
+          name: "uom",
+          label: "UOM",
           type: "text",
-          required: true
+          disabled: true,
+          required: true,
+          span: 1
         },
         {
-          name: "rate",
-          label: "Unit Rate",
+          name: "quantity",
+          label: "Quantity",
           type: "text",
           required: true
         },
@@ -167,10 +169,16 @@ export const PoDetails = [
           required: true
         },
         {
+          name: "rate",
+          label: "Unit Rate",
+          type: "text",
+          required: true
+        },
+        {
             name: "exchangeRate",
-            label: "Exchange Rate",
+            label: "Exchange Rate(INR) ",
             type: "text",
-            span: 2
+            span: 1
         },
         {
             name: "gst",
@@ -194,14 +202,21 @@ export const PoDetails = [
             name: "freightCharge",
             label: "Freight Charges",
             type: "text", 
-            span: 2
+            span: 3
         },
         {
             name: "inrEquivalent",
-            label: "Equivalent INR",
+            label: "Unit Price in INR",
             type: "text",
             disabled: true,
-            span: 2
+            span: 3
+        },
+        {
+            name: "estimatedItemTotal",
+            label: "Total Amount",
+            type: "text",
+            disabled: true,
+            span: 3
         }
 
       ]
@@ -285,13 +300,16 @@ export const PoDetails = [
                     name: "comparativeStatementFileName",
                     label: "Comparative Statement",
                     type: "multiImage",
+                    accept: ".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.doc,.docx",
                     span:2,
                     //required: true,
         },
          {
                     name: "gemContractFileName",
                     label: "Gem Contract Upload",
+                    // type: "multiImage",
                     type: "multiImage",
+                    accept: ".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.doc,.docx",
                     span:2,
                     //required: true,
         }
@@ -357,21 +375,21 @@ export const PoDetails = [
           label: "Vendor A/C No.",
           type: "text",
           required: true,
-        //  disabled: true,
+         disabled: true,
         },
         {
             name: "vendorsIfscCode",
             label: "Vendor IFSC Code",
             type: "text",
             required: true,
-           // disabled: true,
+           disabled: true,
         },
         {
             name: "vendorAccountName",
             label: "Vendor A/C Name",
             type: "text",
             required: true,
-          //  disabled: true,
+           disabled: true,
         }
       ]
     }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Modal, Table, Button, Input, Tag } from "antd";
 
 const { Search } = Input;
@@ -8,18 +8,21 @@ const GprnPoSearch = ({ poArray = [], setFormData, handleSearch }) => {
   const [filteredData, setFilteredData] = useState(poArray || []);
   const [searchText, setSearchText] = useState("");
   const [selectedPoId, setSelectedPoId] = useState(null);
-
+const debounceTimer = useRef(null);
   // Keep filteredData in sync with poArray changes:
   useEffect(() => {
     setFilteredData(poArray || []);
   }, [poArray]);
 
-  
+ 
   const handleSearchInput = (value) => {
-    const q = (value || "").toLowerCase();
-    setSearchText(value);
+  setSearchText(value);
 
-    // Filter logic
+  if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+  debounceTimer.current = setTimeout(() => {
+    const q = (value || "").toLowerCase();
+
     const filtered = (poArray || []).filter((po) => {
       const poText = `${po.poId} ${po.vendorName ?? ""} ${po.projectName ?? ""}`.toLowerCase();
       const indentText = (po.indentIds || []).join(" ").toLowerCase();
@@ -30,18 +33,40 @@ const GprnPoSearch = ({ poArray = [], setFormData, handleSearch }) => {
         )
         .join(" ")
         .toLowerCase();
-      // This includes all requested fields!
-      return (
-        poText.includes(q) ||
-        indentText.includes(q) ||
-        materialText.includes(q)
-      );
+
+      return poText.includes(q) || indentText.includes(q) || materialText.includes(q);
     });
 
-    setFilteredData(filtered);
-    // Modal open on search
-    setOpen(true);
-  };
+    setFilteredData(filtered); // only filter, don't open modal
+  }, 500);
+};
+  // const handleSearchInput = (value) => {
+  //   const q = (value || "").toLowerCase();
+  //   setSearchText(value);
+
+  //   // Filter logic
+  //   const filtered = (poArray || []).filter((po) => {
+  //     const poText = `${po.poId} ${po.vendorName ?? ""} ${po.projectName ?? ""}`.toLowerCase();
+  //     const indentText = (po.indentIds || []).join(" ").toLowerCase();
+  //     const materialText = (po.materials || [])
+  //       .map(
+  //         (m) =>
+  //           `${m.materialCode ?? ""} ${m.materialDesc ?? ""} ${m.orderQty ?? ""} ${m.receivedQty ?? ""} ${m.pendingQty ?? ""}`
+  //       )
+  //       .join(" ")
+  //       .toLowerCase();
+  //     // This includes all requested fields!
+  //     return (
+  //       poText.includes(q) ||
+  //       indentText.includes(q) ||
+  //       materialText.includes(q)
+  //     );
+  //   });
+
+  //   setFilteredData(filtered);
+  //   // Modal open on search
+  //   setOpen(true);
+  // };
 
   // Table columns, same as before
   const columns = [
@@ -53,7 +78,7 @@ const GprnPoSearch = ({ poArray = [], setFormData, handleSearch }) => {
       fixed: "left",
     },
     {
-      title: "Indent IDs",
+      title: "Indentor Name",
       dataIndex: "indentIds",
       width: 200,
       render: (ids) =>
@@ -137,7 +162,7 @@ const handleDeselect = () => {
 
   return (
     <>
-      <Search
+      {/* <Search
         placeholder="Search PO, Material, Indent…"
         value={searchText}
         onChange={(e) => handleSearchInput(e.target.value)}
@@ -146,8 +171,16 @@ const handleDeselect = () => {
        
         onSearch={handleSearchInput} // This opens modal on pressing enter!
         allowClear
-      />
-
+      /> */}
+<Search
+  placeholder="Search PO, Material, Indent…"
+  value={searchText}
+  onChange={(e) => handleSearchInput(e.target.value)}
+  onClick={() => setOpen(true)}
+  style={{ width: 280 }}
+  onSearch={() => setOpen(true)} // opens modal on icon click or Enter
+  allowClear
+/>
       <Modal
         open={open}
         title="Search Purchase Orders"

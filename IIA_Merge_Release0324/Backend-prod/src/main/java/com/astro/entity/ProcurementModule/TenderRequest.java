@@ -137,6 +137,15 @@ public class TenderRequest {
 
     @Column(name = "locked_date")
     private LocalDateTime lockedDate;
+    @Column(name ="current_status")
+    private String currentStatus;
+
+    // ADD these two fields
+@Column(name = "is_active")
+private Boolean isActive = true;
+
+@Column(name = "parent_tender_id")
+private String parentTenderId;
 
     private Boolean buyBack;
     private String buyBackAmount;

@@ -1,7 +1,7 @@
 package com.astro.dto.workflow;
 
 import lombok.Data;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -31,6 +31,14 @@ public class EmployeeDepartmentMasterResponseDto {
     // Reporting Officer (replaces manager)
     private String reportingOfficerId;
     private String reportingOfficerName;
+
+
+    // Employment & date fields
+    private LocalDate dateOfBirth;
+    private LocalDate hireDate;
+    private LocalDate endDate;
+    private String employmentType;
+    private String jobTitle;
 
     // Status field
     private String status;

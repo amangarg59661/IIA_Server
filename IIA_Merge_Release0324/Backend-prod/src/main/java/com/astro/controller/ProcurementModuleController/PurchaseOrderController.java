@@ -53,15 +53,45 @@ public class PurchaseOrderController {
 
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(createdPO), HttpStatus.OK);
     }
+// ── DRAFT ENDPOINTS ──────────────────────────────────────────────
 
-    @PutMapping("/{poId}")
+@PostMapping("/draft")
+public ResponseEntity<Object> savePoDraft(@RequestBody PurchaseOrderRequestDTO dto) {
+    PurchaseOrderResponseDTO response = poService.savePoDraft(dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@PutMapping("/draft")
+public ResponseEntity<Object> updatePoDraft(
+        @RequestParam String poId,
+        @RequestBody PurchaseOrderRequestDTO dto) {
+    PurchaseOrderResponseDTO response = poService.updatePoDraft(poId, dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@PostMapping("/draft/submit")
+public ResponseEntity<Object> submitPoDraft(
+        @RequestParam String poId,
+        @RequestBody PurchaseOrderRequestDTO dto) {
+    PurchaseOrderResponseDTO response = poService.submitPoDraft(poId, dto);
+    // Initiate workflow — same pattern as createPurchaseOrder
+    workflowService.initiateWorkflow(response.getPoId(), "PO Workflow", dto.getCreatedBy());
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
+@GetMapping("/drafts")
+public ResponseEntity<Object> getUserPoDrafts(@RequestParam Integer userId) {
+    List<PurchaseOrderResponseDTO> drafts = poService.getUserPoDrafts(userId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(drafts), HttpStatus.OK);
+}
+    @PutMapping
     public ResponseEntity<Object> updatePurchaseOrder(
-            @PathVariable String poId,
+            @RequestParam String poId,
             @RequestBody @Valid PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
         PurchaseOrderResponseDTO updatedPO = poService.updatePurchaseOrder(poId, purchaseOrderRequestDTO);
 
         // added by abhinav new line
-        String requestId = poId;
+        String requestId = updatedPO.getPoId();
         String workflowName = "PO Workflow";
         Integer userId = purchaseOrderRequestDTO.getCreatedBy();
 
@@ -80,24 +110,30 @@ public class PurchaseOrderController {
 
 
     // Get a PO by ID
-    @GetMapping("/{poId}")
-    public ResponseEntity<Object> getPurchaseOrderById(@PathVariable String poId)  {
+    @GetMapping("/byId")
+    public ResponseEntity<Object> getPurchaseOrderById(@RequestParam String poId)  {
         poWithTenderAndIndentResponseDTO po = poService.getPurchaseOrderById(poId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(po), HttpStatus.OK);
     }
 
-    @GetMapping("/base64Files/{poId}")
-    public ResponseEntity<Object> getPurchaseOrderByIdWithBase64Files(@PathVariable String poId) throws IOException {
+    @GetMapping("/base64Files")
+    public ResponseEntity<Object> getPurchaseOrderByIdWithBase64Files(@RequestParam String poId) throws IOException {
         PoWithTenderAndIndentBase64FilesDto po = poService.getPurchaseOrderBase64FilesById(poId);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(po), HttpStatus.OK);
     }
 
     // Delete a PO by ID
-    @DeleteMapping("/{poId}")
-    public ResponseEntity<String> deletePurchaseOrder(@PathVariable String poId) {
+    @DeleteMapping
+        public ResponseEntity<String> deletePurchaseOrder(@RequestParam String poId) {
         poService.deletePurchaseOrder(poId);
         return ResponseEntity.ok("Purchase Order deleted successfully."+" " +poId);
     }
+
+    @GetMapping("/version-history")
+public ResponseEntity<Object> getPoVersionHistory(@RequestParam String poId) {
+    List<PurchaseOrderResponseDTO> history = poService.getPoVersionHistory(poId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(history), HttpStatus.OK);
+}
 
     @GetMapping("/search")
     public ResponseEntity<Object> searchPoIds(

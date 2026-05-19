@@ -34,7 +34,7 @@ const { tenderId, bidType } = location.state || {};
   const fetchVendorHistory = async (vendorId) => {
   try {
     setHistoryLoading(true);
-    const res = await axios.get(`/api/vendor-quotation/vendorHistory/${tenderId}/${vendorId}`);
+    const res = await axios.get(`/api/vendor-quotation/vendorHistory` , {params:{tenderId ,vendorId}});
     setHistoryData(res.data?.responseData || []);
   } catch (error) {
     message.error("Failed to fetch quotation history");
@@ -60,7 +60,7 @@ const { tenderId, bidType } = location.state || {};
 
   const fetchNotSubmittedVendors = async () => {
     try {
-    const res = await axios.get(`/api/vendor-quotation/NotSubmitVendors/${tenderId}`);
+    const res = await axios.get(`/api/vendor-quotation/NotSubmitVendors`, {params:{tenderId}});
     setNotSubmittedVendors(res.data.responseData || []);
     } catch (error) {
     message.error("Failed to fetch vendors who didn't submit quotations");
@@ -107,7 +107,7 @@ const handleSubmit = async () => {
 
   try {
     setIsSubmitting(true);
-    await axios.put(`/api/tender-requests/update/${tenderId}`, updatedTender);
+    await axios.put(`/api/tender-requests/update/`, updatedTender, {params: {tenderId}});
     message.success("Tender updated successfully");
     navigate("/queue");
   } catch (error) {

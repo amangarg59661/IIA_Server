@@ -27,7 +27,7 @@ public interface IndentCreationService {
     public List<IndentCreationResponseDTO> getAllIndents();
 
     void deleteIndent(String indentId);
-
+    public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) ;
 
     List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate);
 
@@ -45,7 +45,7 @@ public interface IndentCreationService {
 
     public String assignEmployeeToIndent(AssignEmployeeToIndentDto dto);
 
-    public String cancelIndent(CancelIndentRequestDto request);
+    // public String cancelIndent(CancelIndentRequestDto request);
 
     public String requestIndentCancellation(com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCancellationRequestDto request);
 
@@ -54,9 +54,14 @@ public interface IndentCreationService {
     public String approveCancellationRequest(com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCancellationApprovalDto approval);
 
     public IndentCreationResponseDTO getIndentDataForTenderById(String indentId) throws IOException;
-
+    // void releaseHoldIfRejected(String referenceId, String referenceType);
     public List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> getMaterialPurchaseHistory(String materialCode);
 
     public List<com.astro.dto.workflow.MaterialPurchaseHistoryDTO> getJobPurchaseHistory(String jobCode);
 
+    IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto);
+IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreationRequestDTO dto);
+IndentCreationResponseDTO submitIndentDraft(String indentId, IndentCreationRequestDTO dto);
+List<IndentCreationResponseDTO> getUserDrafts(Integer userId);
+public List<IndentAssignmentResponseDto> getMyAssignments(Integer assignedByUserId);
     }

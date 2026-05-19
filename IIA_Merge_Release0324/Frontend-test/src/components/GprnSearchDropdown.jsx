@@ -4,7 +4,8 @@ import axios from "axios";
 
 const { Option } = Select;
 
-const GprnSearchDropdown = ({ label, value, onChange }) => {
+// const GprnSearchDropdown = ({ label, value, onChange }) => {
+  const GprnSearchDropdown = ({ label, value, onChange, userId, role }) => {
   const [options, setOptions] = useState([]);
   const [filteredOptions, setFilteredOptions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -14,7 +15,8 @@ const GprnSearchDropdown = ({ label, value, onChange }) => {
       setLoading(true);
       try {
         const response = await axios.get(
-          "/api/process-controller/pendingGprnsForGi"
+          // "/api/process-controller/pendingGprnsForGi"
+          `/api/process-controller/pendingGprnsForGi?userId=${userId}&role=${role}`
         );
         setOptions(response.data.responseData || []);
         setFilteredOptions(response.data.responseData || []);
@@ -26,7 +28,8 @@ const GprnSearchDropdown = ({ label, value, onChange }) => {
       }
     };
     fetchGprns();
-  }, []);
+    }, [userId, role]);
+  // }, []);
 
   const handleSearch = (input) => {
     if (!input) {

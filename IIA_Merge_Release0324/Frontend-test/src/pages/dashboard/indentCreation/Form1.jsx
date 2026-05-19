@@ -256,20 +256,55 @@ const Form1 = () => {
     return materialList;
   };
 
-  const handleSaveDraft = () => {
-    const formValues = form.getFieldsValue();
-    localStorage.setItem("draftFormData", JSON.stringify(formValues));
-    setShowDraftSavedModal(true);
-  };
+ // FIXED — calls API
+const [draftBtnLoading, setDraftBtnLoading] = useState(false);
 
-  // Load draft
-  useEffect(() => {
-    const savedDraft = localStorage.getItem("draftFormData");
-    if (savedDraft) {
-      const draftValues = JSON.parse(savedDraft);
-      form.setFieldsValue(draftValues);
+const handleSaveDraft = async () => {
+    const values = form.getFieldsValue();
+    const payload = {
+        indentorName: values.indentorName || null,
+        indentorMobileNo: values.indentorMobileNo || null,
+        indentorEmailAddress: values.indentorEmail || null,
+        consignesLocation: values.consigneeLocation || null,
+        quarter: values.quarter || null,
+        purpose: values.purpose || null,
+        createdBy: actionPerformer || 0,
+        indentType: indentType,
+        materialCategoryType: indentType === "material" ? materialCategoryType : jobCategoryType,
+        materialDetails: indentType === "material"
+            ? (values.lineItems || []).map(item => ({ ...item }))
+            : null,
+        jobDetails: indentType === "job"
+            ? (values.jobItems || []).map(item => ({ ...item }))
+            : null,
+        fileType: "Indent",
+    };
+
+    try {
+        setDraftBtnLoading(true);
+        let response;
+        if (editingIndentId) {
+            response = await fetch(
+                `http://103.181.158.220:8081/astro-service/api/indents/draft?indentId=${editingIndentId}`,
+                { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+            );
+        } else {
+            response = await fetch(
+                "http://103.181.158.220:8081/astro-service/api/indents/draft",
+                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
+            );
+        }
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.responseStatus?.message || "Draft save failed");
+        setEditingIndentId(data.responseData?.indentId);
+        setShowDraftSavedModal(true);
+    } catch (error) {
+        message.error("Error saving draft: " + error.message);
+    } finally {
+        setDraftBtnLoading(false);
     }
-  }, [form]);
+};
+
 
   const handleCheckboxChange4 = (e) => {
     setBuyBackOption(e.target.checked);
@@ -1522,7 +1557,8 @@ const Form1 = () => {
               <Button type="primary" htmlType="submit" loading={loading}>
                 <SendOutlined /> Submit
               </Button>
-              <Button type="dashed" htmlType="button" onClick={handleSaveDraft}>
+              <Button type="dashed" htmlType="button" onClick={handleSaveDraft} loading={draftBtnLoading}>
+              {/* <Button type="dashed" htmlType="button" onClick={handleSaveDraft}> */}
                 <SaveOutlined /> Save Draft
               </Button>
               <Button

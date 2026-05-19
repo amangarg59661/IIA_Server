@@ -33,7 +33,8 @@ const GPRN = () => {
 
   const processNo = location?.state?.processNo || null;
 
-  const [fsDd, setFsDd] = useState([])
+  const [fsDd, setFsDd] = useState([]);
+  const [errorField, setErrorField] = useState(null);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
@@ -61,11 +62,30 @@ const GPRN = () => {
         prevMaterialDtlList[fieldName[1]][fieldName[2]] = value
 
         // Calculate total amount when receivedQuantity changes
+        // if (fieldName[2] === 'receivedQuantity') {
+        //   const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
+        //   const quantity = parseFloat(value || 0);
+        //   prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * quantity).toFixed(2);
+        // }
+
         if (fieldName[2] === 'receivedQuantity') {
-          const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
-          const quantity = parseFloat(value || 0);
-          prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * quantity).toFixed(2);
-        }
+  const pendingQty = parseFloat(prevMaterialDtlList[fieldName[1]].orderedQuantity || 0);
+  const enteredQty = parseFloat(value || 0);
+
+  if (enteredQty > pendingQty) {
+    const rowIndex = fieldName[1];
+    message.error(`Received quantity cannot exceed pending quantity (${pendingQty})`);
+    setErrorField({ rowIndex, field: 'receivedQuantity' });
+    return prev; // ❗ prevent update
+  }
+  setErrorField(null);
+
+  const unitPrice = parseFloat(prevMaterialDtlList[fieldName[1]].unitPrice || 0);
+  // AFTER
+const exchangeRate = parseFloat(prevMaterialDtlList[fieldName[1]].exchangeRate || 0);
+prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty * (exchangeRate > 0 ? exchangeRate : 1)).toFixed(2);
+  // prevMaterialDtlList[fieldName[1]].totalAmount = (unitPrice * enteredQty).toFixed(2);
+}
 
         let totQuant = 0
         prevMaterialDtlList.forEach(mat => {
@@ -122,10 +142,11 @@ const GPRN = () => {
 
   const handleSearch = useCallback(async (value) => {
     try {
-      const { data } = await axios.get(`api/purchase-orders/${value ? value : formData.poId}`)
+      const { data } = await axios.get(`api/purchase-orders/byId`, {params: {poId : value ? value : formData.poId}})
 
       const { data: vendorData } = await axios.get(`/api/vendor-master/${data?.responseData?.vendorId}`)
-      const { data: indentData } = await axios.get(`/api/indents/${data?.responseData?.indentIds[0]}`)
+      const indentId = data?.responseData?.indentIds[0];
+      const { data: indentData } = await axios.get(`/api/indents/byId` , {params: {indentId}})
 
        // Resolve locationId at search time using current fsDd
     const consigneesAddress = data?.responseData?.consignesAddress;
@@ -275,6 +296,7 @@ setPendingGprnList(formattedPoList);
           name: "project",
           label: "Project",
           type: "text",
+          disabled : true ,
           // required: true,
           span: 2 // optional
         }
@@ -290,13 +312,15 @@ setPendingGprnList(formattedPoList);
           label: "Vendor ID",
           type: "text",
           span: 2,
-          required: true
+          required: true,
+          disabled : true ,
         },
         {
           name: "vendorName",
           label: "Vendor Name",
           type: "text",
           span: 2,
+          disabled : true ,
           required: true
         },
         {
@@ -304,12 +328,14 @@ setPendingGprnList(formattedPoList);
           label: "Vendor Email",
           type: "text",
           span: 2,
+          disabled : true ,
           required: true
         },
         {
           name: "vendorContactNo",
           label: "Vendor Contact",
           type: "text",
+          disabled : true ,
           span: 2,
           required: true
         }
@@ -353,6 +379,7 @@ setPendingGprnList(formattedPoList);
           label: "Indentor Name",
           type: "text",
           required: true,
+          disabled : true ,
           span: 2
         },
       ]
@@ -368,22 +395,23 @@ setPendingGprnList(formattedPoList);
           type: "text",
           span: 2,
           required: true,
-          // disabled: true
+          disabled: true
         },
         {
           name: "materialDesc",
           label: "Description",
           type: "text",
           span: 3,
-          required: true
+          required: true,
+          disabled: true,
         },
         {
           name: "uomId",
           label: "UOM",
           type: "text",
           span: 1,
-          required: true,
-          // disabled: true
+          // required: true,
+          disabled: true
         },
         {
           name: "warrantyTerms",
@@ -402,6 +430,7 @@ setPendingGprnList(formattedPoList);
           name: "totalQuantity",
           label: "Ordered Quantity",
           type: "text",
+          disabled: true,
         },
         {
           name: "orderedQuantity",
@@ -409,7 +438,7 @@ setPendingGprnList(formattedPoList);
           type: "text",
           span: 3,
           required: true,
-          // disabled: true
+          disabled: true
         },
         {
           name: "quantityDelivered",
@@ -423,11 +452,19 @@ setPendingGprnList(formattedPoList);
           name: "receivedQuantity",
           label: "Received Quantity",
           type: "text",
-          required: true
+          required: true,
+          
         },
         {
           name: "unitPrice",
           label: "Unit Price",
+          type: "text",
+          // required: true,
+          disabled: true
+        },
+        {
+          name: "exchangeRate",
+          label: "Exchange Rate",
           type: "text",
           required: true,
           disabled: true
@@ -468,6 +505,7 @@ setPendingGprnList(formattedPoList);
           name: "category",
           label: "Category",
           type: "text",
+          disabled : true ,
           required: true,
 
         },

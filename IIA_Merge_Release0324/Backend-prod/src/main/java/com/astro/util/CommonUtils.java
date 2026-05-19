@@ -284,7 +284,11 @@ public class CommonUtils {
     public static List<LocalDateTime> getDateRenge(String startDate, String endDate) {
         try{
             LocalDateTime start = CommonUtils.convertStringToDateObject(startDate).atStartOfDay();
-            LocalDateTime end = CommonUtils.convertStringToDateObject(endDate).atTime(23, 59, 59);
+            // LocalDateTime end = CommonUtils.convertStringToDateObject(endDate).atTime(23, 59, 59);
+            LocalDateTime end = CommonUtils
+        .convertStringToDateObject(endDate)
+        .plusDays(1)          // move to next day
+        .atStartOfDay();
             List<LocalDateTime> dateRenge = new ArrayList<>();
             dateRenge.add(start);
             dateRenge.add(end);

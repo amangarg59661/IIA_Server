@@ -72,6 +72,7 @@ import ApprovalLimitsConfig from "../dashboard/admin/ApprovalLimitsConfig";
 import DepartmentApproverMapping from "../dashboard/admin/DepartmentApproverMapping";
 import FieldStationApproverConfig from "../dashboard/admin/FieldStationApproverConfig";
 import FullWorkflowConfig from "../dashboard/admin/FullWorkflowConfig";
+import CommitteeManagement from "../dashboard/admin/CommitteeManagement";
 /*
 const RoutesComponent = () => {
   return (
@@ -180,7 +181,7 @@ const storePurchaseRoutes = (
     <Route path="/inventory/goodsReceipt" element={<Grn />} />
     <Route path="/inventory/goodsInspection" element={<GoodsInspection />} />
     <Route path="/inventory/goodsReturn" element={<Grv />} />
-    <Route path="/inventory/goodsIssue" element={<Isn />} />
+    {/* <Route path="/inventory/goodsIssue" element={<Isn />} /> */}
     <Route path="/inventory/materialDisposal" element={<AssetDisposal />} />
     <Route path="/inventory/outward" element={<Ogp />} />
     <Route path="/inventory/inward" element={<Igp />} />
@@ -197,7 +198,7 @@ const storePersonRoutes = (
     <Route path="/inventory/goodsInspection" element={<GoodsInspection />} />
     <Route path="/inventory/goodsReturn" element={<Grv />} />
     <Route path="/inventory/goodsReceipt" element={<Grn />} />
-    <Route path="/inventory/goodsIssue" element={<Isn />} />
+    {/* <Route path="/inventory/goodsIssue" element={<Isn />} /> */}
     <Route path="/inventory/assetMaster" element={<Asset />} />
     <Route path="/inventory/goodsTransfer" element={<Form17 />} />
     <Route path="/inventory/materialDisposal" element={<AssetDisposal />} />
@@ -227,7 +228,17 @@ const purchasePersonnelRoutes = (
 
   </>
 );
+const committeeMemberRoutes = (
+  <>
+    <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
+  </>
+);
 
+const directorRoutes = (
+  <>
+    <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
+  </>
+);
 const tenderCreatorRoutes = (
   <>
 
@@ -273,6 +284,7 @@ const adminRoutes = (
     <Route path="/admin/budget" element={<BudgetManagement />} />
     <Route path="/admin/employee" element={<EmployeeRegistration />} />
     <Route path="/admin/user" element={<UserCreation />} />
+     <Route path="/admin/committee" element={<CommitteeManagement />} />
   </>
 );
 
@@ -305,6 +317,15 @@ const generateRoutes = (roleName) => {
     case "Tender Creator":
       console.log("➡ using tenderCreatorRoutes");
       return tenderCreatorRoutes;
+      case "Committee Member":
+      console.log("➡ using committeeMemberRoutes");
+      return committeeMemberRoutes;
+    case "Committee Chairman":
+      console.log("➡ using committeeMemberRoutes (Chairman)");
+      return committeeMemberRoutes;
+    case "Director":
+      console.log("➡ using directorRoutes");
+      return directorRoutes;
     default:
       console.log("⚠ no routes for this role");
       return null;
@@ -353,7 +374,7 @@ const RoutesComponent = () => {
           {/* Inventory Reports - Exclude Admin role */}
           {roleName !== "Admin" && (
             <Route path="/invReports" element={<InvReportsMain />}>
-              <Route path="goodsIssue" element={<GoodsIssueReport />} />
+              {/* <Route path="goodsIssue" element={<GoodsIssueReport />} /> */}
               <Route path="igp" element={<IgpReport />} />
               <Route path="ogp" element={<OgpReport />} />
               <Route path="asset" element={<AssetReport />} />

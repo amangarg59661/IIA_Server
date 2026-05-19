@@ -14,4 +14,7 @@ public class AssetSearchResponseDto {
     private String custodianId;
     private Integer locatorId;
     private BigDecimal quantity;
+    private String grnNumber;
+    private String assetDesc;
+    private String materialDesc;
 }

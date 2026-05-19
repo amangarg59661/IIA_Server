@@ -22,7 +22,7 @@ const Asset = () => {
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
   });
-
+const debounceTimer = useRef(null); // add this alongside existing useRef(printRef)
   const [assetIdList, setAssetIdList] = useState([]);
 const [searchParams, setSearchParams] = useState({ keyword: "" });
 
@@ -62,13 +62,14 @@ const assetFields = [
                 label: "Custodian Id",
                 type: "text",
                 span: 2,
-                // disabled: true,
+                disabled: true,
                 // required: true
             },
             {
                 name: "locatorId",
                 label: "Field Station",
                 type: "select",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -76,6 +77,7 @@ const assetFields = [
                 name: "poId",
                 label: "Po Id",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -91,13 +93,14 @@ const assetFields = [
                 type: "select",
                 span: 2,
                 options: assetIdList,
-                // disabled: true,
+                disabled: true,
                 // required: true
             },
             {
                 name: "materialCode",
                 label: "Material Code",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -105,6 +108,7 @@ const assetFields = [
                 name: "materialDesc",
                 label: "Material Description",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -120,6 +124,7 @@ const assetFields = [
                 label: "UOM",
                 type: "text",
                 span: 3,
+                disabled: true,
                 required: true
             }
         ]
@@ -192,6 +197,7 @@ const assetFields = [
                 name: "quantity",
                 label: "Quantity",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -199,6 +205,7 @@ const assetFields = [
                 name: "unitPrice",
                 label: "Unit Price",
                 type: "text",
+                disabled: true,
                 span: 2,
                 required: true
             },
@@ -220,6 +227,7 @@ const assetFields = [
                 name: "locatorId",
                 label: "Locator",
                 type: "select",
+                disabled: true,
                 options: locatorLOV.length > 0
                     ? locatorLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
                     : locatorMaster,
@@ -525,7 +533,7 @@ useEffect(() => {
       <Heading title="Asset Master" />
       {/* 🔍 Search Filters */}
       {/* 🔍 Single Search Field (auto search) */}
-<Row gutter={16} style={{ marginBottom: 20 }}>
+{/* <Row gutter={16} style={{ marginBottom: 20 }}>
   <Col span={8}>
     <Input
       placeholder="Search Asset..."
@@ -539,8 +547,50 @@ useEffect(() => {
       allowClear
     />
   </Col>
-</Row>
+</Row> */}
 
+<Row gutter={16} style={{ marginBottom: 20 }}>
+  <Col span={8}>
+    <Input.Search
+      placeholder="Search Asset..."
+      value={searchParams.keyword}
+      onChange={(e) => {
+        const keyword = e.target.value;
+        setSearchParams({ keyword });
+
+        // Debounce: filter/fetch in background, don't open modal
+        if (debounceTimer.current) clearTimeout(debounceTimer.current);
+        debounceTimer.current = setTimeout(async () => {
+          if (keyword.length >= 2) {
+            try {
+              const { data } = await axios.get("/api/asset/search", {
+                params: { keyword },
+              });
+              setSearchResults(data.responseData || []);
+            } catch (error) {
+              message.error("Failed to search assets");
+            }
+          } else {
+            setSearchResults([]);
+          }
+        }, 500);
+      }}
+      onSearch={() => {
+        // Only open modal on search icon click or Enter
+        if (searchParams.keyword.length >= 2) {
+          setIsSearchModalOpen(true);
+        } else {
+          message.warning("Enter at least 2 characters to search");
+        }
+      }}
+      allowClear
+      onClear={() => {
+        setSearchParams({ keyword: "" });
+        setSearchResults([]);
+      }}
+    />
+  </Col>
+</Row>
       
       <CustomForm formData={formData} onFinish={onFinish}>
         {/*renderFormFields(assetFields, handleChange, handleSearch, formData)*/}
@@ -563,7 +613,7 @@ useEffect(() => {
   title="Asset Search Results"
   onCancel={() => setIsSearchModalOpen(false)}
   footer={null}
-  width={800}
+  width={1000}
 >
   <Table
   rowKey={(record) => `${record.assetId}-${record.locatorId}-${record.custodianId}`}
@@ -576,6 +626,8 @@ useEffect(() => {
     { title: "Custodian ID", dataIndex: "custodianId" },
     { title: "Locator ID", dataIndex: "locatorId" },
     { title: "Quantity", dataIndex: "quantity" },
+    { title: "GRN Number", dataIndex: "grnNumber"},
+    { title: "Asset Description", dataIndex: "assetDesc"},
     {
       title: "Action",
       render: (_, record) => {
@@ -653,7 +705,7 @@ useEffect(() => {
 />
 
 
-  <div style={{ marginTop: 16, textAlign: "right" }}>
+  {/* <div style={{ marginTop: 16, textAlign: "right" }}>
     <Button
       type="primary"
       onClick={() => {
@@ -679,7 +731,7 @@ useEffect(() => {
     >
       Deselect
     </Button>
-  </div>
+  </div> */}
 </Modal>
 
     </Card>

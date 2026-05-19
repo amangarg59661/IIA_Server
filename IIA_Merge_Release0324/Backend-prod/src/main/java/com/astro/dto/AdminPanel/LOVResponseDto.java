@@ -18,6 +18,7 @@ public class LOVResponseDto {
     private String displayValue;    // lovDisplayValue - label to be shown in UI
     private String description;     // lovDescription - additional info/tooltip
     private Boolean isActive;
+    // private String locationCode;  // added for Locator Added bu Aman 
     private Boolean isDefault;
     private Integer displayOrder;
     private String colorCode;       // For UI styling (e.g., status colors)

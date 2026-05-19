@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Upload, Button, Form } from 'antd';
 import { UploadOutlined, DeleteOutlined } from '@ant-design/icons';
 
-const ImageUploadBase64 = ({ value, onChange, required, label, name, multiple = false }) => {
+const ImageUploadBase64 = ({ value, onChange, required, label, name, multiple = false, accept="image/*,.pdf" }) => {
   const [previewData, setPreviewData] = useState(multiple ? (value || []) : (value || ''));
   const [fileNames, setFileNames] = useState(multiple ? [] : '');
 
@@ -77,7 +77,7 @@ const ImageUploadBase64 = ({ value, onChange, required, label, name, multiple = 
     >
       <div className="flex flex-col gap-2">
         <Upload
-          accept="image/*,.pdf"
+          
           multiple={multiple}
           showUploadList={false}
           beforeUpload={(file) => {

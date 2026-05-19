@@ -8,4 +8,5 @@ public class GiApprovalDto {
     private String remarks;
     private String status;
     private Integer createdBy;
+    private String rejectionReason;  // mandatory when SPO rejects
 }

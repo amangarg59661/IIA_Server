@@ -150,7 +150,7 @@ const handleSearchRejectedGI = async (issueNoteId) => {
     }
 
     if(formData.type === "PO"){
-      const {data} = await axios.get(`api/purchase-orders/${formData.issueNoteId}`)
+      const {data} = await axios.get(`api/purchase-orders/byId`, {params: {poId:formData.issueNoteId}})
           setFormData(prev => ({
             ...data?.responseData,
             type: "PO",

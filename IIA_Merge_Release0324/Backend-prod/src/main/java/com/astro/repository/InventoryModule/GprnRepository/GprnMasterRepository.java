@@ -38,6 +38,9 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
 
     GprnMasterEntity findBySubProcessId(Integer gprnSubProcessId);
 
+//     @Query("SELECT COALESCE(MAX(CAST(g.processId AS int)), 0) FROM GprnMasterEntity g WHERE g.processId IS NOT NULL")
+// Integer findMaxGprnSequence();
+
     @Query("SELECT DISTINCT g FROM GprnMasterEntity g " +
             "LEFT JOIN GprnMaterialDtlEntity m ON g.subProcessId = m.subProcessId " +
             "LEFT JOIN GiMasterEntity gi ON g.subProcessId = gi.gprnSubProcessId " +
@@ -56,6 +59,7 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
         po.created_date,
         ic.indentor_name,              -- Fetch from indent_creation
 
+        poa.material_code,
         poa.material_description,
         poa.quantity AS order_qty,
 
@@ -97,6 +101,18 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
     """, nativeQuery = true)
     List<Object[]> findPendingGprnDetailedRows();
 
+@Query("SELECT po.tenderId FROM PurchaseOrder po WHERE po.poId = :poId")
+String findTenderIdByPoId(@Param("poId") String poId);
 
+@Query("SELECT COUNT(i) FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId")
+int countIndentsByTenderId(@Param("tenderId") String tenderId);
+
+@Query("SELECT ic.createdBy FROM IndentCreation ic " +
+       "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")
+Integer findSingleIndentCreatedByForTender(@Param("tenderId") String tenderId);
+
+@Query("SELECT ic.indentorName FROM IndentCreation ic " +
+       "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")
+String findSingleIndentorNameForTender(@Param("tenderId") String tenderId);
 
 }

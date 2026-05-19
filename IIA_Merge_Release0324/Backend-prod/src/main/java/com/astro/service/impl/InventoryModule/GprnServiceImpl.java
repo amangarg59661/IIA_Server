@@ -55,7 +55,14 @@ public class GprnServiceImpl implements GprnService {
     public GprnServiceImpl(@Value("${filePath}") String bp) {
         this.basePath = bp + "/INV";
     }
+    private String extractProcessId(String processNo) {
+    int lastSlash = processNo.lastIndexOf("/");
+    return processNo.substring(3, lastSlash); // strips "INV" prefix and "/{subProcessId}" suffix
+}
 
+private int extractSubProcessId(String processNo) {
+    return Integer.parseInt(processNo.substring(processNo.lastIndexOf("/") + 1));
+}
     @Override
     @Transactional
     public String saveGprn(SaveGprnDto req) {
@@ -68,7 +75,8 @@ public class GprnServiceImpl implements GprnService {
         gme.setDeliveryDate(CommonUtils.convertStringToDateObject(req.getDeliveryDate()));
         gme.setSupplyExpectedDate(CommonUtils.convertStringToDateObject(req.getSupplyExpectedDate()));
         gme.setUpdateDate(LocalDateTime.now());
-        gme.setProcessId(req.getPoId().substring(2));
+        // gme.setProcessId(req.getPoId().substring(2));
+        gme.setProcessId(req.getPoId().substring(2)); 
         gme.setLocationId(req.getLocationId());
         gme.setCreatedBy(req.getCreatedBy());
         gme.setIndentId(req.getIndentId());
@@ -101,7 +109,7 @@ public class GprnServiceImpl implements GprnService {
             gmde.setProcessId(gme.getProcessId());
             gmde.setPoId(gme.getPoId());
             gmde.setSubProcessId(gme.getSubProcessId());
-            
+            if (dtl.getImageBase64() != null && !dtl.getImageBase64().isEmpty()) {
             try {
                 List<String> imageFileNames = new ArrayList<>();
                 for (String base64Image : dtl.getImageBase64()) {
@@ -116,7 +124,7 @@ public class GprnServiceImpl implements GprnService {
                     AppConstant.ERROR_TYPE_CORRUPTED,
                     "Error while uploading images."));
             }
-    
+            }
             saveDtlEntityList.add(gmde);
             Optional<PurchaseOrderAttributes> poMaterial = poMaterialRepo.findByPurchaseOrder_PoIdAndMaterialCode(gme.getPoId(), dtl.getMaterialCode());
 
@@ -146,8 +154,10 @@ public class GprnServiceImpl implements GprnService {
         gmdr.saveAll(saveDtlEntityList);
 
 
-
-        return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
+return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
+// Was: INV001/1 (PO-borrowed)
+// Now: INV0001/1 (GPRN-own sequence)
+        // return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
     }
 
     @Override
@@ -155,7 +165,8 @@ public class GprnServiceImpl implements GprnService {
         ModelMapper mapper = new ModelMapper();
         String[] processNoSplit = processNo.split("/");
         
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -163,7 +174,8 @@ public class GprnServiceImpl implements GprnService {
                 "Invalid process ID"));
         }
 
-        Integer subProcessId = Integer.parseInt(processNoSplit[1]);
+        Integer subProcessId = extractSubProcessId(processNo);
+        // Integer subProcessId = Integer.parseInt(processNoSplit[1]);
         GprnMasterEntity gme = gmr.findById(subProcessId)
             .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                 AppConstant.ERROR_CODE_RESOURCE,
@@ -265,12 +277,13 @@ public class GprnServiceImpl implements GprnService {
             if (dto.getMaterials() == null) dto.setMaterials(new ArrayList<>());
 
             MaterialDto material = new MaterialDto();
-            material.setMaterialDesc((String) r[5]);
+            material.setMaterialCode((String) r[5]);
+            material.setMaterialDesc((String) r[6]);
 
             // Safely convert all quantities using BigDecimal
-            BigDecimal orderQty   = toBigDecimal(r[6]);
-            BigDecimal receivedQty = toBigDecimal(r[7]);
-            BigDecimal pendingQty  = toBigDecimal(r[8]);
+            BigDecimal orderQty   = toBigDecimal(r[7]);
+            BigDecimal receivedQty = toBigDecimal(r[8]);
+            BigDecimal pendingQty  = toBigDecimal(r[9]);
 
             material.setOrderQty(orderQty);
             material.setReceivedQty(receivedQty);
@@ -299,7 +312,8 @@ public class GprnServiceImpl implements GprnService {
     @Override
     public void validateGprnSubProcessId(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -307,7 +321,8 @@ public class GprnServiceImpl implements GprnService {
                 "Invalid process ID"));
         }
 
-        Integer subProcessId = Integer.parseInt(processNoSplit[1]);
+        Integer subProcessId = extractSubProcessId(processNo);
+        // Integer subProcessId = Integer.parseInt(processNoSplit[1]);
         GprnMasterEntity gprnMaster = gmr.findById(subProcessId)
             .orElseThrow(() -> new BusinessException(new ErrorDetails(
                 AppConstant.ERROR_CODE_RESOURCE,
@@ -329,15 +344,16 @@ public class GprnServiceImpl implements GprnService {
     @Transactional
     public void rejectGprn(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
                 AppConstant.ERROR_TYPE_VALIDATION,
                 "Invalid process number format"));
         }
-
-        Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+        Integer inspectionId = extractSubProcessId(processNo);
+        // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
         
         GprnMasterEntity giMaster = gmr.findById(inspectionId)
             .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -354,15 +370,16 @@ public class GprnServiceImpl implements GprnService {
     @Transactional
     public void approveGprn(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
                 AppConstant.ERROR_TYPE_VALIDATION,
                 "Invalid process number format"));
         }
-
-        Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+            Integer inspectionId = extractSubProcessId(processNo);
+        // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
         
         GprnMasterEntity giMaster = gmr.findById(inspectionId)
             .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -379,7 +396,8 @@ public class GprnServiceImpl implements GprnService {
     @Transactional
     public void changeReqGprn(String processNo) {
         String[] processNoSplit = processNo.split("/");
-        if (processNoSplit.length != 2) {
+        // if (processNoSplit.length != 2) {
+        if (processNoSplit.length < 2) {
             throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -387,8 +405,8 @@ public class GprnServiceImpl implements GprnService {
                 "Invalid process number format"));
         }
 
-        Integer inspectionId = Integer.parseInt(processNoSplit[1]);
-        
+        // Integer inspectionId = Integer.parseInt(processNoSplit[1]);
+        Integer inspectionId = extractSubProcessId(processNo);
         GprnMasterEntity giMaster = gmr.findById(inspectionId)
             .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                 AppConstant.ERROR_CODE_RESOURCE,
@@ -426,7 +444,8 @@ public class GprnServiceImpl implements GprnService {
         String createdBy = gprnMaster.getCreatedBy();
         mapper.map(updateRequest, gprnMaster);
         gprnMaster.setCreatedBy(createdBy);
-        gprnMaster.setProcessId(processNoSplit[0].substring(3));
+        gprnMaster.setProcessId(extractProcessId(updateRequest.getProcessId()));
+        // gprnMaster.setProcessId(processNoSplit[0].substring(3));
         gprnMaster.setStatus("AWAITING APPROVAL");
         
         

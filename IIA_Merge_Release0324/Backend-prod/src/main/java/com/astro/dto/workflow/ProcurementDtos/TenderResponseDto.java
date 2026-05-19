@@ -54,7 +54,8 @@ public class TenderResponseDto {
     private String serialNumber;
     private String dateOfPurchase;
     private String uploadBuyBackFileNames;
-
+private Boolean isActive;
+private String parentTenderId;
     // TC_44: Tender Versioning
     private Integer tenderVersion;
 
@@ -71,4 +72,8 @@ public class TenderResponseDto {
     private String lockedReason;
     private String lockedForPO;
     private LocalDateTime lockedDate;
+
+    private String currentStatus;
+public String getCurrentStatus() { return currentStatus; }
+public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
 }

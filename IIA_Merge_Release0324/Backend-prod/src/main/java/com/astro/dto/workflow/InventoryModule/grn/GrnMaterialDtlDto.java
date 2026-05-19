@@ -16,6 +16,6 @@ public class GrnMaterialDtlDto {
     private BigDecimal acceptedQuantity;
     private BigDecimal depriciationRate;
     private BigDecimal quantity;  // Add this field to match the entity
-
+private Boolean assetFlag;
     private String assetCode;
 }

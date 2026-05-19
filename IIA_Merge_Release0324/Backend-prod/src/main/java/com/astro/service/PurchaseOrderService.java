@@ -19,7 +19,8 @@ public interface PurchaseOrderService {
     public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO purchaseOrderRequestDTO);
 
 
-
+    List<PurchaseOrderResponseDTO> getPoVersionHistory(String poId);
+    
    public List<PurchaseOrderResponseDTO > getAllPurchaseOrders();
 
     public poWithTenderAndIndentResponseDTO getPurchaseOrderById(String poId) ;
@@ -44,5 +45,10 @@ public interface PurchaseOrderService {
 
     public List<performanceWarrsntySecurityReportDto> getPerformanceSecurityReport(String startDate, String endDate);
     public PoFormateDto getPoFormatDetails(String poId) throws IOException;
+
+    PurchaseOrderResponseDTO savePoDraft(PurchaseOrderRequestDTO dto);
+PurchaseOrderResponseDTO updatePoDraft(String poId, PurchaseOrderRequestDTO dto);
+PurchaseOrderResponseDTO submitPoDraft(String poId, PurchaseOrderRequestDTO dto);
+List<PurchaseOrderResponseDTO> getUserPoDrafts(Integer userId);
 
 }

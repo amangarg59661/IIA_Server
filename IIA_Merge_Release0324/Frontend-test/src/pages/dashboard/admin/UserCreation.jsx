@@ -316,6 +316,12 @@ const UserCreation = () => {
         if (employee) {
           setEmployeeValidated(true);
           setSelectedEmployee(employee);
+          // Auto-fill email, userName, and mobileNumber from employee table
+          form.setFieldsValue({
+            userName: form.getFieldValue('userName') || employee.employeeName,
+            email: employee.emailAddress,
+            mobileNumber: employee.phoneNumber || form.getFieldValue('mobileNumber')
+          });
           return Promise.resolve();
         }
       }
@@ -782,7 +788,8 @@ const UserCreation = () => {
                   </Form.Item>
 
                   <Form.Item label="Mobile Number (Optional)" name="mobileNumber">
-                    <Input placeholder="Enter mobile number" maxLength={10} />
+                  <Input placeholder="Enter mobile or landline number" maxLength={15} />
+                    {/* <Input placeholder="Enter mobile number" maxLength={10} /> */}
                   </Form.Item>
 
                   <Form.Item style={{ marginTop: '32px', marginBottom: 0 }}>
@@ -925,7 +932,8 @@ const UserCreation = () => {
           </Form.Item>
 
           <Form.Item label="Mobile Number" name="mobileNumber">
-            <Input placeholder="Enter mobile number" maxLength={10} />
+          <Input placeholder="Enter mobile or landline number" maxLength={15} />
+            {/* <Input placeholder="Enter mobile number" maxLength={10} /> */}
           </Form.Item>
 
           <Form.Item style={{ marginTop: '24px', marginBottom: 0 }}>

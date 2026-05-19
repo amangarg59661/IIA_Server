@@ -43,6 +43,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import com.astro.service.BudgetService;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -53,6 +54,9 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     @Autowired
     WorkflowTransitionRepository workflowTransitionRepository;
+
+    @Autowired
+private BudgetService budgetService;
 
     @Autowired
     WorkflowMasterRepository workflowMasterRepository;
@@ -518,6 +522,47 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     /**
+     * Returns true when the role is an indentor / indent-creator role.
+     * These should be routed to the SPECIFIC user who created the indent,
+     * not to every user who carries that role.
+     */
+    private boolean isIndentorRole(String roleName) {
+        if (roleName == null) return false;
+        String trimmed = roleName.trim().toLowerCase();
+        return trimmed.equals("indentor") || trimmed.equals("indent creator");
+    }
+
+    /**
+     * Resolves the indent creator's user record so that the workflow transition
+     * can be assigned to that specific user (user-based routing).
+     * Flow: requestId -> IndentCreation.createdBy -> UserMaster
+     */
+    private Map<String, Object> resolveIndentCreator(String requestId) {
+        IndentCreation indent = indentCreationRepository.findByIndentId(requestId);
+        if (indent == null || indent.getCreatedBy() == null) {
+            throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
+                    "Cannot resolve Indentor: Indent not found or has no creator for requestId=" + requestId));
+        }
+        Integer creatorUserId = indent.getCreatedBy();
+        UserMaster creatorUser = userMasterRepository.findByUserId(creatorUserId);
+        if (creatorUser == null) {
+            throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
+                    "Cannot resolve Indentor: No user account found for creator userId=" + creatorUserId
+                    + " on indent " + requestId));
+        }
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", creatorUser.getUserId());
+        result.put("employeeId", creatorUser.getEmployeeId() != null ? creatorUser.getEmployeeId() : "");
+        result.put("employeeName", creatorUser.getUserName() != null ? creatorUser.getUserName() : "");
+        System.out.println("✅ Resolved Indentor for requestId=" + requestId
+                + " → userId=" + creatorUser.getUserId());
+        return result;
+    }
+
+
+    /**
      * Resolves the location-based approver (Professor In Charge or Engineer In
      * Charge) for the given indent. Flow: requestId ->
      * IndentCreation.consignesLocation -> find User with matching role AND
@@ -649,6 +694,8 @@ public class WorkflowServiceImpl implements WorkflowService {
                 transition.setCurrentRole("Tender Creator");
             } else if (workflowDto.getWorkflowName().toUpperCase().contains("INDENT")) {
                 transition.setCurrentRole("Indent Creator");
+            } else if (workflowDto.getWorkflowName().toUpperCase().contains("PO") || workflowDto.getWorkflowName().toUpperCase().contains("PURCHASE") ) {
+                transition.setCurrentRole("PO Creator");
             } else {
                 transition.setCurrentRole("Request Creator");
             }
@@ -698,7 +745,14 @@ public class WorkflowServiceImpl implements WorkflowService {
                 System.out.println(firstApprover.getRoleName() + " assigned: " + locInfo.get("employeeName")
                         + " (userId=" + locInfo.get("userId") + ")");
             }
-
+  // Indentor / Indent Creator: route to the specific user who created this indent
+            if (isIndentorRole(firstApprover.getRoleName())) {
+                Map<String, Object> indInfo = resolveIndentCreator(requestId);
+                transition.setAssignedToUserId((Integer) indInfo.get("userId"));
+                transition.setAssignedToEmployeeId((String) indInfo.get("employeeId"));
+                System.out.println("Indentor assigned: " + indInfo.get("employeeName")
+                        + " (userId=" + indInfo.get("userId") + ")");
+            }
             System.out.println("✅ Workflow initiated with branch: " + matchedBranch.getBranchCode()
                     + " (ID: " + matchedBranch.getBranchId() + ")"
                     + ", First approver: " + firstApprover.getRoleName()
@@ -1052,6 +1106,24 @@ public class WorkflowServiceImpl implements WorkflowService {
                     AppConstant.ERROR_TYPE_VALIDATION, "Workflow transition not found.With given workflow transition id and request id."));
         }
 
+        // Recovery: if a "Change requested" return transition was saved without branchId
+        // (created before the fix), recover branchId from any sibling transition that has one.
+        // Level/seq are set to 0 so getNextApprover restarts from the first approver (RO),
+        // not from wherever the approver who sent the change request was in the chain.
+        if (workflowTransition.getBranchId() == null && workflowTransition.getTransitionId() == null) {
+            workflowTransitionRepository.findByRequestId(workflowTransition.getRequestId())
+                .stream()
+                .filter(wt -> wt.getBranchId() != null
+                        && !wt.getWorkflowTransitionId().equals(workflowTransition.getWorkflowTransitionId()))
+                .findFirst()
+                .ifPresent(sibling -> {
+                    workflowTransition.setBranchId(sibling.getBranchId());
+                    workflowTransition.setApprovalLevel(0);
+                    workflowTransition.setApprovalSequence(0);
+                    workflowTransitionRepository.save(workflowTransition);
+                });
+        }
+
         // For branch-based workflows, transitionId is null
         TransitionMaster currentTransition = null;
         if (workflowTransition.getTransitionId() != null) {
@@ -1069,14 +1141,14 @@ public class WorkflowServiceImpl implements WorkflowService {
                 validateUserRole(transitionActionReqDto.getActionBy(), currentTransition.getNextRoleId());
             }
         }
-        /* if (AppConstant.COMPLETED_TYPE.equalsIgnoreCase(workflowTransition.getStatus())) {
+
+        // Block any action on a transition that is already fully completed.
+        // NOTE: we do NOT make a special exception for REJECT here — once a workflow is
+        // COMPLETED (i.e. the indent was approved by the full hierarchy), it cannot be
+        // rejected. An approved indent is immutable.
+        if (AppConstant.COMPLETED_TYPE.equalsIgnoreCase(workflowTransition.getStatus())) {
             throw new BusinessException(new ErrorDetails(AppConstant.INVALID_ACTION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION, "Workflow already completed."));
-        }*/
-        if (AppConstant.COMPLETED_TYPE.equalsIgnoreCase(workflowTransition.getStatus())
-                && !AppConstant.REJECT_TYPE.equalsIgnoreCase(transitionActionReqDto.getAction())) {
-            throw new BusinessException(new ErrorDetails(AppConstant.INVALID_ACTION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION, "Workflow already completed."));
+                    AppConstant.ERROR_TYPE_VALIDATION, "Workflow already completed. An approved request cannot be rejected."));
         }
 
         if (AppConstant.APPROVE_TYPE.equalsIgnoreCase(transitionActionReqDto.getAction())) {
@@ -1145,16 +1217,20 @@ public class WorkflowServiceImpl implements WorkflowService {
                 }
             }
         } else if (AppConstant.REJECT_TYPE.equalsIgnoreCase(transitionActionReqDto.getAction())) {
-            WorkflowTransitionDto wt = rejectTransition(workflowTransition, currentTransition, transitionActionReqDto);
-            // List<WorkflowTransition> transitions = workflowTransitionRepository.findByRequestId(transitionActionReqDto.getRequestId());
-            List<WorkflowTransition> transitions = workflowTransitionRepository.findByRequestId(transitionActionReqDto.getRequestId());
+            // Collect all transitions BEFORE termination so we have the full recipient list for email
+            List<WorkflowTransition> allTransitions =
+                    workflowTransitionRepository.findByRequestId(transitionActionReqDto.getRequestId());
+
+            // Terminal rejection — marks current transition COMPLETED/REJECTED,
+            // cancels every other PENDING/IN-PROGRESS transition, updates the request entity status.
+            // No backward traversal. No reassignment. Rejection is a dead end.
+            WorkflowTransitionDto wt = terminateWorkflowOnRejection(workflowTransition, transitionActionReqDto);
 
             if (wt != null) {
                 try {
-                    //  emailService.sendWorkflowEmail(wt); // @Async method
-                    sendRejectionTransitionEmails(transitions, wt);
+                    sendRejectionTransitionEmails(allTransitions, wt);
                 } catch (Exception e) {
-                    // log.error("Failed to send transition email", e);
+                    // email failure must never roll back the rejection transaction
                 }
             }
         } else if (AppConstant.CHANGE_REQUEST_TYPE.equalsIgnoreCase(transitionActionReqDto.getAction())) {
@@ -1374,6 +1450,24 @@ public class WorkflowServiceImpl implements WorkflowService {
             nextWorkflowTransition.setTransitionOrder(latestWorkflowTransition.getTransitionOrder());
             nextWorkflowTransition.setTransitionSubOrder(latestWorkflowTransition.getTransitionSubOrder());
             nextWorkflowTransition.setWorkflowName(latestWorkflowTransition.getWorkflowName());
+            // Preserve branch-based workflow fields so approveTransition can route correctly on resubmit.
+            // Use currentWorkflowTransition (the approver who sent the change request) for branchId —
+            // it always has branchId set. Set level/seq to 0 so getNextApprover restarts from the
+            // first approver in the chain (Reporting Officer) rather than skipping past them.
+            nextWorkflowTransition.setBranchId(currentWorkflowTransition.getBranchId());
+            // nextWorkflowTransition.setApprovalLevel(0);
+            // nextWorkflowTransition.setApprovalSequence(0);
+            if (CREATOR_ROLES.contains(transitionActionReqDto.getAssignmentRole())) {
+    // Sent back to creator (Indent Creator, PO Creator, etc.)
+    // Restart the full approval chain from the beginning — correct behaviour
+    nextWorkflowTransition.setApprovalLevel(0);
+    nextWorkflowTransition.setApprovalSequence(0);
+} else {
+    // Sent back to a mid-chain approver (e.g. Member 2 of 4)
+    // Preserve their level/seq so when they approve, chain continues from Member 3 onwards
+    nextWorkflowTransition.setApprovalLevel(latestWorkflowTransition.getApprovalLevel());
+    nextWorkflowTransition.setApprovalSequence(latestWorkflowTransition.getApprovalSequence());
+}
             nextWorkflowTransition.setStatus(AppConstant.IN_PROGRESS_TYPE);
             nextWorkflowTransition.setNextAction(AppConstant.PENDING_TYPE);
             nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
@@ -1384,22 +1478,19 @@ public class WorkflowServiceImpl implements WorkflowService {
             nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
             nextWorkflowTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
             nextWorkflowTransition.setCurrentRole(currentWorkflowTransition.getNextRole());
-            // if (transitionActionReqDto.getAssignmentRole().equalsIgnoreCase("Request Creator")) {
-            /* if(CREATOR_ROLES.contains(transitionActionReqDto.getAssignmentRole())){
-                nextWorkflowTransition.setNextRole(latestWorkflowTransition.getCurrentRole());
-            } else {
-                nextWorkflowTransition.setNextRole(latestWorkflowTransition.getNextRole());
-            }*/
 
             // nextWorkflowTransition.setNextRole(transitionActionReqDto.getAssignmentRole());
             // updated by abhinav
             String assignmentRole = transitionActionReqDto.getAssignmentRole();
 
-            if ("Request Creator".equalsIgnoreCase(assignmentRole)
+            if ("PO Creator".equalsIgnoreCase(assignmentRole)
                     && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")) {
 
                 nextWorkflowTransition.setNextRole("PO Creator");
 
+            } else if("Request Creator".equalsIgnoreCase(assignmentRole)
+                    && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")){
+                nextWorkflowTransition.setNextRole(assignmentRole);
             } else {
                 nextWorkflowTransition.setNextRole(assignmentRole);
             }
@@ -1463,72 +1554,219 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
     }
 
-    private WorkflowTransitionDto rejectTransition(WorkflowTransition currentWorkflowTransition, TransitionMaster currentTransition, TransitionActionReqDto transitionActionReqDto) {
+    /**
+     * Terminates the entire workflow when a user performs REJECTED.
+     *
+     * <p>Key business rules enforced here:
+     * <ol>
+     *   <li><strong>Approved indent cannot be rejected.</strong> Once an indent has been
+     *       fully approved by the hierarchy (currentStatus = "APPROVED"), it is immutable.
+     *       Attempting to reject it throws a BusinessException.</li>
+     *   <li><strong>Indent linked to an active Tender cannot be rejected.</strong> If the
+     *       indent already has a tender raised against it, the tender must be cancelled first.
+     *       If the indent has no tender yet, it can be rejected freely.</li>
+     *   <li><strong>Terminal rejection.</strong> The current transition is closed in-place
+     *       (status=COMPLETED, action=REJECTED). All other PENDING/IN-PROGRESS sibling
+     *       transitions are bulk-cancelled. The underlying request entity is updated to REJECTED.
+     *       No new transition row is created. No backward traversal. No role re-assignment.</li>
+     * </ol>
+     *
+     * @param currentWorkflowTransition The transition the approver is acting on.
+     * @param transitionActionReqDto    The request payload: action=REJECTED, remarks, actionBy, requestId.
+     * @return DTO of the closed (rejected) transition for email dispatch upstream.
+     */
+    @Transactional
+    private WorkflowTransitionDto terminateWorkflowOnRejection(
+            WorkflowTransition currentWorkflowTransition,
+            TransitionActionReqDto transitionActionReqDto) {
 
         String requestId = transitionActionReqDto.getRequestId();
 
-        // Check if requestId starts with IND
+        // ── Guard: Approved indent cannot be rejected ──
+        // Flow: Indent approved → Tender raised → IndentId table entry created.
+        // Therefore if an indent is in the IndentId table it is already approved,
+        // and Guard 1a below would have caught it first. Guard 1b (tender-cancellation
+        // check) is intentionally omitted — it is unreachable given this flow.
         if (requestId != null && requestId.startsWith("IND")) {
-
-            // Fetch the IndentId entity
-            Optional<IndentId> optionalIndent = indentIdtenderIdsRepository.findByIndentId(requestId);
-            if (optionalIndent.isEmpty()) {
-                throw new InvalidInputException(new ErrorDetails(AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                        AppConstant.ERROR_TYPE_VALIDATION, "Invalid indent ids."));
-            }
-
-            IndentId indent = optionalIndent.get();
-            String tenderId = indent.getTenderRequest().getTenderId();
-
-            if (tenderId != null) {
-                // Fetch latest WorkflowTransition for this tender
-                Optional<WorkflowTransition> latestTransitionOpt
-                        = workflowTransitionRepository.findTopByRequestIdOrderByWorkflowTransitionIdDesc(tenderId);
-
-                if (latestTransitionOpt.isEmpty()) {
-                    throw new InvalidInputException(new ErrorDetails(AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_VALIDATION, "no workflow transition fount."));
+            indentCreationRepository.findById(requestId).ifPresent(indent -> {
+                if ("APPROVED".equalsIgnoreCase(indent.getCurrentStatus())) {
+                    throw new BusinessException(new ErrorDetails(
+                            AppConstant.USER_INVALID_INPUT,
+                            AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                            AppConstant.ERROR_TYPE_VALIDATION,
+                            "Cannot reject Indent " + requestId
+                                    + ". It has already been approved and cannot be reversed."));
                 }
-
-                WorkflowTransition latestTransition = latestTransitionOpt.get();
-
-                // If tender is not canceled, return message without canceling indent
-                if (!AppConstant.CANCELED_TYPE.equalsIgnoreCase(latestTransition.getStatus())) {
-                    // Could return null or custom DTO with message
-                    throw new InvalidInputException(new ErrorDetails(AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_VALIDATION, "Cannot cancel Indent " + requestId + ". Tender " + tenderId + " is not canceled yet.")
-                    );
-
-                }
-            }
+            });
         }
+        // ── End of Indent guard ──
 
-        //update currentWorkflowTransition and save
-        currentWorkflowTransition.setNextAction(AppConstant.COMPLETED_TYPE);
+        Date now = new Date();
+
+        // ── Step 1: Close the CURRENT transition as REJECTED (in-place update) ──
+        // Stamping in-place preserves who rejected and when on the exact transition row
+        // without creating a dangling new row that could re-enter any queue.
+        currentWorkflowTransition.setStatus(AppConstant.COMPLETED_TYPE);
+        currentWorkflowTransition.setAction(AppConstant.REJECT_TYPE);
+        currentWorkflowTransition.setNextAction(null);   // nothing pending after rejection
+        currentWorkflowTransition.setNextRole(null);     // clear queue assignment
+        currentWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+        currentWorkflowTransition.setModificationDate(now);
+        currentWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
         workflowTransitionRepository.save(currentWorkflowTransition);
 
-        WorkflowTransition nextWorkflowTransition = new WorkflowTransition();
-        nextWorkflowTransition.setWorkflowId(currentWorkflowTransition.getWorkflowId());
-        nextWorkflowTransition.setTransitionId(currentWorkflowTransition.getTransitionId());
-        nextWorkflowTransition.setTransitionOrder(currentWorkflowTransition.getTransitionOrder());
-        nextWorkflowTransition.setWorkflowName(currentWorkflowTransition.getWorkflowName());
-        nextWorkflowTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
-        nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
-        nextWorkflowTransition.setTransitionSubOrder(currentWorkflowTransition.getTransitionSubOrder());
-        nextWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
-        nextWorkflowTransition.setRequestId(currentWorkflowTransition.getRequestId());
-        nextWorkflowTransition.setModificationDate(new Date());
-        nextWorkflowTransition.setStatus(AppConstant.CANCELED_TYPE);
-        nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
-        nextWorkflowTransition.setNextAction(null);
-        nextWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
-        nextWorkflowTransition.setCurrentRole(currentWorkflowTransition.getNextRole());
-        nextWorkflowTransition.setWorkflowSequence(currentWorkflowTransition.getWorkflowSequence() + 1);
+        System.out.println("✅ [REJECTION] Closed transition ID="
+                + currentWorkflowTransition.getWorkflowTransitionId()
+                + " for requestId=" + requestId
+                + " by userId=" + transitionActionReqDto.getActionBy());
 
-        workflowTransitionRepository.save(nextWorkflowTransition);
+        // ── Step 2: Cancel ALL other PENDING / IN-PROGRESS sibling transitions ──
+        // This handles parallel-approver scenarios and ensures nothing lingers in any queue.
+        List<WorkflowTransition> siblingTransitions =
+                workflowTransitionRepository.findByRequestId(requestId);
 
-        return mapToWorkflowTransitionDto(nextWorkflowTransition);
+        List<WorkflowTransition> toCancel = siblingTransitions.stream()
+                .filter(t -> !t.getWorkflowTransitionId()
+                        .equals(currentWorkflowTransition.getWorkflowTransitionId()))
+                .filter(t -> AppConstant.PENDING_TYPE.equalsIgnoreCase(t.getNextAction())
+                        || AppConstant.IN_PROGRESS_TYPE.equalsIgnoreCase(t.getStatus()))
+                .collect(Collectors.toList());
 
+        if (!toCancel.isEmpty()) {
+            toCancel.forEach(t -> {
+                t.setStatus(AppConstant.CANCELED_TYPE);
+                t.setNextAction(null);
+                t.setNextRole(null);
+                t.setModifiedBy(transitionActionReqDto.getActionBy());
+                t.setModificationDate(now);
+                t.setRemarks("Auto-cancelled: workflow terminated by rejection on transition ID="
+                        + currentWorkflowTransition.getWorkflowTransitionId());
+            });
+            workflowTransitionRepository.saveAll(toCancel);
+            System.out.println("✅ [REJECTION] Cancelled " + toCancel.size()
+                    + " sibling transition(s) for requestId=" + requestId);
+        }
+
+        // ── Step 3: Update the underlying request entity status to REJECTED ──
+        // This makes the request disappear from application-level lists that filter by status.
+        updateRequestEntityOnRejection(
+                requestId,
+                currentWorkflowTransition.getWorkflowName(),
+                transitionActionReqDto.getActionBy(),
+                transitionActionReqDto.getRemarks(),
+                now);
+
+        // ── Step 4: Return DTO of the closed transition for email dispatch ──
+        return mapToWorkflowTransitionDto(currentWorkflowTransition);
+    }
+
+    /**
+     * Updates the underlying request entity (Indent, Tender, PO, SO, CP) to REJECTED status.
+     *
+     * <p>Each domain table has its own status field. We dispatch to the right repository
+     * based on the requestId prefix or workflow name. If an entity update fails, we log
+     * and swallow the exception — the workflow state is already committed and must not be
+     * rolled back due to a secondary status update failure.
+     *
+     * <p>DB field assumptions:
+     * <ul>
+     *   <li>indent_creation: current_status, current_stage, is_editable</li>
+     *   <li>tender_request:  status</li>
+     *   <li>purchase_order:  status</li>
+     *   <li>service_order:   status</li>
+     *   <li>contingency_purchase: status</li>
+     * </ul>
+     */
+    private void updateRequestEntityOnRejection(
+            String requestId, String workflowName,
+            Integer actionBy, String remarks, Date now) {
+
+        if (requestId == null || workflowName == null) {
+            System.err.println("⚠️ [REJECTION] Cannot update entity — requestId or workflowName is null.");
+            return;
+        }
+
+        String workflowNameUpper = workflowName.toUpperCase();
+
+        try {
+            if (requestId.startsWith("IND") || workflowNameUpper.contains("INDENT")) {
+                indentCreationRepository.findById(requestId).ifPresent(indent -> {
+                    indent.setCurrentStatus("REJECTED");
+                    indent.setCurrentStage("INDENT_REJECTED");
+                    indent.setIsEditable(false);
+                    indentCreationRepository.save(indent);
+                    System.out.println("✅ [REJECTION] IndentCreation " + requestId + " → REJECTED");
+                });
+
+                 // Release budget hold — indent is permanently rejected, funds go back to available
+    try {
+        budgetService.releaseHoldIfRejected(requestId, "INDENT");
+        System.out.println("✅ [REJECTION] Budget hold released for indent " + requestId);
+    } catch (Exception e) {
+        // Log but don't rethrow — workflow rejection must not roll back due to budget release failure
+        System.err.println("❌ [REJECTION] Failed to release budget hold for " + requestId + ": " + e.getMessage());
+    }
+
+            } else if (requestId.startsWith("T") || workflowNameUpper.contains("TENDER")) {
+                tenderRequestRepository.findById(requestId).ifPresent(tender -> {
+                    tender.setCurrentStatus("REJECTED");
+                    tenderRequestRepository.save(tender);
+                    System.out.println("✅ [REJECTION] TenderRequest " + requestId + " → REJECTED");
+                });
+
+            } else if (requestId.startsWith("PO") || workflowNameUpper.contains("PO")) {
+                purchaseOrderRepository.findById(requestId).ifPresent(po -> {
+                    po.setCurrentStatus("REJECTED");
+                    po.setIsActive(false);
+                    purchaseOrderRepository.save(po);
+                    System.out.println("✅ [REJECTION] PurchaseOrder " + requestId + " → REJECTED");
+                });
+                 // Release PO hold if it exists (only present if PO was finally approved before rejection — edge case)
+                try {
+                    budgetService.releaseHoldIfRejected(requestId, "PO");
+                    System.out.println("✅ [REJECTION] Budget hold released for PO " + requestId);
+                } catch (Exception e) {
+                    System.err.println("❌ [REJECTION] Failed to release PO budget hold for " + requestId + ": " + e.getMessage());
+                }
+
+            } else if (requestId.startsWith("SO") || workflowNameUpper.contains("SO")) {
+                serviceOrderRepository.findById(requestId).ifPresent(so -> {
+                    so.setCurrentStatus("REJECTED");
+                    serviceOrderRepository.save(so);
+                    System.out.println("✅ [REJECTION] ServiceOrder " + requestId + " → REJECTED");
+                });
+                 // Reverse spent and restore indent holds
+                try {
+                    com.astro.entity.ProcurementModule.ServiceOrder so =
+                            serviceOrderRepository.findById(requestId).orElse(null);
+                    if (so != null) {
+                        budgetService.releaseSOSpent(requestId, so.getTenderId());
+                        System.out.println("✅ [REJECTION] SO budget reversed for: " + requestId);
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ [REJECTION] Failed to reverse SO budget for " + requestId + ": " + e.getMessage());
+                }
+
+            } else if (requestId.startsWith("CP") || workflowNameUpper.contains("CONTINGENCY")) {
+                contigencyPurchaseRepository.findById(requestId).ifPresent(cp -> {
+                    cp.setCurrentStatus("REJECTED");
+                    contigencyPurchaseRepository.save(cp);
+                    System.out.println("✅ [REJECTION] ContingencyPurchase " + requestId + " → REJECTED");
+                });
+
+            } else {
+                System.err.println("⚠️ [REJECTION] No entity update rule for requestId="
+                        + requestId + ", workflowName=" + workflowName
+                        + ". Add a branch in updateRequestEntityOnRejection() if needed.");
+            }
+
+        } catch (Exception e) {
+            // Log but do NOT rethrow — the workflow transition state is already persisted.
+            // A failed entity status update must not roll back the rejection itself.
+            System.err.println("❌ [REJECTION] Failed to update request entity for "
+                    + requestId + ": " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private WorkflowTransition getPrevWorkflowTransition(WorkflowTransition workflowTransition) {
@@ -1791,6 +2029,38 @@ public class WorkflowServiceImpl implements WorkflowService {
             System.out.println("Final approval by " + currentWorkflowTransition.getNextRole()
                     + " (Branch: " + currentWorkflowTransition.getBranchId()
                     + ") - Workflow COMPLETED");
+                      // PO final approval → finalize budget hold
+            String reqId = currentWorkflowTransition.getRequestId();
+            if (reqId != null && reqId.startsWith("PO")) {
+                try {
+                    purchaseOrderRepository.findById(reqId).ifPresent(po -> {
+                        budgetService.finalizePoHold(
+                                po.getPoId(),
+                                po.getTenderId(),
+                                po.getPurchaseOrderAttributes());
+                        System.out.println("✅ [PO FINAL APPROVAL] Budget hold finalized for PO: " + reqId);
+                    });
+                } catch (Exception e) {
+                    // Rethrow — insufficient budget must block final approval
+                    System.err.println("❌ [PO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+                    throw e;
+                }
+            }
+            // SO final approval → directly to Spent
+            if (reqId != null && reqId.startsWith("SO")) {
+                try {
+                    serviceOrderRepository.findById(reqId).ifPresent(so -> {
+                        budgetService.finalizeSOAsSpent(
+                                so.getSoId(),
+                                so.getTenderId(),
+                                so.getMaterials());
+                        System.out.println("✅ [SO FINAL APPROVAL] Budget spent for SO: " + reqId);
+                    });
+                } catch (Exception e) {
+                    System.err.println("❌ [SO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+                    throw e; // Block approval if budget insufficient
+                }
+            }
         }
 
         workflowTransitionRepository.save(nextWorkflowTransition);
@@ -2627,7 +2897,8 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                         tenderId,
                         tenderRequest.getBidType(),
                         tenderRequest.getTotalTenderValue(),
-                        indentNumber
+                        indentNumber,
+                        tenderRequest.getModeOfProcurement()
                 );
                 approvedTenders.add(dto);
             }
@@ -2661,7 +2932,8 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                 tenderId,
                 tenderRequest.getBidType(),
                 tenderRequest.getTotalTenderValue(),
-                indentNumber
+                indentNumber,
+               tenderRequest.getModeOfProcurement()
         );
     }
 
@@ -2823,6 +3095,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
         response.setWorkflowName("Material Workflow");
         response.setWorkflowId(9);
         response.setAmount(ma.getUnitPrice());
+        response.setMaterialDesc(ma.getDescription());
 
         // Null check to prevent NullPointerException
         if (us != null) {
@@ -2840,6 +3113,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
         response.setRequestId(job.getJobCode());
         response.setWorkflowName("Job Workflow");
         response.setWorkflowId(11);
+        response.setMaterialDesc(job.getJobDescription());
         response.setAmount(job.getEstimatedPriceWithCcy());
         response.setIndentorName(job.getUpdatedBy() != null ? job.getUpdatedBy() : "Unknown User");
         response.setStatus(job.getApprovalStatus());

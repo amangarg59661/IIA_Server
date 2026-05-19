@@ -32,7 +32,7 @@ const [isEditable, setIsEditable] = useState(false);
   }));
 
   const indentList = userMaster
-    ?.filter((item) => item.roleName === "Indent Creator")
+    ?.filter((item) => item.roleName.includes( "Indent Creator"))
     .map((item) => ({ label: item.userName, value: item.userId.toString() }));
 
   const [formData, setFormData] = useState({
@@ -125,7 +125,13 @@ const handleAssetSearch = async (value) => {
         disposalDate: disposalData.disposalDate,
         custodianId: disposalData.custodianId || prev.custodianId,
         locationId: disposalData.locationId || prev.locationId,
-        materialDtlList: disposalData.materialDtlList || [],
+        // materialDtlList: disposalData.materialDtlList || [],
+        materialDtlList: (disposalData.materialDtlList || []).map((item) => ({
+  ...item,
+  poDate: item?.gprnDate
+    ? dayjs(item.gprnDate, "DD/MM/YYYY")
+    : item.poDate || null,
+}))
         // any other fields you want to fill from disposalData
       }));
 
@@ -248,7 +254,7 @@ console.log(formData);
               fieldList: [
                 {
                   name: "assetSearch",
-                  label: "Search Asset",
+                  label: "Search Asset Disposal",
                   type: "search",
                   span: 2,
                   onSearch: handleAssetSearch,

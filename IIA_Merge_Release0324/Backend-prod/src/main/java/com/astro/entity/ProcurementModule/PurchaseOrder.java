@@ -28,6 +28,8 @@ public class PurchaseOrder {
     private String warranty;
     @Column(name = "consignes_address")
     private String consignesAddress;
+    @Column(name = "parent_po_id")
+    private String parentPoId;
     @Column(name = "billing_address")
     private String billingAddress;
     @Column(name = "delivery_period")

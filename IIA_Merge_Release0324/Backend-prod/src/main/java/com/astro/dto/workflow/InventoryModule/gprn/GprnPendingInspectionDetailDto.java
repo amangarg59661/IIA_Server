@@ -17,4 +17,5 @@ public class GprnPendingInspectionDetailDto {
     private String warrantyTerms;
     private String note;
     private String photoPath;
+    private Boolean assetFlag;
 }

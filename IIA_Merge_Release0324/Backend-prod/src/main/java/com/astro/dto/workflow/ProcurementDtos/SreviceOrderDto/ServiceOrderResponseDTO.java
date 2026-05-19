@@ -21,6 +21,9 @@ public class ServiceOrderResponseDTO {
     private String vendorAddress;
     private String applicablePBGToBeSubmitted;
     private String vendorId;
+    private Boolean isActive;
+private Integer soVersion;
+private String parentSoId;
     private String vendorsAccountNo;
     private String vendorsZRSCCode;
     private String vendorsAccountName;

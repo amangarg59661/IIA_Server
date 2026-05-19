@@ -56,6 +56,9 @@ public class JobMaster {
     @Column(name = "updated_by")
     private String updatedBy;
 
+    @Column(name= "origin")
+    private String origin;
+
     private LocalDateTime createdDate = LocalDateTime.now();
     private LocalDateTime updatedDate = LocalDateTime.now();
 

@@ -321,14 +321,14 @@ export const sidebarMenus = {
             label: "Goods Return",
             path: "/inventory/goodsReturn",
           },
-          {
-            key: "5.4",
-            icon: <MdOutlineAddBox />,
-            label: "Goods Issue",
-            path: "/inventory/goodsIssue",
-          },
+          // {
+          //   key: "5.4",
+          //   icon: <MdOutlineAddBox />,
+          //   label: "Goods Issue",
+          //   path: "/inventory/goodsIssue",
+          // },
         {
-          key: "5.5",
+          key: "5.4",
           icon: <CiPassport1 />,
           label: "Outward Gate Pass",
           path: "/inventory/outward",
@@ -391,12 +391,12 @@ export const sidebarMenus = {
           label: "Goods Receipt and Inspection",
           path: "/inventory/goodsReceipt",
         },
-          {
-            key: "4.5",
-            icon: <MdOutlineAddBox />,
-            label: "Goods Issue",
-            path: "/inventory/goodsIssue",
-          },
+          // {
+          //   key: "4.5",
+          //   icon: <MdOutlineAddBox />,
+          //   label: "Goods Issue",
+          //   path: "/inventory/goodsIssue",
+          // },
            {
           key: "4.6",
           icon: <CiPassport1 />,

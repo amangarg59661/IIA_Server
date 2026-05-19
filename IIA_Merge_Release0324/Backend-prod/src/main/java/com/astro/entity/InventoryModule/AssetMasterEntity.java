@@ -67,5 +67,8 @@ public class AssetMasterEntity {
     @Column(name="igp_id")
     private Long igpId;
     
+    @Column(name="grn_no")
+    private String grnNumber;
+    
     private Integer updatedBy;
 }

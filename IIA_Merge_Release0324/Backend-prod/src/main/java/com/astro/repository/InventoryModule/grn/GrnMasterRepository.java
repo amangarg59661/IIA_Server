@@ -39,4 +39,13 @@ WHERE g.grnType = 'GI' AND g.status = 'Approved'
 """)
     List<Object[]> findPoDetailsForGIApproved();
 
+
+
+    @Query("SELECT ic.indentorName FROM IndentCreation ic " +
+       "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")
+String findSingleIndentorNameForTender(@Param("tenderId") String tenderId);
+
+@Query("SELECT g.gprnSubProcessId FROM GiMasterEntity g WHERE g.inspectionSubProcessId = :giSubProcessId")
+Integer findGprnSubProcessIdByGiSubProcessId(@Param("giSubProcessId") Integer giSubProcessId);
+
 }

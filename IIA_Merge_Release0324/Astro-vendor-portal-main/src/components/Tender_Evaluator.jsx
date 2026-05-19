@@ -49,7 +49,7 @@ const TenderEvaluator = ({ tenderId, actionStatus }) => {
   // ─── NEW EFFECT: FETCH AND COMPARE CLOSING DATE ──────────────────────────────
  useEffect(() => {
   axios
-    .get(`/api/tender-requests/data/${tenderId}`)
+    .get(`/api/tender-requests/data/byId`, {param : {tenderId:tenderId}})
     .then(res => {
       const cdString = res.data.responseData.closingDate; // e.g., "10/05/2025"
       if (!cdString) return;
@@ -346,7 +346,7 @@ const handleFileChange = (docName, fileData) => {
         setSelectedRecord({ requestId: tenderId, workflowId: 4 });
 
         try {
-          const response = await axios.get(`/api/tender-requests/${tenderId}`);
+          const response = await axios.get(`/api/tender-requests/byid`,{param :{tenderId:tenderId}});
           setDetailsData(response.data.responseData);
         } catch (err) {
           console.error("Failed to fetch tender details:", err);
