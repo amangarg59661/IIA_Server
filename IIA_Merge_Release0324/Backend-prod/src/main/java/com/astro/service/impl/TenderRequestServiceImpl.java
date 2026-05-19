@@ -1398,7 +1398,7 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
         tenderResponseDto.setBidSecurityDeclarationFile(tenderRequest.getBidSecurityDeclarationFileName());
         tenderResponseDto.setVendorName(tenderRequest.getVendorId());
         List<String> indentIds = indentIdRepository.findTenderWithIndent(tenderRequest.getTenderId());
-
+        tenderResponseDto.setIndentIds(indentIds);
         WorkflowTransition wt = workflowTransitionRepository.findTopByRequestIdOrderByWorkflowSequenceDesc(tenderId);
         if (wt != null) {
             tenderResponseDto.setStatus(wt.getStatus());
