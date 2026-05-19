@@ -60,7 +60,25 @@ public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTran
 
  //   @Query("Select wt.requestId from WorkflowTransition wt WHERE wt.workflowName = 'Tender Evaluator Workflow' AND wt.status = 'Completed' AND wt.nextAction IS NULL AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)")
  //   List<String> findApprovedTenderIdsForPOANDSO();
-    @Query("Select wt.requestId from WorkflowTransition wt WHERE wt.workflowName = 'Tender Approver Workflow' AND wt.status = 'Completed' AND wt.nextAction IS NULL AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)")
+    /**
+     * Returns tender IDs that are:
+     * 1. Workflow-approved (Tender Approver Workflow, Completed)
+     * 2. Not yet in a PurchaseOrder or ServiceOrder
+     * 3. Either have no TenderEvaluation record (older tenders) OR TenderEvaluation is APPROVED.
+     *    This gates PO creation until Tender Evaluation is complete.
+     */
+    @Query("""
+        SELECT wt.requestId FROM WorkflowTransition wt
+        WHERE wt.workflowName = 'Tender Approver Workflow'
+          AND wt.status = 'Completed'
+          AND wt.nextAction IS NULL
+          AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po)
+          AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)
+          AND (
+            wt.requestId NOT IN (SELECT te.tenderId FROM TenderEvaluation te)
+            OR wt.requestId IN (SELECT te.tenderId FROM TenderEvaluation te WHERE te.evaluationStatus = 'APPROVED')
+          )
+    """)
     List<String> findApprovedTenderIdsForPOANDSO();
 
     @Query("SELECT wt.requestId FROM WorkflowTransition wt WHERE wt.workflowName = 'PO Workflow' AND wt.status = 'Completed' AND wt.nextAction IS NULL")

@@ -27,7 +27,7 @@ import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepos
 import com.astro.repository.ProcurementModule.IndentCreation.MaterialDetailsRepository;
 import com.astro.repository.ProcurementModule.IndentIdRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderAttributesRepository;
-
+import com.astro.repository.ProcurementModule.TenderEvaluationRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderRepository;
 
 import com.astro.repository.ProcurementModule.ServiceOrderRepository.ServiceOrderRepository;
@@ -98,6 +98,8 @@ private BudgetService budgetService;
     @Autowired
     private VendorMasterRepository vendorMasterRepository;
     @Autowired
+    private TenderEvaluationRepository tenderEvaluationRepository;
+    @Autowired
     private IndentCreationRepository indentCreationRepository;
     @Autowired
     private MaterialMasterRepository materialMasterRepository;
@@ -126,6 +128,22 @@ private BudgetService budgetService;
 
 
     public PurchaseOrderResponseDTO createPurchaseOrder(PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
+
+        // BR_PO_001: PO cannot be created until Tender Evaluation is APPROVED.
+        // If a TenderEvaluation record exists for this tender it must be in APPROVED status.
+        String tenderIdForGate = purchaseOrderRequestDTO.getTenderId();
+        if (tenderIdForGate != null) {
+            tenderEvaluationRepository.findById(tenderIdForGate).ifPresent(eval -> {
+                if (!"APPROVED".equals(eval.getEvaluationStatus())) {
+                    throw new BusinessException(new ErrorDetails(
+                            400, 1, AppConstant.ERROR_TYPE_VALIDATION,
+                            "Purchase Order cannot be created. Tender Evaluation for tender "
+                            + tenderIdForGate + " is not yet completed. "
+                            + "Current evaluation status: " + eval.getEvaluationStatus()
+                            + ". Complete the Tender Evaluation (status must be 'Tender Evaluation Completed') before creating a PO."));
+                }
+            });
+        }
 
         // Check if the indentorId already exists
      /*   if (purchaseOrderRepository.existsById(purchaseOrderRequestDTO.getPoId())) {

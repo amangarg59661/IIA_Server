@@ -60,6 +60,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     @Autowired private TenderClarificationHistoryRepository clarificationHistoryRepository;
     @Autowired private EmailService emailService;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private com.astro.repository.WorkflowTransitionRepository workflowTransitionRepository;
 
     @Value("${filePath:}")
     private String filePath;
@@ -71,6 +72,17 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     public TenderEvaluationStatusDto initiateTenderEvaluation(String tenderId, Integer initiatedByUserId) {
         TenderRequest tender = requireTender(tenderId);
 
+        // BR_000: Tender must be fully workflow-approved before evaluation can start.
+        com.astro.entity.WorkflowTransition latestTransition =
+                workflowTransitionRepository.findTopByRequestIdOrderByWorkflowTransitionIdDesc(tenderId)
+                        .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                                "Tender " + tenderId + " has no workflow transition record. It must be fully approved first.")));
+        if (!"Completed".equalsIgnoreCase(latestTransition.getStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Tender " + tenderId + " is not yet approved. Current workflow status: "
+                    + latestTransition.getStatus() + ". Evaluation can only begin after final approval."));
+        }
+
         TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
                 .orElseGet(() -> {
                     TenderEvaluation e = new TenderEvaluation();
@@ -79,16 +91,21 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     return e;
                 });
 
-        // Comparison sheet must be uploaded before initiating evaluation (BR_001)
-        if (eval.getUploadQualifiedVendorsFileName() == null
-                || eval.getUploadQualifiedVendorsFileName().trim().isEmpty()) {
+        // Normalize bid type first so we can apply the right sheet rule below.
+        String rawBidType = tender.getBidType() != null ? tender.getBidType().trim() : "";
+        boolean isDoubleBid = rawBidType.toLowerCase().contains("double");
+
+        // BR_001: For Double Bid, comparison sheet is MANDATORY.
+        //         For Single Bid, it is OPTIONAL (show confirmation popup on frontend).
+        if (isDoubleBid
+                && (eval.getUploadQualifiedVendorsFileName() == null
+                    || eval.getUploadQualifiedVendorsFileName().trim().isEmpty())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Comparison Statement must be uploaded before initiating evaluation."));
+                    "Technical Comparison Statement must be uploaded before initiating Double Bid evaluation."));
         }
 
-        // Normalize bid type
-        String rawBidType = tender.getBidType() != null ? tender.getBidType().trim() : "";
-        String bidType = rawBidType.toLowerCase().contains("double") ? "DOUBLE_BID" : "SINGLE_BID";
+        // Normalize and persist bid type
+        String bidType = isDoubleBid ? "DOUBLE_BID" : "SINGLE_BID";
         eval.setBidType(bidType);
 
         // Amount category
@@ -958,6 +975,46 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             log.warn("Clarification history fetch failed (table may not exist yet): {}", e.getMessage());
             return java.util.Collections.emptyList();
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 17. GET APPROVED VENDORS FOR PO (SPO-accepted vendors only)
+    //     Called by PO vendor dropdown — returns only vendors finally
+    //     approved by SPO so that PO can only be raised for them.
+    // ─────────────────────────────────────────────────────────────────
+    @Override
+    public List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId) {
+        TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "No tender evaluation found for tender: " + tenderId
+                        + ". Evaluation must be completed before PO can be created.")));
+
+        if (!"APPROVED".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Tender Evaluation is not yet completed for tender: " + tenderId
+                    + ". Current status: " + eval.getEvaluationStatus()
+                    + ". PO can only be created after Tender Evaluation is Completed."));
+        }
+
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+
+        return quotations.stream()
+                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                .map(q -> {
+                    TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
+                            new TenderEvaluationStatusDto.VendorQuotationEvalDto();
+                    dto.setVendorId(q.getVendorId());
+                    dto.setSpoStatus(q.getSpoStatus());
+                    dto.setStatus(q.getStatus());
+                    dto.setRank(q.getRank());
+                    vendorMasterRepository.findById(q.getVendorId())
+                            .ifPresent(vm -> {
+                                dto.setVendorName(vm.getVendorName());
+                            });
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     // ─────────────────────────────────────────────────────────────────

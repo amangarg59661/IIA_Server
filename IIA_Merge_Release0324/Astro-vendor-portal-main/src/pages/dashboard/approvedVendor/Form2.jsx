@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Card, Row, Col, message, Spin ,Button, Tag} from "antd";
+import { Card, Row, Col, message, Spin, Button, Tag, Select, Space } from "antd";
 import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+const { Option } = Select;
 import TenderEvaluator from "../../../components/Tender_Evaluator";
 import PurchaseOrderDetails from "../../../components/Purchaseorder_details";
 import { Modal } from "antd";
@@ -509,6 +510,7 @@ const Form2 = () => {
   const [selectedTenderLoading, setSelectedTenderLoading] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [allVendorVisible, setAllVendorVisible] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
 
   const [vendorState, setVendorState] = useState({
@@ -661,58 +663,47 @@ const getDisplayStatus = (actionStatus) => {
   <span>Primary Business: {vendorInfo.primaryBusiness}</span>
 </div>
 {/* End */}
-      <h2 className="font-bold mb-2">Approved Tender IDs</h2>
-      <Row gutter={[16, 16]}>
-        {/*tenderIds.map((tenderId) => (
-          <Col key={tenderId} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              hoverable
-              style={{
-                textAlign: "center",
-                cursor: "pointer",
-                border:
-                  selectedTenderId === tenderId
-                    ? "2px solid #1890ff"
-                    : undefined,
-              }}
-              onClick={() => handleTenderCardClick(tenderId)}
-            >
-              {selectedTenderLoading && selectedTenderId === tenderId ? (
-                <Spin />
-              ) : (
-                <a>{tenderId}</a>
-              )}
-            </Card>
-          </Col>
-        ))*/}
-        {tenderIds.map((tender) => (
-          <Col key={tender.tenderId} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              hoverable
-              style={{
-              textAlign: "center",
-              cursor: "pointer",
-              border:
-                selectedTenderId === tender.tenderId ? "2px solid #1890ff" : undefined,
-              }}
-              onClick={() => handleTenderCardClick(tender.tenderId)}
-             >
-          {selectedTenderLoading && selectedTenderId === tender.tenderId ? (
-          <Spin />
-            ) : (
-            <>
-              <a style={{ color: "inherit", fontWeight: "semi bold" }}>
-              {tender.tenderId}
-              </a>
-              <div style={{ marginTop: 4, color: "#555" }}>{tender.title}</div>
-            </>
-             )}
-          </Card>
-       </Col>
-      ))}
+      <h2 className="font-bold mb-2">Tender Evaluation</h2>
 
+      {/* ── Filters ── */}
+      <Space wrap style={{ marginBottom: 16 }}>
+        <div>
+          <label style={{ fontWeight: 600, marginRight: 8 }}>Tender ID</label>
+          <Select
+            showSearch
+            allowClear
+            style={{ width: 340 }}
+            placeholder="Select Tender ID"
+            value={selectedTenderId}
+            loading={selectedTenderLoading}
+            onChange={(value) => {
+              setSelectedTenderId(value);
+              if (value) handleTenderCardClick(value);
+            }}
+            optionFilterProp="label"
+            options={(tenderIds || []).map((tender) => ({
+              label: typeof tender === "string"
+                ? tender
+                : `${tender.tenderId}${tender.title ? " - " + tender.title : ""}`,
+              value: typeof tender === "string" ? tender : tender.tenderId,
+            }))}
+          />
+        </div>
 
-      </Row>
+        <div>
+          <label style={{ fontWeight: 600, marginRight: 8 }}>Status</label>
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 200 }}
+          >
+            <Option value="ALL">All</Option>
+            <Option value="SUBMITTED">Submitted Document</Option>
+            <Option value="CHANGE_REQUESTED">Clarification</Option>
+            <Option value="PENDING">Pending Document</Option>
+          </Select>
+        </div>
+      </Space>
       {/*selectedTenderId && (
   <>
     <Button
