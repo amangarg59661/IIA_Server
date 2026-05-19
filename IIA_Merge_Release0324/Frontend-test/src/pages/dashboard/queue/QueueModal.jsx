@@ -358,10 +358,15 @@ const QueueModal = ({
                       title: "Material SubCategory",
                       dataIndex: "materialSubCategory",
                       ellipsis: true,
-                    },
+                    },{ title: "UOM", dataIndex: "uom", width: 100 },
                     {
                       title: "Quantity",
                       dataIndex: "quantity",
+                      align: "right",
+                    },
+                    {
+                      title: "Currency",
+                      dataIndex: "currency",
                       align: "right",
                     },
                     {
@@ -370,11 +375,7 @@ const QueueModal = ({
                       align: "right",
                       render: (text) => `${text?.toFixed(2)}`,
                     },
-                    {
-                      title: "Currency",
-                      dataIndex: "currency",
-                      align: "right",
-                    },
+                    
                     {
                       title: "Total Price",
                       dataIndex: "totalPrice",
@@ -385,7 +386,7 @@ const QueueModal = ({
                         </span>
                       ),
                     },
-                    { title: "UOM", dataIndex: "uom", width: 100 },
+                    
                     {
                       title: "Budget Code",
                       dataIndex: "budgetCode",

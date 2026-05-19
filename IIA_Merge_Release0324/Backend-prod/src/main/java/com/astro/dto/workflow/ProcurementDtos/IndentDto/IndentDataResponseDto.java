@@ -61,6 +61,7 @@ public class IndentDataResponseDto {
     private String processStage;
     private String status;
     private Integer version;
+    private String buyBackAmount;
 
     // Project-related fields
     private Boolean isUnderProject;
