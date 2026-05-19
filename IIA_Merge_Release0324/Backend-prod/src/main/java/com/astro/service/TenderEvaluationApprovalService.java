@@ -133,4 +133,20 @@ public interface TenderEvaluationApprovalService {
      * Throws if evaluation is not yet APPROVED (status = Tender Evaluation Completed).
      */
     List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId);
+
+    /**
+     * Saves per-vendor indentor/purchase-personnel decision immediately.
+     * decision: ACCEPTED or REJECTED
+     */
+    TenderEvaluationStatusDto saveVendorIndentorDecision(String tenderId, String vendorId,
+                                                          String decision, String remarks,
+                                                          Integer evaluatorUserId);
+
+    /**
+     * Saves per-vendor SPO decision immediately.
+     * decision: ACCEPTED or REJECTED
+     */
+    TenderEvaluationStatusDto saveVendorSpoDecision(String tenderId, String vendorId,
+                                                     String decision, String remarks,
+                                                     Integer spoUserId);
 }
