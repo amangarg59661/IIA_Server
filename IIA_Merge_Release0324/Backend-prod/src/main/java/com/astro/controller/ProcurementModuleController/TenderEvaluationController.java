@@ -330,4 +330,17 @@ public class TenderEvaluationController {
                 HttpStatus.OK);
     }
 
+    /**
+     * GET /api/tender-evaluation/{tenderId}/approved-vendors
+     * Returns SPO-approved vendors for use in PO vendor dropdown.
+     * Only available when evaluationStatus = APPROVED.
+     * Frontend must call this instead of the general vendor list when creating a PO.
+     */
+    @GetMapping("/{tenderId}/approved-vendors")
+    public ResponseEntity<Object> getApprovedVendorsForPO(@PathVariable String tenderId) {
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getApprovedVendorsForPO(tenderId)),
+                HttpStatus.OK);
+    }
+
 }

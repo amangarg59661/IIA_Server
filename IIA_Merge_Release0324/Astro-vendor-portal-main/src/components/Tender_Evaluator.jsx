@@ -409,7 +409,7 @@ const handleFileChange = (docName, fileData) => {
   ) : (
     <>
       <FileUpload
-        documentName="Upload Technical Bid"
+        documentName="Upload Technical Document"
         fileType="document"
         onChange={fileData => handleFileChange('quotationUpload', fileData)}
         fileName={quotationFile ? quotationFile.originalName : 'No file selected'}
@@ -418,7 +418,7 @@ const handleFileChange = (docName, fileData) => {
       {bidType === 'Double' && (
         <div style={{ marginTop: 12 }}>
           <FileUpload
-            documentName="Upload Price Bid"
+            documentName="Upload Financial Document"
             fileType="document"
             onChange={fileData => handleFileChange('priceBid', fileData)}
             fileName={priceBidFile ? priceBidFile.originalName : 'No file selected'}
@@ -476,7 +476,7 @@ const handleFileChange = (docName, fileData) => {
     ) : (
       <>
         <FileUpload
-          documentName="Upload Technical Bid"
+          documentName="Upload Technical Document"
           fileType="document"
           onChange={fileData => handleFileChange('quotationUpload', fileData)}
           fileName={quotationFile ? quotationFile.originalName : 'No file selected'}
@@ -485,7 +485,7 @@ const handleFileChange = (docName, fileData) => {
         {//bidType === 'Double' && (
           <div style={{ marginTop: 12 }}>
             <FileUpload
-              documentName="Upload Price Bid"
+              documentName="Upload Financial Document"
               fileType="document"
               onChange={fileData => handleFileChange('priceBid', fileData)}
               fileName={priceBidFile ? priceBidFile.originalName : 'No file selected'}

@@ -1,0 +1,401 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  @apply !text-base
+}
+label{
+  @apply !font-medium
+}
+
+/* .ant-menu-submenu-arrow{
+  @apply hidden
+} */
+
+.ant-menu-submenu-title, .ant-menu-item{
+  /* @apply !text-white */
+}
+
+@media (max-width: 768px) { /* Tailwind's md breakpoint */
+  .custom-sider-css {
+    @apply !max-w-full 
+  }
+}
+
+
+.main-content::before{
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* background-image: url('./assets/images/iia-bg-image.PNG'); Replace with your image URL */
+  background-color: white;
+  background-size: cover; /* Adjust as needed */
+  background-position: center; /* Adjust as needed */
+  opacity: 0; /* Change this value for desired opacity */
+  z-index: 0; /* Ensure it's behind the content */
+}
+
+.ant-menu-item-selected{
+  @apply !bg-[#327979] !text-white
+}
+
+.dashboard-search .ant-input, .dashboard-search .ant-btn{
+  @apply !bg-darkBlue !text-offWhite !transition-none border-0 outline-none
+}
+.dashboard-search .ant-btn{
+  @apply border-l-2
+}
+.dashboard-search .ant-input:hover, .dashboard-search .ant-input:focus{
+  @apply bg-darkBlue text-offWhite !outline-none !border-none !shadow-none
+}
+.dashboard-search .ant-btn:hover, .dashboard-search .ant-btn:focus{
+  @apply bg-darkBlue text-offWhite !outline-none !border-none !shadow-none
+}
+.dashboard-search .ant-input::placeholder{
+  @apply text-offWhite
+}
+.dashboard-tab-icon svg{
+  @apply !text-4xl 
+}
+.records-tab-icon svg{
+  @apply !text-2xl text-darkBlue
+}
+.dashboard-tab-icon{
+  @apply flex justify-center items-center
+}
+
+.duty-tab-icon svg, .icon svg {
+  @apply !text-2xl
+}
+
+.icon svg{
+  @apply font-semibold
+}
+
+/* styles.css or any other CSS file */
+.ant-table-thead > tr > th {
+  @apply !bg-darkBlue !text-offWhite border-2 border-darkBlue
+}
+
+.ant-table, .ant-table-tbody > tr > td {
+  @apply border-0 border-darkBlue
+}
+
+.horizontal-form .ant-form-item-label, .horizontal-form .ant-form-item-control {
+  @apply !flex-none
+}
+
+.horizontal-form .ant-form-item {
+  @apply mb-3 md:mb-6
+}
+
+.horizontal-form .ant-form-item-label{
+  @apply w-[40%] text-left text-balance !h-max overflow-auto
+}
+
+.horizontal-form .ant-form-item-control{
+  @apply w-[60%]
+}
+
+.responsive-table .table-column {
+  word-wrap: break-word; /* Allows long words to break and wrap onto the next line */
+  white-space: normal;   /* Allows text to wrap */
+}
+
+.responsive-table {
+  width: 100%;
+}
+
+.checkbox-group .ant-checkbox-input, .checkbox-group .ant-checkbox-inner {
+  @apply !w-6 !h-6
+}
+
+.checkbox-group, .checkbox-group label{
+  @apply gap-2
+}
+.checkbox-group label{
+  @apply w-full pb-1
+}
+
+.vi-acpt-def .ant-form-item{
+  @apply mb-0
+}
+
+.ant-divider{
+  border-block-start: 1px solid #9b9b9b;
+}
+
+.date-component .ant-picker{
+  @apply w-full
+}
+
+.time-component .ant-picker{
+  @apply w-full
+}
+
+.ant-table-filter-trigger{
+  @apply !text-white
+}
+
+.bloom-inspection-form label{
+  @apply !h-fit
+}
+
+.no-border .ant-input{
+  @apply !border-0 focus:ring-0;
+}
+
+.no-border{
+  @apply !m-0;
+}
+
+.search-input .ant-btn-primary{
+  @apply !bg-darkBlue
+}
+
+.ant-dropdown-trigger.active, .ant-dropdown-trigger.active>*{
+  color:#E74C3C !important
+}
+
+/* ------------------ ASTRO ------------------- */
+
+.a4-container{
+  @apply mx-auto w-full max-w-[210mm] border border-[#ccc] h-max;
+}
+/* bg-[#e4f2f2] */
+/* aspect-[210/297] */
+
+.org-dtl-container{
+  @apply grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4
+}
+
+.detail-container{
+  @apply flex flex-col gap-2
+}
+
+.item-container{
+  @apply border border-black p-4 rounded-md relative;
+}
+
+.item-detail-container{
+  @apply grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4;
+}
+
+.delete-btn{
+  @apply absolute top-0 right-0;
+}
+
+.no-margin{
+  @apply !m-0;
+}
+
+/* @media print {
+  .print-css-tandc{
+    @apply grid grid-cols-2
+  }
+
+  .print-css-btn-container{
+    @apply grid grid-cols-4 gap-x-4
+  }
+
+  .print-css-desg{
+    @apply grid grid-cols-3
+  }
+
+  .exclude-print{
+    @apply hidden
+  }
+
+  .ant-form-item{
+    @apply !m-0
+  }
+  .form-container {
+    margin: 50px auto;
+    max-width: 1000px;
+    background: #f0f8ff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .form-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 30px;
+    font-weight: bold;
+  }
+  
+  .form-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 0px;
+  }
+  
+  .form-section .ant-form-item {
+    flex: 1;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    .form-container {
+      padding: 15px;
+    }
+  
+    .form-section {
+      flex-direction: column;
+      gap: 10px;
+    }
+  
+    .form-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+  
+  .form-section-2 {
+    display: flex;
+    gap: 50px;
+    margin-bottom: 0px;
+  }
+} */
+
+.form-container {
+    margin: 15px auto;
+    margin-top: -5px;
+    max-width: 1000px;
+    background: #f0f8ff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .form-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 70px;
+    font-weight: bolder;
+  }
+
+  .form-container h6 {
+    margin-bottom: 5px;
+    font-weight:bold;
+  }
+  
+  .form-section {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 0px;
+  }
+  
+  .form-section .ant-form-item {
+    flex: 1;
+  }
+  
+  .form-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  
+  @media (max-width: 768px) {
+    .form-container {
+      padding: 15px;
+    }
+  
+    .form-section {
+      flex-direction: column;
+      gap: 10px;
+    }
+  
+    .form-actions {
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+  
+  .form-section-2 {
+    display: flex;
+    gap: 50px;
+    margin-bottom: 0px;
+  }
+
+  .custom-btn{
+    padding: 50px;
+    width: 10%;
+    margin-top: -35px;
+    margin-bottom: -30px;
+  }
+
+  @media print {
+    body {
+      width: 210mm; /* A4 width */
+      height: 297mm; /* A4 height */
+    }
+    
+    /* Hide all buttons in print */
+    button {
+      display: none !important;
+    }
+  
+    /* Adjust margins and ensure form prints neatly */
+    .ant-form {
+      margin: 20px;
+      padding: 20px;
+      border: none;
+    }
+  
+    /* Page Break for multi-page forms */
+    .page-break {
+      page-break-before: always;
+    }
+  }  
+
+  .large-container{
+    @apply flex flex-col gap-4 md:gap-8 bg-white p-4 w-full md:w-4/5 mx-auto h-[100vh] md:h-fit overflow-y-auto;
+  }
+  
+
+.no-border .ant-input{
+  @apply !border-0 focus:ring-0;
+}
+.no-border .ant-select-selector{
+  @apply !border-0 focus:ring-0;
+}
+
+.ant-form-item .no-border{
+  @apply !m-0;
+}
+
+.ant-form-item-label > label {
+  @apply !text-sm
+}
+
+/* .ant-form-item{
+  @apply !m-0
+}
+
+.ant-form-item-label{
+  @apply !p-0
+}
+
+input{
+  @apply !px-2 !py-[0.1rem]
+}
+
+.ant-picker{
+  @apply !px-[0.1rem] !py-0
+} */

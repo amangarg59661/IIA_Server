@@ -102,6 +102,7 @@ public class VendorQuotationAgainstTender {
    public enum WorkflowActorRole {
       VENDOR,
       INDENTOR,
+      PURCHASE_PERSONNEL,
       STORE_PURCHASE_OFFICER
    }
 }

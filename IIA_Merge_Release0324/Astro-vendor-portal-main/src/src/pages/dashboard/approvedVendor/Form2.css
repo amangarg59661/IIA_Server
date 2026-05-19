@@ -1,0 +1,20 @@
+.form-container {
+    padding: 24px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  .tender-id-section {
+    margin-top: 40px;
+  }
+  
+  .tender-card a {
+    color: #1677ff;
+    text-decoration: none;
+  }
+  
+  .tender-card a:hover {
+    color: #0958d9;
+  }
+  

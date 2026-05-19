@@ -127,4 +127,10 @@ public interface TenderEvaluationApprovalService {
      * Returns full clarification history for a tender (all rounds, questions + responses).
      */
     List<TenderClarificationHistory> getClarificationHistory(String tenderId);
+
+    /**
+     * Returns SPO-approved vendors for a tender, for use in PO vendor dropdown.
+     * Throws if evaluation is not yet APPROVED (status = Tender Evaluation Completed).
+     */
+    List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId);
 }
