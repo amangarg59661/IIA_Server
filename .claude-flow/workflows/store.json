@@ -1,0 +1,69 @@
+{
+  "workflows": {
+    "workflow-1779168614841-rs5rzg": {
+      "workflowId": "workflow-1779168614841-rs5rzg",
+      "name": "tender-evaluation-implementation",
+      "description": "Implement Tender Evaluation workflow gaps across backend and frontend",
+      "steps": [
+        {
+          "stepId": "step-1",
+          "name": "ddl-migration",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-2",
+          "name": "repository-queries",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-3",
+          "name": "service-fixes",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-4",
+          "name": "po-gating",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-5",
+          "name": "controller-endpoint",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-6",
+          "name": "frontend-fixes",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        },
+        {
+          "stepId": "step-7",
+          "name": "vendor-portal-fixes",
+          "type": "task",
+          "config": {},
+          "status": "pending"
+        }
+      ],
+      "status": "ready",
+      "currentStep": 0,
+      "variables": {
+        "status": "in_progress",
+        "project": "IIA_Procurement"
+      },
+      "createdAt": "2026-05-19T05:30:14.841Z"
+    }
+  },
+  "templates": {},
+  "version": "3.0.0"
+}

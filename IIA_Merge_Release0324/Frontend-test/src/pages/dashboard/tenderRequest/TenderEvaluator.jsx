@@ -1134,15 +1134,15 @@ const handleSearchTender = async () => {
   try {
     setLoadingTender(true);
 
-     const baseQuotationResp = await axios.get(`/api/vendor-quotation/${tenderId}`, {
-      params: { userRole: role } // send role if backend expects it
+     const baseQuotationResp = await axios.get(`/api/vendor-quotation`, {
+      params: { userRole: role , tenderId : tenderId } // send role if backend expects it
     });
     const baseQuotationList = baseQuotationResp.data?.responseData || [];
     setQuotationData(baseQuotationList);
 
     // flow for Store Purchase Officer: require comparison sheet
     if (role === 'Store Purchase Officer') {
-      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations/${tenderId}`);
+      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations`,{params :{tenderId: tenderId}});
       const { vendor = [], uploadQualifiedVendorsFileName } = compResp.data?.responseData || {};
 
      /* if (!uploadQualifiedVendorsFileName) {
