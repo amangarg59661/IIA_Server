@@ -486,6 +486,7 @@ const handleSaveFinancialComparisonSheet = async () => {
       updatedBy: String(userId),
     }, { params: { tenderId } });
     await fetchEvalStatus(tenderId);
+    await handleSearchTender();
     message.success('Financial Comparison Sheet uploaded successfully.');
   } catch (e) {
     message.error('Failed to upload Financial Comparison Sheet.');
