@@ -173,6 +173,11 @@ public class TenderEvaluationServiceImpl implements TenderEvaluationService {
         if (tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName() != null) {
             String commFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName(), basePath);
             tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(commFileName);
+
+            if ("PENDING_FINANCIAL_SHEET_UPLOAD".equals(tenderEvaluation.getEvaluationStatus())) {
+                tenderEvaluation.setEvaluationStatus("PENDING_FINANCIAL");
+                tenderEvaluation.setUpdatedDate(java.time.LocalDateTime.now());
+            }
         }
         if (tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee() != null)
             tenderEvaluation.setFormationOfTechnoCommerialComitee(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee());
