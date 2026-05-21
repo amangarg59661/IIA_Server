@@ -113,6 +113,10 @@ const TenderEvaluator = () => {
   // vendor-specific seek clarification
   const [clarifTargetVendorId, setClarifTargetVendorId] = useState('');
 
+  // Registered vendor mapping (OPEN_TENDER / GLOBAL_TENDER / GEM)
+  const [allRegisteredVendors, setAllRegisteredVendors] = useState([]);
+  const [selectedRegisteredVendors, setSelectedRegisteredVendors] = useState({});
+
   const tenderId = formData.tenderId;
   const bidType = formData.bidType;
   const role = useSelector(state => state.auth.role);
@@ -148,6 +152,37 @@ const showActionButtons =
     (isIndentCreatorRole || isPurchasePersonnelRole));
 
 const canPerformActions = showActionButtons;
+
+const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formData.modeOfProcurement);
+const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStatus === 'APPROVED' && isPurchasePersonnelRole;
+
+  useEffect(() => {
+    if (showRegisteredVendorColumn && allRegisteredVendors.length === 0) {
+      axios.get(`${baseURL}/api/vendor-master`)
+        .then(res => {
+          const vendors = res.data?.responseData || res.data || [];
+          setAllRegisteredVendors(vendors);
+        })
+        .catch(() => message.error('Failed to load registered vendors'));
+    }
+  }, [showRegisteredVendorColumn]);
+
+  const handleMapRegisteredVendor = async (tenderId, vendorId) => {
+    const registeredVendorId = selectedRegisteredVendors[vendorId];
+    if (!registeredVendorId) {
+      message.warning('Please select a registered vendor first');
+      return;
+    }
+    try {
+      await axios.put(`${baseURL}/api/tender-evaluation/vendor/map-registered`, null, {
+        params: { tenderId, vendorId, registeredVendorId }
+      });
+      message.success('Registered vendor mapped successfully');
+      await handleSearchTender();
+    } catch (err) {
+      message.error(err.response?.data?.message || 'Failed to map registered vendor');
+    }
+  };
 
   useEffect(() => {
     const fetchApprovedTenders = async () => {
@@ -1103,6 +1138,38 @@ if (isSpoRole) {
     );
   }
 }
+...(showRegisteredVendorColumn ? [{
+  title: 'Registered Vendor',
+  key: 'registeredVendor',
+  width: 250,
+  render: (_, record) => {
+    if (record.registeredVendorId) {
+      return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+    }
+    return (
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <Select
+          showSearch
+          placeholder="Select vendor"
+          style={{ width: 160 }}
+          value={selectedRegisteredVendors[record.vendorId] || undefined}
+          onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+          filterOption={(input, option) =>
+            (option?.children || '').toLowerCase().includes(input.toLowerCase())
+          }
+        >
+          {allRegisteredVendors.map(v => (
+            <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+          ))}
+        </Select>
+        <Button size="small" type="primary"
+          onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>
+          Submit
+        </Button>
+      </div>
+    );
+  }
+}] : []),
 
   ];
 } else {
@@ -1274,6 +1341,38 @@ if (isSpoRole) {
     },
   },
   ] : []),
+...(showRegisteredVendorColumn ? [{
+  title: 'Registered Vendor',
+  key: 'registeredVendor',
+  width: 250,
+  render: (_, record) => {
+    if (record.registeredVendorId) {
+      return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+    }
+    return (
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        <Select
+          showSearch
+          placeholder="Select vendor"
+          style={{ width: 160 }}
+          value={selectedRegisteredVendors[record.vendorId] || undefined}
+          onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+          filterOption={(input, option) =>
+            (option?.children || '').toLowerCase().includes(input.toLowerCase())
+          }
+        >
+          {allRegisteredVendors.map(v => (
+            <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+          ))}
+        </Select>
+        <Button size="small" type="primary"
+          onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>
+          Submit
+        </Button>
+      </div>
+    );
+  }
+}] : []),
 
   ];
 }

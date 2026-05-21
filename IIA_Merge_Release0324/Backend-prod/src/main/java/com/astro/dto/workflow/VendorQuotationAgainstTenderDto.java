@@ -27,6 +27,9 @@ public class VendorQuotationAgainstTenderDto {
     private String financialIndentorStatus;
     private String financialSpoStatus;
 
+    private String registeredVendorId;
+    private String registeredVendorName;
+
 
 
 }

@@ -107,6 +107,12 @@ public class VendorQuotationAgainstTender {
     @Column(name = "financial_spo_remarks", length = 1000)
     private String financialSpoRemarks;
 
+    @Column(name = "registered_vendor_id", length = 100)
+    private String registeredVendorId;
+
+    @Column(name = "registered_vendor_name", length = 300)
+    private String registeredVendorName;
+
     /** Rank assigned after financial evaluation (L1, L2, L3...) */
     @Column(name = "`rank`")
     private Integer rank;

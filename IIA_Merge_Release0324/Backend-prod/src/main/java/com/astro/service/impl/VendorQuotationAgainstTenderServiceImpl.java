@@ -210,6 +210,8 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
 
                    dto.setFinancialIndentorStatus(vq.getFinancialIndentorStatus());
                    dto.setFinancialSpoStatus(vq.getFinancialSpoStatus());
+                   dto.setRegisteredVendorId(vq.getRegisteredVendorId());
+                   dto.setRegisteredVendorName(vq.getRegisteredVendorName());
 
                    dto.setCanIndentorAct(canIndentorAct(vq, loggedInRole));
                    dto.setCanSpoAct(canSpoAct(vq, loggedInRole));

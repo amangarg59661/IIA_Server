@@ -296,4 +296,15 @@ public class TenderEvaluationController {
         TenderEvaluationStatusDto status = approvalService.reopenEvaluation(tenderId, userId);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
+
+    @PutMapping("/vendor/map-registered")
+    public ResponseEntity<Object> mapRegisteredVendor(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @RequestParam String registeredVendorId) {
+        log.info("Map registered vendor tenderId={} vendorId={} registeredVendorId={}",
+                tenderId, vendorId, registeredVendorId);
+        approvalService.mapRegisteredVendor(tenderId, vendorId, registeredVendorId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse("Registered vendor mapped successfully"), HttpStatus.OK);
+    }
 }

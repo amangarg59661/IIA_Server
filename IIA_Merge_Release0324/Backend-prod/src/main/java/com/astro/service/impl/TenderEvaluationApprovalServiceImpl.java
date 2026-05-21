@@ -1615,6 +1615,25 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         return indent != null ? indent.getCreatedBy() : null;
     }
 
+    @Override
+    @Transactional
+    public void mapRegisteredVendor(String tenderId, String vendorId, String registeredVendorId) {
+        VendorQuotationAgainstTender quotation = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                .orElseThrow(() -> new BusinessException(
+                        new ErrorDetails("APP_ERR", "No quotation found for tenderId=" + tenderId + " vendorId=" + vendorId)));
+
+        VendorMaster registeredVendor = vendorMasterRepository.findByVendorId(registeredVendorId)
+                .orElseThrow(() -> new BusinessException(
+                        new ErrorDetails("APP_ERR", "Registered vendor not found: " + registeredVendorId)));
+
+        quotation.setRegisteredVendorId(registeredVendor.getVendorId());
+        quotation.setRegisteredVendorName(registeredVendor.getVendorName());
+        quotation.setUpdatedDate(LocalDateTime.now());
+        quotationRepository.save(quotation);
+        log.info("Mapped vendor {} to registered vendor {} for tender {}", vendorId, registeredVendorId, tenderId);
+    }
+
     private Integer resolveChairmanUserId(TenderEvaluation eval) {
         if ("ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
             return eval.getAdHocChairmanUserId();

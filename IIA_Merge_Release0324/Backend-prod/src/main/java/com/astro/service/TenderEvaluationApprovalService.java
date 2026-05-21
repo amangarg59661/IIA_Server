@@ -160,4 +160,10 @@ public interface TenderEvaluationApprovalService {
      * Reopens a REJECTED evaluation by restoring previousEvaluationStatus.
      */
     TenderEvaluationStatusDto reopenEvaluation(String tenderId, Integer userId);
+
+    /**
+     * Maps an approved vendor (from quotation) to a registered vendor from VendorMaster.
+     * Used for OPEN_TENDER / GLOBAL_TENDER / GEM procurement modes after evaluation is APPROVED.
+     */
+    void mapRegisteredVendor(String tenderId, String vendorId, String registeredVendorId);
 }
