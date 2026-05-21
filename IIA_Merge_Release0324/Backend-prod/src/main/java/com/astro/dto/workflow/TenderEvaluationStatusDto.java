@@ -41,6 +41,10 @@ public class TenderEvaluationStatusDto {
     private String clarificationRemarks;
     private String previousEvaluationStatus;
 
+    // ── Rejection info ──
+    private String rejectedByRole;
+    private Integer rejectedByUserId;
+
     // ── Comparison sheet uploaded by Purchase Personnel ──
     private String comparisonSheetFileName;
     private String financialComparisonSheetFileName;

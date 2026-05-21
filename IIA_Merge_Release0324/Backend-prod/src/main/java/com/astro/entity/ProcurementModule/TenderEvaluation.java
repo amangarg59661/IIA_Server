@@ -47,7 +47,7 @@ public class TenderEvaluation {
      * PENDING_TECHNICAL, PENDING_FINANCIAL, PENDING_APPROVAL,
      * APPROVED, REJECTED
      */
-    @Column(name = "evaluation_status", length = 30)
+    @Column(name = "evaluation_status", length = 50)
     private String evaluationStatus;
 
     /**
@@ -145,5 +145,20 @@ public class TenderEvaluation {
 
     @Column(name = "ad_hoc_co_chairman_name", length = 200)
     private String adHocCoChairmanName;
+
+    @Column(name = "rejected_by_role", length = 50)
+    private String rejectedByRole;
+
+    @Column(name = "rejected_by_user_id")
+    private Integer rejectedByUserId;
+
+    /**
+     * Evaluation initiation flag.
+     * 0 = not yet initiated — all vendors may upload documents freely.
+     * 1 = initiated — only vendors who already submitted a bid before initiation
+     *     may still upload (seek-clarification path); new-bid uploads are blocked.
+     */
+    @Column(name = "initiated", nullable = false)
+    private Integer initiated = 0;
 
 }

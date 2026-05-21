@@ -149,4 +149,15 @@ public interface TenderEvaluationApprovalService {
     TenderEvaluationStatusDto saveVendorSpoDecision(String tenderId, String vendorId,
                                                      String decision, String remarks,
                                                      Integer spoUserId);
+
+    /**
+     * Any role rejects the entire tender evaluation. Stores previousEvaluationStatus for reopen.
+     */
+    TenderEvaluationStatusDto rejectEvaluation(String tenderId, String rejectedByRole,
+                                                Integer rejectedByUserId, String remarks);
+
+    /**
+     * Reopens a REJECTED evaluation by restoring previousEvaluationStatus.
+     */
+    TenderEvaluationStatusDto reopenEvaluation(String tenderId, Integer userId);
 }
