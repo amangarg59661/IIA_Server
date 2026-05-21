@@ -133,8 +133,9 @@ const showEvaluationSection = true;
 const isDoubleBidEval = evalStatus?.bidType === 'DOUBLE_BID';
 const isMultipleIndentEval = evalStatus?.indentCategory === 'MULTIPLE_INDENT';
 
-// Whether we are in the financial bid phase (double bid)
-const isFinancialPhase = Boolean(evalStatus?.financialBidPhase);
+// Financial phase: financialBidPhase=true AND status is PENDING_FINANCIAL or beyond (not PENDING_FINANCIAL_SHEET_UPLOAD)
+const isFinancialPhase = Boolean(evalStatus?.financialBidPhase) &&
+  evalStatus?.evaluationStatus !== 'PENDING_FINANCIAL_SHEET_UPLOAD';
 
 // Accept/Reject/Seek-Clarification in quotation table:
 //   Technical phase: Indentor (single-indent) or PP (multiple-indent), under 10L only
@@ -1340,7 +1341,7 @@ useEffect(() => {
   const isChairman = role === 'Committee Chairman';
   const isCommitteeMember = role === 'Committee Member';
   const isDirector = role === 'Director';
-  const isFinancialPhase = evalStatus?.financialBidPhase === true;
+  // (uses same definition as top-level isFinancialPhase — exclude PENDING_FINANCIAL_SHEET_UPLOAD)
 
   // Clarification pending states
   const isPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
