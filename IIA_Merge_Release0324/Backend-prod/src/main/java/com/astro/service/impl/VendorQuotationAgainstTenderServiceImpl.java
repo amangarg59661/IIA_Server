@@ -53,54 +53,9 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
     private WorkflowTransitionRepository workflowTransitionRepository;
     @Autowired
     private GemVendorIdTrackerRepository gemVendorIdTrackerRepository;
-   /* @Override
-    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
-        VendorQuotationAgainstTender quotation = new VendorQuotationAgainstTender();
-        quotation.setTenderId(dto.getTenderId());
-        quotation.setVendorId(dto.getVendorId());
-       // quotation.setVendorName(dto.getVendorName());
-        quotation.setQuotationFileName(dto.getQuotationFileName());
-        quotation.setFileType(dto.getFileType());
-        quotation.setCreatedBy(dto.getCreatedBy());
-      VendorQuotationAgainstTender qu =  vendorQuotationAgainstTenderRepository.save(quotation);
-        return mapToResponse(qu);
-    }*/
-  /* @Override
-   public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
-       // Step 1: Fetch all quotations for this tenderId and vendorId
-       List<VendorQuotationAgainstTender> existingQuotations =
-               vendorQuotationAgainstTenderRepository.findAllByTenderIdAndVendorId(dto.getTenderId(), dto.getVendorId());
-
-       // Step 2: Mark all existing quotations as not latest, and get max version
-       int maxVersion = 0;
-       for (VendorQuotationAgainstTender q : existingQuotations) {
-           q.setIsLatest(false);
-           vendorQuotationAgainstTenderRepository.save(q);
-           if (q.getVersion() != null && q.getVersion() > maxVersion) {
-               maxVersion = q.getVersion();
-           }
-       }
-
-       // Step 3: Save the new quotation with version = maxVersion + 1
-       VendorQuotationAgainstTender quotation = new VendorQuotationAgainstTender();
-       quotation.setTenderId(dto.getTenderId());
-       quotation.setVendorId(dto.getVendorId());
-       quotation.setQuotationFileName(dto.getQuotationFileName());
-       quotation.setPriceBidFileName(dto.getPriceBidFileName());
-       quotation.setFileType(dto.getFileType());
-       quotation.setCreatedBy(dto.getCreatedBy());
-       quotation.setVersion(maxVersion + 1);
-       quotation.setIsLatest(true);
-       quotation.setStatus("SUBMITTED");
-       quotation.setModifiedBy(1);
-       quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
-       quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
-       quotation.setCreatedDate(LocalDateTime.now());
-       quotation.setUpdatedDate(LocalDateTime.now());
-
-       VendorQuotationAgainstTender saved = vendorQuotationAgainstTenderRepository.save(quotation);
-       return mapToResponse(saved);
-   }*/
+    @Autowired
+    private TenderClarificationHistoryRepository clarificationHistoryRepository;
+   
    @Override
    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
 
@@ -175,6 +130,35 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
        }
 
        VendorQuotationAgainstTender saved = vendorQuotationAgainstTenderRepository.save(quotation);
+
+       // ── Update clarification history with actual vendor response ──
+       if ("Change Requested".equalsIgnoreCase(dto.getStatus()) && dto.getVendorResponse() != null) {
+           try {
+               String tenderId = dto.getTenderId();
+               String vendorId = dto.getVendorId();
+               List<TenderClarificationHistory> history = clarificationHistoryRepository
+                       .findByTenderIdOrderByRequestedAtDesc(tenderId);
+               history.stream()
+                       .filter(h -> h.getRespondedAt() == null
+                               && ("VENDOR".equals(h.getClarificationTarget())
+                                   || "ALL_VENDORS".equals(h.getClarificationTarget()))
+                               && (vendorId.equals(h.getTargetVendorId())
+                                   || h.getTargetVendorId() == null
+                                   || "ALL_VENDORS".equals(h.getClarificationTarget())))
+                       .findFirst()
+                       .ifPresent(h -> {
+                           h.setResponseText(dto.getVendorResponse());
+                           h.setResponseFileName(dto.getClarificationFileName());
+                           h.setRespondedByRole("VENDOR");
+                           h.setRespondedById(dto.getVendorId());
+                           h.setRespondedAt(LocalDateTime.now());
+                           clarificationHistoryRepository.save(h);
+                       });
+           } catch (Exception e) {
+               log.warn("Clarification history update in saveQuotation failed: {}", e.getMessage());
+           }
+       }
+
        return mapToResponse(saved);
    }
 

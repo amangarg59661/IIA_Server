@@ -910,10 +910,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         .filter(h -> h.getRespondedAt() == null)
                         .findFirst()
                         .ifPresent(h -> {
-                            h.setResponseText(dto.getResponseText());
-                            h.setResponseFileName(dto.getResponseFileName());
-                            h.setRespondedByRole(dto.getRespondedByRole());
-                            h.setRespondedById(dto.getRespondedById());
+                            // Only set response text/file if vendor hasn't already responded
+                            // (avoid overwriting actual vendor response with "ACKNOWLEDGED")
+                            if (h.getResponseText() == null || h.getResponseText().isBlank()) {
+                                h.setResponseText(dto.getResponseText());
+                                h.setResponseFileName(dto.getResponseFileName());
+                                h.setRespondedByRole(dto.getRespondedByRole());
+                                h.setRespondedById(dto.getRespondedById());
+                            }
                             h.setRespondedAt(LocalDateTime.now());
                             clarificationHistoryRepository.save(h);
                         });

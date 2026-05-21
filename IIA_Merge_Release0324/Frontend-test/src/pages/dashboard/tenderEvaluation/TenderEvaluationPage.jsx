@@ -680,15 +680,12 @@ const TenderEvaluationPage = () => {
           <Text type="secondary">N/A</Text>
         ),
     },
-    {
+    ...(!isDoubleBid ? [{
       title: "Financial Document",
       dataIndex: "priceBidFileName",
       key: "finDoc",
-      render: (f) => {
-        // Hidden during double-bid technical phase
-        if (isDoubleBid && !financialPhase)
-          return <Text type="secondary" disabled>Hidden</Text>;
-        return f ? (
+      render: (f) =>
+        f ? (
           <Button
             size="small" type="link" icon={<EyeOutlined />}
             href={`/file/view/Tender/${f}`} target="_blank"
@@ -697,9 +694,8 @@ const TenderEvaluationPage = () => {
           </Button>
         ) : (
           <Text type="secondary">N/A</Text>
-        );
-      },
-    },
+        ),
+    }] : []),
     {
       title: "Current Status",
       key: "currentStatus",
@@ -766,8 +762,8 @@ const TenderEvaluationPage = () => {
               <Button
                 size="small" danger icon={<CloseCircleOutlined />}
                 disabled={
-                  r.indentorStatus === "REJECTED" ||
-                  r.status === "CHANGE_REQUESTED"
+                  r.indentorStatus === "REJECTED" 
+                //   r.status === "CHANGE_REQUESTED"
                 }
                 onClick={() => openRejectDialog(r.vendorId, false)}
               >
@@ -823,8 +819,8 @@ const TenderEvaluationPage = () => {
                 size="small" danger icon={<CloseCircleOutlined />}
                 disabled={
                   r.indentorStatus !== "ACCEPTED" ||
-                  r.spoStatus === "REJECTED" ||
-                  r.status === "CHANGE_REQUESTED"
+                  r.spoStatus === "REJECTED" 
+                //   r.status === "CHANGE_REQUESTED"
                 }
                 onClick={() => openRejectDialog(r.vendorId, true)}
               >
@@ -979,37 +975,61 @@ const TenderEvaluationPage = () => {
             <Tag>{indentCategory || "N/A"}</Tag>
           </Space>
 
-          {/* ── Sheet uploads (non-SPO) ── */}
-          {!isSPO && (
-            <Space wrap className="mb-3">
-              {/* Technical sheet: visible when null/PENDING_INITIATION */}
-              {(!evalStatus || evalStatus === "PENDING_INITIATION") && (
-                <Upload
-                  beforeUpload={(f) => { handleUploadSheet(f, false); return false; }}
-                  showUploadList={false}
-                >
-                  <Button icon={<UploadOutlined />} size="small">
-                    Upload Technical Comparison Sheet
-                    {selectedEval.comparisonSheetFileName ? " (Uploaded)" : ""}
-                  </Button>
-                </Upload>
-              )}
+          {/* ── Sheet views + uploads (PP only for upload) ── */}
+          {/* Technical Comparison Sheet: view (all roles) */}
+          {selectedEval.comparisonSheetFileName && (
+            <div className="mb-2" style={{ padding: '6px 12px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Text strong>Technical Comparison Sheet:</Text>
+              <Button
+                size="small" type="link" icon={<EyeOutlined />}
+                href={`/file/view/Tender/${selectedEval.comparisonSheetFileName}`} target="_blank"
+              >
+                View
+              </Button>
+            </div>
+          )}
 
-              {/* Financial sheet: DOUBLE_BID and PENDING_FINANCIAL_SHEET_UPLOAD */}
-              {isDoubleBid && evalStatus === "PENDING_FINANCIAL_SHEET_UPLOAD" && (
-                <Upload
-                  beforeUpload={(f) => { handleUploadSheet(f, true); return false; }}
-                  showUploadList={false}
-                >
-                  <Button icon={<UploadOutlined />} size="small" type="dashed">
-                    Upload Financial Comparison Sheet
-                    {selectedEval.financialComparisonSheetFileName
-                      ? " (Uploaded)"
-                      : " (Required)"}
-                  </Button>
-                </Upload>
-              )}
-            </Space>
+          {/* Technical Comparison Sheet: upload (PP, not initiated) */}
+          {isPP && (!evalStatus || evalStatus === "PENDING_INITIATION") && (
+            <div className="mb-3">
+              <Upload
+                beforeUpload={(f) => { handleUploadSheet(f, false); return false; }}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />} size="small">
+                  Upload Technical Comparison Sheet
+                  {selectedEval.comparisonSheetFileName ? " (Re-upload)" : ""}
+                </Button>
+              </Upload>
+            </div>
+          )}
+
+          {/* Financial Comparison Sheet: view (all roles) */}
+          {selectedEval.financialComparisonSheetFileName && (
+            <div className="mb-2" style={{ padding: '6px 12px', background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 4, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Text strong>Financial Comparison Sheet:</Text>
+              <Button
+                size="small" type="link" icon={<EyeOutlined />}
+                href={`/file/view/Tender/${selectedEval.financialComparisonSheetFileName}`} target="_blank"
+              >
+                View
+              </Button>
+            </div>
+          )}
+
+          {/* Financial Comparison Sheet: upload (PP, PENDING_FINANCIAL_SHEET_UPLOAD) */}
+          {isPP && evalStatus === "PENDING_FINANCIAL_SHEET_UPLOAD" && (
+            <div className="mb-3">
+              <Upload
+                beforeUpload={(f) => { handleUploadSheet(f, true); return false; }}
+                showUploadList={false}
+              >
+                <Button icon={<UploadOutlined />} size="small" type="dashed">
+                  Upload Financial Comparison Sheet
+                  {selectedEval.financialComparisonSheetFileName ? " (Re-upload)" : " (Required)"}
+                </Button>
+              </Upload>
+            </div>
           )}
 
           {/* ── Initiate Evaluation button (PP only) ── */}
@@ -1495,7 +1515,7 @@ const TenderEvaluationPage = () => {
         open={clarHistoryOpen}
         onCancel={() => setClarHistoryOpen(false)}
         footer={null}
-        width={960}
+        width={1100}
       >
         <Table
           dataSource={clarHistoryData}
@@ -1508,16 +1528,40 @@ const TenderEvaluationPage = () => {
             { title: "Requested By", dataIndex: "requestedByRole",     key: "requestedByRole" },
             { title: "Target",       dataIndex: "clarificationTarget", key: "clarificationTarget" },
             {
-              title: "Question",
+              title: "Question Asked",
               dataIndex: "questionRemarks",
               key: "questionRemarks",
-              render: (t) => <Text style={{ whiteSpace: "pre-wrap" }}>{t}</Text>,
+              width: 250,
+              render: (t) => <Text style={{ whiteSpace: "pre-wrap" }}>{t || "--"}</Text>,
             },
             {
-              title: "Response",
+              title: "Response Received",
               dataIndex: "responseText",
               key: "responseText",
-              render: (t) => t || "--",
+              width: 250,
+              render: (t) => (
+                <Text style={{ whiteSpace: "pre-wrap" }}>
+                  {t && t !== "ACKNOWLEDGED" ? t : (t === "ACKNOWLEDGED" ? "Acknowledged (no details)" : "--")}
+                </Text>
+              ),
+            },
+            {
+              title: "Document",
+              dataIndex: "responseFileName",
+              key: "responseFileName",
+              width: 120,
+              render: (fileName) =>
+                fileName ? (
+                  <a
+                    href={`/file/download/Tender/${encodeURIComponent(fileName)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    📎 View File
+                  </a>
+                ) : (
+                  "--"
+                ),
             },
             {
               title: "Responded By",
