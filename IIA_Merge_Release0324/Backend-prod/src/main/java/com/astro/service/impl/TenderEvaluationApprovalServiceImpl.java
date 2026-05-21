@@ -1621,11 +1621,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         VendorQuotationAgainstTender quotation = quotationRepository
                 .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
                 .orElseThrow(() -> new BusinessException(
-                        new ErrorDetails("APP_ERR", "No quotation found for tenderId=" + tenderId + " vendorId=" + vendorId)));
+                        new ErrorDetails(404, 1, "APP_ERR", "No quotation found for tenderId=" + tenderId + " vendorId=" + vendorId)));
 
         VendorMaster registeredVendor = vendorMasterRepository.findByVendorId(registeredVendorId)
                 .orElseThrow(() -> new BusinessException(
-                        new ErrorDetails("APP_ERR", "Registered vendor not found: " + registeredVendorId)));
+                        new ErrorDetails(404, 1, "APP_ERR", "Registered vendor not found: " + registeredVendorId)));
 
         quotation.setRegisteredVendorId(registeredVendor.getVendorId());
         quotation.setRegisteredVendorName(registeredVendor.getVendorName());
