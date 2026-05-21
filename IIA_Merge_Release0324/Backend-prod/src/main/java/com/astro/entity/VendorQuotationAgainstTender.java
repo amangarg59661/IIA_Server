@@ -95,6 +95,18 @@ public class VendorQuotationAgainstTender {
     @Column(name = "financial_bid_visible")
     private Boolean financialBidVisible = false;
 
+    @Column(name = "financial_indentor_status", length = 30)
+    private String financialIndentorStatus;
+
+    @Column(name = "financial_indentor_remarks", length = 1000)
+    private String financialIndentorRemarks;
+
+    @Column(name = "financial_spo_status", length = 30)
+    private String financialSpoStatus;
+
+    @Column(name = "financial_spo_remarks", length = 1000)
+    private String financialSpoRemarks;
+
     /** Rank assigned after financial evaluation (L1, L2, L3...) */
     @Column(name = "`rank`")
     private Integer rank;

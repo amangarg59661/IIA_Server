@@ -1016,7 +1016,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     + eval.getEvaluationStatus()));
         }
 
-        validateAllVendorsDecided(tenderId);
+        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         // BR_006A: For Double Bid financial phase, Financial Comparison Sheet must be uploaded first
         if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
@@ -1130,8 +1130,13 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setStatus("SUBMITTED");
         }
 
-        quotation.setIndentorStatus(normalizedDecision);
-        quotation.setIndentorRemarks(remarks);
+        if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            quotation.setFinancialIndentorStatus(normalizedDecision);
+            quotation.setFinancialIndentorRemarks(remarks);
+        } else {
+            quotation.setIndentorStatus(normalizedDecision);
+            quotation.setIndentorRemarks(remarks);
+        }
         quotation.setModifiedBy(evaluatorUserId);
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
@@ -1177,8 +1182,13 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setStatus("SUBMITTED");
         }
 
-        quotation.setSpoStatus(normalizedDecision);
-        quotation.setSpoRemarks(remarks);
+        if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            quotation.setFinancialSpoStatus(normalizedDecision);
+            quotation.setFinancialSpoRemarks(remarks);
+        } else {
+            quotation.setSpoStatus(normalizedDecision);
+            quotation.setSpoRemarks(remarks);
+        }
         quotation.setModifiedBy(spoUserId);
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
@@ -1251,6 +1261,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
 
     private void validateAllVendorsDecided(String tenderId) {
+        validateAllVendorsDecided(tenderId, false);
+    }
+
+    private void validateAllVendorsDecided(String tenderId, boolean financialPhase) {
         List<VendorQuotationAgainstTender> quotations =
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
         if (quotations.isEmpty()) {
@@ -1268,9 +1282,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     + ". Please resolve clarification or reject the vendor(s) first."));
         }
         List<String> pendingDecision = quotations.stream()
-                .filter(q -> q.getIndentorStatus() == null
-                        || (!"ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
-                            && !"REJECTED".equalsIgnoreCase(q.getIndentorStatus())))
+                .filter(q -> {
+                    String status = financialPhase ? q.getFinancialIndentorStatus() : q.getIndentorStatus();
+                    return status == null
+                        || (!"ACCEPTED".equalsIgnoreCase(status)
+                            && !"REJECTED".equalsIgnoreCase(status));
+                })
                 .map(VendorQuotationAgainstTender::getVendorId)
                 .collect(Collectors.toList());
         if (!pendingDecision.isEmpty()) {

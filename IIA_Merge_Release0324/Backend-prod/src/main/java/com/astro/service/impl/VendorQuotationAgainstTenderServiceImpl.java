@@ -155,7 +155,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                            clarificationHistoryRepository.save(h);
                        });
            } catch (Exception e) {
-               log.warn("Clarification history update in saveQuotation failed: {}", e.getMessage());
+            //    log.warn("Clarification history update in saveQuotation failed: {}", e.getMessage());
            }
        }
 
@@ -207,6 +207,9 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                    dto.setClarificationFileName(vq.getClarificationFileName());
                    dto.setVendorResponse(vq.getVendorResponse());
                  //  dto.setAcceptanceStatus(vq.getAcceptanceStatus()); // ACCEPTED etc.
+
+                   dto.setFinancialIndentorStatus(vq.getFinancialIndentorStatus());
+                   dto.setFinancialSpoStatus(vq.getFinancialSpoStatus());
 
                    dto.setCanIndentorAct(canIndentorAct(vq, loggedInRole));
                    dto.setCanSpoAct(canSpoAct(vq, loggedInRole));

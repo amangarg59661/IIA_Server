@@ -133,17 +133,18 @@ const showEvaluationSection = true;
 const isDoubleBidEval = evalStatus?.bidType === 'DOUBLE_BID';
 const isMultipleIndentEval = evalStatus?.indentCategory === 'MULTIPLE_INDENT';
 
+// Whether we are in the financial bid phase (double bid)
+const isFinancialPhase = Boolean(evalStatus?.financialBidPhase);
+
 // Accept/Reject/Seek-Clarification in quotation table:
-//   Case 1 (under-10L, single-indent, single-bid): Indentor ✓
-//   Case 2 (under-10L, single-indent, double-bid): Indentor ✓ at PENDING_TECHNICAL only (main table hidden)
-//   Case 3 (under-10L, multiple-indent, single-bid): PP ✓
-//   Case 4 (under-10L, multiple-indent, double-bid): PP ✓ technical+financial phases, same flow as Case 2
-//   Above 10L: neither (PP uses Select Approved Vendor instead)
-//   First PENDING_FINANCIAL (financialBidPhase=false): hidden — Indentor/PP uses Confirm only, no per-vendor actions
-//   Second PENDING_FINANCIAL (financialBidPhase=true): shown — financial vendor evaluation
+//   Technical phase: Indentor (single-indent) or PP (multiple-indent), under 10L only
+//   Financial phase: same roles can act again for financial evaluation
 const showActionButtons =
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval && evalStatus !== null) ||
-   (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null));
+   (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null)) ||
+  (isFinancialPhase && evalStatus !== null &&
+    (evalStatus.evaluationStatus === 'PENDING_FINANCIAL') &&
+    (isIndentCreatorRole || isPurchasePersonnelRole));
 
 const canPerformActions = showActionButtons;
 
@@ -986,25 +987,51 @@ if (isSpoRole) {
       dataIndex: 'spoRemarks',
       render: (r) => r || '-',
     }*/,
+    ...(isFinancialPhase ? [
+    {
+      title: 'Indentor/PP Financial Status',
+      key: 'financialIndentorStatus',
+      dataIndex: 'financialIndentorStatus',
+      render: (val) => {
+        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+        if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+        return val || <Tag>Pending</Tag>;
+      }
+    },
+    {
+      title: 'SPO Financial Status',
+      key: 'financialSpoStatus',
+      dataIndex: 'financialSpoStatus',
+      render: (val) => {
+        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+        if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
+        return val || <Tag>Pending</Tag>;
+      }
+    },
+    ] : []),
    {
   title: 'SPO Actions',
   key: 'spoActions',
   render: (_, record) => {
+    const finPhase = isFinancialPhase;
+    const indStatus = finPhase ? record.financialIndentorStatus : record.indentorStatus;
+    const spStatus = finPhase ? record.financialSpoStatus : record.sopStatus;
     const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
-      && record.indentorStatus === 'ACCEPTED'
-      && !record.sopStatus
-      && record.status !== 'CHANGE_REQUESTED'
-    //   && record.evaluationStatus !== 'APPROVED';
+      && indStatus === 'ACCEPTED'
+      && !spStatus
+      && record.status !== 'CHANGE_REQUESTED';
     const pendingToIndentor = record.changeRequestToIndentor;
 
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button
           size="small"
-          disabled={!spoCanAct || record.sopStatus === 'ACCEPTED'}
+          disabled={!spoCanAct || spStatus === 'ACCEPTED'}
           onClick={() => handleSpoReview(record, 'ACCEPT')}
         >
-          {record.sopStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
+          {spStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
         </Button>
 <Popover
   content={
@@ -1020,7 +1047,7 @@ if (isSpoRole) {
       />
       <Button
         type="primary"
-        disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
+        disabled={!spoCanAct || spStatus === 'REJECTED'}
         onClick={() => handleSpoReview(record, 'REJECT')}
         style={{ marginTop: 8 }}
       >
@@ -1034,9 +1061,9 @@ if (isSpoRole) {
   <Button
     size="small"
     style={{ color: 'red' }}
-    disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
+    disabled={!spoCanAct || spStatus === 'REJECTED'}
   >
-    {record.sopStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
+    {spStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
   </Button>
 </Popover>
 
@@ -1126,91 +1153,116 @@ if (isSpoRole) {
       }
     },
 
-   /* {
-      title: 'Remarks',
-      key: 'remarks',
-      dataIndex: 'remarks',
-      render: (remarks) => remarks || 'N/A',
-    },*/
+    ...(isFinancialPhase ? [
+    {
+      title: 'Indentor/PP Financial Status',
+      key: 'financialIndentorStatus',
+      dataIndex: 'financialIndentorStatus',
+      render: (val) => {
+        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+        if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+        return val || <Tag>Pending</Tag>;
+      }
+    },
+    {
+      title: 'SPO Financial Status',
+      key: 'financialSpoStatus',
+      dataIndex: 'financialSpoStatus',
+      render: (val) => {
+        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+        if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
+        return val || <Tag>Pending</Tag>;
+      }
+    },
+    ] : []),
 
   ...(showActionButtons ? [
   {
     title: 'Accept',
     key: 'accept',
-    render: (_, record) => record.indentorStatus === 'ACCEPTED' ? (
-      <Tag color="green">Accepted</Tag>
-    ) : (
-      <Button
-        onClick={() => handleAccept(record)}
-        size="small"
-        disabled={
-          record.indentorStatus === 'ACCEPTED' ||
-          record.indentorStatus === 'REJECTED' ||
-          record.status === 'CHANGE_REQUESTED'
-        }
-        title={record.status === 'CHANGE_REQUESTED' ? 'Cannot accept while clarification is pending for this vendor' : ''}
-      >
-        Accept
-      </Button>
-    ),
+    render: (_, record) => {
+      const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      return status === 'ACCEPTED' ? (
+        <Tag color="green">Accepted</Tag>
+      ) : (
+        <Button
+          onClick={() => handleAccept(record)}
+          size="small"
+          disabled={
+            status === 'ACCEPTED' ||
+            status === 'REJECTED' ||
+            record.status === 'CHANGE_REQUESTED'
+          }
+          title={record.status === 'CHANGE_REQUESTED' ? 'Cannot accept while clarification is pending for this vendor' : ''}
+        >
+          Accept
+        </Button>
+      );
+    },
   },
   {
     title: 'Reject',
     key: 'reject',
-    render: (_, record) => record.indentorStatus === 'REJECTED' ? (
-      <span style={{ color: 'red' }}>Rejected</span>
-    ) : (
-      <Popover
-        content={
-          <div style={{ padding: 12 }}>
-            <Input.TextArea
-              placeholder="Enter reject comment"
-              rows={3}
-              value={rejectedVendorId === record.vendorId ? rejectComment : ''}
-              onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
-            />
-            <Button
-              type="primary"
-              onClick={() => handleReject(record)}
-              style={{ marginTop: 8 }}
-              disabled={
-                record.indentorStatus === 'REJECTED' ||
-                record.status === 'CHANGE_REQUESTED'
-              }
-            >
-              Submit
-            </Button>
-          </div>
-        }
-        title="Reject Vendor"
-        trigger="click"
-      >
-        <Button danger type="link" disabled={
-          record.indentorStatus === 'REJECTED' ||
-          record.status === 'CHANGE_REQUESTED'
-        }>
-          Reject
-        </Button>
-      </Popover>
-    ),
+    render: (_, record) => {
+      const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      return status === 'REJECTED' ? (
+        <span style={{ color: 'red' }}>Rejected</span>
+      ) : (
+        <Popover
+          content={
+            <div style={{ padding: 12 }}>
+              <Input.TextArea
+                placeholder="Enter reject comment"
+                rows={3}
+                value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+              />
+              <Button
+                type="primary"
+                onClick={() => handleReject(record)}
+                style={{ marginTop: 8 }}
+                disabled={
+                  status === 'REJECTED' ||
+                  record.status === 'CHANGE_REQUESTED'
+                }
+              >
+                Submit
+              </Button>
+            </div>
+          }
+          title="Reject Vendor"
+          trigger="click"
+        >
+          <Button danger type="link" disabled={
+            status === 'REJECTED' ||
+            record.status === 'CHANGE_REQUESTED'
+          }>
+            Reject
+          </Button>
+        </Popover>
+      );
+    },
   },
   {
     title: 'Seek Clarification',
     key: 'seekClarification',
-    render: (_, record) => (
-      record.status === 'CHANGE_REQUESTED' ? (
+    render: (_, record) => {
+      const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      return record.status === 'CHANGE_REQUESTED' ? (
         <Tag color="orange">Pending</Tag>
       ) : (
         <Button
           type="link"
           style={{ color: '#fa8c16', padding: 0 }}
-          disabled={record.indentorStatus === 'REJECTED' || record.status === 'CHANGE_REQUESTED'}
+          disabled={status === 'REJECTED' || record.status === 'CHANGE_REQUESTED'}
           onClick={() => openVendorClarificationModal(record.vendorId)}
         >
           Seek Clarification
         </Button>
-      )
-    ),
+      );
+    },
   },
   ] : []),
 
@@ -1300,12 +1352,21 @@ useEffect(() => {
   const anyVendorPendingClarif = quotationData.some(q => q.status === 'CHANGE_REQUESTED');
   // All vendors have been accepted or rejected by Indentor/PP
   const allVendorsDecided = quotationData.length > 0 &&
-    quotationData.every(q => q.indentorStatus === 'ACCEPTED' || q.indentorStatus === 'REJECTED');
+    quotationData.every(q => {
+      const st = isFinancialPhase ? q.financialIndentorStatus : q.indentorStatus;
+      return st === 'ACCEPTED' || st === 'REJECTED';
+    });
   // All Indentor-accepted vendors must have an SPO decision before SPO can do final approval
   const allVendorsSpoDecided = quotationData.length > 0 &&
     quotationData
-      .filter(q => q.indentorStatus === 'ACCEPTED')
-      .every(q => q.sopStatus === 'ACCEPTED' || q.sopStatus === 'REJECTED');
+      .filter(q => {
+        const st = isFinancialPhase ? q.financialIndentorStatus : q.indentorStatus;
+        return st === 'ACCEPTED';
+      })
+      .every(q => {
+        const sp = isFinancialPhase ? q.financialSpoStatus : q.sopStatus;
+        return sp === 'ACCEPTED' || sp === 'REJECTED';
+      });
   // FIX: True only if this logged-in user is actually pre-assigned to this tender's committee.
   // Prevents a STEC-I member from seeing the vote panel for a STEC-II tender (and vice versa).
   const isVotingMember = evalStatus?.committeeVotes?.some(
