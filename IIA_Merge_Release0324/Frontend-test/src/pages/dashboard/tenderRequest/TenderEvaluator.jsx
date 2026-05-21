@@ -188,9 +188,15 @@ const handleSearchTender = async () => {
   try {
     setLoadingTender(true);
 
+     const baseQuotationResp = await axios.get(`/api/vendor-quotation`, {
+      params: { userRole: role , tenderId : tenderId }
+    });
+    const baseQuotationList = baseQuotationResp.data?.responseData || [];
+    setQuotationData(baseQuotationList);
+
     // flow for Store Purchase Officer: require comparison sheet
     if (isSpoRole) {
-      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations` , {params : {tenderId: tenderId}});
+      const compResp = await axios.get(`/api/vendor-quotation/getAllVendorQuotations`,{params :{tenderId: tenderId}});
       const { vendor = [], uploadQualifiedVendorsFileName } = compResp.data?.responseData || {};
 
      /* if (!uploadQualifiedVendorsFileName) {

@@ -17,12 +17,19 @@ public class TenderEvaluation {
     // private Long tenderEvaluationId;
     @Id
     private String tenderId;
+    @Column(length = 500)
     private String uploadQualifiedVendorsFileName;
+    @Column(length = 500)
     private String uploadTechnicallyQualifiedVendorsFileName;
+    @Column(length = 500)
     private String uploadCommeriallyQualifiedVendorsFileName;
+    @Column(length = 500)
     private String formationOfTechnoCommerialComitee;
+    @Column(length = 500)
     private String responseFileName;
+    @Column(length = 500)
     private String responseForTechnicallyQualifiedVendorsFileName;
+    @Column(length = 500)
     private String responseForCommeriallyQualifiedVendorsFileName;
     private Integer uploadQualifiedVendorsFileNameCreatedBy;
     private Integer uploadTechnicallyQualifiedVendorsFileNameCreatedBy;
