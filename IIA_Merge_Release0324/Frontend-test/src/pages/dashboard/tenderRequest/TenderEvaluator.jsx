@@ -1017,6 +1017,8 @@ if (isSpoRole) {
   key: 'spoActions',
   render: (_, record) => {
     const finPhase = isFinancialPhase;
+    const techRejected = finPhase && record.indentorStatus === 'REJECTED';
+    if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
     const indStatus = finPhase ? record.financialIndentorStatus : record.indentorStatus;
     const spStatus = finPhase ? record.financialSpoStatus : record.sopStatus;
     const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
@@ -1185,6 +1187,8 @@ if (isSpoRole) {
     key: 'accept',
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
+      if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
       return status === 'ACCEPTED' ? (
         <Tag color="green">Accepted</Tag>
       ) : (
@@ -1208,6 +1212,8 @@ if (isSpoRole) {
     key: 'reject',
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
+      if (techRejected) return <Tag color="default">N/A</Tag>;
       return status === 'REJECTED' ? (
         <span style={{ color: 'red' }}>Rejected</span>
       ) : (
@@ -1251,6 +1257,8 @@ if (isSpoRole) {
     key: 'seekClarification',
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+      const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
+      if (techRejected) return <Tag color="default">N/A</Tag>;
       return record.status === 'CHANGE_REQUESTED' ? (
         <Tag color="orange">Pending</Tag>
       ) : (
@@ -1351,18 +1359,24 @@ useEffect(() => {
   const isAnyClarificationPending = isPendingVendorClarif || isPendingIndentorClarif || isPendingMemberRevote;
   // Per-vendor: any vendor still has CHANGE_REQUESTED status
   const anyVendorPendingClarif = quotationData.some(q => q.status === 'CHANGE_REQUESTED');
-  // All vendors have been accepted or rejected by Indentor/PP
+  // All eligible vendors have been accepted or rejected by Indentor/PP
+  // In financial phase, skip vendors already rejected in technical
   const allVendorsDecided = quotationData.length > 0 &&
-    quotationData.every(q => {
-      const st = isFinancialPhase ? q.financialIndentorStatus : q.indentorStatus;
-      return st === 'ACCEPTED' || st === 'REJECTED';
-    });
+    quotationData
+      .filter(q => !(isFinancialPhase && q.indentorStatus === 'REJECTED'))
+      .every(q => {
+        const st = isFinancialPhase ? q.financialIndentorStatus : q.indentorStatus;
+        return st === 'ACCEPTED' || st === 'REJECTED';
+      });
   // All Indentor-accepted vendors must have an SPO decision before SPO can do final approval
+  // In financial phase, vendor must be accepted in BOTH rounds to need SPO financial decision
   const allVendorsSpoDecided = quotationData.length > 0 &&
     quotationData
       .filter(q => {
-        const st = isFinancialPhase ? q.financialIndentorStatus : q.indentorStatus;
-        return st === 'ACCEPTED';
+        if (isFinancialPhase) {
+          return q.indentorStatus === 'ACCEPTED' && q.financialIndentorStatus === 'ACCEPTED';
+        }
+        return q.indentorStatus === 'ACCEPTED';
       })
       .every(q => {
         const sp = isFinancialPhase ? q.financialSpoStatus : q.sopStatus;

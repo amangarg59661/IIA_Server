@@ -406,6 +406,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 eval.setEvaluationStatus("PENDING_FINANCIAL_SHEET_UPLOAD");
             } else {
                 // Final SPO approval (either single bid or double bid financial phase)
+                boolean wasFinancialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
                 eval.setEvaluationStatus("APPROVED");
                 eval.setFinancialBidPhase(false);
 
@@ -413,30 +414,46 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 List<VendorQuotationAgainstTender> allQuotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 boolean anyPendingSpo = allQuotations.stream()
-                        .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
-                        .anyMatch(q -> q.getSpoStatus() == null ||
-                                (!"ACCEPTED".equalsIgnoreCase(q.getSpoStatus()) &&
-                                 !"REJECTED".equalsIgnoreCase(q.getSpoStatus())));
+                        .filter(q -> {
+                            if (wasFinancialPhase) {
+                                return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                    && "ACCEPTED".equalsIgnoreCase(q.getFinancialIndentorStatus());
+                            }
+                            return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus());
+                        })
+                        .anyMatch(q -> {
+                            String spSt = wasFinancialPhase ? q.getFinancialSpoStatus() : q.getSpoStatus();
+                            return spSt == null ||
+                                (!"ACCEPTED".equalsIgnoreCase(spSt) &&
+                                 !"REJECTED".equalsIgnoreCase(spSt));
+                        });
                 if (anyPendingSpo) {
                     throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                             "All vendors accepted by the Indentor must be either Accepted or Rejected by SPO before final submission."));
                 }
 
-                // Mark ALL SPO-accepted vendors as Completed so every approved vendor appears in PO LOV
-                // Clear nextRole for all vendors so SPO can no longer change decisions
+                // Mark vendors as Completed only if accepted in ALL rounds (technical + financial for double bid)
                 allQuotations.forEach(q -> {
                     q.setNextRole(null);
-                    if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())) {
-                        q.setStatus("Completed");
-                        q.setAcceptanceStatus("ACCEPTED");
+                    if (wasFinancialPhase) {
+                        if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())
+                                && "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
+                            q.setStatus("Completed");
+                            q.setAcceptanceStatus("ACCEPTED");
+                        }
+                    } else {
+                        if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())) {
+                            q.setStatus("Completed");
+                            q.setAcceptanceStatus("ACCEPTED");
+                        }
                     }
                 });
                 quotationRepository.saveAll(allQuotations);
 
-                // Set approvedVendorId on eval record (first SPO-accepted, for backward compat)
+                // Set approvedVendorId on eval record (first fully-accepted vendor, for backward compat)
                 if (eval.getApprovedVendorId() == null) {
                     allQuotations.stream()
-                            .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                            .filter(q -> "Completed".equals(q.getStatus()))
                             .findFirst()
                             .ifPresent(q -> {
                                 eval.setApprovedVendorId(q.getVendorId());
@@ -1131,6 +1148,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            if ("REJECTED".equalsIgnoreCase(quotation.getIndentorStatus())) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot evaluate vendor " + vendorId
+                        + " in financial phase — already rejected in technical evaluation."));
+            }
             quotation.setFinancialIndentorStatus(normalizedDecision);
             quotation.setFinancialIndentorRemarks(remarks);
         } else {
@@ -1183,6 +1205,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            if ("REJECTED".equalsIgnoreCase(quotation.getIndentorStatus())) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot evaluate vendor " + vendorId
+                        + " in financial phase — already rejected in technical evaluation."));
+            }
             quotation.setFinancialSpoStatus(normalizedDecision);
             quotation.setFinancialSpoRemarks(remarks);
         } else {
@@ -1283,6 +1310,9 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
         List<String> pendingDecision = quotations.stream()
                 .filter(q -> {
+                    if (financialPhase && "REJECTED".equalsIgnoreCase(q.getIndentorStatus())) {
+                        return false;
+                    }
                     String status = financialPhase ? q.getFinancialIndentorStatus() : q.getIndentorStatus();
                     return status == null
                         || (!"ACCEPTED".equalsIgnoreCase(status)
