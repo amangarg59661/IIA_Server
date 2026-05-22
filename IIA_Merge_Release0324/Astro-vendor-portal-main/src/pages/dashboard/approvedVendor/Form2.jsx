@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Card, Row, Col, message, Spin ,Button, Tag} from "antd";
+import { Card, Row, Col, message, Spin, Button, Tag, Select, Space } from "antd";
 import { useSelector } from "react-redux";
 import { useParams } from "react-router-dom";
 import axios from "axios";
@@ -9,6 +9,8 @@ import { Modal } from "antd";
 import QuotationHistoryModal from '../../../components/QuotationHistoryModal';
 import { HistoryOutlined } from '@ant-design/icons';
 import AllVendorsQuotationsstatus from '../../../components/AllVendorsQuotationstatus';
+
+const { Option } = Select;
 
 // import React, { useEffect, useState } from "react";
 // import { Form, Input, Button, Row, Col, message } from "antd";
@@ -509,6 +511,7 @@ const Form2 = () => {
   const [selectedTenderLoading, setSelectedTenderLoading] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [allVendorVisible, setAllVendorVisible] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
 
 
   const [vendorState, setVendorState] = useState({
@@ -557,8 +560,9 @@ const Form2 = () => {
       setSelectedTenderLoading(true);
       try {
         const res = await axios.get(
-          `/api/tender-requests/vendor` , {param:{tenderId:tenderId,vendorId:vendorId}},
+          `/api/tender-requests/vendor`,
           {
+            params: { tenderId: tenderId, vendorId: vendorId },
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${auth.token}`,
@@ -627,9 +631,10 @@ const Form2 = () => {
 const isChangeRequest = actionStatus === "CHANGE_REQUESTED";
 const isChangeRequestToIndentor = actionStatus === "CHANGE_REQUESTED_TO_INTENTOR";
 
-
-  const isSubmittedOrNone =
-    actionStatus === "SUBMITTED" || actionStatus === null || actionStatus === undefined;
+  // Only show upload form when vendor has NOT yet submitted (no record yet)
+  const isSubmittedOrNone = actionStatus === null || actionStatus === undefined;
+  // Vendor submitted but no review action taken yet — show read-only message
+  const isSubmitted = actionStatus === "SUBMITTED";
   const isAccepted = actionStatus === "ACCEPTED";
   const isRejected = actionStatus === "REJECTED";
 
@@ -661,58 +666,56 @@ const getDisplayStatus = (actionStatus) => {
   <span>Primary Business: {vendorInfo.primaryBusiness}</span>
 </div>
 {/* End */}
-      <h2 className="font-bold mb-2">Approved Tender IDs</h2>
-      <Row gutter={[16, 16]}>
-        {/*tenderIds.map((tenderId) => (
-          <Col key={tenderId} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              hoverable
-              style={{
-                textAlign: "center",
-                cursor: "pointer",
-                border:
-                  selectedTenderId === tenderId
-                    ? "2px solid #1890ff"
-                    : undefined,
-              }}
-              onClick={() => handleTenderCardClick(tenderId)}
-            >
-              {selectedTenderLoading && selectedTenderId === tenderId ? (
-                <Spin />
-              ) : (
-                <a>{tenderId}</a>
-              )}
-            </Card>
-          </Col>
-        ))*/}
-        {tenderIds.map((tender) => (
-          <Col key={tender.tenderId} xs={24} sm={12} md={8} lg={6}>
-            <Card
-              hoverable
-              style={{
-              textAlign: "center",
-              cursor: "pointer",
-              border:
-                selectedTenderId === tender.tenderId ? "2px solid #1890ff" : undefined,
-              }}
-              onClick={() => handleTenderCardClick(tender.tenderId)}
-             >
-          {selectedTenderLoading && selectedTenderId === tender.tenderId ? (
-          <Spin />
-            ) : (
-            <>
-              <a style={{ color: "inherit", fontWeight: "semi bold" }}>
-              {tender.tenderId}
-              </a>
-              <div style={{ marginTop: 4, color: "#555" }}>{tender.title}</div>
-            </>
-             )}
-          </Card>
-       </Col>
-      ))}
+      <h2 className="font-bold mb-2">Tender Evaluation</h2>
 
+      {/* ── Filters ── */}
+      <Space wrap style={{ marginBottom: 16 }}>
+        <div>
+          <label style={{ fontWeight: 600, marginRight: 8 }}>Tender ID</label>
+          <Select
+            showSearch
+            allowClear
+            style={{ width: 340 }}
+            placeholder="Select Tender ID"
+            value={selectedTenderId}
+            loading={selectedTenderLoading}
+            onChange={(value) => {
+              setSelectedTenderId(value);
+              if (value) handleTenderCardClick(value);
+            }}
+            optionFilterProp="label"
+            options={(tenderIds || [])
+              .filter((tender) => {
+                if (statusFilter === "ALL") return true;
+                const tenderStatus = typeof tender === "string" ? null : (tender.actionStatus || null);
+                if (statusFilter === "PENDING") return tenderStatus === null || tenderStatus === undefined;
+                if (statusFilter === "SUBMITTED") return tenderStatus === "SUBMITTED";
+                if (statusFilter === "CHANGE_REQUESTED") return tenderStatus === "CHANGE_REQUESTED";
+                return true;
+              })
+              .map((tender) => ({
+              label: typeof tender === "string"
+                ? tender
+                : `${tender.tenderId}${tender.title ? " - " + tender.title : ""}`,
+              value: typeof tender === "string" ? tender : tender.tenderId,
+            }))}
+          />
+        </div>
 
-      </Row>
+        <div>
+          <label style={{ fontWeight: 600, marginRight: 8 }}>Status</label>
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            style={{ width: 200 }}
+          >
+            <Option value="ALL">All</Option>
+            <Option value="SUBMITTED">Submitted Document</Option>
+            <Option value="CHANGE_REQUESTED">Clarification</Option>
+            <Option value="PENDING">Pending Document</Option>
+          </Select>
+        </div>
+      </Space>
       {/*selectedTenderId && (
   <>
     <Button
@@ -802,10 +805,29 @@ const getDisplayStatus = (actionStatus) => {
         </div>
       )}
 
-      {/* Show TenderEvaluator when change requested, submitted, or no action yet */}
+      {/* Upload form: only when no submission yet OR clarification requested */}
       {selectedTenderId && (isChangeRequest || isSubmittedOrNone) && (
         <div style={{ marginTop: "40px" }}>
           <TenderEvaluator key={selectedTenderId} tenderId={selectedTenderId}  actionStatus={actionStatus}/>
+        </div>
+      )}
+
+      {/* Read-only view: vendor submitted, awaiting review */}
+      {selectedTenderId && isSubmitted && (
+        <div style={{ marginTop: "40px" }}>
+          <div
+            style={{
+              padding: 24,
+              background: "#e6f7ff",
+              border: "1px solid #91d5ff",
+              borderRadius: 4,
+            }}
+          >
+            <strong>Documents submitted for Tender ID {selectedTenderId}.</strong>
+            <div style={{ marginTop: 8 }}>
+              <span>Awaiting review by the evaluation team. No further uploads are allowed until a clarification is requested.</span>
+            </div>
+          </div>
         </div>
       )}
 
