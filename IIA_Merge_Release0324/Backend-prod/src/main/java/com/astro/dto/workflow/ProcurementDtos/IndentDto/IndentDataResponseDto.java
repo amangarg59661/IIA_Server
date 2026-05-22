@@ -27,6 +27,7 @@ public class IndentDataResponseDto {
     private Boolean isItARateContractIndent;
     private BigDecimal estimatedRate;
     private BigDecimal periodOfContract;
+    private String buyBackAmount;
     private String singleAndMultipleJob;
     private String materialCategory;
     private BigDecimal totalPriceOfAllMaterials;

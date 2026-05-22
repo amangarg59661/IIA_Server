@@ -1435,6 +1435,7 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
         response.setSerialNumber(indentCreation.getSerialNumber());
         response.setModelNumber(indentCreation.getModelNumber());
         LocalDate dateOfPurchase = indentCreation.getDateOfPurchase();
+        response.setBuyBackAmount(indentCreation.getBuyBackAmount());
         if (dateOfPurchase != null) {
             response.setDateOfPurchase(CommonUtils.convertDateToString(dateOfPurchase));
         } else {
