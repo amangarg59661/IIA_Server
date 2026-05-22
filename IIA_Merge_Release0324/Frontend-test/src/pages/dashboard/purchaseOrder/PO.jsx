@@ -153,24 +153,38 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
       let vendorIdOptions= [];
       let vendorNameOptions=[];
     try {
-      const completedResp = await axios.get(`/api/vendor-quotation/completed-vendorNames`, {params:{tenderId}});
-      const completedVendorsData = completedResp.data?.responseData || [];
-    vendorIdOptions = completedVendorsData.map((vendor) => ({
-  label: vendor.vendorId,
-  value: vendor.vendorId,
-}));
-vendorNameOptions = completedVendorsData.map((vendor) => ({
-  label: vendor.vendorName,
-  value: vendor.vendorName,
-}));
+      // BR_PO_001: Fetch only SPO-approved vendors from Tender Evaluation.
+      // Falls back to completed quotation vendors if evaluation not done yet.
+      let completedVendorsData = [];
+      try {
+        const evalApprovedResp = await axios.get(
+          `/api/tender-evaluation/approved-vendors`, { params: { tenderId } }
+        );
+        completedVendorsData = evalApprovedResp.data?.responseData || [];
+      } catch (evalErr) {
+        // If evaluation endpoint fails (e.g. eval not started), fall back
+        if (evalErr?.response?.status === 404 || evalErr?.response?.status === 400) {
+          const completedResp = await axios.get(
+            `/api/vendor-quotation/completed-vendorNames`, { params: { tenderId } }
+          );
+          completedVendorsData = completedResp.data?.responseData || [];
+        } else {
+          throw evalErr;
+        }
+      }
+      vendorIdOptions = completedVendorsData.map((vendor) => ({
+        label: vendor.vendorId,
+        value: vendor.vendorId,
+      }));
+      vendorNameOptions = completedVendorsData.map((vendor) => ({
+        label: vendor.vendorName || vendor.vendorId,
+        value: vendor.vendorName || vendor.vendorId,
+      }));
 
-
-  setCompletedVendorIds(vendorIdOptions);
-  setCompletedVendorNames(vendorNameOptions);
-      
+      setCompletedVendorIds(vendorIdOptions);
+      setCompletedVendorNames(vendorNameOptions);
     } catch (e) {
-      console.warn("Failed to fetch completed vendors:", e);
-     // setCompletedVendors([]); // fallback
+      console.warn("Failed to fetch approved vendors:", e);
       setCompletedVendorIds([]);
       setCompletedVendorNames([]);
     }

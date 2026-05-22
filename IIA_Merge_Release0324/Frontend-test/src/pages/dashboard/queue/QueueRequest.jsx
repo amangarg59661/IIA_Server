@@ -1077,6 +1077,14 @@ const handleCancellationApprove = async (record, approvalStatus) => {
           amount: apiData.amount,
         }[field];
 
+        case 11:
+        return {
+          indentor: apiData.indentorName,
+          budgetName: apiData.budgetCode,
+          indentTitle: "JOB",
+          amount: apiData.amount,
+        }[field];
+
       default:
         return "-";
     }
@@ -1246,7 +1254,8 @@ const handleCancellationApprove = async (record, approvalStatus) => {
       },
     },
   ];
-
+const WORKFLOW_IDS_WITH_Mat = [9, 11];
+const WORKFLOW_IDS_WITHOUT_Mat = [1,2,3,4,5,6,7,8,10];
   // Main columns
   const columns = [
     {
@@ -1270,13 +1279,14 @@ const handleCancellationApprove = async (record, approvalStatus) => {
       ),
       fixed: "left",
     },
+    ...(WORKFLOW_IDS_WITH_Mat.includes(Number(workflowId)) ? [
     {
         title: 'Description',
         dataIndex: 'materialDesc',
         key: "materialDesc",
         render: (_,record) => 
             record.materialDesc || "-",
-    },
+    }] : []),
     {
       title: "Created by",
       dataIndex: "indentor",
@@ -1305,6 +1315,7 @@ const handleCancellationApprove = async (record, approvalStatus) => {
         );
       },
     },
+    ...(WORKFLOW_IDS_WITHOUT_Mat.includes(Number(workflowId)) ? [
     {
       title: "Project",
       dataIndex: "projectName",
@@ -1345,7 +1356,7 @@ const handleCancellationApprove = async (record, approvalStatus) => {
       dataIndex: "assignedToEmployeeName",
       key: "assignedTo",
       render: (_,record) => record.nextRole || "-",
-    },
+    }] :[]),
     {
       title: "Status",
       dataIndex: "status",

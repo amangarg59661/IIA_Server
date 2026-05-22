@@ -52,6 +52,8 @@ import MonthlyProcurementReport from "../reports/MonthlyProcurementReport";
 import IndentStatus from '../reports/IndentStatus'
 import TenderEvaluator from "../dashboard/tenderRequest/TenderEvaluator";
 import TenderEvaluatorGem from "../dashboard/tenderRequest/TenderEvaluatorGem";
+import TenderEvaluationPage from "../dashboard/tenderEvaluation/TenderEvaluationPage";
+import GemTenderEvaluationPage from "../dashboard/tenderEvaluation/GemTenderEvaluationPage";
 import ForDisposalAssets from "../dashboard/assetDisposal/ForDisposalAssets";
 import { useSelector } from "react-redux";
 import Invoice from "../dashboard/PaymentVoucher/Invoice";
@@ -160,6 +162,7 @@ const indentCreatorRoutes = (
     <Route path="/masters" element={<Master />} />
     <Route path="/procurement/indent/creation" element={<Indent1 />} />
     <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
+    <Route path="/procurement/tender-evaluation" element={<TenderEvaluationPage />} />
     <Route path="/inventory/goodsInspection" element={<GoodsInspection />} />
     <Route path="/inventory/demandIssue" element={<Form20 />} />
     <Route path="/procurement/tender/Quotations" element={<Quotations />} />
@@ -172,12 +175,13 @@ const indentCreatorRoutes = (
 
 const storePurchaseRoutes = (
   <>
-   
+
     <Route path="/masters" element={<Master />} />
     <Route path="/procurement/tender/request" element={<Tender />} />
     <Route path="/procurement/tender/evaluation" element={<TenderEvaluator />} />
     <Route path="/procurement/tender/gem" element={<TenderEvaluatorGem />} />
     <Route path="/procurement/tender/Quotations" element={<Quotations />} />
+    <Route path="/procurement/tender-evaluation" element={<TenderEvaluationPage />} />
     <Route path="/inventory/goodsReceipt" element={<Grn />} />
     <Route path="/inventory/goodsInspection" element={<GoodsInspection />} />
     <Route path="/inventory/goodsReturn" element={<Grv />} />
@@ -221,7 +225,8 @@ const purchasePersonnelRoutes = (
     <Route path="/procurement/tender/gem" element={<TenderEvaluatorGem />} />
     <Route path="/procurement/tender/Quotations" element={<Quotations />} />
     <Route path="/procurement/cancellation/approval" element={<CancellationApprovalPage />} />
-
+    <Route path="/procurement/tender-evaluation" element={<TenderEvaluationPage />} />
+    <Route path="/procurement/gem-tender-evaluation" element={<GemTenderEvaluationPage />} />
 
       <Route path="/procurement/purchaseOrder" element={<PO />} />
       <Route path="/procurement/serviceOrder" element={<SO />} />
