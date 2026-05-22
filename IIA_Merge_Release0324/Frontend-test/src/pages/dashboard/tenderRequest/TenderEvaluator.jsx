@@ -115,6 +115,11 @@ const TenderEvaluator = () => {
   // SPO row-level target toggle (INDENTOR or VENDOR)
   const [spoRowTarget, setSpoRowTarget] = useState('INDENTOR');
 
+  // PP per-vendor clarification response (GEM/OPEN/GLOBAL)
+  const [ppVendorResponses, setPpVendorResponses] = useState({});
+  const [ppVendorFiles, setPpVendorFiles] = useState({});
+  const [ppSubmitting, setPpSubmitting] = useState({});
+
   // Registered vendor mapping (OPEN_TENDER / GLOBAL_TENDER / GEM)
   const [allRegisteredVendors, setAllRegisteredVendors] = useState([]);
   const [selectedRegisteredVendors, setSelectedRegisteredVendors] = useState({});
@@ -752,6 +757,41 @@ const handleRespondClarification = async () => {
     await fetchClarificationHistory(tenderId);
   } catch (e) {
     message.error(e?.response?.data?.responseStatus?.message || 'Failed to submit response.');
+  }
+};
+
+const handlePpRespondForVendor = async (vendorId) => {
+  const responseText = ppVendorResponses[vendorId];
+  if (!responseText || !responseText.trim()) return message.warning('Please enter a clarification response.');
+  setPpSubmitting(prev => ({ ...prev, [vendorId]: true }));
+  try {
+    let responseFileName = null;
+    const fileObj = ppVendorFiles[vendorId];
+    if (fileObj) {
+      const fd = new FormData();
+      fd.append('file', fileObj);
+      const uploadResp = await axios.post('/file/upload?fileType=Tender', fd, {
+        headers: { 'Content-Type': 'multipart/form-data', Accept: 'application/json' },
+      });
+      responseFileName = uploadResp.data.responseData.fileName;
+    }
+    await axios.post('/api/tender-evaluation/respond-clarification', {
+      respondedByRole: 'PURCHASE_PERSONNEL',
+      respondedById: String(userId),
+      responseText: responseText.trim(),
+      responseFileName,
+      vendorId,
+    }, { params: { tenderId } });
+    message.success(`Clarification response submitted for vendor ${vendorId}`);
+    setPpVendorResponses(prev => { const n = { ...prev }; delete n[vendorId]; return n; });
+    setPpVendorFiles(prev => { const n = { ...prev }; delete n[vendorId]; return n; });
+    await fetchEvalStatus(tenderId);
+    await fetchQuotationsAndPending(tenderId);
+    await fetchClarificationHistory(tenderId);
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to submit response.');
+  } finally {
+    setPpSubmitting(prev => ({ ...prev, [vendorId]: false }));
   }
 };
 
@@ -1697,7 +1737,7 @@ useEffect(() => {
                         key={h.id || idx}
                         size="small"
                         style={{ marginBottom: 8 }}
-                        title={`Round ${h.roundNumber} — ${h.clarificationTarget?.replace(/_/g, ' ')} — by ${h.requestedByRole?.replace(/_/g, ' ')}`}
+                        title={`Round ${h.roundNumber} — ${h.clarificationTarget?.replace(/_/g, ' ')}${h.targetVendorId ? ` (Vendor: ${h.targetVendorId})` : ''} — by ${h.requestedByRole?.replace(/_/g, ' ')}`}
                       >
                         <p><strong>Question:</strong> {h.questionRemarks}</p>
                         <p style={{ color: '#888', fontSize: 12 }}>{h.requestedAt ? new Date(h.requestedAt).toLocaleString() : ''}</p>
@@ -1705,6 +1745,9 @@ useEffect(() => {
                           <>
                             <Divider style={{ margin: '8px 0' }} />
                             <p><strong>Response ({h.respondedByRole?.replace(/_/g, ' ')}):</strong> {h.responseText}</p>
+                            {h.responseFileName && (
+                              <p><strong>File:</strong> <a href={`${baseURL}/file/view/Tender/${h.responseFileName}`} target="_blank" rel="noopener noreferrer">{h.responseFileName}</a></p>
+                            )}
                             <p style={{ color: '#888', fontSize: 12 }}>{h.respondedAt ? new Date(h.respondedAt).toLocaleString() : ''}</p>
                           </>
                         ) : (
@@ -1878,16 +1921,86 @@ useEffect(() => {
 
             {/* ── Indentor/PP Responds to Clarification ── */}
             {isPendingIndentorClarif &&
-              (isIndentCreatorRole || isPurchasePersonnelRole) && (
+              (isIndentCreatorRole || isPurchasePersonnelRole) &&
+              evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL' ? (
+                /* PP per-vendor clarification card (GEM/OPEN/GLOBAL) */
+                isPurchasePersonnelRole && (
+                <Card title="Respond to Vendor Clarification (on behalf of vendors)" size="small" style={{ marginTop: 16 }}>
+                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                    message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
+                    description={evalStatus.clarificationRemarks ? `Question: "${evalStatus.clarificationRemarks}"` : ''} />
+                  {quotationData.filter(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED').length === 0 && (
+                    <Alert type="info" showIcon style={{ marginBottom: 8 }}
+                      message="No vendors are pending clarification response." />
+                  )}
+                  {quotationData.filter(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED').map(q => (
+                    <div key={q.vendorId} style={{
+                      marginBottom: 12, padding: 12,
+                      background: q.status === 'CHANGE_REQUESTED' ? '#fff7e6' : '#f6ffed',
+                      border: `1px solid ${q.status === 'CHANGE_REQUESTED' ? '#ffd591' : '#b7eb8f'}`,
+                      borderRadius: 4
+                    }}>
+                      <div style={{ marginBottom: 8 }}>
+                        <strong>{q.vendorName || q.vendorId}</strong>
+                        {q.status === 'CHANGE_RESPONDED'
+                          ? <Tag color="green" style={{ marginLeft: 8 }}>Response Submitted</Tag>
+                          : <Tag color="orange" style={{ marginLeft: 8 }}>Pending Response</Tag>}
+                      </div>
+                      {q.status === 'CHANGE_REQUESTED' && (
+                        <>
+                          <div style={{ marginBottom: 8 }}>
+                            <Text strong style={{ fontSize: 12 }}>Upload Clarification Document:</Text>
+                            <input
+                              type="file"
+                              style={{ display: 'block', marginTop: 4 }}
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                setPpVendorFiles(prev => ({ ...prev, [q.vendorId]: file || null }));
+                              }}
+                            />
+                            {ppVendorFiles[q.vendorId] && (
+                              <span style={{ fontSize: 12, color: '#52c41a' }}>{ppVendorFiles[q.vendorId].name}</span>
+                            )}
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <Text strong style={{ fontSize: 12 }}>Clarification Response:</Text>
+                            <Input.TextArea
+                              rows={3}
+                              placeholder="Enter clarification response on behalf of vendor"
+                              value={ppVendorResponses[q.vendorId] || ''}
+                              onChange={(e) => setPpVendorResponses(prev => ({ ...prev, [q.vendorId]: e.target.value }))}
+                              style={{ marginTop: 4 }}
+                            />
+                          </div>
+                          <Button
+                            type="primary"
+                            size="small"
+                            loading={ppSubmitting[q.vendorId]}
+                            onClick={() => handlePpRespondForVendor(q.vendorId)}
+                          >
+                            Submit Response for {q.vendorName || q.vendorId}
+                          </Button>
+                        </>
+                      )}
+                      {q.status === 'CHANGE_RESPONDED' && q.vendorResponse && (
+                        <div style={{ fontSize: 12, color: '#666' }}>Response: {q.vendorResponse}</div>
+                      )}
+                    </div>
+                  ))}
+                </Card>
+                )
+              ) : isPendingIndentorClarif &&
+              (isIndentCreatorRole || isPurchasePersonnelRole) ? (
+                /* Standard indentor/PP global response card */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
                     description={`Question: ${evalStatus.clarificationRemarks}`} />
-                  <Button type="primary" onClick={() => { setRespondRole('INDENTOR'); setRespondModal(true); }}>
+                  <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
                     Submit Response
                   </Button>
                 </Card>
-              )}
+              ) : null}
 
             {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
             {isPendingVendorClarif &&

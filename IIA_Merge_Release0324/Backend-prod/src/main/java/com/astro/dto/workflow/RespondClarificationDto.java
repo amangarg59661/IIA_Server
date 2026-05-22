@@ -25,4 +25,7 @@ public class RespondClarificationDto {
 
     /** Optional supporting file name (uploaded separately) */
     private String responseFileName;
+
+    /** When PP responds on behalf of a vendor (GEM/OPEN/GLOBAL mode) */
+    private String vendorId;
 }

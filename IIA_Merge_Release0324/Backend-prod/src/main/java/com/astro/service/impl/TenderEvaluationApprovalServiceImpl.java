@@ -738,14 +738,46 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        String target = dto.getClarificationTarget();
+        String originalTarget = dto.getClarificationTarget();
 
         // Auto-route based on role + amountCategory + modeOfProcurement
-        target = resolveClarificationTarget(target, dto, eval, tender);
+        String target = resolveClarificationTarget(originalTarget, dto, eval, tender);
 
         if (target == null || target.isBlank()) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "clarificationTarget must be specified: VENDOR, ALL_VENDORS, INDENTOR, PURCHASE_PERSONNEL, SPECIFIC_MEMBER, or ALL_MEMBERS"));
+        }
+
+        // GEM/OPEN/GLOBAL: original target was VENDOR/ALL_VENDORS but rerouted to PURCHASE_PERSONNEL.
+        // Mark vendor quotations CHANGE_REQUESTED so PP knows which vendors need clarification.
+        boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
+                && (originalTarget != null)
+                && ("VENDOR".equalsIgnoreCase(originalTarget) || "ALL_VENDORS".equalsIgnoreCase(originalTarget));
+
+        if (reroutedVendorToPP) {
+            if ("VENDOR".equalsIgnoreCase(originalTarget)) {
+                String specificVendorId = dto.getTargetVendorId();
+                if (specificVendorId == null || specificVendorId.isBlank()) {
+                    specificVendorId = eval.getApprovedVendorId();
+                }
+                if (specificVendorId != null) {
+                    final String vid = specificVendorId;
+                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vid)
+                            .ifPresent(q -> {
+                                q.setStatus("CHANGE_REQUESTED");
+                                q.setRemarks(dto.getRemarks());
+                                quotationRepository.save(q);
+                            });
+                }
+            } else {
+                List<VendorQuotationAgainstTender> allQuotations =
+                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                allQuotations.forEach(q -> {
+                    q.setStatus("CHANGE_REQUESTED");
+                    q.setRemarks(dto.getRemarks());
+                });
+                quotationRepository.saveAll(allQuotations);
+            }
         }
 
         // Save where to return after clarification is received
@@ -829,18 +861,41 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         // Save to clarification history (table may not exist on first deploy; non-fatal)
         try {
             int nextRound = clarificationHistoryRepository.findMaxRoundByTenderId(tenderId) + 1;
-            TenderClarificationHistory history = new TenderClarificationHistory();
-            history.setTenderId(tenderId);
-            history.setRoundNumber(nextRound);
-            history.setRequestedByRole(dto.getRequestedByRole());
-            history.setRequestedByUserId(dto.getRequestedByUserId());
-            history.setClarificationTarget(target.toUpperCase());
-            history.setTargetVendorId(dto.getTargetVendorId());
-            history.setTargetUserId(dto.getTargetUserId());
-            history.setTargetUserName(dto.getTargetUserName());
-            history.setQuestionRemarks(dto.getRemarks());
-            history.setRequestedAt(LocalDateTime.now());
-            clarificationHistoryRepository.save(history);
+
+            if (reroutedVendorToPP) {
+                // GEM/OPEN/GLOBAL: create per-vendor history records so PP responses map cleanly
+                List<VendorQuotationAgainstTender> markedQuotations =
+                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                        .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                        .collect(Collectors.toList());
+                for (VendorQuotationAgainstTender q : markedQuotations) {
+                    TenderClarificationHistory history = new TenderClarificationHistory();
+                    history.setTenderId(tenderId);
+                    history.setRoundNumber(nextRound);
+                    history.setRequestedByRole(dto.getRequestedByRole());
+                    history.setRequestedByUserId(dto.getRequestedByUserId());
+                    history.setClarificationTarget("PURCHASE_PERSONNEL");
+                    history.setTargetVendorId(q.getVendorId());
+                    history.setTargetUserId(dto.getTargetUserId());
+                    history.setTargetUserName(dto.getTargetUserName());
+                    history.setQuestionRemarks(dto.getRemarks());
+                    history.setRequestedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(history);
+                }
+            } else {
+                TenderClarificationHistory history = new TenderClarificationHistory();
+                history.setTenderId(tenderId);
+                history.setRoundNumber(nextRound);
+                history.setRequestedByRole(dto.getRequestedByRole());
+                history.setRequestedByUserId(dto.getRequestedByUserId());
+                history.setClarificationTarget(target.toUpperCase());
+                history.setTargetVendorId(dto.getTargetVendorId());
+                history.setTargetUserId(dto.getTargetUserId());
+                history.setTargetUserName(dto.getTargetUserName());
+                history.setQuestionRemarks(dto.getRemarks());
+                history.setRequestedAt(LocalDateTime.now());
+                clarificationHistoryRepository.save(history);
+            }
         } catch (Exception e) {
             log.warn("Clarification history save failed (restart backend if table missing): {}", e.getMessage());
         }
@@ -918,8 +973,55 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 return buildStatusDto(eval, tender, tenderId);
             }
             // All vendors responded — fall through to restore status below
+        } else if ("PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole)
+                    && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
+            // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
+            String ppVendorId = dto.getVendorId();
+            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
+                    .ifPresent(q -> {
+                        q.setVendorResponse(dto.getResponseText());
+                        if (dto.getResponseFileName() != null) {
+                            q.setClarificationFileName(dto.getResponseFileName());
+                        }
+                        q.setStatus("CHANGE_RESPONDED");
+                        q.setUpdatedDate(LocalDateTime.now());
+                        quotationRepository.save(q);
+                    });
+
+            // Update clarification history
+            try {
+                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
+                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
+                openRounds.stream()
+                        .filter(h -> h.getRespondedAt() == null
+                                && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
+                                && ppVendorId.equals(h.getTargetVendorId()))
+                        .findFirst()
+                        .ifPresent(h -> {
+                            h.setResponseText(dto.getResponseText());
+                            h.setResponseFileName(dto.getResponseFileName());
+                            h.setRespondedByRole("PURCHASE_PERSONNEL");
+                            h.setRespondedById(dto.getRespondedById());
+                            h.setRespondedAt(LocalDateTime.now());
+                            clarificationHistoryRepository.save(h);
+                        });
+            } catch (Exception e) {
+                log.warn("Clarification history update failed: {}", e.getMessage());
+            }
+
+            // Check if all vendors responded — if not, keep current status
+            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                    .stream()
+                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                    .count();
+            if (stillPending > 0) {
+                eval.setUpdatedDate(LocalDateTime.now());
+                tenderEvaluationRepository.save(eval);
+                return buildStatusDto(eval, tender, tenderId);
+            }
+            // All vendors responded — fall through to restore status below
         } else {
-            // Indentor/PP/member response: update latest open history record (non-fatal if table missing)
+            // Indentor/PP (global)/member response: update latest open history record (non-fatal if table missing)
             try {
                 List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
                         .findByTenderIdOrderByRequestedAtDesc(tenderId);
@@ -927,8 +1029,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         .filter(h -> h.getRespondedAt() == null)
                         .findFirst()
                         .ifPresent(h -> {
-                            // Only set response text/file if vendor hasn't already responded
-                            // (avoid overwriting actual vendor response with "ACKNOWLEDGED")
                             if (h.getResponseText() == null || h.getResponseText().isBlank()) {
                                 h.setResponseText(dto.getResponseText());
                                 h.setResponseFileName(dto.getResponseFileName());
@@ -1629,9 +1729,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
         quotation.setRegisteredVendorId(registeredVendor.getVendorId());
         quotation.setRegisteredVendorName(registeredVendor.getVendorName());
+        quotation.setVendorId(registeredVendor.getVendorId());
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
-        log.info("Mapped vendor {} to registered vendor {} for tender {}", vendorId, registeredVendorId, tenderId);
+        log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
     }
 
     private Integer resolveChairmanUserId(TenderEvaluation eval) {
