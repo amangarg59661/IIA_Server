@@ -127,4 +127,43 @@ public interface TenderEvaluationApprovalService {
      * Returns full clarification history for a tender (all rounds, questions + responses).
      */
     List<TenderClarificationHistory> getClarificationHistory(String tenderId);
+
+    /**
+     * Returns SPO-approved vendors for a tender, for use in PO vendor dropdown.
+     * Throws if evaluation is not yet APPROVED (status = Tender Evaluation Completed).
+     */
+    List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId);
+
+    /**
+     * Saves per-vendor indentor/purchase-personnel decision immediately.
+     * decision: ACCEPTED or REJECTED
+     */
+    TenderEvaluationStatusDto saveVendorIndentorDecision(String tenderId, String vendorId,
+                                                          String decision, String remarks,
+                                                          Integer evaluatorUserId);
+
+    /**
+     * Saves per-vendor SPO decision immediately.
+     * decision: ACCEPTED or REJECTED
+     */
+    TenderEvaluationStatusDto saveVendorSpoDecision(String tenderId, String vendorId,
+                                                     String decision, String remarks,
+                                                     Integer spoUserId);
+
+    /**
+     * Any role rejects the entire tender evaluation. Stores previousEvaluationStatus for reopen.
+     */
+    TenderEvaluationStatusDto rejectEvaluation(String tenderId, String rejectedByRole,
+                                                Integer rejectedByUserId, String remarks);
+
+    /**
+     * Reopens a REJECTED evaluation by restoring previousEvaluationStatus.
+     */
+    TenderEvaluationStatusDto reopenEvaluation(String tenderId, Integer userId);
+
+    /**
+     * Maps an approved vendor (from quotation) to a registered vendor from VendorMaster.
+     * Used for OPEN_TENDER / GLOBAL_TENDER / GEM procurement modes after evaluation is APPROVED.
+     */
+    void mapRegisteredVendor(String tenderId, String vendorId, String registeredVendorId);
 }

@@ -11,6 +11,7 @@ import com.astro.entity.TenderClarificationHistory;
 import com.astro.entity.TenderCommitteeDecision;
 import com.astro.entity.VendorLoginDetails;
 import com.astro.entity.VendorMaster;
+import com.astro.entity.ProcurementModule.IndentCreation;
 import com.astro.entity.ProcurementModule.IndentId;
 import com.astro.entity.ProcurementModule.TenderEvaluation;
 import com.astro.entity.ProcurementModule.TenderRequest;
@@ -23,25 +24,24 @@ import com.astro.repository.TenderCommitteeDecisionRepository;
 import com.astro.repository.VendorLoginDetailsRepository;
 import com.astro.repository.VendorMasterRepository;
 import com.astro.repository.VendorQuotationAgainstTenderRepository;
+import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
 import com.astro.repository.ProcurementModule.TenderEvaluationRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.TenderEvaluationApprovalService;
 import com.astro.util.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
 public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationApprovalService {
 
     private static final Logger log = LoggerFactory.getLogger(TenderEvaluationApprovalServiceImpl.class);
@@ -50,16 +50,45 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     private static final BigDecimal FIFTY_LAKH = new BigDecimal("5000000");
     private static final BigDecimal ONE_CRORE  = new BigDecimal("10000000");
 
-    @Autowired private TenderEvaluationRepository tenderEvaluationRepository;
-    @Autowired private TenderRequestRepository tenderRequestRepository;
-    @Autowired private VendorQuotationAgainstTenderRepository quotationRepository;
-    @Autowired private TechnoFinancialCommitteeRepository committeeRepository;
-    @Autowired private TenderCommitteeDecisionRepository committeeDecisionRepository;
-    @Autowired private VendorMasterRepository vendorMasterRepository;
-    @Autowired private VendorLoginDetailsRepository vendorLoginDetailsRepository;
-    @Autowired private TenderClarificationHistoryRepository clarificationHistoryRepository;
-    @Autowired private EmailService emailService;
-    @Autowired private PasswordEncoder passwordEncoder;
+    private final TenderEvaluationRepository tenderEvaluationRepository;
+    private final TenderRequestRepository tenderRequestRepository;
+    private final VendorQuotationAgainstTenderRepository quotationRepository;
+    private final TechnoFinancialCommitteeRepository committeeRepository;
+    private final TenderCommitteeDecisionRepository committeeDecisionRepository;
+    private final VendorMasterRepository vendorMasterRepository;
+    private final VendorLoginDetailsRepository vendorLoginDetailsRepository;
+    private final TenderClarificationHistoryRepository clarificationHistoryRepository;
+    private final IndentCreationRepository indentCreationRepository;
+    private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final com.astro.repository.WorkflowTransitionRepository workflowTransitionRepository;
+
+    public TenderEvaluationApprovalServiceImpl(
+            TenderEvaluationRepository tenderEvaluationRepository,
+            TenderRequestRepository tenderRequestRepository,
+            VendorQuotationAgainstTenderRepository quotationRepository,
+            TechnoFinancialCommitteeRepository committeeRepository,
+            TenderCommitteeDecisionRepository committeeDecisionRepository,
+            VendorMasterRepository vendorMasterRepository,
+            VendorLoginDetailsRepository vendorLoginDetailsRepository,
+            TenderClarificationHistoryRepository clarificationHistoryRepository,
+            IndentCreationRepository indentCreationRepository,
+            EmailService emailService,
+            PasswordEncoder passwordEncoder,
+            com.astro.repository.WorkflowTransitionRepository workflowTransitionRepository) {
+        this.tenderEvaluationRepository = tenderEvaluationRepository;
+        this.tenderRequestRepository = tenderRequestRepository;
+        this.quotationRepository = quotationRepository;
+        this.committeeRepository = committeeRepository;
+        this.committeeDecisionRepository = committeeDecisionRepository;
+        this.vendorMasterRepository = vendorMasterRepository;
+        this.vendorLoginDetailsRepository = vendorLoginDetailsRepository;
+        this.clarificationHistoryRepository = clarificationHistoryRepository;
+        this.indentCreationRepository = indentCreationRepository;
+        this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
+        this.workflowTransitionRepository = workflowTransitionRepository;
+    }
 
     @Value("${filePath:}")
     private String filePath;
@@ -67,9 +96,21 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 1. INITIATE EVALUATION
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto initiateTenderEvaluation(String tenderId, Integer initiatedByUserId) {
         TenderRequest tender = requireTender(tenderId);
+
+        // BR_000: Tender must be fully workflow-approved before evaluation can start.
+        com.astro.entity.WorkflowTransition latestTransition =
+                workflowTransitionRepository.findTopByRequestIdOrderByWorkflowTransitionIdDesc(tenderId)
+                        .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                                "Tender " + tenderId + " has no workflow transition record. It must be fully approved first.")));
+        if (!"Completed".equalsIgnoreCase(latestTransition.getStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Tender " + tenderId + " is not yet approved. Current workflow status: "
+                    + latestTransition.getStatus() + ". Evaluation can only begin after final approval."));
+        }
 
         TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
                 .orElseGet(() -> {
@@ -79,16 +120,21 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     return e;
                 });
 
-        // Comparison sheet must be uploaded before initiating evaluation (BR_001)
-        if (eval.getUploadQualifiedVendorsFileName() == null
-                || eval.getUploadQualifiedVendorsFileName().trim().isEmpty()) {
+        // Normalize bid type first so we can apply the right sheet rule below.
+        String rawBidType = tender.getBidType() != null ? tender.getBidType().trim() : "";
+        boolean isDoubleBid = rawBidType.toLowerCase().contains("double");
+
+        // BR_001: For Double Bid, comparison sheet is MANDATORY.
+        //         For Single Bid, it is OPTIONAL (show confirmation popup on frontend).
+        if (isDoubleBid
+                && (eval.getUploadQualifiedVendorsFileName() == null
+                    || eval.getUploadQualifiedVendorsFileName().trim().isEmpty())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Comparison Statement must be uploaded before initiating evaluation."));
+                    "Technical Comparison Statement must be uploaded before initiating Double Bid evaluation."));
         }
 
-        // Normalize bid type
-        String rawBidType = tender.getBidType() != null ? tender.getBidType().trim() : "";
-        String bidType = rawBidType.toLowerCase().contains("double") ? "DOUBLE_BID" : "SINGLE_BID";
+        // Normalize and persist bid type
+        String bidType = isDoubleBid ? "DOUBLE_BID" : "SINGLE_BID";
         eval.setBidType(bidType);
 
         // Amount category
@@ -160,6 +206,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         eval.setUpdatedDate(LocalDateTime.now());
+        eval.setInitiated(1);   // lock vendor uploads for non-bidders from this point
         tenderEvaluationRepository.save(eval);
 
         // Pre-create committee vote rows for STEC-I / STEC-II
@@ -188,11 +235,21 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 2. GET EVALUATION STATUS
     // ─────────────────────────────────────────────────────────────────
+    @Transactional(readOnly = true)
     @Override
     public TenderEvaluationStatusDto getEvaluationStatus(String tenderId,
                                                           Integer requestingUserId,
                                                           String requestingRole) {
-        TenderEvaluation eval = requireEval(tenderId);
+        // If evaluation has not been initiated yet, return a minimal DTO with null evaluationStatus.
+        // Frontend checks !selectedEval.evaluationStatus to show the Initiate button, so null is correct.
+        java.util.Optional<TenderEvaluation> evalOpt = tenderEvaluationRepository.findById(tenderId);
+        if (evalOpt.isEmpty()) {
+            TenderEvaluationStatusDto notInitiated = new TenderEvaluationStatusDto();
+            notInitiated.setTenderId(tenderId);
+            notInitiated.setEvaluationStatus(null); // null → frontend shows "Initiate" button
+            return notInitiated;
+        }
+        TenderEvaluation eval = evalOpt.get();
         TenderRequest tender = requireTender(tenderId);
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -200,6 +257,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 3. EVALUATE TECHNICAL BID (Double Bid only)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public void evaluateTechnicalBid(String tenderId, String vendorId,
                                      VendorTechnicalDecisionDto dto) {
@@ -239,6 +297,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 4. SELECT APPROVED VENDOR
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto selectApprovedVendor(String tenderId,
                                                            String approvedVendorId,
@@ -279,6 +338,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 5. APPROVE BY INDENTOR OR PURCHASE DEPT (Under 10L)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto approveByIndentorOrPurchaseDept(String tenderId,
                                                                       String decision,
@@ -312,6 +372,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // 6. APPROVE BY STORE PURCHASE OFFICER (Under 10L)
     //    FIX: Handles Double Bid financial round (Cases 2 & 4)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto approveByStorePurchaseOfficer(String tenderId,
                                                                     String decision,
@@ -319,6 +380,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                                                                     Integer spoUserId) {
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
+
+        validateAllSpoDecided(tenderId);
 
         boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
         boolean isFinancialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
@@ -339,10 +402,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 quotationRepository.saveAll(quotations);
 
                 eval.setFinancialBidPhase(true);
-                // Route back to PENDING_FINANCIAL so PP/Indentor can evaluate financial bids
-                eval.setEvaluationStatus("PENDING_FINANCIAL");
+                // Route back to PENDING_FINANCIAL_SHEET_UPLOAD so PP/Indentor can upload sheet first
+                eval.setEvaluationStatus("PENDING_FINANCIAL_SHEET_UPLOAD");
             } else {
                 // Final SPO approval (either single bid or double bid financial phase)
+                boolean wasFinancialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
                 eval.setEvaluationStatus("APPROVED");
                 eval.setFinancialBidPhase(false);
 
@@ -350,30 +414,46 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 List<VendorQuotationAgainstTender> allQuotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 boolean anyPendingSpo = allQuotations.stream()
-                        .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
-                        .anyMatch(q -> q.getSpoStatus() == null ||
-                                (!"ACCEPTED".equalsIgnoreCase(q.getSpoStatus()) &&
-                                 !"REJECTED".equalsIgnoreCase(q.getSpoStatus())));
+                        .filter(q -> {
+                            if (wasFinancialPhase) {
+                                return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                    && "ACCEPTED".equalsIgnoreCase(q.getFinancialIndentorStatus());
+                            }
+                            return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus());
+                        })
+                        .anyMatch(q -> {
+                            String spSt = wasFinancialPhase ? q.getFinancialSpoStatus() : q.getSpoStatus();
+                            return spSt == null ||
+                                (!"ACCEPTED".equalsIgnoreCase(spSt) &&
+                                 !"REJECTED".equalsIgnoreCase(spSt));
+                        });
                 if (anyPendingSpo) {
                     throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                             "All vendors accepted by the Indentor must be either Accepted or Rejected by SPO before final submission."));
                 }
 
-                // Mark ALL SPO-accepted vendors as Completed so every approved vendor appears in PO LOV
-                // Clear nextRole for all vendors so SPO can no longer change decisions
+                // Mark vendors as Completed only if accepted in ALL rounds (technical + financial for double bid)
                 allQuotations.forEach(q -> {
                     q.setNextRole(null);
-                    if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())) {
-                        q.setStatus("Completed");
-                        q.setAcceptanceStatus("ACCEPTED");
+                    if (wasFinancialPhase) {
+                        if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())
+                                && "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
+                            q.setStatus("Completed");
+                            q.setAcceptanceStatus("ACCEPTED");
+                        }
+                    } else {
+                        if ("ACCEPTED".equalsIgnoreCase(q.getSpoStatus())) {
+                            q.setStatus("Completed");
+                            q.setAcceptanceStatus("ACCEPTED");
+                        }
                     }
                 });
                 quotationRepository.saveAll(allQuotations);
 
-                // Set approvedVendorId on eval record (first SPO-accepted, for backward compat)
+                // Set approvedVendorId on eval record (first fully-accepted vendor, for backward compat)
                 if (eval.getApprovedVendorId() == null) {
                     allQuotations.stream()
-                            .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                            .filter(q -> "Completed".equals(q.getStatus()))
                             .findFirst()
                             .ifPresent(q -> {
                                 eval.setApprovedVendorId(q.getVendorId());
@@ -403,6 +483,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 7. CAST COMMITTEE VOTE (Above 10L)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto castCommitteeVote(String tenderId, String vote,
                                                         String remarks, Integer committeeUserId) {
@@ -427,6 +508,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // 8. ASSIGN EXPERT (Above 10L - Chairman only)
     //    FIX: Creates a separate vote row for the expert so they can vote
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto assignExpert(String tenderId, Integer expertUserId,
                                                    String expertName, Integer chairmanUserId) {
@@ -468,11 +550,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 9. CHAIRMAN DECISION (Above 10L)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto chairmanDecide(String tenderId,
                                                      TenderCommitteeDecisionDto dto) {
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
+
+        validateAllVendorsDecided(tenderId);
 
         // Validate chairman identity for STEC-I / STEC-II
         if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
@@ -530,11 +615,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // 10. DIRECTOR APPROVAL (Above 10L final step)
     //     FIX: Also handles double-bid financial phase for above-10L
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto directorApprove(String tenderId, String decision,
                                                       String remarks, Integer directorUserId) {
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
+
+        validateAllVendorsDecided(tenderId);
 
         TenderCommitteeDecision dirRow = committeeDecisionRepository
                 .findByTenderIdAndCommitteeUserId(tenderId, directorUserId)
@@ -609,6 +697,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 11. VENDOR PORTAL REGISTRATION CHECK
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public boolean checkAndRegisterVendorOnPortal(String vendorId) {
         Optional<VendorLoginDetails> existing =
@@ -643,15 +732,52 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     //     Supports: VENDOR (individual), ALL_VENDORS (bulk),
     //               INDENTOR, PURCHASE_PERSONNEL, SPECIFIC_MEMBER, ALL_MEMBERS
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto seekClarification(String tenderId, SeekClarificationDto dto) {
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        String target = dto.getClarificationTarget();
+        String originalTarget = dto.getClarificationTarget();
+
+        // Auto-route based on role + amountCategory + modeOfProcurement
+        String target = resolveClarificationTarget(originalTarget, dto, eval, tender);
+
         if (target == null || target.isBlank()) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "clarificationTarget must be specified: VENDOR, ALL_VENDORS, INDENTOR, PURCHASE_PERSONNEL, SPECIFIC_MEMBER, or ALL_MEMBERS"));
+        }
+
+        // GEM/OPEN/GLOBAL: original target was VENDOR/ALL_VENDORS but rerouted to PURCHASE_PERSONNEL.
+        // Mark vendor quotations CHANGE_REQUESTED so PP knows which vendors need clarification.
+        boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
+                && (originalTarget != null)
+                && ("VENDOR".equalsIgnoreCase(originalTarget) || "ALL_VENDORS".equalsIgnoreCase(originalTarget));
+
+        if (reroutedVendorToPP) {
+            if ("VENDOR".equalsIgnoreCase(originalTarget)) {
+                String specificVendorId = dto.getTargetVendorId();
+                if (specificVendorId == null || specificVendorId.isBlank()) {
+                    specificVendorId = eval.getApprovedVendorId();
+                }
+                if (specificVendorId != null) {
+                    final String vid = specificVendorId;
+                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vid)
+                            .ifPresent(q -> {
+                                q.setStatus("CHANGE_REQUESTED");
+                                q.setRemarks(dto.getRemarks());
+                                quotationRepository.save(q);
+                            });
+                }
+            } else {
+                List<VendorQuotationAgainstTender> allQuotations =
+                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                allQuotations.forEach(q -> {
+                    q.setStatus("CHANGE_REQUESTED");
+                    q.setRemarks(dto.getRemarks());
+                });
+                quotationRepository.saveAll(allQuotations);
+            }
         }
 
         // Save where to return after clarification is received
@@ -693,6 +819,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 break;
             case "INDENTOR":
             case "PURCHASE_PERSONNEL":
+            case "CHAIRMAN":
                 eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
                 break;
             case "SPECIFIC_MEMBER":
@@ -734,18 +861,41 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         // Save to clarification history (table may not exist on first deploy; non-fatal)
         try {
             int nextRound = clarificationHistoryRepository.findMaxRoundByTenderId(tenderId) + 1;
-            TenderClarificationHistory history = new TenderClarificationHistory();
-            history.setTenderId(tenderId);
-            history.setRoundNumber(nextRound);
-            history.setRequestedByRole(dto.getRequestedByRole());
-            history.setRequestedByUserId(dto.getRequestedByUserId());
-            history.setClarificationTarget(target.toUpperCase());
-            history.setTargetVendorId(dto.getTargetVendorId());
-            history.setTargetUserId(dto.getTargetUserId());
-            history.setTargetUserName(dto.getTargetUserName());
-            history.setQuestionRemarks(dto.getRemarks());
-            history.setRequestedAt(LocalDateTime.now());
-            clarificationHistoryRepository.save(history);
+
+            if (reroutedVendorToPP) {
+                // GEM/OPEN/GLOBAL: create per-vendor history records so PP responses map cleanly
+                List<VendorQuotationAgainstTender> markedQuotations =
+                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                        .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                        .collect(Collectors.toList());
+                for (VendorQuotationAgainstTender q : markedQuotations) {
+                    TenderClarificationHistory history = new TenderClarificationHistory();
+                    history.setTenderId(tenderId);
+                    history.setRoundNumber(nextRound);
+                    history.setRequestedByRole(dto.getRequestedByRole());
+                    history.setRequestedByUserId(dto.getRequestedByUserId());
+                    history.setClarificationTarget("PURCHASE_PERSONNEL");
+                    history.setTargetVendorId(q.getVendorId());
+                    history.setTargetUserId(dto.getTargetUserId());
+                    history.setTargetUserName(dto.getTargetUserName());
+                    history.setQuestionRemarks(dto.getRemarks());
+                    history.setRequestedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(history);
+                }
+            } else {
+                TenderClarificationHistory history = new TenderClarificationHistory();
+                history.setTenderId(tenderId);
+                history.setRoundNumber(nextRound);
+                history.setRequestedByRole(dto.getRequestedByRole());
+                history.setRequestedByUserId(dto.getRequestedByUserId());
+                history.setClarificationTarget(target.toUpperCase());
+                history.setTargetVendorId(dto.getTargetVendorId());
+                history.setTargetUserId(dto.getTargetUserId());
+                history.setTargetUserName(dto.getTargetUserName());
+                history.setQuestionRemarks(dto.getRemarks());
+                history.setRequestedAt(LocalDateTime.now());
+                clarificationHistoryRepository.save(history);
+            }
         } catch (Exception e) {
             log.warn("Clarification history save failed (restart backend if table missing): {}", e.getMessage());
         }
@@ -758,6 +908,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     //     For VENDOR responses: only restores eval status when ALL
     //     CHANGE_REQUESTED vendor quotations have been responded to.
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto respondToClarification(String tenderId,
                                                              RespondClarificationDto dto) {
@@ -822,8 +973,55 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 return buildStatusDto(eval, tender, tenderId);
             }
             // All vendors responded — fall through to restore status below
+        } else if ("PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole)
+                    && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
+            // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
+            String ppVendorId = dto.getVendorId();
+            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
+                    .ifPresent(q -> {
+                        q.setVendorResponse(dto.getResponseText());
+                        if (dto.getResponseFileName() != null) {
+                            q.setClarificationFileName(dto.getResponseFileName());
+                        }
+                        q.setStatus("CHANGE_RESPONDED");
+                        q.setUpdatedDate(LocalDateTime.now());
+                        quotationRepository.save(q);
+                    });
+
+            // Update clarification history
+            try {
+                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
+                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
+                openRounds.stream()
+                        .filter(h -> h.getRespondedAt() == null
+                                && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
+                                && ppVendorId.equals(h.getTargetVendorId()))
+                        .findFirst()
+                        .ifPresent(h -> {
+                            h.setResponseText(dto.getResponseText());
+                            h.setResponseFileName(dto.getResponseFileName());
+                            h.setRespondedByRole("PURCHASE_PERSONNEL");
+                            h.setRespondedById(dto.getRespondedById());
+                            h.setRespondedAt(LocalDateTime.now());
+                            clarificationHistoryRepository.save(h);
+                        });
+            } catch (Exception e) {
+                log.warn("Clarification history update failed: {}", e.getMessage());
+            }
+
+            // Check if all vendors responded — if not, keep current status
+            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                    .stream()
+                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                    .count();
+            if (stillPending > 0) {
+                eval.setUpdatedDate(LocalDateTime.now());
+                tenderEvaluationRepository.save(eval);
+                return buildStatusDto(eval, tender, tenderId);
+            }
+            // All vendors responded — fall through to restore status below
         } else {
-            // Indentor/PP/member response: update latest open history record (non-fatal if table missing)
+            // Indentor/PP (global)/member response: update latest open history record (non-fatal if table missing)
             try {
                 List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
                         .findByTenderIdOrderByRequestedAtDesc(tenderId);
@@ -831,10 +1029,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         .filter(h -> h.getRespondedAt() == null)
                         .findFirst()
                         .ifPresent(h -> {
-                            h.setResponseText(dto.getResponseText());
-                            h.setResponseFileName(dto.getResponseFileName());
-                            h.setRespondedByRole(dto.getRespondedByRole());
-                            h.setRespondedById(dto.getRespondedById());
+                            if (h.getResponseText() == null || h.getResponseText().isBlank()) {
+                                h.setResponseText(dto.getResponseText());
+                                h.setResponseFileName(dto.getResponseFileName());
+                                h.setRespondedByRole(dto.getRespondedByRole());
+                                h.setRespondedById(dto.getRespondedById());
+                            }
                             h.setRespondedAt(LocalDateTime.now());
                             clarificationHistoryRepository.save(h);
                         });
@@ -866,6 +1066,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 14. DIRECTOR FORMS AD-HOC COMMITTEE (Above 1 Crore)
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto directorFormCommittee(String tenderId,
                                                             DirectorFormCommitteeDto dto) {
@@ -914,6 +1115,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // 15. CONFIRM BY INDENTOR (Under 10L — Proprietary / Limited Tender)
     //     Indent Creator reviews quotations and confirms → PENDING_SPO_APPROVAL
     // ─────────────────────────────────────────────────────────────────
+    @Transactional
     @Override
     public TenderEvaluationStatusDto confirmByIndentor(String tenderId, Integer indentorUserId) {
         TenderEvaluation eval = requireEval(tenderId);
@@ -924,11 +1126,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     "Indentor confirmation is only applicable for UNDER_10_LAKH tenders."));
         }
         if (!"PENDING_FINANCIAL".equals(eval.getEvaluationStatus())
+                && !"PENDING_APPROVAL".equals(eval.getEvaluationStatus())
                 && !"PENDING_INDENTOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Evaluation must be in PENDING_FINANCIAL status for indentor confirmation. Current: "
                     + eval.getEvaluationStatus()));
         }
+
+        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         // BR_006A: For Double Bid financial phase, Financial Comparison Sheet must be uploaded first
         if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
@@ -950,6 +1155,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // 16. GET CLARIFICATION HISTORY
     // ─────────────────────────────────────────────────────────────────
+    @Transactional(readOnly = true)
     @Override
     public List<TenderClarificationHistory> getClarificationHistory(String tenderId) {
         try {
@@ -961,8 +1167,295 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // 17. GET APPROVED VENDORS FOR PO (SPO-accepted vendors only)
+    //     Called by PO vendor dropdown — returns only vendors finally
+    //     approved by SPO so that PO can only be raised for them.
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional(readOnly = true)
+    @Override
+    public List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId) {
+        TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "No tender evaluation found for tender: " + tenderId
+                        + ". Evaluation must be completed before PO can be created.")));
+
+        if (!"APPROVED".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Tender Evaluation is not yet completed for tender: " + tenderId
+                    + ". Current status: " + eval.getEvaluationStatus()
+                    + ". PO can only be created after Tender Evaluation is Completed."));
+        }
+
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+
+        return quotations.stream()
+                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                .map(q -> {
+                    TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
+                            new TenderEvaluationStatusDto.VendorQuotationEvalDto();
+                    dto.setVendorId(q.getVendorId());
+                    dto.setSpoStatus(q.getSpoStatus());
+                    dto.setStatus(q.getStatus());
+                    dto.setRank(q.getRank());
+                    vendorMasterRepository.findById(q.getVendorId())
+                            .ifPresent(vm -> {
+                                dto.setVendorName(vm.getVendorName());
+                            });
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 18. SAVE VENDOR INDENTOR DECISION (per-vendor, saved immediately)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto saveVendorIndentorDecision(String tenderId, String vendorId,
+                                                                  String decision, String remarks,
+                                                                  Integer evaluatorUserId) {
+        log.info("Indentor decision tenderId={} vendorId={} decision={} by userId={}",
+                tenderId, vendorId, decision, evaluatorUserId);
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
+                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION");
+        if (lockedStatuses.contains(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
+                    "Evaluator decisions are locked after Confirm Evaluation. Current status: "
+                    + eval.getEvaluationStatus()));
+        }
+
+        VendorQuotationAgainstTender quotation = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "No quotation found for vendor " + vendorId + " in tender " + tenderId)));
+
+        String normalizedDecision = decision.toUpperCase();
+        if (!"ACCEPTED".equals(normalizedDecision) && !"REJECTED".equals(normalizedDecision)) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Decision must be ACCEPTED or REJECTED"));
+        }
+        if ("CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus())) {
+            if ("ACCEPTED".equals(normalizedDecision)) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot accept a vendor that is under seek clarification. "
+                        + "Resolve the clarification first, or reject the vendor."));
+            }
+            quotation.setStatus("SUBMITTED");
+        }
+
+        if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            if ("REJECTED".equalsIgnoreCase(quotation.getIndentorStatus())) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot evaluate vendor " + vendorId
+                        + " in financial phase — already rejected in technical evaluation."));
+            }
+            quotation.setFinancialIndentorStatus(normalizedDecision);
+            quotation.setFinancialIndentorRemarks(remarks);
+        } else {
+            quotation.setIndentorStatus(normalizedDecision);
+            quotation.setIndentorRemarks(remarks);
+        }
+        quotation.setModifiedBy(evaluatorUserId);
+        quotation.setUpdatedDate(LocalDateTime.now());
+        quotationRepository.save(quotation);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 19. SAVE VENDOR SPO DECISION (per-vendor, saved immediately)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto saveVendorSpoDecision(String tenderId, String vendorId,
+                                                             String decision, String remarks,
+                                                             Integer spoUserId) {
+        log.info("SPO decision tenderId={} vendorId={} decision={} by userId={}",
+                tenderId, vendorId, decision, spoUserId);
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if ("APPROVED".equals(eval.getEvaluationStatus()) || "REJECTED".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
+                    "SPO decisions are locked after Confirm Evaluation. Current status: "
+                    + eval.getEvaluationStatus()));
+        }
+
+        VendorQuotationAgainstTender quotation = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "No quotation found for vendor " + vendorId + " in tender " + tenderId)));
+
+        String normalizedDecision = decision.toUpperCase();
+        if (!"ACCEPTED".equals(normalizedDecision) && !"REJECTED".equals(normalizedDecision)) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Decision must be ACCEPTED or REJECTED"));
+        }
+        if ("CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus())) {
+            if ("ACCEPTED".equals(normalizedDecision)) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot accept a vendor that is under seek clarification. "
+                        + "Resolve the clarification first, or reject the vendor."));
+            }
+            quotation.setStatus("SUBMITTED");
+        }
+
+        if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+            if ("REJECTED".equalsIgnoreCase(quotation.getIndentorStatus())) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot evaluate vendor " + vendorId
+                        + " in financial phase — already rejected in technical evaluation."));
+            }
+            quotation.setFinancialSpoStatus(normalizedDecision);
+            quotation.setFinancialSpoRemarks(remarks);
+        } else {
+            quotation.setSpoStatus(normalizedDecision);
+            quotation.setSpoRemarks(remarks);
+        }
+        quotation.setModifiedBy(spoUserId);
+        quotation.setUpdatedDate(LocalDateTime.now());
+        quotationRepository.save(quotation);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 20. REJECT EVALUATION (any role, any status except APPROVED)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto rejectEvaluation(String tenderId, String rejectedByRole,
+                                                       Integer rejectedByUserId, String remarks) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        String currentStatus = eval.getEvaluationStatus();
+        if ("APPROVED".equals(currentStatus)) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot reject an already approved evaluation."));
+        }
+        if ("REJECTED".equals(currentStatus)) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Evaluation is already rejected."));
+        }
+
+        eval.setPreviousEvaluationStatus(currentStatus);
+        eval.setEvaluationStatus("REJECTED");
+        eval.setRejectedByRole(rejectedByRole);
+        eval.setRejectedByUserId(rejectedByUserId);
+        eval.setApprovalRemarks(remarks);
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 21. REOPEN EVALUATION (restore previousEvaluationStatus)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto reopenEvaluation(String tenderId, Integer userId) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if (!"REJECTED".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Only REJECTED evaluations can be reopened. Current: " + eval.getEvaluationStatus()));
+        }
+
+        String restoreStatus = eval.getPreviousEvaluationStatus();
+        if (restoreStatus == null || restoreStatus.isBlank()) {
+            restoreStatus = "PENDING_APPROVAL";
+        }
+
+        eval.setEvaluationStatus(restoreStatus);
+        eval.setPreviousEvaluationStatus(null);
+        eval.setRejectedByRole(null);
+        eval.setRejectedByUserId(null);
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────
+
+    private void validateAllVendorsDecided(String tenderId) {
+        validateAllVendorsDecided(tenderId, false);
+    }
+
+    private void validateAllVendorsDecided(String tenderId, boolean financialPhase) {
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        if (quotations.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "No vendor quotations found for this tender."));
+        }
+        List<String> underClarification = quotations.stream()
+                .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                .map(VendorQuotationAgainstTender::getVendorId)
+                .collect(Collectors.toList());
+        if (!underClarification.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot confirm evaluation — vendor(s) under seek clarification: "
+                    + String.join(", ", underClarification)
+                    + ". Please resolve clarification or reject the vendor(s) first."));
+        }
+        List<String> pendingDecision = quotations.stream()
+                .filter(q -> {
+                    if (financialPhase && "REJECTED".equalsIgnoreCase(q.getIndentorStatus())) {
+                        return false;
+                    }
+                    String status = financialPhase ? q.getFinancialIndentorStatus() : q.getIndentorStatus();
+                    return status == null
+                        || (!"ACCEPTED".equalsIgnoreCase(status)
+                            && !"REJECTED".equalsIgnoreCase(status));
+                })
+                .map(VendorQuotationAgainstTender::getVendorId)
+                .collect(Collectors.toList());
+        if (!pendingDecision.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot confirm evaluation — vendor(s) without a decision (Accept/Reject): "
+                    + String.join(", ", pendingDecision)
+                    + ". All vendors must be accepted or rejected before confirming."));
+        }
+    }
+
+    private void validateAllSpoDecided(String tenderId) {
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        List<String> underClarification = quotations.stream()
+                .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                .map(VendorQuotationAgainstTender::getVendorId)
+                .collect(Collectors.toList());
+        if (!underClarification.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot confirm — vendor(s) under seek clarification: "
+                    + String.join(", ", underClarification)
+                    + ". Please resolve clarification or reject the vendor(s) first."));
+        }
+        List<String> pendingSpo = quotations.stream()
+                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                .filter(q -> q.getSpoStatus() == null
+                        || (!"ACCEPTED".equalsIgnoreCase(q.getSpoStatus())
+                            && !"REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                .map(VendorQuotationAgainstTender::getVendorId)
+                .collect(Collectors.toList());
+        if (!pendingSpo.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot confirm — Indentor-accepted vendor(s) without SPO decision: "
+                    + String.join(", ", pendingSpo)
+                    + ". All accepted vendors must have an SPO decision before confirming."));
+        }
+    }
+
     private void markApprovedVendorCompleted(String tenderId, String vendorId) {
         quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
                 .ifPresent(q -> {
@@ -1017,6 +1510,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         dto.setClarificationRequestedByRole(eval.getClarificationRequestedByRole());
         dto.setClarificationRemarks(eval.getClarificationRemarks());
         dto.setPreviousEvaluationStatus(eval.getPreviousEvaluationStatus());
+        dto.setRejectedByRole(eval.getRejectedByRole());
+        dto.setRejectedByUserId(eval.getRejectedByUserId());
         dto.setFinancialBidPhase(eval.getFinancialBidPhase());
         dto.setComparisonSheetFileName(eval.getUploadQualifiedVendorsFileName());
         dto.setFinancialComparisonSheetFileName(eval.getUploadCommeriallyQualifiedVendorsFileName());
@@ -1107,5 +1602,147 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             sb.append(chars.charAt(random.nextInt(chars.length())));
         }
         return sb.toString();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // CLARIFICATION ROUTING: role + amountCategory + modeOfProcurement
+    // ─────────────────────────────────────────────────────────────────
+
+    private String resolveClarificationTarget(String target, SeekClarificationDto dto,
+                                              TenderEvaluation eval, TenderRequest tender) {
+        String role = dto.getRequestedByRole();
+        String mode = tender.getModeOfProcurement();
+        boolean under10L = "UNDER_10_LAKH".equals(eval.getAmountCategory());
+
+        // INDENTOR under 10L: auto-route based on procurement mode
+        if ("INDENTOR".equalsIgnoreCase(role) && under10L) {
+            if (isLimitedOrProprietary(mode)) {
+                return "VENDOR";
+            } else if (isGemOpenGlobal(mode)) {
+                return "PURCHASE_PERSONNEL";
+            }
+        }
+
+        // SPO under 10L: vendor clarification follows same mode-based routing
+        if ("SPO".equalsIgnoreCase(role) && under10L) {
+            if ("VENDOR".equalsIgnoreCase(target) || "ALL_VENDORS".equalsIgnoreCase(target)) {
+                if (isGemOpenGlobal(mode)) {
+                    return "PURCHASE_PERSONNEL";
+                }
+            }
+        }
+
+        // SPO seeking from indentor: resolve to specific indent creator userId
+        if ("SPO".equalsIgnoreCase(role) && "INDENTOR".equalsIgnoreCase(target)) {
+            Integer indentorUserId = resolveIndentCreatorUserId(tender);
+            if (indentorUserId != null) {
+                dto.setTargetUserId(indentorUserId);
+            }
+        }
+
+        // COMMITTEE_MEMBER above 10L: route to chairman regardless of mode
+        if ("COMMITTEE_MEMBER".equalsIgnoreCase(role) && !under10L) {
+            Integer chairmanUserId = resolveChairmanUserId(eval);
+            if (chairmanUserId != null) {
+                dto.setTargetUserId(chairmanUserId);
+            }
+            return "CHAIRMAN";
+        }
+
+        // CHAIRMAN: mode-based routing (skip if targeting specific/all members)
+        if ("CHAIRMAN".equalsIgnoreCase(role)) {
+            if (!"SPECIFIC_MEMBER".equalsIgnoreCase(target)
+                    && !"ALL_MEMBERS".equalsIgnoreCase(target)) {
+                if (isLimitedOrProprietary(mode)) {
+                    return "VENDOR";
+                } else if (isGemOpenGlobal(mode)) {
+                    return "PURCHASE_PERSONNEL";
+                }
+            }
+        }
+
+        // DIRECTOR any amount: can seek clarification from anyone in the tender
+        if ("DIRECTOR".equalsIgnoreCase(role)) {
+            if ("INDENTOR".equalsIgnoreCase(target)) {
+                Integer indentorUserId = resolveIndentCreatorUserId(tender);
+                if (indentorUserId != null) {
+                    dto.setTargetUserId(indentorUserId);
+                }
+                return target;
+            }
+            if ("CHAIRMAN".equalsIgnoreCase(target)) {
+                Integer chairmanUserId = resolveChairmanUserId(eval);
+                if (chairmanUserId != null) {
+                    dto.setTargetUserId(chairmanUserId);
+                }
+                return target;
+            }
+            // Honor explicit person-level targets as-is
+            if ("SPECIFIC_MEMBER".equalsIgnoreCase(target)
+                    || "ALL_MEMBERS".equalsIgnoreCase(target)
+                    || "PURCHASE_PERSONNEL".equalsIgnoreCase(target)) {
+                return target;
+            }
+            // VENDOR / ALL_VENDORS / empty → mode-based routing
+            if (isLimitedOrProprietary(mode)) {
+                return "VENDOR";
+            } else if (isGemOpenGlobal(mode)) {
+                return "PURCHASE_PERSONNEL";
+            }
+        }
+
+        return target;
+    }
+
+    private boolean isLimitedOrProprietary(String mode) {
+        if (mode == null) return false;
+        String m = mode.toLowerCase();
+        return m.contains("limited") || m.contains("proprietary");
+    }
+
+    private boolean isGemOpenGlobal(String mode) {
+        if (mode == null) return false;
+        String m = mode.toLowerCase();
+        return m.contains("gem") || m.contains("open") || m.contains("global");
+    }
+
+    private Integer resolveIndentCreatorUserId(TenderRequest tender) {
+        if (tender.getIndentIds() == null || tender.getIndentIds().isEmpty()) {
+            return null;
+        }
+        String firstIndentId = tender.getIndentIds().get(0).getIndentId();
+        IndentCreation indent = indentCreationRepository.findByIndentId(firstIndentId);
+        return indent != null ? indent.getCreatedBy() : null;
+    }
+
+    @Override
+    @Transactional
+    public void mapRegisteredVendor(String tenderId, String vendorId, String registeredVendorId) {
+        VendorQuotationAgainstTender quotation = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "No quotation found for tenderId=" + tenderId + " vendorId=" + vendorId)));
+
+        VendorMaster registeredVendor = vendorMasterRepository.findByVendorId(registeredVendorId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Registered vendor not found: " + registeredVendorId)));
+
+        quotation.setRegisteredVendorId(registeredVendor.getVendorId());
+        quotation.setRegisteredVendorName(registeredVendor.getVendorName());
+        quotation.setVendorId(registeredVendor.getVendorId());
+        quotation.setUpdatedDate(LocalDateTime.now());
+        quotationRepository.save(quotation);
+        log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
+    }
+
+    private Integer resolveChairmanUserId(TenderEvaluation eval) {
+        if ("ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            return eval.getAdHocChairmanUserId();
+        }
+        String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
+                ? "STEC_I" : "STEC_II";
+        return committeeRepository.findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", stecType)
+                .map(TechnoFinancialCommittee::getUserId)
+                .orElse(null);
     }
 }

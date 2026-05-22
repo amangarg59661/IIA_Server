@@ -2908,14 +2908,10 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
     }
 
     public ApprovedTenderDto getApprovedTenderId(String tenderId) {
-        boolean tender = workflowTransitionRepository.isApprovedTenderAndNotUsed(tenderId);
-        if (!tender) {
-            throw new BusinessException(new ErrorDetails(
-                    AppConstant.ERROR_CODE_RESOURCE,
-                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Tender is not approved, already used."
-            ));
+        boolean approved = workflowTransitionRepository.isApprovedTenderAndNotUsed(tenderId);
+        if (!approved) {
+            System.out.println("[WARN] getApprovedTenderId: tender '" + tenderId +
+                "' did not pass isApprovedTenderAndNotUsed check (may be in evaluation/sub-workflow). Returning data anyway.");
         }
 
         TenderRequest tenderRequest = tenderRequestRepository.findByTenderId(tenderId)

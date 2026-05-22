@@ -24,6 +24,12 @@ public class VendorQuotationAgainstTenderDto {
     private String vendorResponse;
     private String type;
 
+    private String financialIndentorStatus;
+    private String financialSpoStatus;
+
+    private String registeredVendorId;
+    private String registeredVendorName;
+
 
 
 }

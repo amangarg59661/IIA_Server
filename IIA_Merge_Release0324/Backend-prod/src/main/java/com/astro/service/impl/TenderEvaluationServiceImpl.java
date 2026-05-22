@@ -56,12 +56,34 @@ public class TenderEvaluationServiceImpl implements TenderEvaluationService {
 
         }
      //   tenderEvaluation.setUploadQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName());
-        tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName());
-        tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName());
+
+        if (tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName() == null || tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName().isEmpty()) {
+            tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileName(null);
+        } else {
+            String techFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileName(techFileName);
+        }
+
+        if (tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName() == null || tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName().isEmpty()) {
+            tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(null);
+        } else {
+            String commFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(commFileName);
+        }
         tenderEvaluation.setFormationOfTechnoCommerialComitee(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee());
-        tenderEvaluation.setResponseFileName(tenderEvaluationRequestDto.getResponseFileName());
-        tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName());
-        tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName());
+
+        if (tenderEvaluationRequestDto.getResponseFileName() != null && !tenderEvaluationRequestDto.getResponseFileName().isEmpty()) {
+            String respFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseFileName(), basePath);
+            tenderEvaluation.setResponseFileName(respFileName);
+        }
+        if (tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName() != null && !tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName().isEmpty()) {
+            String respTechFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileName(respTechFileName);
+        }
+        if (tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName() != null && !tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName().isEmpty()) {
+            String respCommFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileName(respCommFileName);
+        }
 
         tenderEvaluation.setUploadQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileNameCreatedBy());
         tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileNameCreatedBy());
@@ -139,26 +161,59 @@ public class TenderEvaluationServiceImpl implements TenderEvaluationService {
                                 "Tender eavaluation request not found for the provided tender ID.")
                 ));
 
-     //   tenderEvaluation.setTenderId(tenderEvaluationRequestDto.getTenderId());
-        tenderEvaluation.setUploadQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName());
-        tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName());
-        tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName());
-        tenderEvaluation.setFormationOfTechnoCommerialComitee(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee());
-        tenderEvaluation.setResponseFileName(tenderEvaluationRequestDto.getResponseFileName());
-        tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName());
-        tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileName(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName());
-        tenderEvaluation.setFileType(tenderEvaluationRequestDto.getFileType());
-        tenderEvaluation.setCreatedBy(tenderEvaluationRequestDto.getCreatedBy());
-        tenderEvaluation.setUpdatedBy(tenderEvaluationRequestDto.getUpdatedBy());
+        // Partial update: only overwrite fields that are explicitly provided (non-null)
+        if (tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName() != null) {
+            String qualFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setUploadQualifiedVendorsFileName(qualFileName);
+        }
+        if (tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName() != null) {
+            String techFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileName(techFileName);
+        }
+        if (tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName() != null) {
+            String commFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(commFileName);
 
+            if ("PENDING_FINANCIAL_SHEET_UPLOAD".equals(tenderEvaluation.getEvaluationStatus())) {
+                tenderEvaluation.setEvaluationStatus("PENDING_FINANCIAL");
+                tenderEvaluation.setUpdatedDate(java.time.LocalDateTime.now());
+            }
+        }
+        if (tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee() != null)
+            tenderEvaluation.setFormationOfTechnoCommerialComitee(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee());
+        if (tenderEvaluationRequestDto.getResponseFileName() != null) {
+            String respFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseFileName(), basePath);
+            tenderEvaluation.setResponseFileName(respFileName);
+        }
+        if (tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName() != null) {
+            String respTechFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileName(respTechFileName);
+        }
+        if (tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName() != null) {
+            String respCommFileName = saveBase64Files(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileName(), basePath);
+            tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileName(respCommFileName);
+        }
+        if (tenderEvaluationRequestDto.getFileType() != null)
+            tenderEvaluation.setFileType(tenderEvaluationRequestDto.getFileType());
+        if (tenderEvaluationRequestDto.getCreatedBy() != null)
+            tenderEvaluation.setCreatedBy(tenderEvaluationRequestDto.getCreatedBy());
+        if (tenderEvaluationRequestDto.getUpdatedBy() != null)
+            tenderEvaluation.setUpdatedBy(tenderEvaluationRequestDto.getUpdatedBy());
 
-        tenderEvaluation.setUploadQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileNameCreatedBy());
-        tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileNameCreatedBy());
-        tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileNameCreatedBy());
-        tenderEvaluation.setFormationOfTechnoCommerialComiteeCreatedBy(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComiteeCreatedBy());
-        tenderEvaluation.setResponseFileNameCreatedBy(tenderEvaluationRequestDto.getResponseFileNameCreatedBy());
-        tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileNameCreatedBy());
-        tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getUploadQualifiedVendorsFileNameCreatedBy() != null)
+            tenderEvaluation.setUploadQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadQualifiedVendorsFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileNameCreatedBy() != null)
+            tenderEvaluation.setUploadTechnicallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadTechnicallyQualifiedVendorsFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileNameCreatedBy() != null)
+            tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getFormationOfTechnoCommerialComiteeCreatedBy() != null)
+            tenderEvaluation.setFormationOfTechnoCommerialComiteeCreatedBy(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComiteeCreatedBy());
+        if (tenderEvaluationRequestDto.getResponseFileNameCreatedBy() != null)
+            tenderEvaluation.setResponseFileNameCreatedBy(tenderEvaluationRequestDto.getResponseFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileNameCreatedBy() != null)
+            tenderEvaluation.setResponseForTechnicallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getResponseForTechnicallyQualifiedVendorsFileNameCreatedBy());
+        if (tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileNameCreatedBy() != null)
+            tenderEvaluation.setResponseForCommeriallyQualifiedVendorsFileNameCreatedBy(tenderEvaluationRequestDto.getResponseForCommeriallyQualifiedVendorsFileNameCreatedBy());
 
 
         tenderEvaluationRepository.save(tenderEvaluation);
