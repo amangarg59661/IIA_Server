@@ -112,6 +112,8 @@ const TenderEvaluator = () => {
   const [clarifHistoryLoading, setClarifHistoryLoading] = useState(false);
   // vendor-specific seek clarification
   const [clarifTargetVendorId, setClarifTargetVendorId] = useState('');
+  // SPO row-level target toggle (INDENTOR or VENDOR)
+  const [spoRowTarget, setSpoRowTarget] = useState('INDENTOR');
 
   // Registered vendor mapping (OPEN_TENDER / GLOBAL_TENDER / GEM)
   const [allRegisteredVendors, setAllRegisteredVendors] = useState([]);
@@ -460,6 +462,29 @@ const handleChange = (key, value) => {
     message.error(err?.response?.data?.message || "Failed to perform SPO review action");
   }
 };
+
+const handleSpoVendorClarification = async (record) => {
+  if (!rejectComment.trim()) return message.warning('Please enter a clarification question for vendor.');
+  try {
+    await axios.post('/api/tender-evaluation/seek-clarification', {
+      requestedByRole: 'SPO',
+      requestedByUserId: userId,
+      clarificationTarget: 'VENDOR',
+      targetVendorId: record.vendorId,
+      remarks: rejectComment,
+    }, { params: { tenderId } });
+    message.success(`Clarification request sent to vendor ${record.vendorId}`);
+    setRejectComment('');
+    setRejectedVendorId(null);
+    setSpoRowTarget('INDENTOR');
+    await fetchQuotationsAndPending(tenderId);
+    await fetchEvalStatus(tenderId);
+    await fetchClarificationHistory(tenderId);
+  } catch (err) {
+    message.error(err?.response?.data?.responseStatus?.message || 'Failed to send clarification to vendor.');
+  }
+};
+
 // ─── New evaluation flow handlers ────────────────────────────────
 
 const fetchEvalStatus = async (tid) => {
@@ -1107,9 +1132,25 @@ if (isSpoRole) {
 
         <Popover
           content={
-            <div style={{ padding: 12 }}>
+            <div style={{ padding: 12, minWidth: 280 }}>
+              <div style={{ marginBottom: 8 }}>
+                <Text strong style={{ fontSize: 12 }}>Send To:</Text>
+                <Select
+                  size="small"
+                  value={rejectedVendorId === record.vendorId ? (spoRowTarget || 'INDENTOR') : 'INDENTOR'}
+                  onChange={(val) => { setRejectedVendorId(record.vendorId); setSpoRowTarget(val); }}
+                  style={{ width: '100%', marginTop: 4 }}
+                >
+                  <Option value="INDENTOR">Indentor / Purchase Personnel</Option>
+                  <Option value="VENDOR">Vendor (ask vendor directly)</Option>
+                </Select>
+              </div>
               <Input.TextArea
-                placeholder="Enter change request to Indentor"
+                placeholder={
+                  (rejectedVendorId === record.vendorId ? spoRowTarget : 'INDENTOR') === 'VENDOR'
+                    ? 'Enter clarification question for vendor'
+                    : 'Enter change request to Indentor'
+                }
                 rows={3}
                 value={rejectedVendorId === record.vendorId ? rejectComment : ''}
                 onChange={(e) => {
@@ -1119,8 +1160,15 @@ if (isSpoRole) {
               />
               <Button
                 type="primary"
-                disabled={!spoCanAct }
-                onClick={() => handleSpoReview(record, 'CHANGE_REQUEST_TO_INTENTOR')}
+                disabled={!spoCanAct}
+                onClick={() => {
+                  const target = spoRowTarget || 'INDENTOR';
+                  if (target === 'VENDOR') {
+                    handleSpoVendorClarification(record);
+                  } else {
+                    handleSpoReview(record, 'CHANGE_REQUEST_TO_INTENTOR');
+                  }
+                }}
                 style={{ marginTop: 8 }}
               >
                 Submit
@@ -1131,18 +1179,19 @@ if (isSpoRole) {
           trigger="click"
         >
           <Button size="small" style={{ color: '#fa8c16' }}>
-            {pendingToIndentor ? 'Change Requested' : 'Seek Revision'}
+            {pendingToIndentor ? 'Change Requested' : record.status === 'CHANGE_REQUESTED' ? 'Clarification Sent' : 'Seek Revision'}
           </Button>
         </Popover>
       </div>
     );
   }
-}
+},
 ...(showRegisteredVendorColumn ? [{
-  title: 'Registered Vendor',
+  title: 'Registered Vendor ID',
   key: 'registeredVendor',
   width: 250,
   render: (_, record) => {
+    if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
     if (record.registeredVendorId) {
       return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
     }
@@ -1342,10 +1391,11 @@ if (isSpoRole) {
   },
   ] : []),
 ...(showRegisteredVendorColumn ? [{
-  title: 'Registered Vendor',
+  title: 'Registered Vendor ID',
   key: 'registeredVendor',
   width: 250,
   render: (_, record) => {
+    if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
     if (record.registeredVendorId) {
       return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
     }
@@ -1950,13 +2000,29 @@ useEffect(() => {
                       SPO Reject
                     </Button> */}
                     <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
-                      onClick={openRevisionModal}>
-                      Send for Revision
+                      onClick={() => {
+                        setClarifRequestedByRole('SPO');
+                        setClarifTarget('INDENTOR');
+                        setClarifTargetVendorId('');
+                        setClarifTargetUserId('');
+                        setClarifTargetUserName('');
+                        setClarifRemarks('');
+                        setClarificationModal(true);
+                      }}>
+                      Revision from Indentor (All Vendors)
                     </Button>
-                    {/* <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
-                      onClick={() => openClarificationModal('SPO')}>
-                      Seek Clarification (Vendor)
-                    </Button> */}
+                    <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                      onClick={() => {
+                        setClarifRequestedByRole('SPO');
+                        setClarifTarget('ALL_VENDORS');
+                        setClarifTargetVendorId('');
+                        setClarifTargetUserId('');
+                        setClarifTargetUserName('');
+                        setClarifRemarks('');
+                        setClarificationModal(true);
+                      }}>
+                      Ask All Vendors for Clarification
+                    </Button>
                   </Space>
                 </Card>
               )}
