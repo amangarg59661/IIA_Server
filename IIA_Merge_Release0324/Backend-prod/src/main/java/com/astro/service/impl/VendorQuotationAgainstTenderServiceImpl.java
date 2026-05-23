@@ -19,6 +19,7 @@ import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.VendorQuotationAgainstTenderService;
 import io.swagger.models.auth.In;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -58,6 +59,8 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
     private TenderClarificationHistoryRepository clarificationHistoryRepository;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
    
    @Override
    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
@@ -482,12 +485,12 @@ public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request
     VendorLoginDetails vendorLogin = vendorLoginOpt.get();
 
     // Verify current password
-    if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
+    if (!passwordEncoder.matches(request.getCurrentPassword(), vendorLogin.getPassword())) {
         return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
     }
 
     // Update password
-    vendorLogin.setPassword(request.getNewPassword());
+    vendorLogin.setPassword(passwordEncoder.encode(request.getNewPassword()));
     vendorLogin.setIsFirstLogin(false);
     vendorLogin.setIsTempPassword(false);
     vendorLogin.setPasswordChangedAt(LocalDateTime.now());
@@ -905,7 +908,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         VendorLoginDetails vl = vendorLoginOpt.get();
 
         // Server-side password validation
-        if (!vl.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), vl.getPassword())) {
             throw new BusinessException(
                 new ErrorDetails(
                     AppConstant.USER_NOT_FOUND,
