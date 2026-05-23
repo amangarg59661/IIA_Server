@@ -795,7 +795,6 @@ const handlePpRespondForVendor = async (vendorId) => {
   }
 };
 
-
 // ── Director Forms Ad-Hoc Committee ──────────────────────────────
 const handleDirectorFormCommittee = async () => {
   if (!adHocChairmanId || !adHocChairmanName) return message.warning('Chairman details are required.');
@@ -1983,7 +1982,7 @@ useEffect(() => {
                 </Card>
               ) : null}
 
-            {/* ── Vendor Clarification Response Status (view-only) ── */}
+            {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
             {isPendingVendorClarif &&
               (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && (
                 <Card title="Vendor Clarification Response" size="small" style={{ marginTop: 16 }}>

@@ -488,7 +488,6 @@ const TenderEvaluationPage = () => {
     }
   };
 
-
   // Reject entire evaluation
   const handleRejectEvalConfirm = async () => {
     if (!rejectEvalRemarks.trim()) {
@@ -594,7 +593,6 @@ const TenderEvaluationPage = () => {
           v.status !== "CHANGE_REQUESTED"
       ) &&
     vendors.filter((v) => v.indentorStatus === "ACCEPTED").length > 0;
-
 
   // Show Initiate button: PP only, no status or PENDING_INITIATION
   const showInitiate =

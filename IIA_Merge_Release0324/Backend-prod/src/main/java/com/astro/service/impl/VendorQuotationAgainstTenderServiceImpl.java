@@ -1,6 +1,5 @@
 package com.astro.service.impl;
 
-import com.astro.config.JwtUtil;
 import com.astro.constant.AppConstant;
 import com.astro.dto.workflow.*;
 import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
@@ -19,7 +18,6 @@ import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.VendorQuotationAgainstTenderService;
 import io.swagger.models.auth.In;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
@@ -57,10 +55,6 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
     private GemVendorIdTrackerRepository gemVendorIdTrackerRepository;
     @Autowired
     private TenderClarificationHistoryRepository clarificationHistoryRepository;
-    @Autowired
-    private JwtUtil jwtUtil;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
    
    @Override
    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
@@ -111,7 +105,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setIsLatest(true);
 
            quotation.setStatus("SUBMITTED");
-           quotation.setUpdatedBy(dto.getCreatedBy());
+           quotation.setModifiedBy(1);
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -127,7 +121,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setVersion(maxVersion + 1);
            quotation.setIsLatest(true);
            quotation.setStatus("SUBMITTED");
-           quotation.setUpdatedBy(dto.getCreatedBy());
+           quotation.setModifiedBy(1);
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -349,6 +343,7 @@ public VendorStatusDto getVendorStatus(String vendorId) {
     
     if (vendorLogin.isPresent()) {
         VendorLoginDetails vl = vendorLogin.get();
+        dto.setPassword(vl.getPassword());
         dto.setEmailStatus(vl.getEmailSent());
         dto.setIsFirstLogin(vl.getIsFirstLogin());
         dto.setIsTempPassword(vl.getIsTempPassword());
@@ -452,7 +447,7 @@ public boolean markQuotationForChangeRequest(VendorQuotationChangeRequestDto req
     newQuotation.setIndentorRemarks(request.getRemarks());
     newQuotation.setStatus("CHANGE_REQUESTED");
    // newQuotation.setRemarks(request.getRemarks());
-    newQuotation.setUpdatedBy(String.valueOf(request.getUserId()));
+    newQuotation.setModifiedBy(request.getUserId());
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
 
@@ -485,12 +480,12 @@ public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request
     VendorLoginDetails vendorLogin = vendorLoginOpt.get();
 
     // Verify current password
-    if (!passwordEncoder.matches(request.getCurrentPassword(), vendorLogin.getPassword())) {
+    if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
         return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
     }
 
     // Update password
-    vendorLogin.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    vendorLogin.setPassword(request.getNewPassword());
     vendorLogin.setIsFirstLogin(false);
     vendorLogin.setIsTempPassword(false);
     vendorLogin.setPasswordChangedAt(LocalDateTime.now());
@@ -562,7 +557,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
   //  newQuotation.setRemarks("Accepted by indentor");
     newQuotation.setIndentorStatus("ACCEPTED");
    // newQuotation.setIndentorRemarks("Accepted by indentor");
-    newQuotation.setUpdatedBy(String.valueOf(userId));
+    newQuotation.setModifiedBy(userId);
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -606,7 +601,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setIndentorStatus(oldQuotation.getIndentorStatus());
         newQuotation.setIndentorRemarks(oldQuotation.getIndentorRemarks());
         newQuotation.setRemarks(oldQuotation.getIndentorRemarks());
-        newQuotation.setUpdatedBy(String.valueOf(userId));
+        newQuotation.setModifiedBy(userId);
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
         switch (action) {
@@ -684,7 +679,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setRemarks(remarks);
         newQuotation.setIndentorStatus("REJECTED");
         newQuotation.setIndentorRemarks(remarks);
-        newQuotation.setUpdatedBy(String.valueOf(userId)); // indentor
+        newQuotation.setModifiedBy(userId); // indentor
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
         newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -735,7 +730,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
             dto.setSpoStatus(vq.getSpoStatus());
             dto.setSpoRemarks(vq.getSpoRemarks());
             dto.setChangeRequestToIndentor(vq.getChangeRequestToIndentor());
-            dto.setUpdatedBy(vq.getUpdatedBy());
+            dto.setModifiedBy(vq.getModifiedBy());
             dto.setCurrentRole(vq.getCurrentRole());
             dto.setNextRole(vq.getNextRole());
             return dto;
@@ -893,69 +888,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         return resultList;
     }
 
-    @Override
-    public VendorStatusDto vendorLogin(VendorLoginRequestDto request) {
-        VendorStatusDto dto = new VendorStatusDto();
-        dto.setVendorId(request.getVendorId());
 
-        Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findByVendorId(request.getVendorId());
 
-        if (vendorLoginOpt.isEmpty()) {
-            dto.setStatus("NOT_FOUND");
-            return dto;
-        }
 
-        VendorLoginDetails vl = vendorLoginOpt.get();
-
-        // Server-side password validation
-        if (!passwordEncoder.matches(request.getPassword(), vl.getPassword())) {
-            throw new BusinessException(
-                new ErrorDetails(
-                    AppConstant.USER_NOT_FOUND,
-                    AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION,
-                    "Invalid credentials."
-                )
-            );
-        }
-
-        dto.setEmailStatus(vl.getEmailSent());
-        dto.setEmailSent(vl.getEmailSent());
-        dto.setIsFirstLogin(vl.getIsFirstLogin());
-        dto.setIsTempPassword(vl.getIsTempPassword());
-        dto.setCreatedDate(vl.getCreatedDate() != null ? vl.getCreatedDate().toString() : null);
-
-        // Check vendor approval status
-        Optional<VendorMaster> approved = vendorMasterRepository.findByVendorId(request.getVendorId());
-        if (approved.isPresent()) {
-            VendorMaster vm = approved.get();
-            if ("APPROVED".equalsIgnoreCase(vm.getStatus())) {
-                dto.setStatus("APPROVED");
-            } else if ("REJECTED".equalsIgnoreCase(vm.getStatus())) {
-                dto.setStatus("REJECTED");
-                dto.setComments(vm.getRemarks());
-            } else if ("CHANGE_REQUEST".equalsIgnoreCase(vm.getStatus())) {
-                dto.setStatus("CHANGE_REQUEST");
-                dto.setComments(vm.getRemarks());
-            } else {
-                dto.setStatus("AWAITING_APPROVAL");
-            }
-        } else {
-            Optional<VendorMasterUtil> pending = vendorMasterUtilRepository.findByVendorId(request.getVendorId());
-            if (pending.isPresent()) {
-                dto.setStatus("AWAITING_APPROVAL");
-            } else {
-                dto.setStatus("NOT_FOUND");
-            }
-        }
-
-        String token = jwtUtil.generateToken(
-                request.getVendorId(),
-                List.of("VENDOR"),
-                "VENDOR"
-        );
-        dto.setToken(token);
-
-        return dto;
-    }
 }

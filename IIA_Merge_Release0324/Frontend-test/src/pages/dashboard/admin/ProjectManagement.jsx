@@ -214,6 +214,12 @@ const ProjectManagement = () => {
 
   const columns = [
     {
+      title: 'Project Code',
+      dataIndex: 'projectCode',
+      key: 'projectCode',
+      width: 250
+    },
+    {
       title: 'Project Name',
       dataIndex: 'projectNameDescription',
       key: 'projectNameDescription',
@@ -356,10 +362,17 @@ const ProjectManagement = () => {
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <Form.Item
+              label="Project Code"
+              name="projectCode"
+              rules={[{ required: true, message: 'Please enter project code' }]}
+            >
+              <Input placeholder="Enter project code" />
+            </Form.Item>
             <Form.Item
               label="Project Name"
               name="projectNameDescription"
-              rules={[{ required: true, message: 'Please enter project name' }]}
+              rules={[{ required: true, disabled: true ,message: 'Please enter project name' }]}
             >
               <Input placeholder="Enter project name" />
             </Form.Item>

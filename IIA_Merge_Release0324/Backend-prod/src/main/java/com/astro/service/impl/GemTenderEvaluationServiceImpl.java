@@ -91,7 +91,7 @@ public class GemTenderEvaluationServiceImpl implements GemTenderEvaluationServic
                 quotation.setStatus("SUBMITTED");
                 quotation.setIsLatest(true);
                 quotation.setVersion(1);
-                quotation.setCreatedBy(String.valueOf(actionByUserId));
+                quotation.setCreatedBy(actionByUserId);
                 quotation.setTechnicalStatus("PENDING");
                 quotation.setFinancialBidVisible(false);
                 quotation.setCreatedDate(LocalDateTime.now());

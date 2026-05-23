@@ -2661,8 +2661,8 @@ useEffect(() => {
         { name: "estimatedPrice", label: "Estimated Price", type: "text", disabled: true, span: 1 },
         { name: "currency",       label: "Currency",        type: "text", disabled: true, span: 1 },
         { name: "totalPrice",     label: "Total Price",     type: "text", disabled: true, span: 2 },
-        { name: "briefDescription", label: "Brief Description", type: "text", disabled: true, span: 2 },
-        { name: "origin",         label: "Origin",          type: "text", disabled: true, span: 1 },
+        // { name: "briefDescription", label: "Brief Description", type: "text", disabled: true, span: 2 },
+        // { name: "origin",         label: "Origin",          type: "text", disabled: true, span: 1 },
         { name: "modeOfProcurement", label: "Mode of Procurement", type: "text", disabled: true, span: 1 },
         { name: "budgetCode",     label: "Budget Code",     type: "text", disabled: true, span: 2 },
         { name: "vendorNames",    label: "Vendor Codes",    type: "text", disabled: true, span: 2 },
@@ -2682,8 +2682,8 @@ useEffect(() => {
         ...((formData.materialDetails || []).some(m => m.currency && m.currency !== "INR")
           ? [{ name: "conversionRate", label: "Conversion Rate",      type: "text",   disabled: true, span: 1 }]
           : []),
-        { name: "origin",              label: "Origin",               type: "text",   disabled: true, span: 1 },
-        { name: "briefDescription",    label: "Brief Description",    type: "text",   disabled: true, span: 2 },
+        // { name: "origin",              label: "Origin",               type: "text",   disabled: true, span: 1 },
+        // { name: "briefDescription",    label: "Brief Description",    type: "text",   disabled: true, span: 2 },
         { name: "budgetCode",          label: "Budget Code",          type: "select", disabled: true, span: 2, options: [] },
         { name: "totalPrice",          label: "Total Price",          type: "text",   disabled: true, span: 2 },
         { name: "materialCategory",    label: "Material Category",    type: "text",   disabled: true, span: 2 },
