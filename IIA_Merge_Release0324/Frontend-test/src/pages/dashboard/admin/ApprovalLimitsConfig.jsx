@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { ApprovalLimitsService, CATEGORY_OPTIONS, formatCurrency } from '../../../services/approvalWorkflowService';
+import store from '../../../store';
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -118,7 +119,7 @@ const ApprovalLimitsConfig = () => {
 
   const handleStatusChange = async (record, isActive) => {
     try {
-      await ApprovalLimitsService.updateStatus(record.limitId, isActive, 'admin');
+      await ApprovalLimitsService.updateStatus(record.limitId, isActive, String(store.getState().auth?.userId || 'admin'));
       message.success(`Approval limit ${isActive ? 'activated' : 'deactivated'} successfully`);
       fetchApprovalLimits();
     } catch (error) {
@@ -135,8 +136,8 @@ const ApprovalLimitsConfig = () => {
         ...values,
         roleName: selectedRole?.roleName || values.roleName,
         escalationRoleName: escalationRole?.roleName || null,
-        createdBy: 'admin',
-        updatedBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin'),
+        updatedBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingRecord) {

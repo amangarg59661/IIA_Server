@@ -7,10 +7,17 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "service_order_material")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class ServiceOrderMaterial {
 
 
@@ -44,6 +51,22 @@ public class ServiceOrderMaterial {
    @ManyToOne
    @JoinColumn(name = "so_id", nullable = false, referencedColumnName = "so_id", insertable = false, updatable = false)
    private ServiceOrder serviceOrder;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 
 
 

@@ -4,6 +4,7 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import CustomSelect from "../../components/CustomSelect";
 import { useSelector } from "react-redux";
 import { has } from "lodash";
+import axios from "axios";
 
 const { Option } = Select;
 
@@ -29,10 +30,7 @@ const LineItem = ({
   useEffect(() => {
     const fetchVendors = async () => {
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/vendor-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/vendor-master");
 
         if (data.responseStatus.statusCode === 0) {
           // Filter active vendors if needed
@@ -182,10 +180,7 @@ const LineItem = ({
 
   const fetchInitialData = async () => {
     try {
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/material-master"
-      );
-      const data = await response.json();
+      const { data } = await axios.get("/api/material-master");
 
       if (!data.responseData) throw new Error("Invalid material data");
 
@@ -216,10 +211,7 @@ const LineItem = ({
 
       setMaterialDetailMap(materialMap);
       setMaterialsList(Object.keys(materialMap));
-      const uomResponse = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/uom-master"
-      );
-      const uomData = await uomResponse.json();
+      const { data: uomData } = await axios.get("/api/uom-master");
 
       if (!uomData.responseData) throw new Error("Invalid UOM data");
 

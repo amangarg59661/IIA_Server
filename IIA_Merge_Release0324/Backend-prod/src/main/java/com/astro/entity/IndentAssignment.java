@@ -2,9 +2,15 @@ package com.astro.entity;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "indent_assignment")
+@EntityListeners(AuditingEntityListener.class)
 public class IndentAssignment {
 
     @Id
@@ -25,6 +31,22 @@ public class IndentAssignment {
 
     @Column(name = "status")
     private String status = "ACTIVE";
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 
     // ================= GETTERS & SETTERS =================
     public Long getId() {

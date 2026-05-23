@@ -36,8 +36,6 @@ public class LocationMasterServiceImpl implements LocationMasterService {
         locationMaster.setLocationCode(locationMasterRequestDto.getLocationCode());
         locationMaster.setLocationName(locationMasterRequestDto.getLocationName());
         locationMaster.setAddress(locationMasterRequestDto.getAddress());
-        locationMaster.setCreatedBy(locationMasterRequestDto.getCreatedBy());
-        locationMaster.setUpdatedBy(locationMasterRequestDto.getUpdatedBy());
 
         locationMasterRepository.save(locationMaster);
         return  mapToResponseDTO(locationMaster);
@@ -60,8 +58,6 @@ public class LocationMasterServiceImpl implements LocationMasterService {
        // locationMaster.setLocationCode(locationMasterRequestDto.getLocationCode());
         locationMaster.setLocationName(locationMasterRequestDto.getLocationName());
         locationMaster.setAddress(locationMasterRequestDto.getAddress());
-        locationMaster.setCreatedBy(locationMasterRequestDto.getCreatedBy());
-        locationMaster.setUpdatedBy(locationMasterRequestDto.getUpdatedBy());
         locationMasterRepository.save(locationMaster);
         return mapToResponseDTO(locationMaster);
 
@@ -126,8 +122,8 @@ public class LocationMasterServiceImpl implements LocationMasterService {
         location.setLocationCode(saved.getLovValue());
         location.setLocationName(saved.getLovDisplayValue());
         location.setAddress(saved.getLovDescription());
-        location.setCreatedBy("SYSTEM");
-        location.setUpdatedBy("SYSTEM");
+        location.setCreatedBy(saved.getCreatedBy());
+        location.setUpdatedBy(saved.getCreatedBy());
         locationMasterRepository.save(location);
     }
 
@@ -144,13 +140,13 @@ public class LocationMasterServiceImpl implements LocationMasterService {
         } else {
             location = new LocationMaster();
             location.setLocationCode(updated.getLovValue());
-            location.setCreatedBy("SYSTEM");
+            location.setCreatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
         }
 
         location.setLocationName(updated.getLovDisplayValue());
         location.setAddress(updated.getLovDescription());
         location.setIsActive(updated.getIsActive());
-        location.setUpdatedBy("SYSTEM");
+        location.setUpdatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
         locationMasterRepository.save(location);
     }
     // End

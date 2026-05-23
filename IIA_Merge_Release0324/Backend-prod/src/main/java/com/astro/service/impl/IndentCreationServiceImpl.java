@@ -245,7 +245,7 @@ private String extractBaseIndentId(String indentId) {
         // This is used by the workflow engine for department-based approver routing (Dean/Head SEG).
         if (indentRequestDTO.getCreatedBy() != null) {
             try {
-                UserMaster creatingUser = userMasterRepository.findByUserId(indentRequestDTO.getCreatedBy());
+                UserMaster creatingUser = userMasterRepository.findByUserId(Integer.valueOf(indentRequestDTO.getCreatedBy()));
                 if (creatingUser != null && creatingUser.getEmployeeId() != null) {
                     employeeDepartmentMasterRepository.findByEmployeeId(creatingUser.getEmployeeId())
                             .ifPresent(emp -> {
@@ -478,7 +478,7 @@ public IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto) {
     // Resolve department
     if (dto.getCreatedBy() != null) {
         try {
-            UserMaster user = userMasterRepository.findByUserId(dto.getCreatedBy());
+            UserMaster user = userMasterRepository.findByUserId(Integer.valueOf(dto.getCreatedBy()));
             if (user != null && user.getEmployeeId() != null) {
                 employeeDepartmentMasterRepository.findByEmployeeId(user.getEmployeeId())
                     .ifPresent(emp -> indent.setIndentorDepartment(emp.getDepartmentName()));
@@ -789,7 +789,7 @@ public IndentCreationResponseDTO submitIndentDraft(String indentId, IndentCreati
 }
 
 public List<IndentCreationResponseDTO> getUserDrafts(Integer userId) {
-    return indentCreationRepository.findByCreatedByAndCurrentStatus(userId, "DRAFT")
+    return indentCreationRepository.findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT")
         .stream()
         .map(this::mapToResponseDTO)
         .collect(Collectors.toList());
@@ -966,7 +966,7 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
     // Resolve indentorDepartment
     if (old.getCreatedBy() != null) {
         try {
-            UserMaster creatingUser = userMasterRepository.findByUserId(old.getCreatedBy());
+            UserMaster creatingUser = userMasterRepository.findByUserId(Integer.valueOf(old.getCreatedBy()));
             if (creatingUser != null && creatingUser.getEmployeeId() != null) {
                 employeeDepartmentMasterRepository.findByEmployeeId(creatingUser.getEmployeeId())
                         .ifPresent(emp -> newIndent.setIndentorDepartment(emp.getDepartmentName()));
@@ -1435,6 +1435,7 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
         response.setSerialNumber(indentCreation.getSerialNumber());
         response.setModelNumber(indentCreation.getModelNumber());
         LocalDate dateOfPurchase = indentCreation.getDateOfPurchase();
+        response.setBuyBackAmount(indentCreation.getBuyBackAmount());
         if (dateOfPurchase != null) {
             response.setDateOfPurchase(CommonUtils.convertDateToString(dateOfPurchase));
         } else {
@@ -2278,7 +2279,7 @@ boolean isRejected = lastTransition != null
                     dto.setIndentId(id);
                     IndentCreation indent = indentCreationRepository.findById(id).orElse(null);
                     if (indent != null) {
-                        dto.setUserId(indent.getCreatedBy());
+                        dto.setUserId(indent.getCreatedBy() != null ? Integer.valueOf(indent.getCreatedBy()) : null);
                     } else {
                         dto.setUserId(null);
                     }
@@ -2297,7 +2298,7 @@ boolean isRejected = lastTransition != null
                     dto.setIndentId(id);
                     IndentCreation indent = indentCreationRepository.findById(id).orElse(null);
                     if (indent != null) {
-                        dto.setUserId(indent.getCreatedBy());
+                        dto.setUserId(indent.getCreatedBy() != null ? Integer.valueOf(indent.getCreatedBy()) : null);
                     } else {
                         dto.setUserId(null);
                     }
@@ -2359,7 +2360,7 @@ boolean isRejected = lastTransition != null
             }
             dto.setStatus((String) row[9]);
             dto.setAsOnDate(LocalDate.now());
-            dto.setCreatedBy((Integer) row[10]);
+            dto.setCreatedBy(row[10] != null ? String.valueOf(row[10]) : null);
             dto.setIndentValue((BigDecimal) row[11]);
 
             String json = (String) row[12];
@@ -2396,7 +2397,7 @@ boolean isRejected = lastTransition != null
             IndentWorkflowStatusDto indent = new IndentWorkflowStatusDto();
             indent.setRequestId(wt.getRequestId());
             indent.setCreatedBy(wt.getCreatedBy());
-            indent.setModifiedBy(wt.getModifiedBy());
+            indent.setUpdatedBy(wt.getUpdatedBy());
             indent.setStatus(wt.getStatus());
             indent.setNextAction(wt.getNextAction());
             indent.setAction(wt.getAction());
@@ -2774,7 +2775,7 @@ newAssignment.setAssignedByEmployeeId(assignedByEmpId);
         Optional<EmployeeDepartmentMaster> em
                 = employeeDepartmentMasterRepository.findByEmployeeId(dto.getEmployeeId());
 
-        UserMaster um = userMasterRepository.findByUserId(indent.getCreatedBy());
+        UserMaster um = userMasterRepository.findByUserId(Integer.valueOf(indent.getCreatedBy()));
 
         if (em.isPresent()) {
             try {

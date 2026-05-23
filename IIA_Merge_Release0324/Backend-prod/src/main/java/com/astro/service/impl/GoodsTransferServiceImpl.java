@@ -39,8 +39,6 @@ public class GoodsTransferServiceImpl implements GoodsTransferService {
         goodsTransfer.setQuantity(goodsTransferRequestDto.getQuantity());
         goodsTransfer.setLocator(goodsTransferRequestDto.getLocator());
         goodsTransfer.setNote(goodsTransferRequestDto.getNote());
-        goodsTransfer.setUpdatedBy(goodsTransferRequestDto.getUpdatedBy());
-        goodsTransfer.setCreatedBy(goodsTransferRequestDto.getCreatedBy());
         goodsTransferRepository.save(goodsTransfer);
         return mapToResponseDTO(goodsTransfer);
     }
@@ -66,8 +64,6 @@ public class GoodsTransferServiceImpl implements GoodsTransferService {
         existing.setQuantity(goodsTransferRequestDto.getQuantity());
         existing.setLocator(goodsTransferRequestDto.getLocator());
         existing.setNote(goodsTransferRequestDto.getNote());
-        existing.setUpdatedBy(goodsTransferRequestDto.getUpdatedBy());
-        existing.setCreatedBy(goodsTransferRequestDto.getCreatedBy());
         goodsTransferRepository.save(existing);
         return mapToResponseDTO(existing);
     }

@@ -597,9 +597,9 @@ public List<AssetMasterReportDto> getAssetReport() {
         dto.setComponentName((String) row[15]);
         dto.setComponentId((Integer) row[16]);
         // dto.setCreateDate(((Timestamp) row[17]).toLocalDateTime());
-        dto.setCreatedBy((Integer) row[18]);
+        dto.setCreatedBy(row[18] != null ? String.valueOf(row[18]) : null);
         // dto.setUpdatedDate(((Timestamp) row[19]).toLocalDateTime());
-        dto.setUpdatedBy((Integer) row[20]);
+        dto.setUpdatedBy(row[20] != null ? String.valueOf(row[20]) : null);
         dto.setPoId((String) row[21]); // po_id
         dto.setPoValue((BigDecimal) row[22]); // total_value_of_po
         dto.setVendorId((String) row[23]);

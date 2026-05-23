@@ -20,6 +20,6 @@ public class GrnMaterialMasterDto {
     private String status;
     private String grnDate;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
 }
 

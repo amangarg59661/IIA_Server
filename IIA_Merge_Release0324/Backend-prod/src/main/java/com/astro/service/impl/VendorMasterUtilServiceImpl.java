@@ -375,7 +375,7 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
         newVendor.setState(vendor.getState());
         newVendor.setPlace(vendor.getPlace());
         newVendor.setStatus("APPROVED");
-        newVendor.setCreatedBy(actionBy);
+        newVendor.setCreatedBy(String.valueOf(actionBy));
         newVendor.setRemarks(remarks);
 
         vendorMasterRepository.save(newVendor);

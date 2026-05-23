@@ -35,10 +35,10 @@ public class AssetDataForGtDto {
     private String conditionOfGoods;
     private String shelfLife;
     private LocalDateTime createDate;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime updatedDate;
     private Long igpId;
-    private Integer updatedBy;
+    private String updatedBy;
 
     private String custodianId;
     private Integer locatorId;
@@ -67,10 +67,10 @@ public class AssetDataForGtDto {
             String conditionOfGoods,
             String shelfLife,
             LocalDateTime createDate,
-            Integer createdBy,
+            String createdBy,
             LocalDateTime updatedDate,
             Long igpId,
-            Integer updatedBy,
+            String updatedBy,
             String custodianId,
             Integer locatorId,
             BigDecimal quantity,

@@ -4,6 +4,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SearchOutli
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { useLOVValuesByFormName } from '../../../hooks/useLOVValues';
+import store from '../../../store';
 
 const { Option } = Select;
 
@@ -139,7 +140,7 @@ const BudgetManagement = () => {
         status: values.status,
         departmentName: values.departmentName,
         projectCode: values.projectCode,
-        createdBy: 'admin' // Replace with actual user from auth state
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       console.log('Submitting budget payload:', payload);

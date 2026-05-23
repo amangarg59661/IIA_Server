@@ -33,8 +33,6 @@ public class WorkMasterServiceImpl implements WorkMasterService {
         workMaster.setWorkSubCategory(workMasterRequestDto.getWorkSubCategory());
     //    workMaster.setModeOfProcurement(workMasterRequestDto.getModeOfProcurement());
         workMaster.setWorkDescription(workMasterRequestDto.getWorkDescription());
-        workMaster.setCreatedBy(workMasterRequestDto.getCreatedBy());
-        workMaster.setUpdatedBy(workMasterRequestDto.getUpdatedBy());
 
         workMasterRepository.save(workMaster);
 
@@ -71,8 +69,6 @@ public class WorkMasterServiceImpl implements WorkMasterService {
         workMaster.setWorkSubCategory(workMasterRequestDto.getWorkSubCategory());
       //  workMaster.setModeOfProcurement(workMasterRequestDto.getModeOfProcurement());
         workMaster.setWorkDescription(workMasterRequestDto.getWorkDescription());
-        workMaster.setCreatedBy(workMasterRequestDto.getCreatedBy());
-        workMaster.setUpdatedBy(workMasterRequestDto.getUpdatedBy());
 
         workMasterRepository.save(workMaster);
 

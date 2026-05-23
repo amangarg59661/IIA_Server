@@ -20,9 +20,9 @@ public class DepartmentComputerPriceLimitResponseDTO {
 
     private Boolean isActive;
 
-    private Integer createdBy;
+    private String createdBy;
 
-    private Integer updatedBy;
+    private String updatedBy;
 
     private LocalDateTime createdDate;
 

@@ -53,8 +53,6 @@ public class MaterialDisposalServiceImpl implements MaterialDisposalService {
         materialDisposal.setSaleNoteFileName(saleNoteFileName);
         materialDisposal.setEditQuantity(materialDisposalRequestDTO.getEditQuantity());
         materialDisposal.setEditValueMaterials(materialDisposalRequestDTO.getEditValueMaterials());
-        materialDisposal.setCreatedBy(materialDisposalRequestDTO.getCreatedBy());
-        materialDisposal.setUpdatedBy(materialDisposalRequestDTO.getUpdatedBy());
         materialDisposal = materialDisposalRepository.save(materialDisposal);
 
         return mapToResponseDTO(materialDisposal);
@@ -107,8 +105,6 @@ public class MaterialDisposalServiceImpl implements MaterialDisposalService {
         materialDisposal.setEditQuantity(materialDisposalRequestDTO.getEditQuantity());
         materialDisposal.setEditValueMaterials(materialDisposalRequestDTO.getEditValueMaterials());
         materialDisposal.setSaleNoteFileName(saleNoteFileName);
-        materialDisposal.setCreatedBy(materialDisposalRequestDTO.getCreatedBy());
-        materialDisposal.setUpdatedBy(materialDisposalRequestDTO.getUpdatedBy());
         materialDisposal = materialDisposalRepository.save(materialDisposal);
 
         return mapToResponseDTO(materialDisposal);

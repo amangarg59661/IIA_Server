@@ -13,8 +13,8 @@ public class CompletedIndentsQueueResponse {
         private String workflowName;
         private Integer transitionId;
         private String requestId;
-        private Integer createdBy;
-        private Integer modifiedBy;
+        private String createdBy;
+        private String updatedBy;
         private String status;
         private String nextAction;
         private String action;
@@ -34,7 +34,7 @@ public class CompletedIndentsQueueResponse {
     private String consignee;
 
         public CompletedIndentsQueueResponse(Integer workflowTransitionId, Integer workflowId, String workflowName,
-                                             Integer transitionId, String requestId, Integer createdBy, Integer modifiedBy,
+                                             Integer transitionId, String requestId, String createdBy, String updatedBy,
                                              String status, String nextAction, String action, String remarks,
                                              Integer transitionOrder, Integer transitionSubOrder, String currentRole, String nextRole,
                                              Integer workflowSequence, Date modificationDate, Date createdDate,
@@ -46,7 +46,7 @@ public class CompletedIndentsQueueResponse {
             this.transitionId = transitionId;
             this.requestId = requestId;
             this.createdBy = createdBy;
-            this.modifiedBy = modifiedBy;
+            this.updatedBy = updatedBy;
             this.status = status;
             this.nextAction = nextAction;
             this.action = action;

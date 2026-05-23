@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { DepartmentApproversService, APPROVER_TYPE_OPTIONS, formatCurrency, DEFAULT_APPROVAL_LIMITS } from '../../../services/approvalWorkflowService';
+import store from '../../../store';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -179,8 +180,8 @@ const DepartmentApproverMapping = () => {
     try {
       const payload = {
         ...values,
-        createdBy: 'admin',
-        updatedBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin'),
+        updatedBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingRecord) {

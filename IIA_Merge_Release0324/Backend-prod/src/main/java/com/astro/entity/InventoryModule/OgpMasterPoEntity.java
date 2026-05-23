@@ -9,12 +9,19 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 
 import lombok.Data;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name="ogp_master_po")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class OgpMasterPoEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,9 +38,11 @@ public class OgpMasterPoEntity {
     private String locationId;
 
     @Column(name = "created_by", nullable = false)
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 
     @Column(name = "create_date", nullable = false)
+    @CreatedDate
     private LocalDateTime createDate;
 
     @Column(name = "ogp_type")

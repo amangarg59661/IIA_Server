@@ -29,25 +29,27 @@ public interface TenderRequestRepository extends JpaRepository<TenderRequest, St
 //     List<SearchTenderIdDto> findTenderIdsBySubmittedDate(@Param("startDate") LocalDateTime startDate,
 //                                                          @Param("endDate") LocalDateTime endDate);
 
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender) " +
+    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
             "FROM WorkflowTransition wt " +
             "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
             "WHERE wt.workflowName = 'Tender Approver Workflow' " +
             "AND wt.status = 'Completed' " +
             "AND wt.nextAction IS NULL " +
-            "AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) " +
-            "AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)")
+            "AND tr.lockedForPO IS NULL" )
+            // "AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) " +
+            // "AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)")
     List<ApprovedTenderIdDtos> findApprovedTenderIdsAndTitlesForPOANDSO();
 
-    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender) " +
+    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
             "FROM WorkflowTransition wt " +
             "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
             "WHERE wt.workflowName = 'Tender Approver Workflow' " +
             "AND wt.status = 'Completed' " +
             "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
            // "AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) " +
            // "AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so) " +
-            "AND tr.modeOfProcurement IN ('Gem','CPPP')")   // filter applied
+            "AND tr.modeOfProcurement IN ('Gem','CPPP','OPEN_TENDER', 'GLOBAL_TENDER')")   // filter applied
     List<ApprovedTenderIdDtos> findApprovedTenderIdsForGemAndTitlesForPOANDSO();
 
 
@@ -77,12 +79,12 @@ List<SearchTenderIdDto> findTenderIdsBySubmittedDate(@Param("startDate") LocalDa
     //  TenderRequest getByTenderId(String tenderId);
 
     @Query("SELECT t FROM TenderRequest t WHERE t.createdBy = :userId AND t.currentStatus = 'DRAFT'")
-List<TenderRequest> findDraftsByCreatedBy(@Param("userId") Integer userId);
+List<TenderRequest> findDraftsByCreatedBy(@Param("userId") String userId);
 
-List<TenderRequest> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
+List<TenderRequest> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
 
- @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender) " +
+ @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender , tr.bidType) " +
             "FROM WorkflowTransition wt " +
             "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
             "WHERE wt.workflowName = 'Tender Approver Workflow' " +

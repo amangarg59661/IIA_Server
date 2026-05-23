@@ -75,7 +75,6 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         }else{
             cp.setDate(null);
         }
-        cp.setCreatedBy(contigencyPurchaseDto.getCreatedBy());
 
         List<CpMaterials> materials = contigencyPurchaseDto.getCpMaterials().stream().map(materialDto -> {
             CpMaterials material = mapper.map(materialDto, CpMaterials.class);
@@ -198,7 +197,7 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
             dto.setPaymentToVendor((String) row[3]);
             dto.setPaymentToEmployee((String) row[4]);
             dto.setPurpose((String) row[5]);
-            dto.setCreatedBy(row[6] != null ? ((Number) row[6]).intValue() : null);
+            dto.setCreatedBy(row[6] != null ? String.valueOf(((Number) row[6]).intValue()) : null);
             dto.setPendingWith((String) row[7]);
 
             if (row[8] != null && row[8] instanceof Timestamp) {

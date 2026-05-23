@@ -42,7 +42,7 @@ public class TenderResponseDto {
     private String billinngAddress;
     private String consignes;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private List<String> indentIds;

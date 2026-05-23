@@ -13,7 +13,7 @@ public class IsnDto {
     private String consigneeDetail;
     private String indentorName;
     private String fieldStation;
-    private Integer createdBy;
+    private String createdBy;
     private String locationId;
     private String senderName;
     private List<IsnMaterialDtlDto> materialDtlList;

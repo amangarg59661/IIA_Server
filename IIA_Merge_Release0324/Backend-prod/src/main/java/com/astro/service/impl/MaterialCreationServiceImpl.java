@@ -50,8 +50,6 @@ public class MaterialCreationServiceImpl implements MaterialCreationService {
         materialCreation.setBuilding(materialCreationRequestDto.getBuilding());
         materialCreation.setUploadImage(materialCreationRequestDto.getUploadImage());
         materialCreation.setShelfLife(materialCreationRequestDto.getShelfLife());
-        materialCreation.setCreatedBy(materialCreationRequestDto.getCreatedBy());
-        materialCreation.setUpdatedBy(materialCreationRequestDto.getUpdatedBy());
         materialCreationRepository.save(materialCreation);
         return mapToResponseDTO(materialCreation);
     }
@@ -89,8 +87,6 @@ public class MaterialCreationServiceImpl implements MaterialCreationService {
         materialCreation.setBuilding(materialCreationRequestDto.getBuilding());
         materialCreation.setUploadImage(materialCreationRequestDto.getUploadImage());
         materialCreation.setShelfLife(materialCreationRequestDto.getShelfLife());
-        materialCreation.setUpdatedBy(materialCreationRequestDto.getUpdatedBy());
-        materialCreation.setCreatedBy(materialCreationRequestDto.getCreatedBy());
 
         materialCreationRepository.save(materialCreation);
 

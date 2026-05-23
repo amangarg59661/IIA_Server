@@ -24,4 +24,5 @@ public class UserRoleDto {
 
     // TC_14 FIX: Add first login flag to prompt password change
     private Boolean isFirstLogin;
+    private String token;
 }

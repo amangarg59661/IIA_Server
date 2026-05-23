@@ -94,7 +94,7 @@ const SubworkflowTransition = () => {
 
     const populateData = useCallback(async () => {
         try{
-            const {data} = await apiCall("GET", `getSubWorkflowTransitionQueue?modifiedBy=${userId}`)
+            const {data} = await apiCall("GET", `getSubWorkflowTransitionQueue?updatedBy=${userId}`)
            // setQueueData(data.responseData || [])
              // Filter only pending action records
         const allData = data.responseData || [];

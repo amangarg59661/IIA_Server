@@ -11,9 +11,9 @@ public class PoFormateApprovalHistory {
     private String nextAction;
     private String action;
     private String remarks;
-    private Integer createdBy;
+    private String createdBy;
     private String createdRole;
-    private Integer modifiedBy;
+    private String updatedBy;
     private Date modificationDate;
     private Date createdDate;
 }

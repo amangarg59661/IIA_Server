@@ -6,9 +6,12 @@ import lombok.Data;
 public class ApprovedTenderIdDtos {
     private String tenderId;
     private String title;
+    private String bidType;
 
-    public ApprovedTenderIdDtos(String tenderId, String title) {
+    public ApprovedTenderIdDtos(String tenderId, String title , String bidType) {
         this.tenderId = tenderId;
         this.title = title;
+        this.bidType = bidType;
+        
     }
 }

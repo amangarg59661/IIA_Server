@@ -9,7 +9,9 @@ public class VendorStatusDto {
     private String status;
     private String comments;
     private Boolean emailStatus;
-    private String password;
+    private String token;
     private Boolean isFirstLogin;
     private Boolean isTempPassword;
+    private Boolean emailSent;
+    private String createdDate;
 }

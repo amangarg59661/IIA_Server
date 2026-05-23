@@ -14,7 +14,7 @@ public class GrnDto {
     private String commissioningDate;
     private String grnDate;
     private String createdBy;
-    private Integer systemCreatedBy;
+    private String systemCreatedBy;
     private String locationId;
     private String custodianId;
     private Boolean storesStock;

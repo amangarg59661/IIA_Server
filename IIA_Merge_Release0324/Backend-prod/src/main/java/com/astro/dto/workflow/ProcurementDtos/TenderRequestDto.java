@@ -48,7 +48,7 @@ public class TenderRequestDto {
     private List<String> uploadSpecificTermsAndConditions;
     private String preBidDisscussions;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
     private List<String> indentId; // Updated
 
     private Boolean buyBack;

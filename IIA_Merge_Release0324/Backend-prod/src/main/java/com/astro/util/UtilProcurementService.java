@@ -141,7 +141,7 @@ String poRequestId = baseTenderId.replace("T", "PO");
             cancelledQuotation.setVersion(v.getVersion() + 1);
             cancelledQuotation.setIsLatest(true);
             cancelledQuotation.setStatus("CANCELLED");
-            cancelledQuotation.setModifiedBy(request.getActionBy());
+            cancelledQuotation.setUpdatedBy(String.valueOf(request.getActionBy()));
             cancelledQuotation.setCurrentRole(v.getCurrentRole());
             cancelledQuotation.setNextRole(v.getNextRole());
             cancelledQuotation.setCreatedDate(LocalDateTime.now());

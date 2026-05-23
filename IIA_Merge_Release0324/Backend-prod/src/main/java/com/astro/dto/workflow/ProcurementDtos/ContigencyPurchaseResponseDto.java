@@ -29,7 +29,7 @@ public class ContigencyPurchaseResponseDto {
     private Boolean declarationOne;
     private Boolean declarationTwo;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
     private String status;
     private String processStage;
     private LocalDateTime createdDate;

@@ -9,10 +9,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Date; // added by abhinav
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "purchase_order")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class PurchaseOrder {
 
 
@@ -117,28 +123,18 @@ public class PurchaseOrder {
     @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PurchaseOrderAttributes> purchaseOrderAttributes;
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     @Column(name = "updated_by")
+    @LastModifiedBy
     // private String updatedBy;
-    private Integer updatedBy; //updated by abhinav to Integer to match createdBy type
+    private String updatedBy; //updated by abhinav to Integer to match createdBy type
 
-    // private LocalDateTime createdDate = LocalDateTime.now();
-    // private LocalDateTime updatedDate = LocalDateTime.now();
-    // updated by abhinav the createdDate and updatedDate
     @Column(name = "created_date", updatable = false)
+    @CreatedDate
     private LocalDateTime createdDate;
 
     @Column(name = "updated_date")
+    @LastModifiedDate
     private LocalDateTime updatedDate;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdDate = LocalDateTime.now();
-        this.updatedDate = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedDate = LocalDateTime.now();
-    }
 }

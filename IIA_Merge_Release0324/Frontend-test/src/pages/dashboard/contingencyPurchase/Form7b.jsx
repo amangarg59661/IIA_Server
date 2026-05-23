@@ -22,6 +22,7 @@ import {
 } from "@ant-design/icons";
 import { Option } from "antd/es/mentions";
 import dayjs from "dayjs";
+import axios from "axios";
 import { useSelector } from "react-redux";
 import { values } from "lodash";
 // import LineItem from "../LineItem";
@@ -52,10 +53,7 @@ const Form7b = () => {
     const fetchVendors = async () => {
       setVendorLoading(true);
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/vendor-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/vendor-master");
 
         if (
           data.responseStatus.statusCode === 0 &&
@@ -80,10 +78,7 @@ const Form7b = () => {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/project-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/project-master");
 
         if (
           data.responseStatus.statusCode === 0 &&
@@ -110,10 +105,9 @@ const Form7b = () => {
     }
 
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/contigency-purchase/${contingencyId}`
+      const { data } = await axios.get(
+        `/api/contigency-purchase/${contingencyId}`
       );
-      const data = await response.json();
 
       if (data.responseData) {
         const purchase = data.responseData;
@@ -166,26 +160,17 @@ const Form7b = () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/file/upload?fileType=CP",
-        {
-          method: "POST",
-          body: formData,
-        }
+      const { data } = await axios.post(
+        "/file/upload?fileType=CP",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.responseStatus?.message || "File upload failed"
-        );
-      }
-
-      const data = await response.json();
       return data.responseData.fileName;
     } catch (error) {
+      const errorMsg = error.response?.data?.responseStatus?.message || "File upload failed";
       console.error(`File upload error (${fieldName}):`, error);
-      throw new Error(`Failed to upload ${fieldName}: ${error.message}`);
+      throw new Error(`Failed to upload ${fieldName}: ${errorMsg}`);
     }
   };
   // Modified submit function
@@ -257,31 +242,17 @@ const Form7b = () => {
       };
 
       // Submit as JSON
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/contigency-purchase",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
+      const { data: responseData } = await axios.post(
+        "/api/contigency-purchase",
+        payload
       );
-
-      const responseData = await response.json();
-
-    if (!response.ok) {
-      throw new Error(
-        responseData.responseStatus?.message || "Submission failed"
-      );
-    }
 
     // Fix 1: Check correct response structure
     if (responseData.responseData?.contigencyId) {
       setGeneratedContingencyId(responseData.responseData?.contigencyId);
       setShowSuccessModal(true);  // Fix 2: Ensure modal state is set
       message.success("Contingency purchase created successfully");
-    } 
+    }
     else {
       throw new Error("No contingency ID in response");
     }
@@ -296,12 +267,7 @@ const Form7b = () => {
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/material-master"
-        );
-        if (!response.ok) throw new Error("Failed to fetch materials");
-
-        const data = await response.json();
+        const { data } = await axios.get("/api/material-master");
         if (!data.responseData)
           throw new Error("Invalid material master response");
 

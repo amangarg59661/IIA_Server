@@ -4,10 +4,16 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.util.Date;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "ACTION_MASTER")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class ActionMaster {
 
     @Id
@@ -19,6 +25,7 @@ public class ActionMaster {
     private String actionName;
 
     @Column(name = "CREATEDBY")
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "CREATEDDATE")

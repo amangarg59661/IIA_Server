@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { FieldStationApproversService, INCHARGE_TYPE_OPTIONS, formatCurrency } from '../../../services/approvalWorkflowService';
+import store from '../../../store';
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -175,8 +176,8 @@ const FieldStationApproverConfig = () => {
       const payload = {
         ...values,
         roleName: selectedRole?.roleName || (values.inchargeType === 'ENGINEER_INCHARGE' ? 'Engineer In-Charge' : 'Professor In-Charge'),
-        createdBy: 'admin',
-        updatedBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin'),
+        updatedBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingRecord) {

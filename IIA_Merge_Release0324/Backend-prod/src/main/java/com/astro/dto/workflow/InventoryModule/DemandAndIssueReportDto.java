@@ -19,7 +19,7 @@ public class DemandAndIssueReportDto {
     private LocalDateTime createDate;
 
     private Date demandIssueDate;
-    private Integer createdBy;
+    private String createdBy;
 
     private Date issueDate;
     private Integer issuedBy;

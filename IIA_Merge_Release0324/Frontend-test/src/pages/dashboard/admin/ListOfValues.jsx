@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Select, Input, Button, Table, Space, message, Modal, Form, Tag, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import store from '../../../store';
 
 const { Option } = Select;
 
@@ -183,7 +184,7 @@ const [locationLoading, setLocationLoading] = useState(false);
         ...values,
         designatorId: selectedDesignator,
         // locationCode: locationCode,
-        createdBy: 'admin' // Replace with actual user from auth state
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       console.log('Submitting LOV payload:', payload);

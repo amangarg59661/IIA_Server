@@ -51,7 +51,7 @@ const TenderEvaluator = ({ tenderId, actionStatus }) => {
   // ─── NEW EFFECT: FETCH AND COMPARE CLOSING DATE ──────────────────────────────
  useEffect(() => {
   axios
-    .get(`/api/tender-requests/data/byId`, {params: {tenderId: tenderNumber, version: tenderVersion}})
+    .get(`/api/tender-requests/data`, {params: {tenderId: tenderNumber, version: tenderVersion}})
     .then(res => {
       const cdString = res.data.responseData.closingDate; // e.g., "10/05/2025"
       if (!cdString) return;
@@ -159,7 +159,7 @@ const handleFileChange = (docName, fileData) => {
         vendorId: vendorId,  // assuming vendorId = userId or you can try with V1001
         quotationFileName: serverFileName,
         fileType: "Tender",
-        createdBy: null
+        createdBy: vendorId
       };
 
       const response = await axios.post(
@@ -261,7 +261,7 @@ const handleFileChange = (docName, fileData) => {
       vendorId: vendorId,
       quotationFileName: quotationFileName,
       fileType: 'Tender',
-      createdBy: null,
+      createdBy: vendorId,
     //  ...(bidType === 'Double' && { priceBidFileName }), // include if double
     ...((bidType === 'Double' || bidType === 'Single') && { priceBidFileName }),
     ...(actionStatus === 'CHANGE_REQUESTED' && {

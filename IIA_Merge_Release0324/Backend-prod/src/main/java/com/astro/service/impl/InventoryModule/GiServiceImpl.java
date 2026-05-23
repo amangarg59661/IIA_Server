@@ -113,7 +113,7 @@ private int extractSubProcessId(String processNo) {
         gprnService.validateGprnSubProcessId(req.getGprnNo());
        Integer gprn = extractSubProcessId(req.getGprnNo());
         GprnMasterEntity gprnForCheck = gprnMasterRepository.findBySubProcessId(gprn);
-if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
+if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy() != null ? Integer.valueOf(req.getCreatedBy()) : null, req.getRole())) {
     throw new BusinessException(new ErrorDetails(
             AppConstant.ERROR_CODE_RESOURCE,
             AppConstant.ERROR_TYPE_CODE_RESOURCE,
@@ -485,7 +485,7 @@ giRes.setSpoRejectionCount(gime.getSpoRejectionCount());
         return combinedRes;
     }
 
-    private NewAssetResponseDto createNewAsset(GiMaterialDtlDto materialDtl, Integer createdBy, String poId, String locationId) {
+    private NewAssetResponseDto createNewAsset(GiMaterialDtlDto materialDtl, String createdBy, String poId, String locationId) {
         MaterialMaster mme = mmr.findById(materialDtl.getMaterialCode())
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,
@@ -1039,7 +1039,7 @@ public void rejectGi(GiApprovalDto req) {
         extractSubProcessId(req.getGprnNo())
         // Integer.parseInt(processNoSplit[1])
         );
-if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy(), req.getRole())) {
+if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreatedBy() != null ? Integer.valueOf(req.getCreatedBy()) : null, req.getRole())) {
     throw new BusinessException(new ErrorDetails(
             AppConstant.ERROR_CODE_RESOURCE,
             AppConstant.ERROR_TYPE_CODE_RESOURCE,
@@ -1235,8 +1235,8 @@ public boolean isGprnAccessibleToUser(GprnMasterEntity gprn, Integer userId, Str
 
     int indentCount = gprnMasterRepository.countIndentsByTenderId(tenderId);
     if (indentCount == 1) {
-        Integer indentorUserId = gprnMasterRepository.findSingleIndentCreatedByForTender(tenderId);
-        return userId != null && userId.equals(indentorUserId);
+        String indentorUserId = gprnMasterRepository.findSingleIndentCreatedByForTender(tenderId);
+        return userId != null && String.valueOf(userId).equals(indentorUserId);
     }
     return false;
 }

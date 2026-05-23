@@ -34,9 +34,9 @@ public class poWithTenderAndIndentResponseDTO {
  private List<String> indentIds;
  private String deliveryDate;
  private List<PurchaseOrderAttributesResponseDTO> purchaseOrderAttributes;
- private Integer createdBy;
+ private String createdBy;
 //  private String updatedBy;
- private Integer updatedBy; //updated by abhinav to Integer to match createdBy type
+ private String updatedBy; //updated by abhinav to Integer to match createdBy type
  private String comparativeStatementFileName;
  private LocalDateTime createdDate;
  private LocalDateTime updatedDate;

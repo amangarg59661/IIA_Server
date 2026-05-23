@@ -11,7 +11,7 @@ public class VendorQuotationAgainstTenderDto {
     private String quotationFileName;
     private String priceBidFileName;
     private String fileType;
-    private Integer createdBy;
+    private String createdBy;
     private Integer version;
     private String remarks;
     private String status;

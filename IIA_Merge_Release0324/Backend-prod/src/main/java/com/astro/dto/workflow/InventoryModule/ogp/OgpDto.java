@@ -8,7 +8,7 @@ public class OgpDto {
     private String ogpDate;
     private String issueNoteId;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private String senderName;
     private String receiverName;
     private String receiverLocation;

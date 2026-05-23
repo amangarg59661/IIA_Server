@@ -334,6 +334,8 @@ public class LOVController {
         lov.setColorCode(dto.getColorCode());
         lov.setIconName(dto.getIconName());
         lov.setParentLovId(dto.getParentLovId());
+        lov.setCreatedBy(dto.getCreatedBy());
+        lov.setUpdatedBy(dto.getUpdatedBy());
         return lov;
     }
 }

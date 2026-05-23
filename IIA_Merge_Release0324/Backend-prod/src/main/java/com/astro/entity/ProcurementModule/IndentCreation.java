@@ -4,6 +4,12 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Data
 @Getter
 @Setter
@@ -171,17 +178,21 @@ public class IndentCreation {
     @Column(name = "approval_level")
     private Integer approvalLevel = 0;
 
+    @CreatedBy
     @Column(name = "created_by")
-    private Integer createdBy;
+    private String createdBy;
 
+    @LastModifiedBy
     @Column(name = "updated_by")
     private String updatedBy;
 
+    @CreatedDate
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    private LocalDateTime createdDate;
 
+    @LastModifiedDate
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    private LocalDateTime updatedDate;
 
     // Add this column
 @Column(name = "indentor_department")

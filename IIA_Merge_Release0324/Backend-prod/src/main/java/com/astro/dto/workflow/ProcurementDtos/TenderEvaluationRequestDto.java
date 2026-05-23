@@ -15,13 +15,13 @@ public class TenderEvaluationRequestDto {
     private String responseForCommeriallyQualifiedVendorsFileName;
     private String fileType;
     private String updatedBy;
-    private Integer createdBy;
-    private Integer uploadQualifiedVendorsFileNameCreatedBy;
-    private Integer uploadTechnicallyQualifiedVendorsFileNameCreatedBy;
-    private Integer uploadCommeriallyQualifiedVendorsFileNameCreatedBy;
-    private Integer formationOfTechnoCommerialComiteeCreatedBy;
-    private Integer responseFileNameCreatedBy;
-    private Integer responseForTechnicallyQualifiedVendorsFileNameCreatedBy;
-    private Integer responseForCommeriallyQualifiedVendorsFileNameCreatedBy;
+    private String createdBy;
+    private String uploadQualifiedVendorsFileNameCreatedBy;
+    private String uploadTechnicallyQualifiedVendorsFileNameCreatedBy;
+    private String uploadCommeriallyQualifiedVendorsFileNameCreatedBy;
+    private String formationOfTechnoCommerialComiteeCreatedBy;
+    private String responseFileNameCreatedBy;
+    private String responseForTechnicallyQualifiedVendorsFileNameCreatedBy;
+    private String responseForCommeriallyQualifiedVendorsFileNameCreatedBy;
 
 }

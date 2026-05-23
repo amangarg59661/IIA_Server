@@ -11,12 +11,19 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 
 import lombok.Data;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Data
 @Entity
 @Table(name = "issue_note_master")
+@EntityListeners(AuditingEntityListener.class)
 public class IsnMasterEntity {
     
     @Id
@@ -41,9 +48,11 @@ public class IsnMasterEntity {
     private String fieldStation;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 
     @Column(name = "create_date")
+    @CreatedDate
     private LocalDateTime createDate;
 
     @Column(name="location_id")

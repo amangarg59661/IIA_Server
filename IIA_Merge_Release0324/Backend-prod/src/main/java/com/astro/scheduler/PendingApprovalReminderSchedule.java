@@ -72,7 +72,7 @@ public class PendingApprovalReminderSchedule {
             List<String> recipients = new ArrayList<>();
 
             // Get user details (PO creator) from UserMaster using createdBy
-            UserMaster user = userMasterRepository.findById(po.getCreatedBy())
+            UserMaster user = userMasterRepository.findById(Integer.valueOf(po.getCreatedBy()))
                     .orElse(null);
             if (user != null && user.getEmail() != null) {
                 recipients.add(user.getEmail());
@@ -103,7 +103,7 @@ public void sendExpiringAMCNotifications() throws MessagingException {
             List<String> recipients = new ArrayList<>();
 
             // Get indentor (creator of SO)
-            UserMaster indentor = userMasterRepository.findById(so.getCreatedBy()).orElse(null);
+            UserMaster indentor = userMasterRepository.findById(Integer.valueOf(so.getCreatedBy())).orElse(null);
             if (indentor != null && indentor.getEmail() != null) {
                 recipients.add(indentor.getEmail());
             }

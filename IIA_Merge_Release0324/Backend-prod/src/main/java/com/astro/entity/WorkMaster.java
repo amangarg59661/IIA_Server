@@ -5,11 +5,17 @@ import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
 @Table(name = "work_master")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class WorkMaster {
 
     @Id
@@ -25,10 +31,14 @@ public class WorkMaster {
     @Column(name = "work_description")
     private String workDescription;
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 }

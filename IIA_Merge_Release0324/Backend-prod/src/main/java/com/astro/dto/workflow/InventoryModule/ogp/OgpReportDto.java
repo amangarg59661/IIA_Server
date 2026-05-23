@@ -11,7 +11,7 @@ public class OgpReportDto {
     private Integer issueNoteId;
     private String ogpDate;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createDate;
     private List<OgpDetailReportDto> ogpDetails;
 }

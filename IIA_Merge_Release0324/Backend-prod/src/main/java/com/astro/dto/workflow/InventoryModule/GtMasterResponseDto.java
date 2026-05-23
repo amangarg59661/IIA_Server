@@ -17,7 +17,7 @@ public class GtMasterResponseDto {
     private Integer receiverCustodianId;
     private String gtDate;
     private String status;
-    private Integer createdBy;
+    private String createdBy;
     private String createDate;
 
     private List<GtDtlDto> materialDtlList;

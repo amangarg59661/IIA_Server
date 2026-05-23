@@ -18,7 +18,7 @@ public class TenderEvaluationHistory {
     private String remarks;
     private Integer version;
     private Boolean isLatest;
-    private Integer createdBy;
+    private String createdBy;
     private String acceptanceStatus;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
@@ -29,7 +29,7 @@ public class TenderEvaluationHistory {
     private String spoRemarks;
     private Boolean changeRequestToIndentor;
 
-    private Integer modifiedBy;
+    private String updatedBy;
     private VendorQuotationAgainstTender.WorkflowActorRole currentRole;
     private VendorQuotationAgainstTender.WorkflowActorRole nextRole;
 }

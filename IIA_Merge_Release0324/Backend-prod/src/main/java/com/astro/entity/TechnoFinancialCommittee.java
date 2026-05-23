@@ -4,10 +4,16 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Data
 @Entity
 @Table(name = "techno_financial_committee")
+@EntityListeners(AuditingEntityListener.class)
 public class TechnoFinancialCommittee {
 
     @Id
@@ -42,11 +48,14 @@ public class TechnoFinancialCommittee {
     private Boolean isActive = true;
 
     @Column(name = "created_by", length = 100)
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 }

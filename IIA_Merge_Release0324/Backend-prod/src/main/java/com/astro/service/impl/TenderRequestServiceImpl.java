@@ -523,7 +523,7 @@ tenderRequest.setParentTenderId(null);  // ADD
     }
 
     public List<TenderResponseDto> getUserTenderDrafts(Integer userId) {
-        return TRrepo.findByCreatedByAndCurrentStatus(userId, "DRAFT").stream()
+        return TRrepo.findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT").stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -1132,12 +1132,12 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
           String spoStatus = latest.getSpoStatus() != null ? latest.getSpoStatus().trim().toUpperCase() : null;
           String indentorStatus = latest.getIndentorStatus() != null ? latest.getIndentorStatus().trim().toUpperCase() : null;
 
-          final Integer modifiedBy = latest.getModifiedBy();
+          final String updatedBy = latest.getUpdatedBy();
           final String roleName;
-          if(modifiedBy==1){
+          if("1".equals(updatedBy)){
               roleName="Vendor";
           }else{
-              roleName = resolveRoleName(modifiedBy);
+              roleName = resolveRoleName(updatedBy != null ? Integer.valueOf(updatedBy) : null);
           }
 
           //  Indentor → Vendor change request first

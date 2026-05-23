@@ -9,9 +9,9 @@ public class IndentWorkflowStatusDto {
 
     private String requestId;
 
-    private Integer createdBy;
+    private String createdBy;
 
-    private Integer modifiedBy;
+    private String updatedBy;
 
     private String status;
 

@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, useRef, useState } from "react";
+import axios from "axios";
 import {
   Form,
   Input,
@@ -146,10 +147,7 @@ const Form1 = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/location-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/location-master");
 
         if (
           data.responseStatus.statusCode === 0 &&
@@ -172,10 +170,7 @@ const Form1 = () => {
     const fetchProjects = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/project-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/project-master");
 
         if (
           data.responseStatus.statusCode === 0 &&
@@ -199,10 +194,7 @@ const Form1 = () => {
   useEffect(() => {
     const fetchMaterials = async () => {
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/material-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/material-master");
 
         if (!data.responseData) throw new Error("Invalid material data");
 
@@ -282,20 +274,14 @@ const handleSaveDraft = async () => {
 
     try {
         setDraftBtnLoading(true);
-        let response;
+        let data;
         if (editingIndentId) {
-            response = await fetch(
-                `http://103.181.158.220:8081/astro-service/api/indents/draft?indentId=${editingIndentId}`,
-                { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-            );
+            const response = await axios.put(`/api/indents/draft?indentId=${editingIndentId}`, payload);
+            data = response.data;
         } else {
-            response = await fetch(
-                "http://103.181.158.220:8081/astro-service/api/indents/draft",
-                { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }
-            );
+            const response = await axios.post("/api/indents/draft", payload);
+            data = response.data;
         }
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.responseStatus?.message || "Draft save failed");
         setEditingIndentId(data.responseData?.indentId);
         setShowDraftSavedModal(true);
     } catch (error) {
@@ -324,14 +310,7 @@ const handleSaveDraft = async () => {
     }
 
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/indents/${indentId}`
-      );
-
-      if (!response.ok)
-        throw new Error(`Failed to fetch data: ${response.statusText}`);
-
-      const data = await response.json();
+      const { data } = await axios.get(`/api/indents/${indentId}`);
 
       if (!data.responseData) {
         throw new Error("Invalid API response: responseData is missing");
@@ -438,20 +417,11 @@ const handleSaveDraft = async () => {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/file/upload?fileType=Indent",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${auth.token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.responseStatus?.message || "Upload failed");
+      const { data } = await axios.post("/file/upload?fileType=Indent", formData, {
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+        },
+      });
 
       return data.responseData.fileName;
     } catch (error) {
@@ -588,19 +558,13 @@ const handleSaveDraft = async () => {
 
       const isEditing = !!editingIndentId;
       const submitUrl = isEditing
-        ? `http://103.181.158.220:8081/astro-service/api/indents/${editingIndentId}`
-        : "http://103.181.158.220:8081/astro-service/api/indents";
-      const response = await fetch(submitUrl, {
-        method: isEditing ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+        ? `/api/indents/${editingIndentId}`
+        : "/api/indents";
+      const { data: responseData } = isEditing
+        ? await axios.put(submitUrl, payload)
+        : await axios.post(submitUrl, payload);
 
-      const responseData = await response.json();
-
-      if (!response.ok || responseData.responseStatus.statusCode !== 0) {
+      if (responseData.responseStatus.statusCode !== 0) {
         throw new Error(
           responseData.responseStatus?.message || "Submission failed"
         );
@@ -766,11 +730,7 @@ const handleSaveDraft = async () => {
       // Trigger the same search logic used by the search button
       (async () => {
         try {
-          const response = await fetch(
-            `http://103.181.158.220:8081/astro-service/api/indents/${navIndentId}`
-          );
-          if (!response.ok) throw new Error("Failed to fetch indent");
-          const data = await response.json();
+          const { data } = await axios.get(`/api/indents/${navIndentId}`);
           const responseData = data.responseData;
           if (!responseData) throw new Error("No indent data");
 

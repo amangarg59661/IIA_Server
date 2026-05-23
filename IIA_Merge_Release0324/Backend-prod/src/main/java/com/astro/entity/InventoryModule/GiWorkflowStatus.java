@@ -4,9 +4,15 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class GiWorkflowStatus {
 
     @Id
@@ -26,9 +32,11 @@ public class GiWorkflowStatus {
     private String remarks;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 
     @Column(name = "create_date")
-    private LocalDateTime createDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createDate;
 
 }

@@ -39,8 +39,8 @@ private Integer poVersion;
     private List<String> gemContractFileName;
     private BigDecimal buyBackAmount;
     private List<PurchaseOrderAttributesResponseDTO> purchaseOrderAttributes;
-    private Integer createdBy;
-    private Integer updatedBy; // updated by abhinav
+    private String createdBy;
+    private String updatedBy; // updated by abhinav
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 

@@ -26,7 +26,7 @@ const Form1 = () => {
 const [showCityField, setShowCityField] = useState(true);
 // End
   const auth = useSelector((state) => state.auth);
-  const actionPerformer = auth.userId;
+  const actionPerformer = auth.vendorId;
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();

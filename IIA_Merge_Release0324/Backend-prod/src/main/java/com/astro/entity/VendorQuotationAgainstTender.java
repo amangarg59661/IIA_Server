@@ -5,10 +5,16 @@ import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Date;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Data
 @Entity
 @Table(name = "Vendor_quotation_against_tender")
+@EntityListeners(AuditingEntityListener.class)
 public class VendorQuotationAgainstTender {
 
     @Id
@@ -33,12 +39,15 @@ public class VendorQuotationAgainstTender {
     private Boolean isLatest;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     @Column(name = "acceptance_status")
     private String acceptanceStatus;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
 
     @Column(name = "indentor_status")
@@ -58,7 +67,7 @@ public class VendorQuotationAgainstTender {
     private Boolean changeRequestToIndentor = false;
 
    @Column(name = "modified_by")
-   private Integer modifiedBy; // who performed this action/version
+   private String updatedBy; // who performed this action/version
 
    @Enumerated(EnumType.STRING)
    @Column(name = "current_role")

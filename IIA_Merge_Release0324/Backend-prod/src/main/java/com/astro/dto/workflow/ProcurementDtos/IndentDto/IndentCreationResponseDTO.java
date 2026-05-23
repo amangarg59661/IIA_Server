@@ -62,7 +62,7 @@ public class IndentCreationResponseDTO {
     private String buyBackAmount;
     private String uploadBuyBackFileNames;
     private String employeeDepartment;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
 
     private Boolean cancelStatus;

@@ -1,4 +1,5 @@
 import React, { forwardRef, useEffect, useState } from "react";
+import axios from "axios";
 import logo from "../assets/images/iia-logo.png";
 
 const PrintFormate = forwardRef(({ data }, ref) => {
@@ -16,16 +17,11 @@ const PrintFormate = forwardRef(({ data }, ref) => {
   const fetchDownloadLinks = async (fileNames, type) => {
     const promises = fileNames.map(async (fileName) => {
       try {
-        const response = await fetch(`http://localhost:8081/astro-service/file/download/Indent/${fileName}`, {
-          method: 'GET'
+        const response = await axios.get(`/file/download/Indent/${fileName}`, {
+          responseType: 'blob'
         });
 
-      if (!response.ok) {
-        console.error(`Failed to fetch ${fileName}:`, response.status);
-        return null;
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
       if (blob.size === 0) {
         console.warn(`Blob is empty for file: ${fileName}`);
         return null;
@@ -91,7 +87,7 @@ useEffect(() => {
       <div className="flex flex-col gap-1">
         {fileNames.map((fileName, index) => {
           const encodedFileName = encodeURIComponent(fileName.trim());
-          const url = `http://localhost:8081/astro-service/file/download/Indent/${encodedFileName}`;
+          const url = `/file/download/Indent/${encodedFileName}`;
           return (
             <a
               key={index}

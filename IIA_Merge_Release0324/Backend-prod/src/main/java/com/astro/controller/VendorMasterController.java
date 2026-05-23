@@ -98,12 +98,7 @@ public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendo
 
     return ResponseEntity.ok(finalResponse);
 }
-    // @GetMapping("/approvedtenderIDs/{vendorId}")
-    // public ResponseEntity<Object> getAllTenderIdsByVendor(@PathVariable String vendorId) {
-    //     List<approvedTenderIdWithTitle> response = vendorMasterService.getTenderIds(vendorId);
-    //     return ResponseEntity.ok(ResponseBuilder.getSuccessResponse(response));
-    // }
-// End
+  
     @GetMapping("/vendorIdVendorName")
     public ResponseEntity<Object> getAllvendorIdVendorNames() {
         List<VendorIdNameDTO> response = vendorMasterService.getAllVendorIdAndName();

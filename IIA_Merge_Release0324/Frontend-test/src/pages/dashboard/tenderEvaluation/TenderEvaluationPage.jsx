@@ -33,12 +33,15 @@ const STATUS_COLOR = {
 };
 
 // context-aware label; pass indentCategory when available
-const evalStatusLabel = (s, indentCategory) => {
+const evalStatusLabel = (s, indentCategory, bidType) => {
   if (!s || s === "PENDING_INITIATION") return "Pending Initiation";
   if (s === "PENDING_APPROVAL") {
     return indentCategory === "MULTIPLE_INDENT"
       ? "Pending Approval from Purchase Personnel"
       : "Pending Approval from Indentor";
+  }
+  if (s === "PENDING_FINANCIAL" && bidType && bidType.toUpperCase().includes("SINGLE")) {
+    return "Pending Evaluation";
   }
   const map = {
     PENDING_TECHNICAL:               "Pending Technical Evaluation",
@@ -485,27 +488,6 @@ const TenderEvaluationPage = () => {
     }
   };
 
-  // Acknowledge Clarification (evaluator)
-  const handleAcknowledgeClarification = async () => {
-    setActionLoading(true);
-    try {
-      await axios.post(
-        '/api/tender-evaluation/respond-clarification',
-        {
-          respondedByRole: backendRole,
-          respondedById:   String(auth.userId),
-          responseText:    "ACKNOWLEDGED",
-        },
-        { params: { tenderId: selectedEval.tenderId } }
-      );
-      message.success("Clarification acknowledged.");
-      await loadEval(selectedEval.tenderId);
-    } catch (e) {
-      message.error(e?.response?.data?.message || "Acknowledge failed.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   // Reject entire evaluation
   const handleRejectEvalConfirm = async () => {
@@ -613,11 +595,6 @@ const TenderEvaluationPage = () => {
       ) &&
     vendors.filter((v) => v.indentorStatus === "ACCEPTED").length > 0;
 
-  // Acknowledge button: evaluator, clarification pending from vendor, none CHANGE_REQUESTED
-  const showAcknowledge =
-    isEvaluator &&
-    selectedEval?.clarificationPendingFrom === "VENDOR" &&
-    vendors.every((v) => v.status !== "CHANGE_REQUESTED");
 
   // Show Initiate button: PP only, no status or PENDING_INITIATION
   const showInitiate =
@@ -879,7 +856,7 @@ const TenderEvaluationPage = () => {
         return (
           <Badge
             status={STATUS_COLOR[s] || "default"}
-            text={evalStatusLabel(s, r.evalData?.indentCategory)}
+            text={evalStatusLabel(s, r.evalData?.indentCategory, r.bidType)}
           />
         );
       },
@@ -969,7 +946,7 @@ const TenderEvaluationPage = () => {
             </Title>
             <Badge
               status={STATUS_COLOR[evalStatus] || "default"}
-              text={evalStatusLabel(evalStatus, indentCategory)}
+              text={evalStatusLabel(evalStatus, indentCategory, bidType)}
             />
             <Tag>{bidType || "N/A"}</Tag>
             <Tag>{indentCategory || "N/A"}</Tag>
@@ -1079,16 +1056,6 @@ const TenderEvaluationPage = () => {
                 </Tooltip>
               )}
 
-              {/* Acknowledge Clarification */}
-              {showAcknowledge && (
-                <Button
-                  type="default"
-                  loading={actionLoading}
-                  onClick={handleAcknowledgeClarification}
-                >
-                  Acknowledge Clarification
-                </Button>
-              )}
             </Space>
           )}
 
@@ -1113,15 +1080,6 @@ const TenderEvaluationPage = () => {
                     Confirm Evaluation
                   </Button>
                 </Tooltip>
-                {showAcknowledge && (
-                  <Button
-                    type="default"
-                    loading={actionLoading}
-                    onClick={handleAcknowledgeClarification}
-                  >
-                    Acknowledge Clarification
-                  </Button>
-                )}
               </Space>
             )}
 

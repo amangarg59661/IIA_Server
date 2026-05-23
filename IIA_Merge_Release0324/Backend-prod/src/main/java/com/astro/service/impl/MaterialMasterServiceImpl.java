@@ -78,8 +78,6 @@ public class MaterialMasterServiceImpl implements MaterialMasterService {
      //   materialMaster.setUploadImageName(materialMasterRequestDto.getUploadImageFileName());
         materialMaster.setIndigenousOrImported(materialMasterRequestDto.getIndigenousOrImported());
         materialMaster.setEstimatedPriceWithCcy(materialMasterRequestDto.getEstimatedPriceWithCcy());
-        materialMaster.setCreatedBy(materialMasterRequestDto.getCreatedBy());
-        materialMaster.setUpdatedBy(materialMasterRequestDto.getUpdatedBy());
         materialMasterRepository.save(materialMaster);
       /*  // Saveing Vendornames in different table
         if (materialMasterRequestDto.getVendorNames() != null && !materialMasterRequestDto.getVendorNames().isEmpty()) {

@@ -350,7 +350,7 @@ public class DiServiceImpl implements DiService {
         di.setSenderLocationId(diMasterDto.getSenderLocationId());
         di.setSenderCustodianId(diMasterDto.getSenderCustodianId());
         di.setIssueDate(LocalDate.now());
-        di.setIssuedBy(diMasterDto.getCreatedBy());
+        di.setIssuedBy(diMasterDto.getCreatedBy() != null ? Integer.valueOf(diMasterDto.getCreatedBy()) : null);
         di.setStatus("Approved");
         demandAndIssueMasterEntityRepository.save(di);
 
@@ -472,9 +472,9 @@ public class DiServiceImpl implements DiService {
             dto.setSenderCustodianId((Integer) row[3]);
             dto.setCreateDate(((Timestamp) row[4]).toLocalDateTime());
             dto.setDemandIssueDate(row[5] != null ? ((Date) row[5]) : null);
-            dto.setCreatedBy((Integer) row[6]);
+            dto.setCreatedBy(row[6] != null ? String.valueOf(row[6]) : null);
             dto.setIssueDate(row[7] != null ? ((Date) row[7]) : null);
-            dto.setIssuedBy((Integer) row[8]);
+            dto.setIssuedBy(row[8] != null ? ((Number) row[8]).intValue() : null);
 
             // Parse Materials JSON Safely
             try {

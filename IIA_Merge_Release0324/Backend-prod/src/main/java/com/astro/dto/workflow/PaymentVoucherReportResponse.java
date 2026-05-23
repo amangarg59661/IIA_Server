@@ -37,7 +37,7 @@ public class PaymentVoucherReportResponse {
         private Double advanceAmount;
         private Double paidAmount;
         private String soId;
-        private Integer createdBy;
+        private String createdBy;
         private String createdDate;
         private List<MaterialData> materials;
     }

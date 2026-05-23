@@ -15,6 +15,7 @@ import {
 } from "@ant-design/icons";
 import TextArea from "antd/es/input/TextArea";
 import { useSelector } from "react-redux";
+import axios from "axios";
 
 const { Option } = Select;
 
@@ -37,17 +38,15 @@ const Form7a = () => {
     const fetchInitialData = async () => {
       try {
         // Fetch approved tender IDs
-        const approvedResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/getApprovedTenderIdForPOAndSO"
+        const { data: approvedData } = await axios.get(
+          "/getApprovedTenderIdForPOAndSO"
         );
-        const approvedData = await approvedResponse.json();
         const approvedIds = approvedData.responseData || [];
 
         // Fetch all tenders
-        const tendersResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/tender-requests"
+        const { data: tendersData } = await axios.get(
+          "/api/tender-requests"
         );
-        const tendersData = await tendersResponse.json();
         const allTenders = tendersData.responseData || [];
 
         // Filter approved tenders
@@ -57,10 +56,9 @@ const Form7a = () => {
         setTenders(approvedTenders);
 
         // Fetch vendors
-        const vendorsResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/vendor-master"
+        const { data: vendorsData } = await axios.get(
+          "/api/vendor-master"
         );
-        const vendorsData = await vendorsResponse.json();
         setVendors(vendorsData.responseData || []);
       } catch (error) {
         console.error("Initial data fetch error:", error);
@@ -93,10 +91,9 @@ const Form7a = () => {
     form.resetFields(["lineItems"]);
 
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/tender-requests/${tenderId}`
+      const { data } = await axios.get(
+        `/api/tender-requests/${tenderId}`
       );
-      const data = await response.json();
 
       if (!data.responseData) {
         message.error("No Tender data found");
@@ -115,10 +112,9 @@ const Form7a = () => {
       const allServices = await Promise.all(
         indents.map(async (indent) => {
           try {
-            const response = await fetch(
-              `http://103.181.158.220:8081/astro-service/api/indents/${indent.indentId}`
+            const { data } = await axios.get(
+              `/api/indents/${indent.indentId}`
             );
-            const data = await response.json();
 
             return (data.responseData?.materialDetails || []).map((item) => ({
               materialCode: item.materialCode,
@@ -163,10 +159,9 @@ const Form7a = () => {
 
     setSearching(true);
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/service-orders/${soId}`
+      const { data } = await axios.get(
+        `/api/service-orders/${soId}`
       );
-      const data = await response.json();
 
       if (!data.responseData) {
         message.warning("No service order found for this SO ID");
@@ -274,10 +269,9 @@ const Form7a = () => {
   // Fetch Service Details from Indent API
   const fetchServiceDetails = async (indentId) => {
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/indents/${indentId}`
+      const { data } = await axios.get(
+        `/api/indents/${indentId}`
       );
-      const data = await response.json();
 
       if (!data.responseData || !data.responseData.materialDetails) {
         message.error("No Service Details found");
@@ -347,18 +341,11 @@ const Form7a = () => {
         updatedBy: null,
       };
 
-      const response = await fetch("http://103.181.158.220:8081/astro-service/api/service-orders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await axios.post("/api/service-orders", payload);
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (response.status < 200 || response.status >= 300) {
         throw new Error(
-          errorData.responseStatus?.message || "Submission failed"
+          response.data?.responseStatus?.message || "Submission failed"
         );
       }
 

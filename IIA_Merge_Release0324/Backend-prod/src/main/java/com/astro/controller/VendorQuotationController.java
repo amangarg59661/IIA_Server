@@ -4,6 +4,7 @@ import com.astro.dto.workflow.*;
 import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
 import com.astro.dto.workflow.ProcurementDtos.QuotationViewHistoryDto;
 import com.astro.dto.workflow.ProcurementDtos.VendorQuotationChangeRequestDto;
+import com.astro.dto.workflow.VendorLoginRequestDto;
 import com.astro.service.VendorQuotationAgainstTenderService;
 import com.astro.util.ResponseBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +48,12 @@ public class VendorQuotationController {
     @GetMapping("VendorStatus/{vendorId}")
     public ResponseEntity<Object> getVendorStatus(@PathVariable String vendorId) {
         VendorStatusDto responseDTO = vqService.getVendorStatus(vendorId);
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    }
+
+    @PostMapping("/vendor-login")
+    public ResponseEntity<Object> vendorLogin(@RequestBody VendorLoginRequestDto request) {
+        VendorStatusDto responseDTO = vqService.vendorLogin(request);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
 

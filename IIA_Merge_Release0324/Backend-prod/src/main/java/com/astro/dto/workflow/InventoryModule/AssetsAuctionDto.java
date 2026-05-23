@@ -21,5 +21,7 @@ public class AssetsAuctionDto {
 
     private String vendorName;
 
+    private String createdBy;
+
     private List<AutionAssetsDisposalsDto> assets;
 }

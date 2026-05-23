@@ -45,7 +45,7 @@ public class ogpAssetServiceImpl implements ogpAssetService {
         ogpMaster.setVendorName(request.getVendorName());
         ogpMaster.setStatus("Awaiting For Approval");
 
-        ogpMaster.setCreatedBy(1);
+        ogpMaster.setCreatedBy(request.getCreatedBy());
         ogpMaster.setCreateDate(LocalDateTime.now());
 
         ogpMaster = ogpAssetDisposalRepository.save(ogpMaster);

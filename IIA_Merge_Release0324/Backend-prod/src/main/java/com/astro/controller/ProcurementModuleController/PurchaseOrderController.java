@@ -46,7 +46,7 @@ public class PurchaseOrderController {
       //  String createdBy = purchaseOrderRequestDTO.getCreatedBy();
       //  Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
       //  Integer userId = userMaster.get().getUserId();
-        Integer userId = purchaseOrderRequestDTO.getCreatedBy();
+        String userId = purchaseOrderRequestDTO.getCreatedBy();
 
         // Call initiateWorkflow API
         WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
@@ -93,7 +93,7 @@ public ResponseEntity<Object> getUserPoDrafts(@RequestParam Integer userId) {
         // added by abhinav new line
         String requestId = updatedPO.getPoId();
         String workflowName = "PO Workflow";
-        Integer userId = purchaseOrderRequestDTO.getCreatedBy();
+        String userId = purchaseOrderRequestDTO.getCreatedBy();
 
         workflowService.initiateWorkflow(requestId, workflowName, userId);
 

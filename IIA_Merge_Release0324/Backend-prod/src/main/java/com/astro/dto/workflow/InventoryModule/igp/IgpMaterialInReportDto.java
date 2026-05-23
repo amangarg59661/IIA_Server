@@ -13,7 +13,7 @@ public class IgpMaterialInReportDto {
     private String igpDate;
     private String igpType;
     private Integer indentId;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createDate;
     private String locationId;
     private List<IgpMaterialInDetailReportDto> igpDetails;

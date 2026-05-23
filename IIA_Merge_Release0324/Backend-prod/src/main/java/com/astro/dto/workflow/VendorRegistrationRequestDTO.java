@@ -25,7 +25,7 @@ public class VendorRegistrationRequestDTO {
     private String accountNumber;
     private String ifscCode;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
     private String alternateEmailOrPhoneNumber;
     private String swiftCode;
     private String bicCode;

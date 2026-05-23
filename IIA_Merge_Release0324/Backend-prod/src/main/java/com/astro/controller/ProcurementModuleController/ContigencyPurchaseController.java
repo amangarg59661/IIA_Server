@@ -59,7 +59,7 @@ public class ContigencyPurchaseController {
        // String createdBy = contigencyPurchaseDTO.getCreatedBy();
       //  Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
       //  Integer userId = userMaster.get().getUserId();
-        Integer userId = created.getCreatedBy();
+        String userId = created.getCreatedBy();
 
         // Call initiateWorkflow API
         WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);

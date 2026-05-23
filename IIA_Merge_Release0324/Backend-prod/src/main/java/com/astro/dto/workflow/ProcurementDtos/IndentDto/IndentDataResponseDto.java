@@ -27,6 +27,7 @@ public class IndentDataResponseDto {
     private Boolean isItARateContractIndent;
     private BigDecimal estimatedRate;
     private BigDecimal periodOfContract;
+    private String buyBackAmount;
     private String singleAndMultipleJob;
     private String materialCategory;
     private BigDecimal totalPriceOfAllMaterials;
@@ -48,7 +49,7 @@ public class IndentDataResponseDto {
     private Boolean buyBack;
     private Boolean proprietaryAndLimitedDeclaration;
     private List<String> uploadBuyBackFileNames;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
     private String approvedBy;
     private String date;

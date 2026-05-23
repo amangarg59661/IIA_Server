@@ -7,7 +7,7 @@ import javax.validation.constraints.Pattern;
 public class DirectorApprovalRequestDto {
 
     @NotBlank(message = "decision is required")
-    @Pattern(regexp = "APPROVED|REJECTED", message = "decision must be APPROVED or REJECTED")
+    @Pattern(regexp = "APPROVED|REJECTED|OVERRIDE", message = "decision must be APPROVED, REJECTED, or OVERRIDE")
     private String decision;
 
     private String remarks;

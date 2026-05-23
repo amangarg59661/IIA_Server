@@ -6,10 +6,16 @@ import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "user_master")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class UserMaster {
 
     @Id
@@ -30,9 +36,11 @@ public class UserMaster {
 
     private String mobileNumber;
 
+    @CreatedBy
     private String createdBy;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     // TC_14 FIX: Track if user has changed password after first login
     @Column(name = "is_first_login", columnDefinition = "BOOLEAN DEFAULT TRUE")

@@ -11,6 +11,6 @@ public class IgpDto {
     private String igpId;
     private String igpDate;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private List<IgpMaterialDtlDto> materialDtlList;
 }

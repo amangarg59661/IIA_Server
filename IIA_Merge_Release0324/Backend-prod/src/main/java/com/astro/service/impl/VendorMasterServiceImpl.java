@@ -12,11 +12,13 @@ import com.astro.entity.VendorNamesForJobWorkMaterial;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
 import com.astro.exception.InvalidInputException;
+import com.astro.entity.VendorQuotationAgainstTender;
 import com.astro.repository.ProcurementModule.IndentIdRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.repository.VendorMasterRepository;
 import com.astro.repository.VendorNamesForJobWorkMaterialRepository;
+import com.astro.repository.VendorQuotationAgainstTenderRepository;
 import com.astro.repository.WorkflowTransitionRepository;
 import com.astro.service.VendorMasterService;
 import com.astro.util.CommonUtils;
@@ -47,6 +49,9 @@ public class VendorMasterServiceImpl implements VendorMasterService {
     @Autowired
     private WorkflowTransitionRepository workflowTransitionRepository;
 
+    @Autowired
+    private VendorQuotationAgainstTenderRepository vendorQuotationAgainstTenderRepository;
+
     @Override
     public VendorMasterResponseDto createVendorMaster(VendorMasterRequestDto vendorMasterRequestDto) {
 
@@ -76,6 +81,7 @@ public class VendorMasterServiceImpl implements VendorMasterService {
         vendorMaster.setIfscCode(vendorMasterRequestDto.getIfscCode());
         vendorMaster.setPurchaseHistory(vendorMasterRequestDto.getPurchaseHistory());
         vendorMaster.setStatus(AppConstant.PENDING_TYPE);
+        vendorMaster.setCreatedBy(vendorMasterRequestDto.getCreatedBy());
         vendorMaster.setUpdatedBy(vendorMasterRequestDto.getUpdatedBy());
         vendorMaster.setSwiftCode(vendorMasterRequestDto.getSwiftCode());
         vendorMaster.setAlternateEmailOrPhoneNumber(vendorMasterRequestDto.getAlternateEmailOrPhoneNumber());
@@ -259,6 +265,17 @@ public class VendorMasterServiceImpl implements VendorMasterService {
                 approvedTenderIdWithTitle approved = new approvedTenderIdWithTitle();
                 approved.setTenderId(tenderId);
                 approved.setTitle(tenderRequest.getTitleOfTender());
+
+                // Populate vendor's current submission status for this tender
+                Optional<VendorQuotationAgainstTender> latestOpt =
+                        vendorQuotationAgainstTenderRepository
+                                .findTopByTenderIdAndVendorIdAndIsLatestTrueOrderByVersionDesc(tenderId, vendorId);
+                if (latestOpt.isPresent()) {
+                    approved.setActionStatus(latestOpt.get().getStatus());
+                } else {
+                    approved.setActionStatus(null); // PENDING — no submission yet
+                }
+
                 resultList.add(approved);
             }
         }

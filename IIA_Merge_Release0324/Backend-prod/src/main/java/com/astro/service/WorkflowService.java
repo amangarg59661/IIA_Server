@@ -14,7 +14,7 @@ public interface WorkflowService {
 
     public TransitionDto transitionsByWorkflowIdAndOrder(Integer workflowId, Integer order, Integer subOrder);
 
-    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, Integer createdBy);
+    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, String createdBy);
 
     public List<WorkflowTransitionDto> workflowTransitionHistory(String requestId);
 
@@ -34,9 +34,9 @@ public interface WorkflowService {
 
     public WorkflowTransitionDto submitWorkflow(Integer workflowTransitionId, Integer actionBy, String remarks);
 
-    public List<WorkflowTransitionDto> approvedWorkflowTransition(Integer modifiedBy);
+    public List<WorkflowTransitionDto> approvedWorkflowTransition(String updatedBy);
 
-    public List<SubWorkflowTransitionDto> getSubWorkflowTransition(Integer modifiedBy);
+    public List<SubWorkflowTransitionDto> getSubWorkflowTransition(String updatedBy);
 
     public void approveSubWorkflow(Integer subWorkflowTransitionId);
 
@@ -57,7 +57,7 @@ public interface WorkflowService {
 
     public List<QueueResponse> allPendingWorkflowTransitionINQueue(String roleName, Integer userId);
 
-    public List<SubWorkflowQueueDto> getSubWorkflowQueue(Integer modifiedBy);
+    public List<SubWorkflowQueueDto> getSubWorkflowQueue(String updatedBy);
 
     public List<WorkflowTransitionDto> performAllTransitionAction(List<TransitionActionReqDto> transitionActionReqDto);
 

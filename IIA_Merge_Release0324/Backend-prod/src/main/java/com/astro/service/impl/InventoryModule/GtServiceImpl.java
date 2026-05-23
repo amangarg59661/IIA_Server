@@ -672,7 +672,7 @@ public class GtServiceImpl implements GtService {
             dto.setStatus((String) row[5]);
             dto.setGtDate(((java.sql.Date) row[6]).toLocalDate());
             dto.setCreateDate(((java.sql.Timestamp) row[7]).toLocalDateTime());
-            dto.setCreatedBy((Integer) row[8]);
+            dto.setCreatedBy(row[8] != null ? String.valueOf(row[8]) : null);
 
             try {
                 String materialDetailsJson = (String) row[9];
@@ -722,7 +722,7 @@ public class GtServiceImpl implements GtService {
         dto.setStatus((String) row[5]);
         dto.setGtDate(((java.sql.Date) row[6]).toLocalDate());
         dto.setCreateDate(((java.sql.Timestamp) row[7]).toLocalDateTime());
-        dto.setCreatedBy((Integer) row[8]);
+        dto.setCreatedBy(row[8] != null ? String.valueOf(row[8]) : null);
 
         try {
             String materialDetailsJson = (String) row[9];

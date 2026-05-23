@@ -35,8 +35,8 @@ public class PoWithTenderAndIndentBase64FilesDto {
         private List<String> indentIds;
         private String deliveryDate;
         private List<PurchaseOrderAttributesResponseDTO> purchaseOrderAttributes;
-        private Integer createdBy;
-        private Integer updatedBy; //updated by abhinav
+        private String createdBy;
+        private String updatedBy; //updated by abhinav
         private String comparativeStatementFileName;
         private List<String> comparativeStatementFileNameList;
         private LocalDateTime createdDate;

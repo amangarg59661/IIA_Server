@@ -23,7 +23,7 @@ public class JobMasterResponseDto {
     private String briefDescription;
     private String subCategory;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
 
     private LocalDateTime createdDate;
 

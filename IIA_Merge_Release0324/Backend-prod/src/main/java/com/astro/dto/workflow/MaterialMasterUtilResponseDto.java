@@ -19,7 +19,7 @@ public class MaterialMasterUtilResponseDto {
     private Boolean indigenousOrImported;
     private BigDecimal unitPrice;
     private String currency;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
     private String approvalStatus;
     private String briefDescription;

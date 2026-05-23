@@ -116,7 +116,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 .orElseGet(() -> {
                     TenderEvaluation e = new TenderEvaluation();
                     e.setTenderId(tenderId);
-                    e.setCreatedBy(initiatedByUserId);
+                    e.setCreatedBy(String.valueOf(initiatedByUserId));
                     return e;
                 });
 
@@ -1259,7 +1259,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setIndentorStatus(normalizedDecision);
             quotation.setIndentorRemarks(remarks);
         }
-        quotation.setModifiedBy(evaluatorUserId);
+        quotation.setUpdatedBy(String.valueOf(evaluatorUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1316,7 +1316,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setSpoStatus(normalizedDecision);
             quotation.setSpoRemarks(remarks);
         }
-        quotation.setModifiedBy(spoUserId);
+        quotation.setUpdatedBy(String.valueOf(spoUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1712,7 +1712,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
         String firstIndentId = tender.getIndentIds().get(0).getIndentId();
         IndentCreation indent = indentCreationRepository.findByIndentId(firstIndentId);
-        return indent != null ? indent.getCreatedBy() : null;
+        return indent != null && indent.getCreatedBy() != null ? Integer.valueOf(indent.getCreatedBy()) : null;
     }
 
     @Override

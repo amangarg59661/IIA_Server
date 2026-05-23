@@ -4,6 +4,11 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
  * Tracks vendors manually added by Purchase Personnel during GeM/Open/Global
@@ -13,6 +18,7 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 @Table(name = "gem_tender_evaluation")
+@EntityListeners(AuditingEntityListener.class)
 public class GemTenderEvaluation {
 
     @Id
@@ -51,10 +57,28 @@ public class GemTenderEvaluation {
     private LocalDateTime sentAt;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 
     @PrePersist
     protected void onCreate() {

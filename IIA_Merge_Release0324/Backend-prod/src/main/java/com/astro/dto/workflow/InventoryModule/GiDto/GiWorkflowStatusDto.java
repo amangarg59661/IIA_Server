@@ -11,6 +11,6 @@ public class GiWorkflowStatusDto {
     private Integer subProcessId;
     private String action;
     private String remarks;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createDate;
 }

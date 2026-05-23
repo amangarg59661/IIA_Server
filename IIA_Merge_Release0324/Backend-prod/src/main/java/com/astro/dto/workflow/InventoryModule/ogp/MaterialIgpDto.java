@@ -16,7 +16,7 @@ public class MaterialIgpDto {
     private String igpDate;
     private List<IgpMaterialDetailDto> materialDtlList;
     private String igpType;
-    private Integer createdBy;
+    private String createdBy;
     private Integer indentId;
     private String custodianName;
     private String status;

@@ -795,27 +795,6 @@ const handlePpRespondForVendor = async (vendorId) => {
   }
 };
 
-const handleAcknowledgeVendorClarification = async () => {
-  try {
-    const respondedByRole =
-      isIndentCreatorRole         ? 'INDENTOR'
-      : isSpoRole ? 'SPO'
-      : role === 'Committee Chairman'   ? 'CHAIRMAN'
-      : role === 'Director'             ? 'DIRECTOR'
-      : 'PURCHASE_PERSONNEL';
-    await axios.post('/api/tender-evaluation/respond-clarification', {
-      respondedByRole,
-      respondedById: String(userId),
-      responseText: 'Vendor clarification acknowledged.',
-      responseFileName: null,
-    }, { params: { tenderId } });
-    message.success('Vendor clarification acknowledged. Evaluation resumed.');
-    await fetchEvalStatus(tenderId);
-    await fetchQuotationsAndPending(tenderId);
-  } catch (e) {
-    message.error(e?.response?.data?.responseStatus?.message || 'Failed to acknowledge clarification.');
-  }
-};
 
 // ── Director Forms Ad-Hoc Committee ──────────────────────────────
 const handleDirectorFormCommittee = async () => {
@@ -1637,10 +1616,12 @@ useEffect(() => {
         {tenderId && (
           <div style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {evalLoading && <Spin size="small" />}
-            {evalStatus?.evaluationStatus ? (
+            {evalStatus?.evaluationStatus && evalStatus.evaluationStatus !== 'PENDING_INITIATION' ? (
               <>
                 <Tag color={evalStatusColor[evalStatus.evaluationStatus] || 'default'} style={{ fontSize: 13 }}>
-                  Status: {evalStatus.evaluationStatus?.replace(/_/g, ' ')}
+                  Status: {evalStatus.evaluationStatus === 'PENDING_FINANCIAL' && evalStatus.bidType === 'SINGLE_BID'
+                    ? 'PENDING EVALUATION'
+                    : evalStatus.evaluationStatus?.replace(/_/g, ' ')}
                 </Tag>
                 <Tag color="cyan">{amountCategoryLabel}</Tag>
                 {evalStatus.committeeType && (
@@ -1780,7 +1761,7 @@ useEffect(() => {
                   </a>
                 </div>
               )}
-            {isPurchasePersonnelRole && !evalStatus?.evaluationStatus && (
+            {isPurchasePersonnelRole && (!evalStatus?.evaluationStatus || evalStatus?.evaluationStatus === 'PENDING_INITIATION') && (
                 <div style={{ marginTop: 16 }}>
                   {renderFormFields(
                     [{ heading: '', colCnt: 1, fieldList: [{ name: 'comparationStatementFileName', label: 'Technical Comparison Sheet (PDF / Excel / Word)', type: 'multiImage', accept: '.pdf,.xlsx,.xls,.doc,.docx', span: 1 }] }],
@@ -2002,7 +1983,7 @@ useEffect(() => {
                 </Card>
               ) : null}
 
-            {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
+            {/* ── Vendor Clarification Response Status (view-only) ── */}
             {isPendingVendorClarif &&
               (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && (
                 <Card title="Vendor Clarification Response" size="small" style={{ marginTop: 16 }}>
@@ -2026,19 +2007,6 @@ useEffect(() => {
                   {quotationData.every(q => q.status !== 'CHANGE_REQUESTED') && quotationData.every(q => !q.vendorResponse) && (
                     <Alert type="info" showIcon style={{ marginBottom: 8 }}
                       message="Waiting for vendor(s) to submit clarification response." />
-                  )}
-                  <Button
-                    type="primary"
-                    style={{ marginTop: 8 }}
-                    disabled={anyVendorPendingClarif}
-                    onClick={handleAcknowledgeVendorClarification}
-                  >
-                    Acknowledge &amp; Resume Evaluation
-                  </Button>
-                  {anyVendorPendingClarif && (
-                    <span style={{ marginLeft: 10, color: '#888', fontSize: 12 }}>
-                      Button enables once all pending vendors submit their response
-                    </span>
                   )}
                 </Card>
               )}

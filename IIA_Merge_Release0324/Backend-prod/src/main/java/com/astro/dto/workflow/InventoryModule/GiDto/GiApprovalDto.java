@@ -7,6 +7,6 @@ public class GiApprovalDto {
     private String processNo;
     private String remarks;
     private String status;
-    private Integer createdBy;
+    private String createdBy;
     private String rejectionReason;  // mandatory when SPO rejects
 }

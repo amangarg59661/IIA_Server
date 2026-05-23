@@ -37,7 +37,7 @@ public class WorkOrderController {
        // String createdBy = responseDTO.getCreatedBy();
       // Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
         //Integer userId = userMaster.get().getUserId();
-        Integer userId = requestDTO.getCreatedBy();
+        String userId = requestDTO.getCreatedBy();
 
         // Call initiateWorkflow API
         WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
