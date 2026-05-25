@@ -804,6 +804,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             .ifPresent(q -> {
                                 q.setStatus("CHANGE_REQUESTED");
                                 q.setRemarks(dto.getRemarks());
+                                applyClarificationRoleFields(q, dto);
                                 quotationRepository.save(q);
                             });
                 }
@@ -816,6 +817,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 allQuotations.forEach(q -> {
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
+                    applyClarificationRoleFields(q, dto);
                 });
                 quotationRepository.saveAll(allQuotations);
                 break;
@@ -903,6 +905,26 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HELPER: set role-specific status fields on quotation during clarification
+    // ─────────────────────────────────────────────────────────────────
+    private void applyClarificationRoleFields(VendorQuotationAgainstTender q, SeekClarificationDto dto) {
+        q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
+        q.setUpdatedBy(dto.getRequestedByUserId() != null ? String.valueOf(dto.getRequestedByUserId()) : q.getUpdatedBy());
+        q.setUpdatedDate(LocalDateTime.now());
+
+        String role = dto.getRequestedByRole();
+        if ("SPO".equalsIgnoreCase(role) || "Store Purchase Officer".equalsIgnoreCase(role)) {
+            q.setSpoStatus("CHANGE_REQUESTED");
+            q.setSpoRemarks(dto.getRemarks());
+            q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
+        } else {
+            q.setIndentorStatus("CHANGE_REQUESTED");
+            q.setIndentorRemarks(dto.getRemarks());
+            q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────

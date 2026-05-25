@@ -13,6 +13,7 @@ import com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto;
 import com.astro.dto.workflow.ProcurementDtos.SreviceOrderDto.ServiceOrderMaterialRequestDTO;
 import com.astro.dto.workflow.TransitionActionReqDto;
 import com.astro.entity.ProcurementModule.*;
+import com.astro.entity.ProcurementModule.TenderEvaluation;
 import com.astro.entity.ProjectMaster;
 import com.astro.entity.VendorQuotationAgainstTender;
 import com.astro.entity.WorkflowTransition;
@@ -23,6 +24,7 @@ import com.astro.repository.*;
 import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
 import com.astro.repository.ProcurementModule.IndentCreation.MaterialDetailsRepository;
 import com.astro.repository.ProcurementModule.IndentIdRepository;
+import com.astro.repository.ProcurementModule.TenderEvaluationRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.IndentCreationService;
 import com.astro.service.TenderRequestService;
@@ -73,6 +75,8 @@ public class TenderRequestServiceImpl implements TenderRequestService {
     private UserMasterRepository userRepository;
     @Autowired
     private VendorQuotationAgainstTenderService vqService;
+    @Autowired
+    private TenderEvaluationRepository tenderEvaluationRepository;
     // added  by abhinav
     @Autowired
     @Lazy
@@ -1138,6 +1142,21 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
               roleName="Vendor";
           }else{
               roleName = resolveRoleName(updatedBy != null ? Integer.valueOf(updatedBy) : null);
+          }
+
+          // Safety net: if generic status is CHANGE_REQUESTED and eval is pending vendor clarification,
+          // treat as clarification regardless of stale spoStatus/indentorStatus values
+          String genericStatus = latest.getStatus() != null ? latest.getStatus().trim().toUpperCase() : null;
+          if ("CHANGE_REQUESTED".equalsIgnoreCase(genericStatus)) {
+              TenderEvaluation eval = tenderEvaluationRepository.findByTenderId(tenderId);
+              if (eval != null && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
+                  resp.setActionTakenBy(roleName);
+                  resp.setActionStatus("CHANGE_REQUESTED");
+                  resp.setRemarks(latest.getRemarks());
+                  resp.setQualified(true);
+                  resp.setChangeRequest(true);
+                  return resp;
+              }
           }
 
           //  Indentor → Vendor change request first
