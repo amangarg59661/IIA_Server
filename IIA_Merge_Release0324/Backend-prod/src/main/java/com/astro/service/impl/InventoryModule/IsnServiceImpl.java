@@ -141,7 +141,7 @@ Integer isnSubProcessId;
         List<IsnMaterialDtlEntity> isnMaterialList = isnmdr.findByIssueNoteId(isnMaster.getIssueNoteId());
 
         System.out.println("ISN CREATED BY: " + isnMaster.getCreatedBy());
-        UserMaster um = userMasterRepository.findByUserId(Integer.valueOf(isnMaster.getCreatedBy()));
+        UserMaster um = isnMaster.getCreatedBy() != null ? userMasterRepository.findByUserId(Integer.valueOf(isnMaster.getCreatedBy())) : null;
 
         List<IsnMaterialDtlDto> materialDtlListRes = isnMaterialList.stream()
                 .map(material -> {

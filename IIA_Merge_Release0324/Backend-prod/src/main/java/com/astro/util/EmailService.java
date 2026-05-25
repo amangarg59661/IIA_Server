@@ -145,6 +145,7 @@ public class EmailService {
         // If status is COMPLETED, send to creator
         String nextRole = wt.getNextRole();
         if (nextRole == null || nextRole.equalsIgnoreCase("NULL") || nextRole.isEmpty()) {
+            if (wt.getCreatedBy() == null) return;
             UserMaster user = userMasterRepository.findByUserId(Integer.valueOf(wt.getCreatedBy()));
             context.setVariable("userName", user.getUserName());
             String userEmail = user.getEmail();

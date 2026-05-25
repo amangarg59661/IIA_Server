@@ -2775,7 +2775,7 @@ newAssignment.setAssignedByEmployeeId(assignedByEmpId);
         Optional<EmployeeDepartmentMaster> em
                 = employeeDepartmentMasterRepository.findByEmployeeId(dto.getEmployeeId());
 
-        UserMaster um = userMasterRepository.findByUserId(Integer.valueOf(indent.getCreatedBy()));
+        UserMaster um = indent.getCreatedBy() != null ? userMasterRepository.findByUserId(Integer.valueOf(indent.getCreatedBy())) : null;
 
         if (em.isPresent()) {
             try {

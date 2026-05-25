@@ -3090,7 +3090,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
         Optional<MaterialMasterUtil> Material = materialMasterUtilRepository.findByMaterialCode(materialCode);
 
         MaterialMasterUtil ma = Material.get();
-        UserMaster us = userMasterRepository.findByUserId(Integer.valueOf(ma.getCreatedBy()));
+        UserMaster us = ma.getCreatedBy() != null ? userMasterRepository.findByUserId(Integer.valueOf(ma.getCreatedBy())) : null;
         QueueResponse response = new QueueResponse();
         response.setRequestId(material.getMaterialCode());
         response.setWorkflowName("Material Workflow");

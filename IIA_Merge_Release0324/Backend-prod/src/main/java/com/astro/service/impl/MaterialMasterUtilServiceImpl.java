@@ -92,7 +92,7 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
 
         material = materialMasterUtilRepository.save(material);
 
-       saveMaterialTracking(material.getMaterialCode(), "CREATED", material.getApprovalStatus().name(), material.getComments() , Integer.parseInt(dto.getCreatedBy()));
+       saveMaterialTracking(material.getMaterialCode(), "CREATED", material.getApprovalStatus().name(), material.getComments() , dto.getCreatedBy() != null ? Integer.parseInt(dto.getCreatedBy()) : null);
 
        // saveMaterialTracking(material.getMaterialCode(), "CREATED", request.getAction(), "Material created in MasterUtil", request.getActionBy());
 
