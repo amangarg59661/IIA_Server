@@ -1797,7 +1797,7 @@ useEffect(() => {
             {/* ── Indent Creator actions (under 10L, SINGLE indent only) — Confirm or Seek Clarification to Vendor ── */}
             {isIndentCreatorRole &&
               evalStatus?.amountCategory === 'UNDER_10_LAKH' &&
-              evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
+              (evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' || evalStatus?.evaluationStatus === 'PENDING_TECHNICAL') &&
               !isMultipleIndentEval && (
                 <Card title="Indent Creator — Review &amp; Confirm" size="small" style={{ marginTop: 16 }}>
                   {isAnyClarificationPending && (
@@ -1829,7 +1829,7 @@ useEffect(() => {
               )}
 
             {/* ── Purchase Personnel Confirm (Multiple Indent Under 10L — Cases 3 & 4) ── */}
-            {evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
+            {(evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' || evalStatus?.evaluationStatus === 'PENDING_TECHNICAL') &&
               evalStatus?.amountCategory === 'UNDER_10_LAKH' &&
               isMultipleIndentEval &&
               isPurchasePersonnelRole && (

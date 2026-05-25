@@ -199,10 +199,6 @@ const handleFileChange = (docName, fileData) => {
     console.log("its calling");
 
   if (actionStatus === 'CHANGE_REQUESTED') {
-  if (!clarificationFile) {
-    message.warning('Please upload clarification document');
-    return;
-  }
   if (!clarificationResponse) {
     message.warning('Please enter clarification response');
     return;
@@ -249,9 +245,11 @@ const handleFileChange = (docName, fileData) => {
 
     let clarificationFileName = null;
     if (actionStatus === 'CHANGE_REQUESTED') {
-     clarificationFileName = await upload(clarificationFile);
-    }else{
-         quotationFileName = await upload(quotationFile);
+      if (clarificationFile) {
+        clarificationFileName = await upload(clarificationFile);
+      }
+    } else {
+      quotationFileName = await upload(quotationFile);
     }
 
 

@@ -296,7 +296,9 @@ private BudgetService budgetService;
         System.err.println("🚀🚀🚀 WORKFLOW INITIATION - RequestID: " + requestId + ", Workflow: " + workflowName);
         WorkflowTransitionDto workflowTransitionDto = null;
         if (Objects.nonNull(requestId) && Objects.nonNull(workflowName) && Objects.nonNull(createdBy)) {
-            userService.validateUser(Integer.valueOf(createdBy));
+            if (isNumeric(createdBy)) {
+                userService.validateUser(Integer.valueOf(createdBy));
+            }
             WorkflowDto workflowDto = workflowByWorkflowName(workflowName);
 
             // validateWorkflowTransition(requestId, createdBy, workflowDto.getWorkflowId());
@@ -632,7 +634,7 @@ private BudgetService budgetService;
             // Without this, branches with "indentorDepartment" conditions (e.g. B46 for Tech dept)
             // would never match because the dept is null at the time findMatchingBranch runs.
             String indentorDepartment = (String) conditions.get("indentorDepartment");
-            if ((indentorDepartment == null || indentorDepartment.trim().isEmpty()) && createdBy != null) {
+            if ((indentorDepartment == null || indentorDepartment.trim().isEmpty()) && createdBy != null && isNumeric(createdBy)) {
                 try {
                     com.astro.entity.UserMaster creatorUser = userMasterRepository.findByUserId(Integer.valueOf(createdBy));
                     if (creatorUser != null && creatorUser.getEmployeeId() != null) {
@@ -3502,6 +3504,11 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
     @Override
     public List<pendingRecordsDto> getPendingRecordsForRole(String roleName) {
         return workflowTransitionRepository.findPendingByNextRole(roleName);
+    }
+
+    private boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) return false;
+        try { Integer.parseInt(str); return true; } catch (NumberFormatException e) { return false; }
     }
 
 }

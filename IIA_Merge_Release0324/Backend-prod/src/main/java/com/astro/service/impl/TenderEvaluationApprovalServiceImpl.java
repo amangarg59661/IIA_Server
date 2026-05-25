@@ -1151,6 +1151,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     "Indentor confirmation is only applicable for UNDER_10_LAKH tenders."));
         }
         if (!"PENDING_FINANCIAL".equals(eval.getEvaluationStatus())
+                && !"PENDING_TECHNICAL".equals(eval.getEvaluationStatus())
                 && !"PENDING_APPROVAL".equals(eval.getEvaluationStatus())
                 && !"PENDING_INDENTOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",

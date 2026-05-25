@@ -1138,10 +1138,10 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
 
           final String updatedBy = latest.getUpdatedBy();
           final String roleName;
-          if("1".equals(updatedBy)){
+          if("1".equals(updatedBy) || (updatedBy != null && !isNumeric(updatedBy))){
               roleName="Vendor";
           }else{
-              roleName = resolveRoleName(updatedBy != null ? Integer.valueOf(updatedBy) : null);
+              roleName = resolveRoleName(Integer.valueOf(updatedBy));
           }
 
           // Safety net: if generic status is CHANGE_REQUESTED and eval is pending vendor clarification,
@@ -1773,7 +1773,9 @@ public List<SearchTenderIdDto> searchTenderIds(String type, String value) {
 
 
 
-
-
+    private boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) return false;
+        try { Integer.parseInt(str); return true; } catch (NumberFormatException e) { return false; }
+    }
 
 }
