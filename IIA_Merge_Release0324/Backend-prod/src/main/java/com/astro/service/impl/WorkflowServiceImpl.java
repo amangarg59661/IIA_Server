@@ -1028,8 +1028,12 @@ private BudgetService budgetService;
         workflowTransitionDto.setCreatedDate(workflowTransition.getCreatedDate());
         workflowTransitionDto.setUpdatedBy(workflowTransition.getUpdatedBy());
         workflowTransitionDto.setNextAction(workflowTransition.getNextAction());
-        workflowTransitionDto.setCreatedRole(roleNameById(Integer.valueOf(workflowTransition.getCreatedBy())));
-        workflowTransitionDto.setModifiedRole(roleNameById(Integer.valueOf(workflowTransition.getUpdatedBy())));
+        if (workflowTransition.getCreatedBy() != null) {
+            workflowTransitionDto.setCreatedRole(roleNameById(Integer.valueOf(workflowTransition.getCreatedBy())));
+        }
+        if (workflowTransition.getUpdatedBy() != null) {
+            workflowTransitionDto.setModifiedRole(roleNameById(Integer.valueOf(workflowTransition.getUpdatedBy())));
+        }
         workflowTransitionDto.setCurrentRole(workflowTransition.getCurrentRole());
         workflowTransitionDto.setNextRole(workflowTransition.getNextRole());
         workflowTransitionDto.setWorkflowSequence(workflowTransition.getWorkflowSequence());
