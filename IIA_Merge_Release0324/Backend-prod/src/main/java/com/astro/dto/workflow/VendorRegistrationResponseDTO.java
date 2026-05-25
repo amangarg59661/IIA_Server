@@ -37,7 +37,7 @@ public class VendorRegistrationResponseDTO {
     private String state;
     private String place;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 }

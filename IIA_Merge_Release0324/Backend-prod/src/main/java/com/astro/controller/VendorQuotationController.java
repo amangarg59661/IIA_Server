@@ -4,6 +4,7 @@ import com.astro.dto.workflow.*;
 import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
 import com.astro.dto.workflow.ProcurementDtos.QuotationViewHistoryDto;
 import com.astro.dto.workflow.ProcurementDtos.VendorQuotationChangeRequestDto;
+import com.astro.dto.workflow.VendorLoginRequestDto;
 import com.astro.service.VendorQuotationAgainstTenderService;
 import com.astro.util.ResponseBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,12 @@ public class VendorQuotationController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(vq), HttpStatus.OK);
     }
 
+    @PostMapping("/bulk")
+    public ResponseEntity<Object> createBulkVendorQuotations(@RequestBody BulkVendorQuotationRequest request) {
+        List<VendorQuotationAgainstTenderDto> results = vqService.saveBulkQuotations(request);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(results), HttpStatus.OK);
+    }
+
     @GetMapping
     public ResponseEntity<Object> getVendorQuotationByTenderId(@RequestParam String tenderId,@RequestParam String userRole) {
         List<VendorQuotationAgainstTenderDto> responseDTO = vqService.getQuotationsByTenderId(tenderId, userRole);
@@ -47,6 +54,12 @@ public class VendorQuotationController {
     @GetMapping("VendorStatus/{vendorId}")
     public ResponseEntity<Object> getVendorStatus(@PathVariable String vendorId) {
         VendorStatusDto responseDTO = vqService.getVendorStatus(vendorId);
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    }
+
+    @PostMapping("/vendor-login")
+    public ResponseEntity<Object> vendorLogin(@RequestBody VendorLoginRequestDto request) {
+        VendorStatusDto responseDTO = vqService.vendorLogin(request);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
     }
 

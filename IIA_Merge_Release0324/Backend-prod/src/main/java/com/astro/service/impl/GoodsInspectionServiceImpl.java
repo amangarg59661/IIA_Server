@@ -55,8 +55,6 @@ public class GoodsInspectionServiceImpl implements GoodsInspectionService {
         goodsInspection.setGoodsReturnReason(goodsInspectionDTO.getGoodsReturnReason());
         goodsInspection.setMaterialRejectionAdviceSent(goodsInspectionDTO.getMaterialRejectionAdviceSent());
         goodsInspection.setPoAmendmentNotified(goodsInspectionDTO.getPoAmendmentNotified());
-        goodsInspection.setUpdatedBy(goodsInspectionDTO.getUpdatedBy());
-        goodsInspection.setCreatedBy(goodsInspectionDTO.getCreatedBy());
         goodsInspection.setUploadInstallationReportFileName(uploadInstallationReportFileName);
         GoodsInspection saved = repository.save(goodsInspection);
         return mapToResponseDTO(saved);
@@ -113,8 +111,6 @@ public class GoodsInspectionServiceImpl implements GoodsInspectionService {
         existing.setGoodsReturnReason(goodsInspectionDTO.getGoodsReturnReason());
         existing.setPoAmendmentNotified(goodsInspectionDTO.getPoAmendmentNotified());
         existing.setMaterialRejectionAdviceSent(goodsInspectionDTO.getMaterialRejectionAdviceSent());
-        existing.setUpdatedBy(goodsInspectionDTO.getUpdatedBy());
-        existing.setCreatedBy(goodsInspectionDTO.getCreatedBy());
         existing.setUploadInstallationReportFileName(uploadInstallationReportFileName);
         GoodsInspection updated = repository.save(existing);
         return mapToResponseDTO(updated);

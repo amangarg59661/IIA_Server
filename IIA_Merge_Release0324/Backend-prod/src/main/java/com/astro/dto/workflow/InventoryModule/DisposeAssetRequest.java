@@ -14,6 +14,6 @@ public class DisposeAssetRequest {
     private BigDecimal reservePrice;
     private BigDecimal auctionPrice;
     private String vendorName;
-    private Integer updatedBy;
+    private String updatedBy;
     private String locationId;
 }

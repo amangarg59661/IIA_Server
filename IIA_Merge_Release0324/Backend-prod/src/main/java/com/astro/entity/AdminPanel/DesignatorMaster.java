@@ -3,11 +3,17 @@ package com.astro.entity.AdminPanel;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "designator_master",
        uniqueConstraints = @UniqueConstraint(columnNames = {"form_id", "designator_name"}))
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class DesignatorMaster {
 
     @Id
@@ -37,8 +43,10 @@ public class DesignatorMaster {
     private Integer displayOrder = 0;
 
     @Column(name = "created_by", length = 100)
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 }

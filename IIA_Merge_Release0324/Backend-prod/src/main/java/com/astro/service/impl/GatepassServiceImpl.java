@@ -35,8 +35,6 @@ public class GatepassServiceImpl implements GatepassService {
         String EDR = requestDTO.getExpectedDateOfReturn();
         gatepass.setExpectedDateOfReturn(CommonUtils.convertStringToDateObject(EDR));
         gatepass.setExtendEDR(requestDTO.getExtendEDR());
-        gatepass.setCreatedBy(requestDTO.getCreatedBy());
-        gatepass.setUpdatedBy(requestDTO.getUpdatedBy());
 
         GatepassOutAndIn savedGatepass = gatepassRepository.save(gatepass);
 
@@ -97,8 +95,6 @@ public class GatepassServiceImpl implements GatepassService {
         String EDR = requestDTO.getExpectedDateOfReturn();
         gatepass.setExpectedDateOfReturn(CommonUtils.convertStringToDateObject(EDR));
         gatepass.setExtendEDR(requestDTO.getExtendEDR());
-        gatepass.setCreatedBy(requestDTO.getCreatedBy());
-        gatepass.setUpdatedBy(requestDTO.getUpdatedBy());
 
         GatepassOutAndIn savedGatepass = gatepassRepository.save(gatepass);
 

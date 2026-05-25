@@ -11,8 +11,8 @@ public class MaterialTransitionHistory {
     private String action;
     private String status;
     private String comments;
-    private Integer createdBy;
-    private Integer updatedBy;
+    private String createdBy;
+    private String updatedBy;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
 

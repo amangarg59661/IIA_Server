@@ -8,10 +8,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @Table(name = "contigency_purchase")
+@EntityListeners(AuditingEntityListener.class)
 public class ContigencyPurchase {
 
     @Id
@@ -57,9 +63,11 @@ public class ContigencyPurchase {
     private String paymentToVendor;
     private String paymentToEmployee;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     private String purpose;
     private Boolean declarationOne;
     private Boolean declarationTwo;
@@ -67,9 +75,11 @@ public class ContigencyPurchase {
     @OneToMany(mappedBy = "contigencyPurchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CpMaterials> cpMaterials;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
 
 

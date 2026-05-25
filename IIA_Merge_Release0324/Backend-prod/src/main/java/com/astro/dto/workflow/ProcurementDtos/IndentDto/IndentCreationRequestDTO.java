@@ -52,7 +52,7 @@ public class IndentCreationRequestDTO {
     private List<MaterialDetailsRequestDTO> materialDetails;
 
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
 
     // Indent type - "material" or "job"
     private String indentType;

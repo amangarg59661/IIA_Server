@@ -23,7 +23,7 @@ public class AssetMasterDto {
     private BigDecimal stockLevels;
     private String conditionOfGoods;
     private String shelfLife;
-    private Integer createdBy;
-    private Integer updatedBy;
+    private String createdBy;
+    private String updatedBy;
     private Integer locatorId;
 }

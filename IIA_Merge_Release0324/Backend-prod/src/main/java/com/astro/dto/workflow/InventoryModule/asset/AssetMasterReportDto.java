@@ -26,9 +26,9 @@ public class AssetMasterReportDto {
     private String componentName;
     private Integer componentId;
     private LocalDateTime createDate;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime updatedDate;
-    private Integer updatedBy;
+    private String updatedBy;
     private String poId;
     private BigDecimal poValue;
     private String vendorId;

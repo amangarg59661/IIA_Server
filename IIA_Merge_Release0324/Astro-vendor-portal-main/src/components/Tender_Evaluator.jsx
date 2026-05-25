@@ -159,7 +159,7 @@ const handleFileChange = (docName, fileData) => {
         vendorId: vendorId,  // assuming vendorId = userId or you can try with V1001
         quotationFileName: serverFileName,
         fileType: "Tender",
-        createdBy: null
+        createdBy: vendorId
       };
 
       const response = await axios.post(
@@ -199,10 +199,6 @@ const handleFileChange = (docName, fileData) => {
     console.log("its calling");
 
   if (actionStatus === 'CHANGE_REQUESTED') {
-  if (!clarificationFile) {
-    message.warning('Please upload clarification document');
-    return;
-  }
   if (!clarificationResponse) {
     message.warning('Please enter clarification response');
     return;
@@ -249,9 +245,11 @@ const handleFileChange = (docName, fileData) => {
 
     let clarificationFileName = null;
     if (actionStatus === 'CHANGE_REQUESTED') {
-     clarificationFileName = await upload(clarificationFile);
-    }else{
-         quotationFileName = await upload(quotationFile);
+      if (clarificationFile) {
+        clarificationFileName = await upload(clarificationFile);
+      }
+    } else {
+      quotationFileName = await upload(quotationFile);
     }
 
 
@@ -261,7 +259,7 @@ const handleFileChange = (docName, fileData) => {
       vendorId: vendorId,
       quotationFileName: quotationFileName,
       fileType: 'Tender',
-      createdBy: null,
+      createdBy: vendorId,
     //  ...(bidType === 'Double' && { priceBidFileName }), // include if double
     ...((bidType === 'Double' || bidType === 'Single') && { priceBidFileName }),
     ...(actionStatus === 'CHANGE_REQUESTED' && {

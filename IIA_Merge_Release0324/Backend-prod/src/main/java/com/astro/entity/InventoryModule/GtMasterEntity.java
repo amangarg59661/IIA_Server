@@ -9,16 +9,23 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Data
 @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "gt_master")
+@EntityListeners(AuditingEntityListener.class)
 public class GtMasterEntity {
 
     @Id
@@ -43,11 +50,13 @@ public class GtMasterEntity {
 
     // User field was "createdate": map to that column while keeping Java-friendly name
     @Column(name = "create_date", nullable = false, updatable = false)
+    @CreatedDate
     private LocalDateTime createDate;
 
     @Column(name="gt_date", nullable = false)
     private LocalDate gtDate;
 
     @Column(name = "created_by", nullable = false, length = 100)
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 }

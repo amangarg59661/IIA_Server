@@ -8,13 +8,21 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 
 import lombok.*;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Entity
 @Table(name = "ogp_gt_dtl")
+@EntityListeners(AuditingEntityListener.class)
 public class OgpGtDtlEntity {
 
     @Id
@@ -57,4 +65,20 @@ public class OgpGtDtlEntity {
 
     @Column(name = "book_value")
     private BigDecimal bookValue;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 }

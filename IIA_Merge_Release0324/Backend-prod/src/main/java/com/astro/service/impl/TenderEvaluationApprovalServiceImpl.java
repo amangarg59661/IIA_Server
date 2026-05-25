@@ -116,7 +116,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 .orElseGet(() -> {
                     TenderEvaluation e = new TenderEvaluation();
                     e.setTenderId(tenderId);
-                    e.setCreatedBy(initiatedByUserId);
+                    e.setCreatedBy(String.valueOf(initiatedByUserId));
                     return e;
                 });
 
@@ -787,6 +787,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         eval.setClarificationPendingFromName(dto.getTargetUserName());
         eval.setClarificationRequestedByRole(dto.getRequestedByRole());
         eval.setClarificationRemarks(dto.getRemarks());
+        // Store vendor context for INDENTOR/PP clarifications (null if general/tender-level)
+        eval.setClarificationTargetVendorId(dto.getTargetVendorId());
 
         switch (target.toUpperCase()) {
             case "VENDOR":
@@ -802,6 +804,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             .ifPresent(q -> {
                                 q.setStatus("CHANGE_REQUESTED");
                                 q.setRemarks(dto.getRemarks());
+                                applyClarificationRoleFields(q, dto);
                                 quotationRepository.save(q);
                             });
                 }
@@ -814,6 +817,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 allQuotations.forEach(q -> {
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
+                    applyClarificationRoleFields(q, dto);
                 });
                 quotationRepository.saveAll(allQuotations);
                 break;
@@ -901,6 +905,26 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HELPER: set role-specific status fields on quotation during clarification
+    // ─────────────────────────────────────────────────────────────────
+    private void applyClarificationRoleFields(VendorQuotationAgainstTender q, SeekClarificationDto dto) {
+        q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
+        q.setUpdatedBy(dto.getRequestedByUserId() != null ? String.valueOf(dto.getRequestedByUserId()) : q.getUpdatedBy());
+        q.setUpdatedDate(LocalDateTime.now());
+
+        String role = dto.getRequestedByRole();
+        if ("SPO".equalsIgnoreCase(role) || "Store Purchase Officer".equalsIgnoreCase(role)) {
+            q.setSpoStatus("CHANGE_REQUESTED");
+            q.setSpoRemarks(dto.getRemarks());
+            q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
+        } else {
+            q.setIndentorStatus("CHANGE_REQUESTED");
+            q.setIndentorRemarks(dto.getRemarks());
+            q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -1057,6 +1081,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         eval.setClarificationPendingFromName(null);
         eval.setClarificationRequestedByRole(null);
         eval.setClarificationRemarks(null);
+        eval.setClarificationTargetVendorId(null);
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
@@ -1126,6 +1151,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     "Indentor confirmation is only applicable for UNDER_10_LAKH tenders."));
         }
         if (!"PENDING_FINANCIAL".equals(eval.getEvaluationStatus())
+                && !"PENDING_TECHNICAL".equals(eval.getEvaluationStatus())
                 && !"PENDING_APPROVAL".equals(eval.getEvaluationStatus())
                 && !"PENDING_INDENTOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
@@ -1259,7 +1285,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setIndentorStatus(normalizedDecision);
             quotation.setIndentorRemarks(remarks);
         }
-        quotation.setModifiedBy(evaluatorUserId);
+        quotation.setUpdatedBy(String.valueOf(evaluatorUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1316,7 +1342,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setSpoStatus(normalizedDecision);
             quotation.setSpoRemarks(remarks);
         }
-        quotation.setModifiedBy(spoUserId);
+        quotation.setUpdatedBy(String.valueOf(spoUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1510,6 +1536,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         dto.setClarificationRequestedByRole(eval.getClarificationRequestedByRole());
         dto.setClarificationRemarks(eval.getClarificationRemarks());
         dto.setPreviousEvaluationStatus(eval.getPreviousEvaluationStatus());
+        dto.setClarificationTargetVendorId(eval.getClarificationTargetVendorId());
         dto.setRejectedByRole(eval.getRejectedByRole());
         dto.setRejectedByUserId(eval.getRejectedByUserId());
         dto.setFinancialBidPhase(eval.getFinancialBidPhase());
@@ -1712,7 +1739,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
         String firstIndentId = tender.getIndentIds().get(0).getIndentId();
         IndentCreation indent = indentCreationRepository.findByIndentId(firstIndentId);
-        return indent != null ? indent.getCreatedBy() : null;
+        if (indent == null || indent.getCreatedBy() == null) return null;
+        try {
+            return Integer.parseInt(indent.getCreatedBy());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

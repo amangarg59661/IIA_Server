@@ -33,7 +33,7 @@ private String parentSoId;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private List<ServiceOrderMaterialResponseDTO> materials;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
 
 }

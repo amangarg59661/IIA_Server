@@ -46,8 +46,8 @@ public class LocatorServiceImpl implements LocatorService{
         locator.setLocationId(request.getLocationCode());
         locator.setLocatorId(Integer.parseInt(saved.getLovValue()));
         locator.setLocatorDesc(saved.getLovDisplayValue());
-        locator.setCreatedBy("SYSTEM");
-        locator.setUpdatedBy("SYSTEM");
+        locator.setCreatedBy(saved.getCreatedBy());
+        locator.setUpdatedBy(saved.getCreatedBy());
         lmr.save(locator);
     }
 
@@ -69,13 +69,13 @@ if (updated.getLovValue() == null || updated.getLovValue().isBlank()) {
         } else {
             locator = new LocatorMasterEntity();
             locator.setLocatorId(Integer.parseInt(updated.getLovValue()));
-            locator.setCreatedBy("SYSTEM");
+            locator.setCreatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
         }
-        
+
         locator.setLocatorDesc(updated.getLovDisplayValue());
         // locator.setAddress(updated.getLovDescription());
         // locator.setIsActive(updated.getIsActive());
-        locator.setUpdatedBy("SYSTEM");
+        locator.setUpdatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
         lmr.save(locator);
     }
     // End

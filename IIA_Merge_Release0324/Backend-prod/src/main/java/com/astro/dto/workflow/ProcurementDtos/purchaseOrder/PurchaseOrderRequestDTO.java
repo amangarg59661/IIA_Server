@@ -34,8 +34,8 @@ public class PurchaseOrderRequestDTO{
         private List<String> comparativeStatementFileName;
         private List<PurchaseOrderAttributesDTO> purchaseOrderAttributes;
         // private String updatedBy;
-        private Integer updatedBy;  // updated by abhinav
-        private Integer createdBy;
+        private String updatedBy;  // updated by abhinav
+        private String createdBy;
         private List<String> gemContractFileName;
 
         private String typeOfSecurity;

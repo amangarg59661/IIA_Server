@@ -443,5 +443,5 @@ List<SearchPOIdDto> findByCreatedDateBetweenAndIsActive(@Param("start") LocalDat
 
 // Draft support
 List<PurchaseOrder> findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(
-        Integer createdBy, String currentStatus);
+        String createdBy, String currentStatus);
 }

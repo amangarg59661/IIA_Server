@@ -8,12 +8,19 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 
 import lombok.Data;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @Table(name = "ogp_master_rejected_gi")
+@EntityListeners(AuditingEntityListener.class)
 public class OgpMasterRejectedGiEntity {
 
     @Id
@@ -34,6 +41,7 @@ public class OgpMasterRejectedGiEntity {
     private String giId;
 
     @Column(name = "created_by")
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "sender_name")

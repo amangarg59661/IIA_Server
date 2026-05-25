@@ -3,6 +3,7 @@ import { Card, Form, Input, Button, Select, message, Row, Col, Table, Tag, Modal
 import { TeamOutlined, EyeInvisibleOutlined, EyeOutlined, CheckCircleOutlined, UserOutlined, SearchOutlined, EditOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import store from '../../../store';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -161,7 +162,7 @@ const UserCreation = () => {
         mobileNumber: values.mobileNumber || null,
         employeeId: values.employeeId || null,
         roleNames: values.roleNames,
-        createdBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       // Only include password if provided
@@ -347,7 +348,7 @@ const UserCreation = () => {
         employeeId: values.employeeId || null,
         roleNames: values.roleNames,
         mobileNumber: values.mobileNumber || null,
-        createdBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       // Check if user exists for employee ID

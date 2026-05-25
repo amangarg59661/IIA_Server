@@ -10,7 +10,7 @@ import java.util.List;
 public interface SubWorkflowTransitionRepository extends JpaRepository<SubWorkflowTransition, Integer> {
     List<SubWorkflowTransition> findByWorkflowTransitionIdAndStatus(Integer workflowTransitionId, String pendingType);
 
-    List<SubWorkflowTransition> findByActionOn(Integer modifiedBy);
+    List<SubWorkflowTransition> findByActionOn(String updatedBy);
 
     List<SubWorkflowTransition> findByWorkflowTransitionIdAndRequestIdAndTransitionTypeAndTransitionName(Integer workflowTransitionId, String requestId, String transitionType, String transitionName);
 }

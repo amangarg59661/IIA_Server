@@ -7,10 +7,16 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 
 @Entity
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class MaterialCreation {
 
     @Id
@@ -60,11 +66,15 @@ public class MaterialCreation {
     @Column(name = "shelf_life")
     private BigDecimal shelfLife;
     @Column(name = "created_by")
+    @CreatedBy
     private String createdBy;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
 }

@@ -6,6 +6,7 @@ import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
 import com.astro.dto.workflow.ProcurementDtos.QuotationViewHistoryDto;
 import com.astro.dto.workflow.ProcurementDtos.VendorQuotationChangeRequestDto;
 import com.astro.entity.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.astro.entity.ProcurementModule.TenderEvaluation;
 import com.astro.entity.ProcurementModule.TenderRequest;
 import com.astro.exception.BusinessException;
@@ -19,7 +20,7 @@ import com.astro.service.VendorQuotationAgainstTenderService;
 import io.swagger.models.auth.In;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.astro.config.JwtUtil;
 import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +38,10 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
     private VendorQuotationAgainstTenderRepository vendorQuotationAgainstTenderRepository;
     @Autowired
     private VendorMasterRepository vendorMasterRepository;
+    @Autowired
+    JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     @Autowired
     private VendorMasterUtilRepository vendorMasterUtilRepository;
     @Autowired
@@ -58,6 +63,12 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
    
    @Override
    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
+
+       TenderEvaluation tenderEval = tenderEvaluationRepository.findByTenderId(dto.getTenderId());
+       if (tenderEval != null && tenderEval.getInitiated() != null && tenderEval.getInitiated() == 1) {
+           throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                   "Tender already under evaluation. Cannot submit new quotations."));
+       }
 
        if (dto.getVendorId() == null && "GEM".equalsIgnoreCase(dto.getType())) {
            // get last vendorId
@@ -100,12 +111,12 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setFileType(v.getFileType());
            quotation.setClarificationFileName(dto.getClarificationFileName());
            quotation.setVendorResponse(dto.getVendorResponse());
-           quotation.setCreatedBy(v.getCreatedBy());
+           quotation.setCreatedBy(dto.getVendorId());
            quotation.setVersion(maxVersion + 1);
            quotation.setIsLatest(true);
 
            quotation.setStatus("SUBMITTED");
-           quotation.setModifiedBy(1);
+           quotation.setUpdatedBy("1");
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -121,7 +132,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setVersion(maxVersion + 1);
            quotation.setIsLatest(true);
            quotation.setStatus("SUBMITTED");
-           quotation.setModifiedBy(1);
+           quotation.setUpdatedBy("1");
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -162,7 +173,21 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
        return mapToResponse(saved);
    }
 
+    @Override
+    @Transactional
+    public List<VendorQuotationAgainstTenderDto> saveBulkQuotations(BulkVendorQuotationRequest request) {
+        if (request.getQuotations() == null || request.getQuotations().isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "BULK_EMPTY", "No quotations provided in bulk request"));
+        }
 
+        List<VendorQuotationAgainstTenderDto> results = new ArrayList<>();
+        for (VendorQuotationAgainstTenderDto dto : request.getQuotations()) {
+            dto.setTenderId(request.getTenderId());
+            VendorQuotationAgainstTenderDto saved = saveQuotation(dto);
+            results.add(saved);
+        }
+        return results;
+    }
 
     @Override
    public List<VendorQuotationAgainstTenderDto> getQuotationsByTenderId(String tenderId, String loggedInRole) {
@@ -343,7 +368,6 @@ public VendorStatusDto getVendorStatus(String vendorId) {
     
     if (vendorLogin.isPresent()) {
         VendorLoginDetails vl = vendorLogin.get();
-        dto.setPassword(vl.getPassword());
         dto.setEmailStatus(vl.getEmailSent());
         dto.setIsFirstLogin(vl.getIsFirstLogin());
         dto.setIsTempPassword(vl.getIsTempPassword());
@@ -447,7 +471,7 @@ public boolean markQuotationForChangeRequest(VendorQuotationChangeRequestDto req
     newQuotation.setIndentorRemarks(request.getRemarks());
     newQuotation.setStatus("CHANGE_REQUESTED");
    // newQuotation.setRemarks(request.getRemarks());
-    newQuotation.setModifiedBy(request.getUserId());
+    newQuotation.setUpdatedBy(String.valueOf(request.getUserId()));
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
 
@@ -480,12 +504,24 @@ public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request
     VendorLoginDetails vendorLogin = vendorLoginOpt.get();
 
     // Verify current password
-    if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
+    // ✅ Verify current password using BCrypt
+    if (!passwordEncoder.matches(request.getCurrentPassword(), vendorLogin.getPassword())) {
         return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
     }
 
-    // Update password
-    vendorLogin.setPassword(request.getNewPassword());
+    // ✅ Prevent reuse of the same password
+    if (passwordEncoder.matches(request.getNewPassword(), vendorLogin.getPassword())) {
+        return new ChangePasswordResponseDto(false, "New password must be different from current password", request.getVendorId());
+    }
+
+    // ✅ Encode new password before saving
+    vendorLogin.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    // if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
+    //     return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
+    // }
+
+    // // Update password
+    // vendorLogin.setPassword(request.getNewPassword());
     vendorLogin.setIsFirstLogin(false);
     vendorLogin.setIsTempPassword(false);
     vendorLogin.setPasswordChangedAt(LocalDateTime.now());
@@ -557,7 +593,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
   //  newQuotation.setRemarks("Accepted by indentor");
     newQuotation.setIndentorStatus("ACCEPTED");
    // newQuotation.setIndentorRemarks("Accepted by indentor");
-    newQuotation.setModifiedBy(userId);
+    newQuotation.setUpdatedBy(String.valueOf(userId));
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -601,7 +637,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setIndentorStatus(oldQuotation.getIndentorStatus());
         newQuotation.setIndentorRemarks(oldQuotation.getIndentorRemarks());
         newQuotation.setRemarks(oldQuotation.getIndentorRemarks());
-        newQuotation.setModifiedBy(userId);
+        newQuotation.setUpdatedBy(String.valueOf(userId));
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
         switch (action) {
@@ -679,7 +715,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setRemarks(remarks);
         newQuotation.setIndentorStatus("REJECTED");
         newQuotation.setIndentorRemarks(remarks);
-        newQuotation.setModifiedBy(userId); // indentor
+        newQuotation.setUpdatedBy(String.valueOf(userId)); // indentor
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
         newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -730,7 +766,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
             dto.setSpoStatus(vq.getSpoStatus());
             dto.setSpoRemarks(vq.getSpoRemarks());
             dto.setChangeRequestToIndentor(vq.getChangeRequestToIndentor());
-            dto.setModifiedBy(vq.getModifiedBy());
+            dto.setUpdatedBy(vq.getUpdatedBy());
             dto.setCurrentRole(vq.getCurrentRole());
             dto.setNextRole(vq.getNextRole());
             return dto;
@@ -818,6 +854,47 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
 
         return resultList;
     }
+    @Override
+    public VendorStatusDto vendorLogin(VendorLoginRequestDto request) {
+        VendorStatusDto dto = new VendorStatusDto();
+        dto.setVendorId(request.getVendorId());
+
+        Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findByVendorId(request.getVendorId());
+        if (vendorLoginOpt.isEmpty()) {
+            dto.setStatus("NOT_FOUND");
+            dto.setComments("Vendor ID not found.");
+            return dto;
+        }
+
+        VendorLoginDetails vl = vendorLoginOpt.get();
+         if (!passwordEncoder.matches(request.getPassword(), vl.getPassword())) {
+        dto.setStatus("INVALID_CREDENTIALS");
+        dto.setComments("Invalid password.");
+        return dto;
+    }
+        // if (!vl.getPassword().equals(request.getPassword())) {
+        //     dto.setStatus("INVALID_CREDENTIALS");
+        //     dto.setComments("Invalid password.");
+        //     return dto;
+        // }
+
+         // Generate JWT token
+         List<String> roleNames = null;
+               String token = jwtUtil.generateToken(
+                String.valueOf(request.getVendorId()),
+                roleNames,
+                "VENDOR"
+        );
+        dto.setToken(token);
+
+        dto.setEmailStatus(vl.getEmailSent());
+        dto.setIsFirstLogin(vl.getIsFirstLogin());
+        dto.setIsTempPassword(vl.getIsTempPassword());
+        dto.setStatus("SUCCESS");
+        dto.setComments("Login successful.");
+        return dto;
+    }
+
     @Override
     public List<AllVendorStatus> getAllVendorStatusOnTenderidsForGem(String tenderId) {
         TenderRequest tenderRequest = tenderRepo.findById(tenderId)

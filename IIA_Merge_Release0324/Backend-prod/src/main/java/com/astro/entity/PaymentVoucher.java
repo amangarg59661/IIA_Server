@@ -6,10 +6,16 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "payment_voucher")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class PaymentVoucher {
 
     @Id
@@ -67,8 +73,10 @@ public class PaymentVoucher {
 
     private String soId;
 
-    private Integer createdBy;
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedBy
+    private String createdBy;
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     @OneToMany(mappedBy = "paymentVoucher", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentVoucherMaterials> materialsList;

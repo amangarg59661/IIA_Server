@@ -145,7 +145,8 @@ public class EmailService {
         // If status is COMPLETED, send to creator
         String nextRole = wt.getNextRole();
         if (nextRole == null || nextRole.equalsIgnoreCase("NULL") || nextRole.isEmpty()) {
-            UserMaster user = userMasterRepository.findByUserId(wt.getCreatedBy());
+            if (wt.getCreatedBy() == null) return;
+            UserMaster user = userMasterRepository.findByUserId(Integer.valueOf(wt.getCreatedBy()));
             context.setVariable("userName", user.getUserName());
             String userEmail = user.getEmail();
             String userBody = templateEngine.process("user-email-template", context);
@@ -519,7 +520,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
         context.setVariable("remarks", wt.getRemarks());
         context.setVariable("createdBy", wt.getCreatedBy());
         context.setVariable("workflowName", wt.getWorkflowName());
-        context.setVariable("modifiedBy", wt.getModifiedBy());
+        context.setVariable("modifiedBy", wt.getUpdatedBy());
 
         // Prepare email body using rejection-specific template
         String body = templateEngine.process("rejection-email-template", context);
@@ -628,7 +629,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
                     body);
 
             if (wt.getCreatedBy() != null) {
-                UserMaster creator = userMasterRepository.findByUserId(wt.getCreatedBy());
+                UserMaster creator = userMasterRepository.findByUserId(Integer.valueOf(wt.getCreatedBy()));
                 if (creator != null && creator.getEmail() != null) {
                     sendMailToUser(creator.getEmail(),
                             "Auto-Approved: Your Request " + wt.getRequestId(),

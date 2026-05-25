@@ -11,7 +11,7 @@ public class IgpReportDto {
     private Integer ogpSubProcessId;
     private String igpDate;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime createDate;
     private List<IgpDetailReportDto> igpDetails;
 }

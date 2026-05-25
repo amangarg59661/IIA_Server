@@ -916,7 +916,7 @@ if (materialDetails != null) {
                 history.setRemarks(dto.getRemarks());
                 history.setCreatedBy(dto.getCreatedBy());
                 history.setCreatedRole(dto.getCreatedRole());
-                history.setModifiedBy(dto.getModifiedBy());
+                history.setUpdatedBy(dto.getUpdatedBy());
                 history.setModificationDate(dto.getModificationDate());
                 history.setCreatedDate(dto.getCreatedDate());
                 return history;
@@ -951,7 +951,7 @@ if (materialDetails != null) {
         workflowTransitionDto.setStatus(workflowTransition.getStatus());
         workflowTransitionDto.setTransitionSubOrder(workflowTransition.getTransitionSubOrder());
         workflowTransitionDto.setCreatedDate(workflowTransition.getCreatedDate());
-        workflowTransitionDto.setModifiedBy(workflowTransition.getModifiedBy());
+        workflowTransitionDto.setUpdatedBy(workflowTransition.getUpdatedBy());
         workflowTransitionDto.setNextAction(workflowTransition.getNextAction());
         workflowTransitionDto.setCurrentRole(workflowTransition.getCurrentRole());
         workflowTransitionDto.setNextRole(workflowTransition.getNextRole());
@@ -2103,7 +2103,7 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
      */
     public List<PurchaseOrderResponseDTO> getUserPoDrafts(Integer userId) {
         return purchaseOrderRepository
-                .findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(userId, "DRAFT")
+                .findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(String.valueOf(userId), "DRAFT")
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());

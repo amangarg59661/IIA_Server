@@ -52,7 +52,6 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         voucher.setPartialAmount(dto.getPartialAmount());
         voucher.setAdvanceAmount(dto.getAdvanceAmount());
         voucher.setSoId(dto.getServiceOrderDetails());
-        voucher.setCreatedBy(dto.getCreatedBy());
         voucher.setTdsAmount(dto.getTdsAmount());
         voucher.setPaymentVoucherNetAmount(dto.getPaymentVoucherNetAmount());
 

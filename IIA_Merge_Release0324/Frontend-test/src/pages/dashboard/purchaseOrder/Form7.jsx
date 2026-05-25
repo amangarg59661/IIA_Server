@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   Button,
   Checkbox,
@@ -46,10 +47,7 @@ const Form7 = () => {
     const fetchVendors = async () => {
       setLoadingVendors(true);
       try {
-        const response = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/vendor-master"
-        );
-        const data = await response.json();
+        const { data } = await axios.get("/api/vendor-master");
 
         if (data.responseData) {
           setVendors(data.responseData);
@@ -126,17 +124,11 @@ const Form7 = () => {
     const fetchData = async () => {
       try {
         // Get approved tender IDs
-        const approvedResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/getApprovedTenderIdForPOAndSO"
-        );
-        const approvedData = await approvedResponse.json();
+        const { data: approvedData } = await axios.get("/getApprovedTenderIdForPOAndSO");
         const approvedIds = approvedData.responseData || [];
 
         // Get all tender details
-        const tendersResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/tender-requests"
-        );
-        const tendersData = await tendersResponse.json();
+        const { data: tendersData } = await axios.get("/api/tender-requests");
 
         // Filter and combine data
         const approvedTenders = (tendersData.responseData || [])
@@ -172,10 +164,7 @@ const Form7 = () => {
       const allMaterials = await Promise.all(
         selectedTender.indentIds.map(async (indentId) => {
           try {
-            const response = await fetch(
-              `http://103.181.158.220:8081/astro-service/api/indents/${indentId}`
-            );
-            const data = await response.json();
+            const { data } = await axios.get(`/api/indents/${indentId}`);
 
             return (data.responseData?.materialDetails || []).map(
               (material) => ({
@@ -219,10 +208,7 @@ const Form7 = () => {
 
     setSearching(true);
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/purchase-orders/${poId}`
-      );
-      const data = await response.json();
+      const { data } = await axios.get(`/api/purchase-orders/${poId}`);
 
       if (!data.responseData) {
         message.warning("No purchase order found for this PO ID");
@@ -288,10 +274,7 @@ const Form7 = () => {
   // **3. Fetch Material Details from Indent API**
   const fetchMaterialDetails = async (indentId) => {
     try {
-      const response = await fetch(
-        `http://103.181.158.220:8081/astro-service/api/indents/${indentId}`
-      );
-      const data = await response.json();
+      const { data } = await axios.get(`/api/indents/${indentId}`);
 
       if (!data.responseData?.materialDetails) {
         message.error("No Material Details found");
@@ -376,20 +359,12 @@ const Form7 = () => {
       const isUpdate = values.poId && values.poId !== "";
 
       const url = isUpdate
-        ? `http://103.181.158.220:8081/astro-service/api/purchase-orders/${values.poId}`
-        : "http://103.181.158.220:8081/astro-service/api/purchase-orders";
+        ? `/api/purchase-orders/${values.poId}`
+        : "/api/purchase-orders";
 
-      const method = isUpdate ? "PUT" : "POST";
-
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const responseData = await response.json();
+      const { data: responseData } = isUpdate
+        ? await axios.put(url, payload)
+        : await axios.post(url, payload);
 
       if (responseData.responseStatus?.statusCode === 0) {
         // Set generated ID and update form

@@ -23,6 +23,7 @@ import {
   UploadOutlined,
 } from "@ant-design/icons";
 import { useSelector } from "react-redux";
+import axios from "axios";
 
 const MaterialForm = () => {
   const auth = useSelector((state) => state.auth);
@@ -38,10 +39,7 @@ const MaterialForm = () => {
 
   const fetchInitialData = async () => {
     try {
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/material-master"
-      );
-      const data = await response.json();
+      const { data } = await axios.get("/api/material-master");
 
       if (!data.responseData) throw new Error("Invalid material data");
 
@@ -72,10 +70,7 @@ const MaterialForm = () => {
 
       setMaterialDetailsMap(materialMap);
       setMaterialList(Object.keys(materialMap));
-      const uomResponse = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/uom-master"
-      );
-      const uomData = await uomResponse.json();
+      const { data: uomData } = await axios.get("/api/uom-master");
 
       if (!uomData.responseData) throw new Error("Invalid UOM data");
 
@@ -103,15 +98,11 @@ const MaterialForm = () => {
         const formData = new FormData();
         formData.append("file", fileList[0].originFileObj);
 
-        const uploadResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/file/upload?fileType=Material",
-          {
-            method: "POST",
-            body: formData,
-          }
+        const { data: uploadResult } = await axios.post(
+          "/file/upload?fileType=Material",
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
         );
-
-        const uploadResult = await uploadResponse.json();
         uploadedFileName = uploadResult.fileName; // Adjust based on actual API response
       }
 
@@ -124,22 +115,7 @@ const MaterialForm = () => {
         updatedBy: "0", // Replace with actual user ID from your auth system
       };
 
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/material-master",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Submission failed");
-      }
+      await axios.post("/api/material-master", payload);
 
       message.success("Material submitted successfully!");
       form.resetFields();

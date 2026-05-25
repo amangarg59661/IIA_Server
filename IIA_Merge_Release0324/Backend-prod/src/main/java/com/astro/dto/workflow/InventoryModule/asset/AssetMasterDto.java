@@ -25,7 +25,7 @@ public class AssetMasterDto {
     private String componentName;
     private Integer componentId;
     private LocalDateTime createDate;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime updatedDate;
-    private Integer updatedBy;
+    private String updatedBy;
 }

@@ -81,6 +81,7 @@ public class VendorMasterServiceImpl implements VendorMasterService {
         vendorMaster.setIfscCode(vendorMasterRequestDto.getIfscCode());
         vendorMaster.setPurchaseHistory(vendorMasterRequestDto.getPurchaseHistory());
         vendorMaster.setStatus(AppConstant.PENDING_TYPE);
+        vendorMaster.setCreatedBy(vendorMasterRequestDto.getCreatedBy());
         vendorMaster.setUpdatedBy(vendorMasterRequestDto.getUpdatedBy());
         vendorMaster.setSwiftCode(vendorMasterRequestDto.getSwiftCode());
         vendorMaster.setAlternateEmailOrPhoneNumber(vendorMasterRequestDto.getAlternateEmailOrPhoneNumber());

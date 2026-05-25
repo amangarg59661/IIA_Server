@@ -27,7 +27,7 @@ public class MaterialMasterResponseDto {
   //  private List<String> vendorNames;
     private BigDecimal unitPrice;
     private String currency;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;

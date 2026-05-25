@@ -7,10 +7,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "asset_disposal_auction")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class AssetDisposalAuctionEntity {
 
     @Id
@@ -34,9 +40,11 @@ public class AssetDisposalAuctionEntity {
     private String vendorName;
 
     @Column(name = "created_by", nullable = false)
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 
     @Column(name = "created_date", nullable = false)
+    @CreatedDate
     private LocalDateTime createdDate;
 
     @OneToMany(mappedBy = "auction", cascade = CascadeType.ALL)

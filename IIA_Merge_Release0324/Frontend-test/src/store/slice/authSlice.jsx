@@ -1,32 +1,17 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
-/*
-const initialState = {
-  userRoleId: null,
-  roleId: null,
-  role: null,
-  userId: null,
-  readPermission: false,
-  writePermission: false,
-  loading: false,
-  error: null,
-  locationId: null,
-  userName: null,
-  mobileNumber: null,
-  email: null,
-  employeeDepartment: null,
-};
-*/
+
 const initialState = {
   userId: null,
   userName: null,
   email: null,
   mobileNumber: null,
   employeeDepartment: null,
-  roles: [],           // list of roles from backend
-  role: "", // current role
+  roles: [],
+  role: "",
   roleId: null,
-  isFirstLogin: false, // TC_14: Track if user needs to change password
+  isFirstLogin: false,
+  token: localStorage.getItem('token') || null,
   loading: false,
   error: null
 };
@@ -41,15 +26,13 @@ export const login = createAsyncThunk(
         formData
       );
       const data = response.data;
-      
-      // Check for successful status (assuming statusCode === 0 means success)
+
       if (data.responseStatus?.statusCode !== 0) {
         return thunkAPI.rejectWithValue(
           data.responseStatus?.message || 'Login failed'
         );
       }
-      
-      // Return the responseData that contains userRoleId, roleId, role, userId, etc.
+
       return data.responseData;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -64,7 +47,6 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout(state) {
-      // Reset all authentication-related state fields
       state.userRoleId = null;
       state.roleId = null;
       state.role = null;
@@ -78,12 +60,13 @@ const authSlice = createSlice({
       state.email = null;
       state.locationId = null;
       state.employeeDepartment = null;
+      state.token = null;
+      localStorage.removeItem('token');
     },
      changeRole(state, action) {
       state.role = action.payload;
       state.roleId = state.roles.find(r => r.roleName === action.payload)?.roleId || null;
     },
-    // TC_14: Clear first login flag after password change
     clearFirstLogin(state) {
       state.isFirstLogin = false;
     }
@@ -94,53 +77,35 @@ const authSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      /*
-      .addCase(login.fulfilled, (state, action) => {
+     .addCase(login.fulfilled, (state, action) => {
         state.loading = false;
         const {
-          userRoleId,
-          roleId,
-          role,
           userId,
+          userName,
+          email,
+          mobileNumber,
           employeeDepartment,
-          readPermission,
-          writePermission
+          roles,
+          isFirstLogin,
+          token
         } = action.payload;
-        state.userRoleId = userRoleId;
-        state.roleId = roleId;
-        state.role = role;
+
         state.userId = userId;
-        state.readPermission = readPermission;
-        state.writePermission = writePermission;
-        state.locationId = "BNG"
-        state.userName = action?.payload?.userName;
-        state.email = action?.payload?.email;
-        state.mobileNumber = action?.payload?.mobileNumber;
-        state.employeeDepartment = action?.payload?.employeeDepartment;
-      })*/
-     .addCase(login.fulfilled, (state, action) => {
-  state.loading = false;
-  const {
-    userId,
-    userName,
-    email,
-    mobileNumber,
-    employeeDepartment,
-    roles,
-    isFirstLogin  // TC_14: Get isFirstLogin from backend
-  } = action.payload;
+        state.userName = userName;
+        state.email = email;
+        state.mobileNumber = mobileNumber;
+        state.employeeDepartment = employeeDepartment;
+        state.roles = roles || [];
+        state.role = roles?.[0]?.roleName || "";
+        state.roleId = roles?.[0]?.roleId || null;
+        state.isFirstLogin = isFirstLogin || false;
+        state.token = token || null;
 
-  state.userId = userId;
-  state.userName = userName;
-  state.email = email;
-  state.mobileNumber = mobileNumber;
-  state.employeeDepartment = employeeDepartment;
-  state.roles = roles || [];
-  state.role = roles?.[0]?.roleName || ""; // Default: first role
-  state.roleId = roles?.[0]?.roleId || null;// Default: first roleId
-  state.isFirstLogin = isFirstLogin || false; // TC_14: Store first login status
-})
-
+        // Persist token
+        if (token) {
+          localStorage.setItem('token', token);
+        }
+      })
       .addCase(login.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || action.error.message;
@@ -148,6 +113,5 @@ const authSlice = createSlice({
   }
 });
 
-//export const { logout } = authSlice.actions;
 export const { logout, changeRole, clearFirstLogin } = authSlice.actions;
 export default authSlice.reducer;

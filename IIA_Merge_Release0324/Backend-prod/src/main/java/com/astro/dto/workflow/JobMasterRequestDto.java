@@ -22,6 +22,6 @@ public class JobMasterRequestDto {
   //  private String modeOfProcurement;
    // private List<String> vendorNames;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
 private String origin;
 }

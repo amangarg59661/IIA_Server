@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Select, Input, InputNumber, Button, Table, Space, message, Modal, Form, Tag, Popconfirm, Switch, Tooltip, Alert, Collapse } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined, SettingOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import store from '../../../store';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -300,7 +301,7 @@ const ApprovalWorkflow = () => {
         conditionConfig: conditionConfig,
         displayOrder: values.displayOrder,
         isActive: values.isActive,
-        createdBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingBranch) {
@@ -423,7 +424,7 @@ const ApprovalWorkflow = () => {
 
   const handleStatusChange = async (approverId, newStatus) => {
     try {
-      await axios.put(`/api/admin/approvers/${approverId}/status?status=${newStatus}&updatedBy=admin`);
+      await axios.put(`/api/admin/approvers/${approverId}/status?status=${newStatus}&updatedBy=${String(store.getState().auth?.userId || 'admin')}`);
       message.success(`Approver ${newStatus.toLowerCase()} successfully`);
       fetchApprovers(selectedWorkflow, selectedBranch);
     } catch (error) {
@@ -447,7 +448,7 @@ const ApprovalWorkflow = () => {
         autoApproveHours: values.autoApproveHours || null,
         status: values.status,
         conditionCheckType: values.conditionCheckType || null,
-        createdBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingApprover) {
@@ -1386,7 +1387,7 @@ export default ApprovalWorkflow;
 
 //   const handleStatusChange = async (approverId, newStatus) => {
 //     try {
-//       await axios.put(`/api/admin/approvers/${approverId}/status?status=${newStatus}&updatedBy=admin`);
+//       await axios.put(`/api/admin/approvers/${approverId}/status?status=${newStatus}&updatedBy=${String(store.getState().auth?.userId || 'admin')}`);
 //       message.success(`Approver ${newStatus.toLowerCase()} successfully`);
 //       fetchApprovers(selectedWorkflow, selectedBranch);
 //     } catch (error) {

@@ -20,7 +20,7 @@ public class IndentListReportDto {
     private String pendingFrom;
     private String status;
     private LocalDate asOnDate;
-    private Integer createdBy;
+    private String createdBy;
     private BigDecimal indentValue;
     private List<IndentMaterialListReportDto> materialDetails;
 

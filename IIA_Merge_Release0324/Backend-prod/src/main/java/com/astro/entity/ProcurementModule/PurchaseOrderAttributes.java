@@ -2,14 +2,22 @@ package com.astro.entity.ProcurementModule;
 
 import com.astro.entity.ProcurementModule.PurchaseOrder;
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class PurchaseOrderAttributes {
 
 
@@ -46,5 +54,22 @@ public class PurchaseOrderAttributes {
    // private PurchaseOrder purchaseOrder;
    @ManyToOne
    @JoinColumn(name = "po_id", referencedColumnName = "po_id")
+   @ToString.Exclude
    private PurchaseOrder purchaseOrder;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 }

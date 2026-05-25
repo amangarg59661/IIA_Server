@@ -109,7 +109,7 @@ int countIndentsByTenderId(@Param("tenderId") String tenderId);
 
 @Query("SELECT ic.createdBy FROM IndentCreation ic " +
        "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")
-Integer findSingleIndentCreatedByForTender(@Param("tenderId") String tenderId);
+String findSingleIndentCreatedByForTender(@Param("tenderId") String tenderId);
 
 @Query("SELECT ic.indentorName FROM IndentCreation ic " +
        "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")

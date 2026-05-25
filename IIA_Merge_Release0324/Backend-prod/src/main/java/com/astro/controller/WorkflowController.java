@@ -35,7 +35,7 @@ public class WorkflowController {
     }
 
     @PostMapping("/initiateWorkflow")
-    public ResponseEntity<Object> initiateWorkflow(@RequestParam String requestId, @RequestParam String workflowName, @RequestParam Integer createdBy) {
+    public ResponseEntity<Object> initiateWorkflow(@RequestParam String requestId, @RequestParam String workflowName, @RequestParam String createdBy) {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.initiateWorkflow(requestId, workflowName, createdBy)), HttpStatus.OK);
     }
 
@@ -100,18 +100,18 @@ public class WorkflowController {
     }
 
     @GetMapping("/approvedWorkflowTransition")
-    public ResponseEntity<Object> approvedWorkflowTransition(@RequestParam Integer modifiedBy) {
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.approvedWorkflowTransition(modifiedBy)), HttpStatus.OK);
+    public ResponseEntity<Object> approvedWorkflowTransition(@RequestParam String updatedBy) {
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.approvedWorkflowTransition(updatedBy)), HttpStatus.OK);
     }
 
     @GetMapping("/getSubWorkflowTransition")
-    public ResponseEntity<Object> getSubWorkflowTransition(@RequestParam Integer modifiedBy) {
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getSubWorkflowTransition(modifiedBy)), HttpStatus.OK);
+    public ResponseEntity<Object> getSubWorkflowTransition(@RequestParam String updatedBy) {
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getSubWorkflowTransition(updatedBy)), HttpStatus.OK);
     }
 
     @GetMapping("/getSubWorkflowTransitionQueue")
-    public ResponseEntity<Object> getSubWorkflowTransitionQueue(@RequestParam Integer modifiedBy) {
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getSubWorkflowQueue(modifiedBy)), HttpStatus.OK);
+    public ResponseEntity<Object> getSubWorkflowTransitionQueue(@RequestParam String updatedBy) {
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getSubWorkflowQueue(updatedBy)), HttpStatus.OK);
     }
 
     @PostMapping("/approveSubWorkflow")

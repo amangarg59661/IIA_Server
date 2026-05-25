@@ -32,10 +32,10 @@ public class AssetFullResponseDto {
     private String conditionOfGoods;
     private String shelfLife;
     private LocalDateTime createDate;
-    private Integer createdBy;
+    private String createdBy;
     private LocalDateTime updatedDate;
     private Long igpId;
-    private Integer updatedBy;
+    private String updatedBy;
 
     // Fields from ohq_master
     private String custodianId;

@@ -795,28 +795,6 @@ const handlePpRespondForVendor = async (vendorId) => {
   }
 };
 
-const handleAcknowledgeVendorClarification = async () => {
-  try {
-    const respondedByRole =
-      isIndentCreatorRole         ? 'INDENTOR'
-      : isSpoRole ? 'SPO'
-      : role === 'Committee Chairman'   ? 'CHAIRMAN'
-      : role === 'Director'             ? 'DIRECTOR'
-      : 'PURCHASE_PERSONNEL';
-    await axios.post('/api/tender-evaluation/respond-clarification', {
-      respondedByRole,
-      respondedById: String(userId),
-      responseText: 'Vendor clarification acknowledged.',
-      responseFileName: null,
-    }, { params: { tenderId } });
-    message.success('Vendor clarification acknowledged. Evaluation resumed.');
-    await fetchEvalStatus(tenderId);
-    await fetchQuotationsAndPending(tenderId);
-  } catch (e) {
-    message.error(e?.response?.data?.responseStatus?.message || 'Failed to acknowledge clarification.');
-  }
-};
-
 // ── Director Forms Ad-Hoc Committee ──────────────────────────────
 const handleDirectorFormCommittee = async () => {
   if (!adHocChairmanId || !adHocChairmanName) return message.warning('Chairman details are required.');
@@ -1637,10 +1615,12 @@ useEffect(() => {
         {tenderId && (
           <div style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {evalLoading && <Spin size="small" />}
-            {evalStatus?.evaluationStatus ? (
+            {evalStatus?.evaluationStatus && evalStatus.evaluationStatus !== 'PENDING_INITIATION' ? (
               <>
                 <Tag color={evalStatusColor[evalStatus.evaluationStatus] || 'default'} style={{ fontSize: 13 }}>
-                  Status: {evalStatus.evaluationStatus?.replace(/_/g, ' ')}
+                  Status: {evalStatus.evaluationStatus === 'PENDING_FINANCIAL' && evalStatus.bidType === 'SINGLE_BID'
+                    ? 'PENDING EVALUATION'
+                    : evalStatus.evaluationStatus?.replace(/_/g, ' ')}
                 </Tag>
                 <Tag color="cyan">{amountCategoryLabel}</Tag>
                 {evalStatus.committeeType && (
@@ -1780,7 +1760,7 @@ useEffect(() => {
                   </a>
                 </div>
               )}
-            {isPurchasePersonnelRole && !evalStatus?.evaluationStatus && (
+            {isPurchasePersonnelRole && (!evalStatus?.evaluationStatus || evalStatus?.evaluationStatus === 'PENDING_INITIATION') && (
                 <div style={{ marginTop: 16 }}>
                   {renderFormFields(
                     [{ heading: '', colCnt: 1, fieldList: [{ name: 'comparationStatementFileName', label: 'Technical Comparison Sheet (PDF / Excel / Word)', type: 'multiImage', accept: '.pdf,.xlsx,.xls,.doc,.docx', span: 1 }] }],
@@ -1817,7 +1797,7 @@ useEffect(() => {
             {/* ── Indent Creator actions (under 10L, SINGLE indent only) — Confirm or Seek Clarification to Vendor ── */}
             {isIndentCreatorRole &&
               evalStatus?.amountCategory === 'UNDER_10_LAKH' &&
-              evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
+              (evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' || evalStatus?.evaluationStatus === 'PENDING_TECHNICAL') &&
               !isMultipleIndentEval && (
                 <Card title="Indent Creator — Review &amp; Confirm" size="small" style={{ marginTop: 16 }}>
                   {isAnyClarificationPending && (
@@ -1849,7 +1829,7 @@ useEffect(() => {
               )}
 
             {/* ── Purchase Personnel Confirm (Multiple Indent Under 10L — Cases 3 & 4) ── */}
-            {evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
+            {(evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' || evalStatus?.evaluationStatus === 'PENDING_TECHNICAL') &&
               evalStatus?.amountCategory === 'UNDER_10_LAKH' &&
               isMultipleIndentEval &&
               isPurchasePersonnelRole && (
@@ -1991,11 +1971,22 @@ useEffect(() => {
                 )
               ) : isPendingIndentorClarif &&
               (isIndentCreatorRole || isPurchasePersonnelRole) ? (
-                /* Standard indentor/PP global response card */
+                /* Standard indentor/PP response card — with optional vendor context */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
                     description={`Question: ${evalStatus.clarificationRemarks}`} />
+                  {evalStatus.clarificationTargetVendorId && (() => {
+                    const targetVendor = quotationData.find(q => q.vendorId === evalStatus.clarificationTargetVendorId);
+                    return (
+                      <Alert type="info" showIcon style={{ marginBottom: 8 }}
+                        message={`Regarding Vendor: ${targetVendor?.vendorName || evalStatus.clarificationTargetVendorId}`}
+                        description={targetVendor?.quotationFileName ? (
+                          <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer">View Quotation</a>
+                        ) : null}
+                      />
+                    );
+                  })()}
                   <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
                     Submit Response
                   </Button>
@@ -2026,19 +2017,6 @@ useEffect(() => {
                   {quotationData.every(q => q.status !== 'CHANGE_REQUESTED') && quotationData.every(q => !q.vendorResponse) && (
                     <Alert type="info" showIcon style={{ marginBottom: 8 }}
                       message="Waiting for vendor(s) to submit clarification response." />
-                  )}
-                  <Button
-                    type="primary"
-                    style={{ marginTop: 8 }}
-                    disabled={anyVendorPendingClarif}
-                    onClick={handleAcknowledgeVendorClarification}
-                  >
-                    Acknowledge &amp; Resume Evaluation
-                  </Button>
-                  {anyVendorPendingClarif && (
-                    <span style={{ marginLeft: 10, color: '#888', fontSize: 12 }}>
-                      Button enables once all pending vendors submit their response
-                    </span>
                   )}
                 </Card>
               )}
@@ -2445,6 +2423,22 @@ useEffect(() => {
             <Text strong>Target Vendor ID:</Text>
             <Input value={clarifTargetVendorId} onChange={e => setClarifTargetVendorId(e.target.value)}
               style={{ marginTop: 4 }} placeholder="Enter vendor ID (leave blank for approved vendor)" />
+          </div>
+        )}
+        {clarifTarget === 'INDENTOR' && quotationData.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Regarding Vendor (optional):</Text>
+            <Select
+              value={clarifTargetVendorId || undefined}
+              onChange={val => setClarifTargetVendorId(val || '')}
+              allowClear
+              placeholder="Select vendor (leave blank for general clarification)"
+              style={{ width: '100%', marginTop: 4 }}
+            >
+              {quotationData.map(q => (
+                <Option key={q.vendorId} value={q.vendorId}>{q.vendorName || q.vendorId}</Option>
+              ))}
+            </Select>
           </div>
         )}
         {(clarifTarget === 'SPECIFIC_MEMBER' || clarifTarget === 'INDENTOR') && (

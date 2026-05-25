@@ -342,7 +342,7 @@ public class IgpServiceImpl implements IgpService {
             dto.setIgpDate(CommonUtils.convertSqlDateToString((Date) row[3]));
             // dto.setIgpDate(row[3] != null ? ((java.sql.Timestamp) row[3]).toLocalDateTime() : null);
             dto.setLocationId((String) row[4]);
-            dto.setCreatedBy((Integer) row[5]);
+            dto.setCreatedBy(row[5] != null ? String.valueOf(row[5]) : null);
             // dto.setCreateDate(row[6] != null ? ((java.sql.Timestamp) row[6]).toLocalDateTime() : null);
             
             try {
@@ -384,7 +384,7 @@ public class IgpServiceImpl implements IgpService {
             dto.setIgpDate((String) row[3]);
             dto.setIgpType((String) row[4]);
             dto.setIndentId(row[5] != null ? ((Number) row[5]).intValue() : null);
-            dto.setCreatedBy(row[6] != null ? ((Number) row[6]).intValue() : null);
+            dto.setCreatedBy(row[6] != null ? String.valueOf(((Number) row[6]).intValue()) : null);
             dto.setCreateDate(row[7] != null ? ((java.sql.Timestamp) row[7]).toLocalDateTime() : null);
             dto.setLocationId((String) row[8]);
 
@@ -424,7 +424,7 @@ public List<IgpMaterialInReportDto> getIgpMaterialInReport(String startDate, Str
         dto.setIgpDate((String) row[3]);
         dto.setIgpType((String) row[4]);
         dto.setIndentId(row[5] != null ? ((Number) row[5]).intValue() : null);
-        dto.setCreatedBy(row[6] != null ? ((Number) row[6]).intValue() : null);
+        dto.setCreatedBy(row[6] != null ? String.valueOf(((Number) row[6]).intValue()) : null);
         dto.setCreateDate(row[7] != null ? ((java.sql.Timestamp) row[7]).toLocalDateTime() : null);
         dto.setLocationId((String) row[8]);
 
@@ -637,7 +637,7 @@ public List<IgpMaterialInReportDto> getIgpMaterialInReport(String startDate, Str
         return materialIgpDto;
     }
 
-    private void createNewAsset(String igpId, Integer createdBy){
+    private void createNewAsset(String igpId, String createdBy){
         System.out.println("CREATE NEW ASSET");
         Long id = Long.parseLong(igpId.split("/")[1]);
         IgpMaterialMasterEntity igpMaterialMasterEntity = immr.findById(id).orElseThrow(() -> new RuntimeException("IGP not found"));

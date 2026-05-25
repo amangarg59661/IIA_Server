@@ -292,11 +292,13 @@ private BudgetService budgetService;
 
     @Override
     @Transactional
-    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, Integer createdBy) {
+    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, String createdBy) {
         System.err.println("🚀🚀🚀 WORKFLOW INITIATION - RequestID: " + requestId + ", Workflow: " + workflowName);
         WorkflowTransitionDto workflowTransitionDto = null;
         if (Objects.nonNull(requestId) && Objects.nonNull(workflowName) && Objects.nonNull(createdBy)) {
-            userService.validateUser(createdBy);
+            if (isNumeric(createdBy)) {
+                userService.validateUser(Integer.valueOf(createdBy));
+            }
             WorkflowDto workflowDto = workflowByWorkflowName(workflowName);
 
             // validateWorkflowTransition(requestId, createdBy, workflowDto.getWorkflowId());
@@ -334,7 +336,7 @@ private BudgetService budgetService;
             workflowTransitionDto = mapWorkflowTransitionDto(workflowTransition);
 
             if (WorkflowName.TENDER_EVALUATOR.getValue().equalsIgnoreCase(workflowName)) {
-                workflowTransition.setModifiedBy(createdBy);
+                workflowTransition.setUpdatedBy(createdBy);
                 List<SubWorkflowTransitionDto> list = validateTenderWorkFlow(null, workflowTransition, null);
                 list.forEach(dto -> {
                     if (dto != null) {
@@ -378,9 +380,9 @@ private BudgetService budgetService;
      * (String) Throws BusinessException if the reporting officer or their user
      * account cannot be found.
      */
-    private Map<String, Object> resolveReportingOfficer(Integer creatorUserId) {
+    private Map<String, Object> resolveReportingOfficer(String creatorUserId) {
         // Step 1: Find the creator's user record to get their employeeId
-        UserMaster creatorUser = userMasterRepository.findByUserId(creatorUserId);
+        UserMaster creatorUser = userMasterRepository.findByUserId(Integer.valueOf(creatorUserId));
         if (creatorUser == null || creatorUser.getEmployeeId() == null || creatorUser.getEmployeeId().trim().isEmpty()) {
             throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
@@ -544,8 +546,8 @@ private BudgetService budgetService;
                     AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
                     "Cannot resolve Indentor: Indent not found or has no creator for requestId=" + requestId));
         }
-        Integer creatorUserId = indent.getCreatedBy();
-        UserMaster creatorUser = userMasterRepository.findByUserId(creatorUserId);
+        String creatorUserId = indent.getCreatedBy();
+        UserMaster creatorUser = userMasterRepository.findByUserId(Integer.valueOf(creatorUserId));
         if (creatorUser == null) {
             throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
@@ -620,7 +622,7 @@ private BudgetService budgetService;
      * BRANCH-BASED WORKFLOW INITIATION Matches workflow branch based on
      * conditions and routes to first approver
      */
-    private WorkflowTransition initiateBranchBasedWorkflow(String requestId, WorkflowDto workflowDto, Integer createdBy) {
+    private WorkflowTransition initiateBranchBasedWorkflow(String requestId, WorkflowDto workflowDto, String createdBy) {
         try {
             System.out.println("Initiating workflow for " + requestId);
             System.out.println(" WORKFLOW NAME RECEIVED: " + workflowDto.getWorkflowName()); // updated by abhinav
@@ -632,9 +634,9 @@ private BudgetService budgetService;
             // Without this, branches with "indentorDepartment" conditions (e.g. B46 for Tech dept)
             // would never match because the dept is null at the time findMatchingBranch runs.
             String indentorDepartment = (String) conditions.get("indentorDepartment");
-            if ((indentorDepartment == null || indentorDepartment.trim().isEmpty()) && createdBy != null) {
+            if ((indentorDepartment == null || indentorDepartment.trim().isEmpty()) && createdBy != null && isNumeric(createdBy)) {
                 try {
-                    com.astro.entity.UserMaster creatorUser = userMasterRepository.findByUserId(createdBy);
+                    com.astro.entity.UserMaster creatorUser = userMasterRepository.findByUserId(Integer.valueOf(createdBy));
                     if (creatorUser != null && creatorUser.getEmployeeId() != null) {
                         employeeDepartmentMasterRepository.findByEmployeeId(creatorUser.getEmployeeId())
                                 .ifPresent(emp -> {
@@ -804,7 +806,7 @@ private BudgetService budgetService;
         return new HashMap<>();
     }
 
-    // private void validateWorkflowTransition(String requestId, Integer createdBy, Integer workflowId) {
+    // private void validateWorkflowTransition(String requestId, String createdBy, Integer workflowId) {
     //     WorkflowTransition workflowTransition = workflowTransitionRepository.findByWorkflowIdAndCreatedByAndRequestId(workflowId, createdBy, requestId);
     //     if (Objects.nonNull(workflowTransition)) {
     //         throw new InvalidInputException(new ErrorDetails(AppConstant.WORKFLOW_ALREADY_EXISTS, AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -1026,10 +1028,14 @@ private BudgetService budgetService;
         workflowTransitionDto.setStatus(workflowTransition.getStatus());
         workflowTransitionDto.setTransitionSubOrder(workflowTransition.getTransitionSubOrder());
         workflowTransitionDto.setCreatedDate(workflowTransition.getCreatedDate());
-        workflowTransitionDto.setModifiedBy(workflowTransition.getModifiedBy());
+        workflowTransitionDto.setUpdatedBy(workflowTransition.getUpdatedBy());
         workflowTransitionDto.setNextAction(workflowTransition.getNextAction());
-        workflowTransitionDto.setCreatedRole(roleNameById(workflowTransition.getCreatedBy()));
-        workflowTransitionDto.setModifiedRole(roleNameById(workflowTransition.getModifiedBy()));
+        if (workflowTransition.getCreatedBy() != null) {
+            workflowTransitionDto.setCreatedRole(roleNameById(Integer.valueOf(workflowTransition.getCreatedBy())));
+        }
+        if (workflowTransition.getUpdatedBy() != null) {
+            workflowTransitionDto.setModifiedRole(roleNameById(Integer.valueOf(workflowTransition.getUpdatedBy())));
+        }
         workflowTransitionDto.setCurrentRole(workflowTransition.getCurrentRole());
         workflowTransitionDto.setNextRole(workflowTransition.getNextRole());
         workflowTransitionDto.setWorkflowSequence(workflowTransition.getWorkflowSequence());
@@ -1060,7 +1066,7 @@ private BudgetService budgetService;
         return transitionMasterRepository.findById(transitionId).orElse(null);
     }
 
-    private WorkflowTransition createWorkflowTransition(String requestId, WorkflowDto workflowDto, TransitionDto transitionDto, Integer createdBy) {
+    private WorkflowTransition createWorkflowTransition(String requestId, WorkflowDto workflowDto, TransitionDto transitionDto, String createdBy) {
         WorkflowTransition workflowTransition = new WorkflowTransition();
         workflowTransition.setTransitionId(transitionDto.getTransitionId());
         workflowTransition.setWorkflowId(workflowDto.getWorkflowId());
@@ -1071,7 +1077,7 @@ private BudgetService budgetService;
         workflowTransition.setNextAction(AppConstant.PENDING_TYPE);
         workflowTransition.setCreatedDate(new Date());
         workflowTransition.setCreatedBy(createdBy);
-        workflowTransition.setModifiedBy(null);
+        workflowTransition.setUpdatedBy(null);
         workflowTransition.setModificationDate(null);
         workflowTransition.setRequestId(requestId);
         workflowTransition.setWorkflowName(workflowDto.getWorkflowName());
@@ -1255,10 +1261,11 @@ private BudgetService budgetService;
             return;
         }
 
-        // Collect all distinct createdBy and modifiedBy from all records
+        // Collect all distinct createdBy and updatedBy from all records
         Set<Integer> userIds = transitions.stream()
-                .flatMap(t -> Stream.of(t.getCreatedBy(), t.getModifiedBy()))
+                .flatMap(t -> Stream.of(t.getCreatedBy(), t.getUpdatedBy()))
                 .filter(Objects::nonNull)
+                .map(Integer::valueOf)
                 .collect(Collectors.toSet());
 
         if (userIds.isEmpty()) {
@@ -1310,7 +1317,7 @@ private BudgetService budgetService;
         nextWorkflowTransition.setNextAction(AppConstant.PENDING_TYPE);
         nextWorkflowTransition.setAction(AppConstant.APPROVE_TYPE);
         nextWorkflowTransition.setRemarks(remarks);
-        nextWorkflowTransition.setModifiedBy(actionBy);
+        nextWorkflowTransition.setUpdatedBy(String.valueOf(actionBy));
         nextWorkflowTransition.setModificationDate(new Date());
         nextWorkflowTransition.setRequestId(currentWorkflowTransition.getRequestId());
         nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
@@ -1325,9 +1332,9 @@ private BudgetService budgetService;
     }
 
     @Override
-    public List<WorkflowTransitionDto> approvedWorkflowTransition(Integer modifiedBy) {
+    public List<WorkflowTransitionDto> approvedWorkflowTransition(String updatedBy) {
         List<WorkflowTransitionDto> workflowTransitionDtoList = new ArrayList<>();
-        List<WorkflowTransition> workflowTransitionList = workflowTransitionRepository.findByModifiedBy(modifiedBy);
+        List<WorkflowTransition> workflowTransitionList = workflowTransitionRepository.findByUpdatedBy(updatedBy);
         if (Objects.nonNull(workflowTransitionList) && !workflowTransitionList.isEmpty()) {
             workflowTransitionDtoList = workflowTransitionList.stream().sorted(Comparator.comparing(WorkflowTransition::getWorkflowSequence).reversed()).map(e -> {
                 return mapWorkflowTransitionDto(e);
@@ -1337,17 +1344,17 @@ private BudgetService budgetService;
     }
 
     @Override
-    public List<SubWorkflowTransitionDto> getSubWorkflowTransition(Integer modifiedBy) {
+    public List<SubWorkflowTransitionDto> getSubWorkflowTransition(String updatedBy) {
         List<SubWorkflowTransitionDto> workflowTransitionDtoList = new ArrayList<>();
 
-        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(modifiedBy);
+        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(updatedBy);
         if (Objects.nonNull(subWorkflowTransitionList) && !subWorkflowTransitionList.isEmpty()) {
             workflowTransitionDtoList = subWorkflowTransitionList.stream().map(e -> {
                 SubWorkflowTransitionDto subWorkflowTransitionDto = new SubWorkflowTransitionDto();
                 subWorkflowTransitionDto.setSubWorkflowTransitionId(e.getSubWorkflowTransitionId());
                 subWorkflowTransitionDto.setWorkflowId(e.getWorkflowId());
                 subWorkflowTransitionDto.setWorkflowName(e.getWorkflowName());
-                subWorkflowTransitionDto.setModifiedBy(e.getModifiedBy());
+                subWorkflowTransitionDto.setUpdatedBy(e.getUpdatedBy());
                 subWorkflowTransitionDto.setWorkflowSequence(e.getWorkflowSequence());
                 subWorkflowTransitionDto.setStatus(e.getStatus());
                 subWorkflowTransitionDto.setRemarks(e.getRemarks());
@@ -1417,7 +1424,7 @@ private BudgetService budgetService;
                 nextWorkflowTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
                 nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
                 nextWorkflowTransition.setTransitionSubOrder(currentWorkflowTransition.getTransitionSubOrder());
-                nextWorkflowTransition.setModifiedBy(currentWorkflowTransition.getModifiedBy());
+                nextWorkflowTransition.setUpdatedBy(currentWorkflowTransition.getUpdatedBy());
                 nextWorkflowTransition.setModificationDate(new Date());
                 nextWorkflowTransition.setStatus(AppConstant.IN_PROGRESS_TYPE);
                 nextWorkflowTransition.setAction(AppConstant.APPROVE_TYPE);
@@ -1472,7 +1479,7 @@ private BudgetService budgetService;
             nextWorkflowTransition.setNextAction(AppConstant.PENDING_TYPE);
             nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
             nextWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
-            nextWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+            nextWorkflowTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
             nextWorkflowTransition.setModificationDate(new Date());
             nextWorkflowTransition.setRequestId(currentWorkflowTransition.getRequestId());
             nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
@@ -1610,7 +1617,7 @@ private BudgetService budgetService;
         currentWorkflowTransition.setAction(AppConstant.REJECT_TYPE);
         currentWorkflowTransition.setNextAction(null);   // nothing pending after rejection
         currentWorkflowTransition.setNextRole(null);     // clear queue assignment
-        currentWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+        currentWorkflowTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
         currentWorkflowTransition.setModificationDate(now);
         currentWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
         workflowTransitionRepository.save(currentWorkflowTransition);
@@ -1637,7 +1644,7 @@ private BudgetService budgetService;
                 t.setStatus(AppConstant.CANCELED_TYPE);
                 t.setNextAction(null);
                 t.setNextRole(null);
-                t.setModifiedBy(transitionActionReqDto.getActionBy());
+                t.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
                 t.setModificationDate(now);
                 t.setRemarks("Auto-cancelled: workflow terminated by rejection on transition ID="
                         + currentWorkflowTransition.getWorkflowTransitionId());
@@ -1953,7 +1960,7 @@ private BudgetService budgetService;
         nextWorkflowTransition.setRequestId(currentWorkflowTransition.getRequestId());
         nextWorkflowTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
         nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
-        nextWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+        nextWorkflowTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
         nextWorkflowTransition.setModificationDate(new Date());
         nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
         nextWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
@@ -2082,7 +2089,7 @@ private BudgetService budgetService;
         escalationTransition.setRequestId(currentWorkflowTransition.getRequestId());
         escalationTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
         escalationTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
-        escalationTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+        escalationTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
         escalationTransition.setModificationDate(new Date());
         escalationTransition.setAction("Escalated");
         escalationTransition.setRemarks("ESCALATION: " + escalationReason);
@@ -2174,7 +2181,7 @@ private BudgetService budgetService;
         nextWorkflowTransition.setRequestId(pendingTransition.getRequestId());
         nextWorkflowTransition.setCreatedDate(pendingTransition.getCreatedDate());
         nextWorkflowTransition.setCreatedBy(pendingTransition.getCreatedBy());
-        nextWorkflowTransition.setModifiedBy(null);
+        nextWorkflowTransition.setUpdatedBy(null);
         nextWorkflowTransition.setModificationDate(new Date());
         nextWorkflowTransition.setAction("Auto-Approved");
         nextWorkflowTransition.setRemarks("AUTO-APPROVED: " + pendingTransition.getNextRole() + " did not act within " + autoApproveHours + " hours");
@@ -2263,7 +2270,7 @@ private BudgetService budgetService;
             nextWorkflowTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
             nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
             nextWorkflowTransition.setTransitionSubOrder(currentWorkflowTransition.getTransitionSubOrder());
-            nextWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+            nextWorkflowTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
             nextWorkflowTransition.setModificationDate(new Date());
             nextWorkflowTransition.setStatus(AppConstant.COMPLETED_TYPE);
             nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
@@ -2301,7 +2308,7 @@ private BudgetService budgetService;
 
             nextWorkflowTransition.setAction(transitionActionReqDto.getAction());
             nextWorkflowTransition.setRemarks(transitionActionReqDto.getRemarks());
-            nextWorkflowTransition.setModifiedBy(transitionActionReqDto.getActionBy());
+            nextWorkflowTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
             nextWorkflowTransition.setModificationDate(new Date());
             nextWorkflowTransition.setRequestId(currentWorkflowTransition.getRequestId());
             nextWorkflowTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
@@ -2358,7 +2365,7 @@ private BudgetService budgetService;
         dto.setNextAction(nextWorkflowTransition.getNextAction());
         dto.setAction(nextWorkflowTransition.getAction());
         dto.setRemarks(nextWorkflowTransition.getRemarks());
-        dto.setModifiedBy(nextWorkflowTransition.getModifiedBy());
+        dto.setUpdatedBy(nextWorkflowTransition.getUpdatedBy());
         dto.setModificationDate(nextWorkflowTransition.getModificationDate());
         dto.setRequestId(nextWorkflowTransition.getRequestId());
         dto.setCreatedBy(nextWorkflowTransition.getCreatedBy());
@@ -2392,7 +2399,7 @@ private BudgetService budgetService;
             TenderWithIndentResponseDTO tenderWithIndentResponseDTO = tenderRequestService.getTenderRequestById(nextWorkflowTransition.getRequestId());
             if (Objects.nonNull(tenderWithIndentResponseDTO) && Objects.nonNull(tenderWithIndentResponseDTO.getIndentResponseDTO()) && !tenderWithIndentResponseDTO.getIndentResponseDTO().isEmpty()) {
                 List<IndentCreationResponseDTO> indentResponseDTO = tenderWithIndentResponseDTO.getIndentResponseDTO();
-                List<Integer> indenterList = indentResponseDTO.stream().map(e -> e.getCreatedBy()).collect(Collectors.toList());
+                List<Integer> indenterList = indentResponseDTO.stream().map(e -> e.getCreatedBy() != null ? Integer.valueOf(e.getCreatedBy()) : null).collect(Collectors.toList());
                 if (Objects.nonNull(indenterList) && !indenterList.isEmpty()) {
                     AtomicInteger seq = new AtomicInteger(1);
                     indenterList.forEach(e -> {
@@ -2407,7 +2414,7 @@ private BudgetService budgetService;
                         } else {
                             subWorkflowTransition.setActionOn(26); // Evaluator
                         }*/
-                        subWorkflowTransition.setCreatedBy(nextWorkflowTransition.getModifiedBy());
+                        subWorkflowTransition.setCreatedBy(nextWorkflowTransition.getUpdatedBy());
                         subWorkflowTransition.setWorkflowSequence(seq.get());
                         subWorkflowTransition.setRequestId(nextWorkflowTransition.getRequestId());
                         subWorkflowTransition.setStatus(AppConstant.PENDING_TYPE);
@@ -2427,7 +2434,7 @@ private BudgetService budgetService;
                         subDto.setWorkflowName(subWorkflowTransition.getWorkflowName());
                         subDto.setRequestId(subWorkflowTransition.getRequestId());
                         subDto.setCreatedBy(subWorkflowTransition.getCreatedBy());
-                        subDto.setModifiedBy(subWorkflowTransition.getModifiedBy());
+                        subDto.setUpdatedBy(subWorkflowTransition.getUpdatedBy());
                         subDto.setStatus(subWorkflowTransition.getStatus());
                         subDto.setAction(subWorkflowTransition.getAction());
                         subDto.setRemarks(subWorkflowTransition.getRemarks());
@@ -3085,7 +3092,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
         Optional<MaterialMasterUtil> Material = materialMasterUtilRepository.findByMaterialCode(materialCode);
 
         MaterialMasterUtil ma = Material.get();
-        UserMaster us = userMasterRepository.findByUserId(ma.getCreatedBy());
+        UserMaster us = ma.getCreatedBy() != null ? userMasterRepository.findByUserId(Integer.valueOf(ma.getCreatedBy())) : null;
         QueueResponse response = new QueueResponse();
         response.setRequestId(material.getMaterialCode());
         response.setWorkflowName("Material Workflow");
@@ -3138,7 +3145,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
         queueResponse.setRequestId(workflowTransition.getRequestId());
         queueResponse.setCreatedBy(workflowTransition.getCreatedBy());
         //  queueResponse.setCreatedRole(workflowTransition.getCreatedRole());
-        queueResponse.setModifiedBy(workflowTransition.getModifiedBy());
+        queueResponse.setUpdatedBy(workflowTransition.getUpdatedBy());
         // queueResponse.setModifiedRole(workflowTransition.getModifiedRole());
         queueResponse.setStatus(workflowTransition.getStatus());
         queueResponse.setNextAction(workflowTransition.getNextAction());
@@ -3297,11 +3304,11 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
 
 
     @Override
-    public List<SubWorkflowQueueDto> getSubWorkflowQueue(Integer modifiedBy) {
+    public List<SubWorkflowQueueDto> getSubWorkflowQueue(String updatedBy) {
         List<SubWorkflowQueueDto> workflowQueueDtoList = new ArrayList<>();
         Set<String> processedIndentIds = new HashSet<>(); // To track already added indentIds
         String previousRequestId = null; // Track last requestId
-        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(modifiedBy);
+        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(updatedBy);
 
         if (Objects.nonNull(subWorkflowTransitionList) && !subWorkflowTransitionList.isEmpty()) {
             for (SubWorkflowTransition transition : subWorkflowTransitionList) {
@@ -3326,7 +3333,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                     subWorkflowQueueDto.setSubWorkflowTransitionId(transition.getSubWorkflowTransitionId());
                     subWorkflowQueueDto.setWorkflowId(transition.getWorkflowId());
                     subWorkflowQueueDto.setWorkflowName(transition.getWorkflowName());
-                    subWorkflowQueueDto.setModifiedBy(transition.getModifiedBy());
+                    subWorkflowQueueDto.setUpdatedBy(transition.getUpdatedBy());
                     subWorkflowQueueDto.setWorkflowSequence(transition.getWorkflowSequence());
                     subWorkflowQueueDto.setStatus(transition.getStatus());
                     subWorkflowQueueDto.setRemarks(transition.getRemarks());
@@ -3355,11 +3362,11 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
      */
  /*
     @Override
-    public List<SubWorkflowQueueDto> getSubWorkflowQueue(Integer modifiedBy) {
+    public List<SubWorkflowQueueDto> getSubWorkflowQueue(String updatedBy) {
         List<SubWorkflowQueueDto> workflowQueueDtoList = new ArrayList<>();
 
 
-        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(modifiedBy);
+        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(updatedBy);
 
         if (subWorkflowTransitionList != null && !subWorkflowTransitionList.isEmpty()) {
 
@@ -3386,7 +3393,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                     subWorkflowQueueDto.setSubWorkflowTransitionId(transition.getSubWorkflowTransitionId());
                     subWorkflowQueueDto.setWorkflowId(transition.getWorkflowId());
                     subWorkflowQueueDto.setWorkflowName(transition.getWorkflowName());
-                    subWorkflowQueueDto.setModifiedBy(transition.getModifiedBy());
+                    subWorkflowQueueDto.setUpdatedBy(transition.getUpdatedBy());
                     subWorkflowQueueDto.setWorkflowSequence(transition.getWorkflowSequence());
                     subWorkflowQueueDto.setStatus(transition.getStatus());
                     subWorkflowQueueDto.setRemarks(transition.getRemarks());
@@ -3415,10 +3422,10 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
 
      */
     @Override
-    public List<SubWorkflowQueueDto> getSubWorkflowQueue(Integer modifiedBy) {
+    public List<SubWorkflowQueueDto> getSubWorkflowQueue(String updatedBy) {
         List<SubWorkflowQueueDto> workflowQueueDtoList = new ArrayList<>();
 
-        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(modifiedBy);
+        List<SubWorkflowTransition> subWorkflowTransitionList = subWorkflowTransitionRepository.findByActionOn(updatedBy);
 
         if (subWorkflowTransitionList != null && !subWorkflowTransitionList.isEmpty()) {
 
@@ -3453,7 +3460,7 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                     subWorkflowQueueDto.setSubWorkflowTransitionId(transition.getSubWorkflowTransitionId());
                     subWorkflowQueueDto.setWorkflowId(transition.getWorkflowId());
                     subWorkflowQueueDto.setWorkflowName(transition.getWorkflowName());
-                    subWorkflowQueueDto.setModifiedBy(transition.getModifiedBy());
+                    subWorkflowQueueDto.setUpdatedBy(transition.getUpdatedBy());
                     subWorkflowQueueDto.setWorkflowSequence(transition.getWorkflowSequence());
                     subWorkflowQueueDto.setStatus(transition.getStatus());
                     subWorkflowQueueDto.setRemarks(transition.getRemarks());
@@ -3497,6 +3504,11 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
     @Override
     public List<pendingRecordsDto> getPendingRecordsForRole(String roleName) {
         return workflowTransitionRepository.findPendingByNextRole(roleName);
+    }
+
+    private boolean isNumeric(String str) {
+        if (str == null || str.isEmpty()) return false;
+        try { Integer.parseInt(str); return true; } catch (NumberFormatException e) { return false; }
     }
 
 }

@@ -19,7 +19,7 @@ private Integer spoRejectionCount;
     private String commissioningDate;
     private List<GiMaterialDtlDto> materialDtlList;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private BigDecimal gprnAmount;
     private BigDecimal poAmount;
     private String role;

@@ -338,7 +338,7 @@ const searchMaterials = async (searchText) => {
       const payload = {
 
         category: values.category,
-        createdBy: Number(createdByValue),
+        createdBy: String(createdByValue),
         currency: values.currency,
         description: values.description,
         // estimatedPriceWithCcy: values.estimatedPriceWithCcy,

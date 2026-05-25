@@ -23,9 +23,9 @@ public class DepartmentComputerPriceLimitRequestDTO {
 
     private Boolean isActive = true;
 
-    private Integer createdBy;
+    private String createdBy;
 
-    private Integer updatedBy;
+    private String updatedBy;
 
     private String remarks;
 }

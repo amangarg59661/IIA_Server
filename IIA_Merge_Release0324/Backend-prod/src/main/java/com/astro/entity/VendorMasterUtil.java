@@ -4,10 +4,16 @@ import org.apache.logging.log4j.message.StringFormattedMessage;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Data
 @Entity
 @Table(name = "vendor_master_util")
+@EntityListeners(AuditingEntityListener.class)
 public class VendorMasterUtil {
 
     @Id
@@ -37,8 +43,10 @@ public class VendorMasterUtil {
     private ApprovalStatus approvalStatus;
     private String comments;
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
     @Column(name = "alternate_email_or_phone_number", length = 255)
     private String alternateEmailOrPhoneNumber;
@@ -72,8 +80,10 @@ public class VendorMasterUtil {
 
 
 
-    private LocalDateTime createdDate = LocalDateTime.now();
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
     public enum ApprovalStatus {
 

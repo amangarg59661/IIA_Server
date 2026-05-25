@@ -18,6 +18,6 @@ public class DiMasterDto {
 
     private String diDate;
     private String status;
-    private Integer createdBy;
+    private String createdBy;
     private List<GtDtl> materialDtlList;
 }

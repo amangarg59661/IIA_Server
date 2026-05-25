@@ -3,11 +3,17 @@ package com.astro.entity.AdminPanel;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "workflow_branch_master",
        uniqueConstraints = @UniqueConstraint(columnNames = {"workflow_id", "branch_code"}))
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class WorkflowBranchMaster {
 
     @Id
@@ -50,8 +56,10 @@ public class WorkflowBranchMaster {
     private String budgetCheckConfig; // {"budgetSource": "PROJECT", "checkField": "availableProjectLimit"}
 
     @Column(name = "created_by", length = 100)
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 }

@@ -6,12 +6,19 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.persistence.EntityListeners;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @Table(name = "employee_department_master")
+@EntityListeners(AuditingEntityListener.class)
 public class EmployeeDepartmentMaster {
 
     @Id
@@ -89,16 +96,20 @@ public class EmployeeDepartmentMaster {
     private String status = "Active";
     
     @Column(name = "created_by", nullable = false)
+    @CreatedBy
     private String createdBy;
     
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
     
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
     @Column(name = "is_draft")
     private Boolean isDraft = false;

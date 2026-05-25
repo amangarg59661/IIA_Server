@@ -4,10 +4,16 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.util.Date;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "SUB_WORKFLOW_TRANSITION")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class SubWorkflowTransition {
 
     @Id
@@ -28,10 +34,11 @@ public class SubWorkflowTransition {
     private String requestId;
 
     @Column(name = "CREATEDBY")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
 
     @Column(name = "MODIFIEDBY")
-    private Integer modifiedBy;
+    private String updatedBy;
 
     @Column(name = "STATUS")
     private String status;

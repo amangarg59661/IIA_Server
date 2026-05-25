@@ -5,10 +5,16 @@ import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @Table(name = "goods_inspection")
+@EntityListeners(AuditingEntityListener.class)
 public class GoodsInspection {
 
     @Id
@@ -50,10 +56,14 @@ public class GoodsInspection {
     @Column(name = "po_amendment_notified")
     private Boolean poAmendmentNotified = false;
 
+    @CreatedBy
     private String createdBy;
+    @LastModifiedBy
     private String updatedBy;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 }

@@ -7,6 +7,12 @@ import lombok.Setter;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -14,6 +20,7 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Entity
 @Table(name = "demand_and_issue_dtl")
+@EntityListeners(AuditingEntityListener.class)
 public class DemandAndIssueDtlEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,4 +59,20 @@ public class DemandAndIssueDtlEntity {
     @Column(name = "book_value")
     private BigDecimal bookValue;
     private String uom;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 }

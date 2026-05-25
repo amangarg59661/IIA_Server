@@ -123,7 +123,7 @@ private com.astro.service.BudgetService budgetService;
         }
 
         grnMaster.setCreatedBy(req.getCreatedBy());
-        grnMaster.setSystemCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        grnMaster.setSystemCreatedBy(req.getCreatedBy());
         grnMaster.setCreateDate(LocalDateTime.now());
         grnMaster.setLocationId(req.getLocationId());
         grnMaster.setGrnType(req.getGrnType());
@@ -371,7 +371,7 @@ String grnNumber = "INV" + grnMaster.getGrnProcessId() + "/" + grnMaster.getGrnS
         workflowStatus.setSubProcessId(grnMaster.getGrnSubProcessId());
         workflowStatus.setAction("CREATED");
         workflowStatus.setRemarks("GRN Created");
-        workflowStatus.setCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        workflowStatus.setCreatedBy(req.getCreatedBy());
         workflowStatus.setCreateDate(LocalDateTime.now());
 
         grnWorkRepo.save(workflowStatus);
@@ -660,7 +660,7 @@ private int extractSubProcessId(String processNo) {
         mapper.map(req, grnMaster);
         grnMaster.setStatus("AWAITING APPROVAL");
         grnMaster.setCreatedBy(req.getCreatedBy());
-        grnMaster.setSystemCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        grnMaster.setSystemCreatedBy(req.getCreatedBy());
 
         if (StringUtils.hasText(req.getGrnDate())) {
             grnMaster.setGrnDate(CommonUtils.convertStringToDateObject(req.getGrnDate()));
@@ -726,7 +726,7 @@ private int extractSubProcessId(String processNo) {
         workflowStatus.setSubProcessId(grnMaster.getGrnSubProcessId());
         workflowStatus.setAction("Updated");
         workflowStatus.setRemarks("GRN updated");
-        workflowStatus.setCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        workflowStatus.setCreatedBy(req.getCreatedBy());
         workflowStatus.setCreateDate(LocalDateTime.now());
 
         grnWorkRepo.save(workflowStatus);
@@ -758,7 +758,7 @@ private int extractSubProcessId(String processNo) {
         mapper.map(req, grnMaster);
         grnMaster.setStatus("AWAITING APPROVAL");
         grnMaster.setCreatedBy(req.getCreatedBy());
-        grnMaster.setSystemCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        grnMaster.setSystemCreatedBy(req.getCreatedBy());
         if (StringUtils.hasText(req.getGrnDate())) {
             grnMaster.setGrnDate(CommonUtils.convertStringToDateObject(req.getGrnDate()));
         }
@@ -871,7 +871,7 @@ private int extractSubProcessId(String processNo) {
         workflowStatus.setSubProcessId(grnMaster.getGrnSubProcessId());
         workflowStatus.setAction("Updated");
         workflowStatus.setRemarks("GRN updated");
-        workflowStatus.setCreatedBy(Integer.parseInt(req.getCreatedBy()));
+        workflowStatus.setCreatedBy(req.getCreatedBy());
         workflowStatus.setCreateDate(LocalDateTime.now());
         grnWorkRepo.save(workflowStatus);
 
@@ -907,7 +907,7 @@ private int extractSubProcessId(String processNo) {
         grnMaster.setStatus("APPROVED");
         grnMaster.setSystemCreatedBy(req.getCreatedBy());
         grnMaster.setLocationId(req.getLocationId());
-        grnMaster.setCreatedBy(req.getCreatedBy().toString());
+        grnMaster.setCreatedBy(req.getCreatedBy());
         grnMaster.setCreateDate(LocalDateTime.now());
         grnMaster.setGrnProcessId("N/A");
 

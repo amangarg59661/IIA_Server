@@ -31,7 +31,7 @@ public class paymentVoucherRequestDto {
    private BigDecimal paymentVoucherNetAmount;
 
 
-   private Integer createdBy;
+   private String createdBy;
 
     private List<paymentVoucherMaterialRequestDto> materials;
 

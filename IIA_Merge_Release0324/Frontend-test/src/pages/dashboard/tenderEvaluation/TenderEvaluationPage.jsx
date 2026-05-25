@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Badge, Button, Input, message, Modal, Select, Space, Spin,
+  Alert, Badge, Button, Input, message, Modal, Select, Space, Spin,
   Table, Tag, Tooltip, Typography, Upload,
 } from "antd";
 import {
@@ -33,12 +33,15 @@ const STATUS_COLOR = {
 };
 
 // context-aware label; pass indentCategory when available
-const evalStatusLabel = (s, indentCategory) => {
+const evalStatusLabel = (s, indentCategory, bidType) => {
   if (!s || s === "PENDING_INITIATION") return "Pending Initiation";
   if (s === "PENDING_APPROVAL") {
     return indentCategory === "MULTIPLE_INDENT"
       ? "Pending Approval from Purchase Personnel"
       : "Pending Approval from Indentor";
+  }
+  if (s === "PENDING_FINANCIAL" && bidType && bidType.toUpperCase().includes("SINGLE")) {
+    return "Pending Evaluation";
   }
   const map = {
     PENDING_TECHNICAL:               "Pending Technical Evaluation",
@@ -485,28 +488,6 @@ const TenderEvaluationPage = () => {
     }
   };
 
-  // Acknowledge Clarification (evaluator)
-  const handleAcknowledgeClarification = async () => {
-    setActionLoading(true);
-    try {
-      await axios.post(
-        '/api/tender-evaluation/respond-clarification',
-        {
-          respondedByRole: backendRole,
-          respondedById:   String(auth.userId),
-          responseText:    "ACKNOWLEDGED",
-        },
-        { params: { tenderId: selectedEval.tenderId } }
-      );
-      message.success("Clarification acknowledged.");
-      await loadEval(selectedEval.tenderId);
-    } catch (e) {
-      message.error(e?.response?.data?.message || "Acknowledge failed.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // Reject entire evaluation
   const handleRejectEvalConfirm = async () => {
     if (!rejectEvalRemarks.trim()) {
@@ -612,12 +593,6 @@ const TenderEvaluationPage = () => {
           v.status !== "CHANGE_REQUESTED"
       ) &&
     vendors.filter((v) => v.indentorStatus === "ACCEPTED").length > 0;
-
-  // Acknowledge button: evaluator, clarification pending from vendor, none CHANGE_REQUESTED
-  const showAcknowledge =
-    isEvaluator &&
-    selectedEval?.clarificationPendingFrom === "VENDOR" &&
-    vendors.every((v) => v.status !== "CHANGE_REQUESTED");
 
   // Show Initiate button: PP only, no status or PENDING_INITIATION
   const showInitiate =
@@ -879,7 +854,7 @@ const TenderEvaluationPage = () => {
         return (
           <Badge
             status={STATUS_COLOR[s] || "default"}
-            text={evalStatusLabel(s, r.evalData?.indentCategory)}
+            text={evalStatusLabel(s, r.evalData?.indentCategory, r.bidType)}
           />
         );
       },
@@ -969,11 +944,40 @@ const TenderEvaluationPage = () => {
             </Title>
             <Badge
               status={STATUS_COLOR[evalStatus] || "default"}
-              text={evalStatusLabel(evalStatus, indentCategory)}
+              text={evalStatusLabel(evalStatus, indentCategory, bidType)}
             />
             <Tag>{bidType || "N/A"}</Tag>
             <Tag>{indentCategory || "N/A"}</Tag>
           </Space>
+
+          {/* ── Clarification Info Banner ── */}
+          {(evalStatus === "PENDING_VENDOR_CLARIFICATION" || evalStatus === "PENDING_INDENTOR_CLARIFICATION") && (
+            <Alert
+              type="warning"
+              showIcon
+              className="mb-3"
+              message={`Clarification pending from: ${selectedEval.clarificationPendingFromName || selectedEval.clarificationPendingFrom || "—"}`}
+              description={
+                <div>
+                  {selectedEval.clarificationRemarks && (
+                    <div><Text strong>Remarks:</Text> {selectedEval.clarificationRemarks}</div>
+                  )}
+                  {selectedEval.clarificationRequestedByRole && (
+                    <div><Text strong>Requested by:</Text> {selectedEval.clarificationRequestedByRole}</div>
+                  )}
+                  {selectedEval.clarificationTargetVendorId && (() => {
+                    const targetVendor = vendors.find(v => v.vendorId === selectedEval.clarificationTargetVendorId);
+                    return (
+                      <div style={{ marginTop: 4 }}>
+                        <Text strong>Regarding Vendor:</Text>{" "}
+                        {targetVendor?.vendorName || selectedEval.clarificationTargetVendorId}
+                      </div>
+                    );
+                  })()}
+                </div>
+              }
+            />
+          )}
 
           {/* ── Sheet views + uploads (PP only for upload) ── */}
           {/* Technical Comparison Sheet: view (all roles) */}
@@ -1079,16 +1083,6 @@ const TenderEvaluationPage = () => {
                 </Tooltip>
               )}
 
-              {/* Acknowledge Clarification */}
-              {showAcknowledge && (
-                <Button
-                  type="default"
-                  loading={actionLoading}
-                  onClick={handleAcknowledgeClarification}
-                >
-                  Acknowledge Clarification
-                </Button>
-              )}
             </Space>
           )}
 
@@ -1113,15 +1107,6 @@ const TenderEvaluationPage = () => {
                     Confirm Evaluation
                   </Button>
                 </Tooltip>
-                {showAcknowledge && (
-                  <Button
-                    type="default"
-                    loading={actionLoading}
-                    onClick={handleAcknowledgeClarification}
-                  >
-                    Acknowledge Clarification
-                  </Button>
-                )}
               </Space>
             )}
 
@@ -1439,6 +1424,20 @@ const TenderEvaluationPage = () => {
           )}
           {clarVendorId && (
             <Text type="secondary">Vendor: {clarVendorId}</Text>
+          )}
+          {/* Vendor selector when target is INDENTOR/PURCHASE_PERSONNEL (optional - for vendor-specific clarification) */}
+          {(clarTarget === "INDENTOR" || clarTarget === "PURCHASE_PERSONNEL") && vendors.length > 0 && (
+            <Select
+              placeholder="Regarding vendor (optional - leave blank for general)"
+              onChange={setClarVendorId}
+              value={clarVendorId || undefined}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {vendors.map((v) => (
+                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
+              ))}
+            </Select>
           )}
           <TextArea
             rows={4}

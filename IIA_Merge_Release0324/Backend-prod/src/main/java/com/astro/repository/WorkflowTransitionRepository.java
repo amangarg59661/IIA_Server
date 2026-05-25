@@ -18,11 +18,10 @@ import java.util.Optional;
 public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTransition, Integer> {
     List<WorkflowTransition> findByWorkflowId(Integer workflowId);
     WorkflowTransition findByWorkflowIdAndTransitionOrder(Integer workflowId, Integer order);
-    List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestIdOrTransitionId(Integer workflowId, Integer createdBy, Integer requestId, Integer nextTransitionId);
-    // WorkflowTransition findByWorkflowIdAndCreatedByAndRequestId(Integer workflowId, Integer createdBy, String requestId);
+    List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestIdOrTransitionId(Integer workflowId, String createdBy, Integer requestId, Integer nextTransitionId);
     List<WorkflowTransition> findByWorkflowIdAndCreatedByAndRequestId(
-        Integer workflowId, Integer createdBy, String requestId);  // updated by abhinav
-    List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestId(Integer workflowId, Integer createdBy, Integer requestId);
+        Integer workflowId, String createdBy, String requestId);
+    List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestId(Integer workflowId, String createdBy, Integer requestId);
     List<WorkflowTransition> findByWorkflowIdAndCurrentRole(Integer workflowId, String roleName);
     List<WorkflowTransition> findByRequestId(String requestId);
     WorkflowTransition findByWorkflowTransitionIdAndRequestId(Integer workflowTransitionId, String requestId);
@@ -31,7 +30,7 @@ public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTran
     List<WorkflowTransition> findByWorkflowIdAndRequestId(Integer workflowId, String requestId);
     List<WorkflowTransition> findByWorkflowIdAndRequestIdAndCurrentRole(Integer workflowId, String requestId, String assignmentRole);
     List<WorkflowTransition> findByWorkflowIdAndRequestIdAndNextRole(Integer workflowId, String requestId, String assignmentRole);
-    List<WorkflowTransition> findByModifiedBy(Integer modifiedBy);
+    List<WorkflowTransition> findByUpdatedBy(String updatedBy);
    // Optional<WorkflowTransition> findTopByRequestIdOrderByCreatedDateDesc(String requestId);
    Optional<WorkflowTransition> findTopByRequestIdOrderByWorkflowTransitionIdDesc(String requestId);
 
@@ -188,7 +187,7 @@ WHERE wt.workflowId = :workflowId
     @Query("""
 SELECT new com.astro.dto.workflow.CompletedIndentsQueueResponse(
     wt.workflowTransitionId, wt.workflowId, wt.workflowName,
-    wt.transitionId, wt.requestId, wt.createdBy, wt.modifiedBy,
+    wt.transitionId, wt.requestId, wt.createdBy, wt.updatedBy,
     wt.status, wt.nextAction, wt.action, wt.remarks,
     wt.transitionOrder, wt.transitionSubOrder, wt.currentRole, wt.nextRole,
     wt.workflowSequence, wt.modificationDate, wt.createdDate,

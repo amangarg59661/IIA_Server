@@ -16,7 +16,7 @@ public class WorkMasterRequestDto {
     private String workDescription;
    // private List<String> vendorNames;
     private String updatedBy;
-    private Integer createdBy;
+    private String createdBy;
 
 
 

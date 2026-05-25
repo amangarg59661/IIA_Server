@@ -27,7 +27,7 @@ public class woWithTenderAndIndentResponseDTO {
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private List<WorkOrderMaterialResponseDTO> materials;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
     private TenderWithIndentResponseDTO tenderDetails;
     private String projectName;

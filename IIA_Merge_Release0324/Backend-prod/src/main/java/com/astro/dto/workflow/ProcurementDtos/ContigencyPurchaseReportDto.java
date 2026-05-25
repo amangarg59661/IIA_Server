@@ -14,7 +14,7 @@ public class ContigencyPurchaseReportDto {
     private String paymentToVendor;
     private String paymentToEmployee;
     private String purpose;
-    private Integer createdBy;
+    private String createdBy;
     private List<CpMaterialRequestDto> cpMaterials;
     private String pendingWith;
     private String pendingFrom;

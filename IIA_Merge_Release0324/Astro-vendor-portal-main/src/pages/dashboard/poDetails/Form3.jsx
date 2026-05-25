@@ -7,7 +7,7 @@ import axios from "axios";
 const Form3 = () => {
   const { vendorId } = useParams();
   const auth = useSelector((state) => state.auth);
-  const actionPerformer = auth.userId;
+  const actionPerformer = auth.vendorId;
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);

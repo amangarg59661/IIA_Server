@@ -4,6 +4,7 @@ import com.astro.dto.workflow.*;
 import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
 import com.astro.dto.workflow.ProcurementDtos.QuotationViewHistoryDto;
 import com.astro.dto.workflow.ProcurementDtos.VendorQuotationChangeRequestDto;
+import com.astro.dto.workflow.VendorLoginRequestDto;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,6 +13,8 @@ import java.util.List;
 public interface VendorQuotationAgainstTenderService {
 
     public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto);
+
+    public List<VendorQuotationAgainstTenderDto> saveBulkQuotations(BulkVendorQuotationRequest request);
 
     public List<VendorQuotationAgainstTenderDto> getQuotationsByTenderId(String tenderId, String loggedInRole);
 
@@ -45,4 +48,6 @@ public interface VendorQuotationAgainstTenderService {
 
     // New method for changing password
     public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request);
+
+    public VendorStatusDto vendorLogin(VendorLoginRequestDto request);
 }

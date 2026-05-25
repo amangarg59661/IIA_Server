@@ -5,10 +5,16 @@ import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
 @Table(name = "goods_receipt_inspection")
+@EntityListeners(AuditingEntityListener.class)
 public class GoodsReceiptInspection {
 
   //  @Id
@@ -46,13 +52,17 @@ public class GoodsReceiptInspection {
     @Column(name = "attach_component_popup")
     private String attachComponentPopup;
 
+    @LastModifiedBy
     private String updatedBy;
 
+    @CreatedBy
     private String createdBy;
 
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
 
 

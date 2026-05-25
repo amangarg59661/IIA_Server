@@ -65,7 +65,7 @@ public class IndentCreationController {
    //String createdBy = indentRequestDTO.getCreatedBy();
    //Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
     //Integer userId = userMaster.get().getUserId();
-     Integer userId = indentRequestDTO.getCreatedBy();
+     String userId = indentRequestDTO.getCreatedBy();
 
      //initiateing Workflow API
     WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);

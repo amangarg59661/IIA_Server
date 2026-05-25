@@ -24,7 +24,7 @@ public class WorkOrderRequestDTO {
      private String vendorsZRSCCode;
      private String vendorsAccountName;
      private List<WorkOrderMaterialRequestDTO> materials;
-     private Integer createdBy;
+     private String createdBy;
      private String updatedBy;
 
 

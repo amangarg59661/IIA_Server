@@ -31,7 +31,7 @@ public class MaterialMasterRequestDto {
     private String currency;
     private String briefDescription;
   //  private List<String> vendorNames;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
 
     private String materialStatus;

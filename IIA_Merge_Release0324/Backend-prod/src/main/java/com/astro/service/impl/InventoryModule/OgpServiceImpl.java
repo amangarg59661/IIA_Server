@@ -265,7 +265,7 @@ public class OgpServiceImpl implements OgpService {
             dto.setOgpDate(CommonUtils.convertSqlDateToString((java.sql.Date) row[3]));
             // dto.setOgpDate( row[3] != null ? ((java.sql.Timestamp) row[3]).toLocalDateTime() : null);
             dto.setLocationId((String) row[4]);
-            dto.setCreatedBy((Integer) row[5]);
+            dto.setCreatedBy(row[5] != null ? String.valueOf(row[5]) : null);
             
             try {
                 String detailsJson = (String) row[7];

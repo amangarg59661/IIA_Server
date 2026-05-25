@@ -141,7 +141,7 @@ Integer isnSubProcessId;
         List<IsnMaterialDtlEntity> isnMaterialList = isnmdr.findByIssueNoteId(isnMaster.getIssueNoteId());
 
         System.out.println("ISN CREATED BY: " + isnMaster.getCreatedBy());
-        UserMaster um = userMasterRepository.findByUserId(isnMaster.getCreatedBy());
+        UserMaster um = isnMaster.getCreatedBy() != null ? userMasterRepository.findByUserId(Integer.valueOf(isnMaster.getCreatedBy())) : null;
 
         List<IsnMaterialDtlDto> materialDtlListRes = isnMaterialList.stream()
                 .map(material -> {
@@ -243,7 +243,7 @@ Integer isnSubProcessId;
                 dto.setConsigneeDetail((String) row[3]);
                 dto.setIndentorName((String) row[4]);
                 dto.setFieldStation((String) row[5]);
-                dto.setCreatedBy((Integer) row[6]);
+                dto.setCreatedBy(row[6] != null ? String.valueOf(row[6]) : null);
                 // dto.setCreateDate(CommonUtils.convertSqlDateToString((java.sql.Date) row[7]));
                 // dto.setCreateDate((LocalDateTime) row[7]);
                 dto.setLocationId((String) row[8]);

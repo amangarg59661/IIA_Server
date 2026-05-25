@@ -15,6 +15,7 @@ import com.astro.service.VendorMasterUtilService;
 import com.astro.util.EmailService;
 import com.astro.util.PasswordGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -46,7 +47,9 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
     private VendorLoginDetailsRepository vendorLoginDetailsRepository;
     @Autowired
     private VendorIdTrackerRepository vendorIdTrackerRepository;
-    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     @Override
     @Transactional
     public VendorRegiEmailResponseDTO registerVendor(VendorRegistrationRequestDTO dto) {
@@ -94,7 +97,7 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
         VendorLoginDetails vendorLoginDetails = new VendorLoginDetails();
         vendorLoginDetails.setVendorId(vm.getVendorId());
         vendorLoginDetails.setEmailAddress(vm.getEmailAddress());
-        vendorLoginDetails.setPassword(password);
+        vendorLoginDetails.setPassword(passwordEncoder.encode(password));
         vendorLoginDetails.setEmailSent(true); // optimistic: email will be sent after commit
         vendorLoginDetails.setIsFirstLogin(true);
         vendorLoginDetails.setIsTempPassword(true);
@@ -375,7 +378,7 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
         newVendor.setState(vendor.getState());
         newVendor.setPlace(vendor.getPlace());
         newVendor.setStatus("APPROVED");
-        newVendor.setCreatedBy(actionBy);
+        newVendor.setCreatedBy(String.valueOf(actionBy));
         newVendor.setRemarks(remarks);
 
         vendorMasterRepository.save(newVendor);

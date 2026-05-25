@@ -280,6 +280,7 @@ private UomMasterService uomMasterService;
             lov.setIconName(lovMaster.getIconName());
             lov.setParentLovId(lovMaster.getParentLovId());
             lov.setLocationCode(lovMaster.getLocationCode());
+            lov.setUpdatedBy(lovMaster.getUpdatedBy() != null ? lovMaster.getUpdatedBy() : lovMaster.getCreatedBy());
             LOVMaster updated = lovMasterRepository.save(lov);
             // Added by Aman
              dispatchUpdateHandler(updated, request);

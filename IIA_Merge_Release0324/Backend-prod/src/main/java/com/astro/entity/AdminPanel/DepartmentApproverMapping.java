@@ -4,11 +4,17 @@ import lombok.Data;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "department_approver_mapping",
        uniqueConstraints = @UniqueConstraint(columnNames = {"department_name", "approver_type"}))
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class DepartmentApproverMapping {
 
     @Id
@@ -35,16 +41,20 @@ public class DepartmentApproverMapping {
     private Boolean isActive = true;
 
     @Column(name = "created_by", length = 100)
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     @Column(name = "updated_by", length = 100)
+    @LastModifiedBy
     private String updatedBy;
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
     @PreUpdate
     public void preUpdate() {

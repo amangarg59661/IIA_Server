@@ -696,7 +696,7 @@ public class ProcessController {
 
         String requestId = res;
         String workflowName = "Payment Voucher Workflow";
-        Integer userId = dto.getCreatedBy();
+        String userId = dto.getCreatedBy();
 
         //initiateing Workflow API
         WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);

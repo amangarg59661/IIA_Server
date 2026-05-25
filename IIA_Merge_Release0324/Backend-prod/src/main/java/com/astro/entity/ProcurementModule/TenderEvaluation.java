@@ -7,10 +7,16 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "tender_evaluation")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class TenderEvaluation {
     // @Id
     // @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,23 +37,27 @@ public class TenderEvaluation {
     private String responseForTechnicallyQualifiedVendorsFileName;
     @Column(length = 500)
     private String responseForCommeriallyQualifiedVendorsFileName;
-    private Integer uploadQualifiedVendorsFileNameCreatedBy;
-    private Integer uploadTechnicallyQualifiedVendorsFileNameCreatedBy;
-    private Integer uploadCommeriallyQualifiedVendorsFileNameCreatedBy;
-    private Integer formationOfTechnoCommerialComiteeCreatedBy;
-    private Integer responseFileNameCreatedBy;
-    private Integer responseForTechnicallyQualifiedVendorsFileNameCreatedBy;
-    private Integer responseForCommeriallyQualifiedVendorsFileNameCreatedBy;
+    private String uploadQualifiedVendorsFileNameCreatedBy;
+    private String uploadTechnicallyQualifiedVendorsFileNameCreatedBy;
+    private String uploadCommeriallyQualifiedVendorsFileNameCreatedBy;
+    private String formationOfTechnoCommerialComiteeCreatedBy;
+    private String responseFileNameCreatedBy;
+    private String responseForTechnicallyQualifiedVendorsFileNameCreatedBy;
+    private String responseForCommeriallyQualifiedVendorsFileNameCreatedBy;
 
     private String fileType;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
     @Column(name = "created_by")
-    private Integer createdBy;
+    @CreatedBy
+    private String createdBy;
     @Column(name = "created_date", nullable = false)
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
     @Column(name = "updated_date", nullable = false)
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 // ── Tender Evaluation Flow Fields ──
 
     /**
@@ -128,6 +138,10 @@ public class TenderEvaluation {
     /** The evaluation status BEFORE clarification was sought — restored after response is received */
     @Column(name = "previous_evaluation_status", length = 50)
     private String previousEvaluationStatus;
+
+    /** When clarification to INDENTOR/PP is about a specific vendor (null = general/tender-level) */
+    @Column(name = "clarification_target_vendor_id", length = 100)
+    private String clarificationTargetVendorId;
 
     // ── Double Bid Under 10L: Financial Bid Phase ──
 

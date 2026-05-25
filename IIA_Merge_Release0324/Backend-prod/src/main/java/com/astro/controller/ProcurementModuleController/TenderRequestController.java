@@ -56,7 +56,7 @@ public class TenderRequestController {
         // String workflowName = WorkflowName.TENDER_APPROVER.getValue();  // Use enum for workflow name
         String workflowName = WorkflowName.TENDER_APPROVER.getKey(); // updated by abhinav  to match to db
 
-        Integer userId = created.getCreatedBy();
+        String userId = created.getCreatedBy();
         //initiateing Workflow API
         WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
 

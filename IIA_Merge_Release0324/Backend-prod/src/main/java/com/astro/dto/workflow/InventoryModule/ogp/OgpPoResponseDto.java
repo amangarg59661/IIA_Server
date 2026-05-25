@@ -10,7 +10,7 @@ public class OgpPoResponseDto {
     private String poId;
     private String ogpDate;
     private String locationId;
-    private Integer createdBy;
+    private String createdBy;
     private String ogpType;
     private List<OgpPoMaterialDto> materialDtlList;
 }

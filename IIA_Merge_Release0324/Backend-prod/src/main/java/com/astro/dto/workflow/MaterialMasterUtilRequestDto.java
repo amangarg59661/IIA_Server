@@ -19,7 +19,7 @@ public class MaterialMasterUtilRequestDto {
     private BigDecimal unitPrice;
     private String currency;
     private String briefDescription;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
       // Added by Aman 
     private Boolean asset_Flag;

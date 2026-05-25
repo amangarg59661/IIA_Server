@@ -49,7 +49,7 @@ public class IndentDataResponseDto {
     private Boolean buyBack;
     private Boolean proprietaryAndLimitedDeclaration;
     private List<String> uploadBuyBackFileNames;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
     private String approvedBy;
     private String date;

@@ -13,7 +13,7 @@ import javax.persistence.Column;
 public class AssetDisposalDto {
     private Integer disposalId;
     private String disposalDate;
-    private Integer createdBy;
+    private String createdBy;
     private String locationId;
     private String custodianId;
     private String custodianName;

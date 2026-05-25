@@ -12,7 +12,7 @@ public class IsnReportDto {
     private String consigneeDetail;
     private String indentorName;
     private String fieldStation;
-    private Integer createdBy;
+    private String createdBy;
     private String createDate;
     private String locationId;
     private List<IsnReportDetailDto> details;

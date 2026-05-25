@@ -4,9 +4,15 @@ import lombok.Data;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class GoodsTransfer {
 
     @Id
@@ -21,11 +27,15 @@ public class GoodsTransfer {
     private String locator;
     private String note;
     @Column(name = "created_by")
+    @CreatedBy
     private String createdBy;
     @Column(name = "updated_by")
+    @LastModifiedBy
     private String updatedBy;
     @Column(name = "created_date", nullable = false)
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
     @Column(name = "updated_date", nullable = false)
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 }

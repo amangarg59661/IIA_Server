@@ -47,8 +47,6 @@ public class DepartmentComputerPriceLimitServiceImpl implements DepartmentComput
         priceLimit.setDepartmentName(requestDTO.getDepartmentName());
         priceLimit.setPriceLimit(requestDTO.getPriceLimit());
         priceLimit.setIsActive(requestDTO.getIsActive() != null ? requestDTO.getIsActive() : true);
-        priceLimit.setCreatedBy(requestDTO.getCreatedBy());
-        priceLimit.setUpdatedBy(requestDTO.getUpdatedBy());
         priceLimit.setRemarks(requestDTO.getRemarks());
         priceLimit.setCreatedDate(LocalDateTime.now());
         priceLimit.setUpdatedDate(LocalDateTime.now());
@@ -85,7 +83,6 @@ public class DepartmentComputerPriceLimitServiceImpl implements DepartmentComput
         priceLimit.setDepartmentName(requestDTO.getDepartmentName());
         priceLimit.setPriceLimit(requestDTO.getPriceLimit());
         priceLimit.setIsActive(requestDTO.getIsActive() != null ? requestDTO.getIsActive() : priceLimit.getIsActive());
-        priceLimit.setUpdatedBy(requestDTO.getUpdatedBy());
         priceLimit.setRemarks(requestDTO.getRemarks());
         priceLimit.setUpdatedDate(LocalDateTime.now());
 
@@ -211,6 +208,10 @@ public class DepartmentComputerPriceLimitServiceImpl implements DepartmentComput
         limit.setDepartmentName(saved.getLovDisplayValue());
         limit.setPriceLimit(request.getDepartmentLimit());
         limit.setIsActive(saved.getIsActive());
+        if (saved.getCreatedBy() != null) {
+            limit.setCreatedBy(saved.getCreatedBy());
+            limit.setUpdatedBy(saved.getCreatedBy());
+        }
         priceLimitRepository.save(limit);
     }
 
@@ -227,6 +228,10 @@ public class DepartmentComputerPriceLimitServiceImpl implements DepartmentComput
         limit.setDepartmentName(updated.getLovDisplayValue());
         limit.setPriceLimit(request.getDepartmentLimit());
         limit.setIsActive(updated.getIsActive());
+        String actor = updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy();
+        if (actor != null) {
+            limit.setUpdatedBy(actor);
+        }
         priceLimitRepository.save(limit);
     }
 

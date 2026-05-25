@@ -1,13 +1,21 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
 @Table(name = "cp_materials")
+@EntityListeners(AuditingEntityListener.class)
 public class CpMaterials {
 
     @Id
@@ -52,6 +60,23 @@ public class CpMaterials {
     @ManyToOne
     // @JoinColumn(name = "contigency_id", referencedColumnName = "contigency_id", insertable = false, updatable = false)
     @JoinColumn(name = "contigency_id")
+    @ToString.Exclude
     private ContigencyPurchase contigencyPurchase;
+
+    @CreatedBy
+    @Column(name = "created_by", length = 50)
+    private String createdBy;
+
+    @LastModifiedBy
+    @Column(name = "updated_by", length = 50)
+    private String updatedBy;
+
+    @CreatedDate
+    @Column(name = "create_date")
+    private LocalDateTime createDate;
+
+    @LastModifiedDate
+    @Column(name = "update_date")
+    private LocalDateTime updateDate;
 
 }

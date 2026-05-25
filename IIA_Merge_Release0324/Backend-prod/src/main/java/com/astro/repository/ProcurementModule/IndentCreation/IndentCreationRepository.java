@@ -398,7 +398,7 @@ List<SearchIndentIdDto> findByIndentorNameAndCurrentStatusNot(String value, Stri
 List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
 List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
 // List<SearchIndentIdDto> findByMaterialDescriptionAndCurrentStatusNot(String value, String status);
-List<IndentCreation> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
+List<IndentCreation> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
 
 
@@ -406,13 +406,13 @@ List<IndentCreation> findByCreatedByAndCurrentStatus(Integer createdBy, String c
 
 // processid search — all statuses including DRAFT
 List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCreatedBy(
-    String indentId, Integer createdBy);
+    String indentId, String createdBy);
 
 List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCreatedBy(
-    String indentId, String indentType, Integer createdBy);
+    String indentId, String indentType, String createdBy);
 
 List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCreatedBy(
-    String indentId, String indentType, String materialCategoryType, Integer createdBy);
+    String indentId, String indentType, String materialCategoryType, String createdBy);
 
 // submitteddate search — all statuses
 // List<SearchIndentIdDto> findByCreatedDateBetween(

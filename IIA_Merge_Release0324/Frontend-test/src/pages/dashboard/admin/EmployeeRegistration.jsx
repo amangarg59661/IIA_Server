@@ -5,6 +5,7 @@ import axios from 'axios';
 import dayjs from 'dayjs';
 import { useLOVValues } from '../../../hooks/useLOVValues';
 import AdvancedEmployeeSearch from '../../../components/AdvancedEmployeeSearch'; // TC_15
+import store from '../../../store';
 
 const { Option } = Select;
 
@@ -228,8 +229,8 @@ const EmployeeRegistration = () => {
         jobTitle: values.jobTitle,
         status: values.status || 'Active',
         createdBy: editingEmployee?.createdBy || null,
-        updatedBy: 'admin',
-        // Added by Aman 
+        updatedBy: String(store.getState().auth?.userId || 'admin'),
+        // Added by Aman
         employeeId: values.employeeId,
         // End
       };
@@ -288,7 +289,7 @@ const EmployeeRegistration = () => {
         employeeName: `${values.firstName} ${values.lastName}`,
         address: `${values.streetAddress || ''}, ${values.city || ''}, ${values.state || ''} ${values.pinCode || ''}`.trim(),
         status: 'Active',
-        createdBy: 'admin', // Replace with actual user from auth state
+        createdBy: String(store.getState().auth?.userId || 'admin'),
         
       };
 

@@ -3,10 +3,16 @@ package com.astro.entity.AdminPanel;
 import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
 @Table(name = "approver_master")
 @Data
+@EntityListeners(AuditingEntityListener.class)
 public class ApproverMaster {
 
     @Id
@@ -70,16 +76,20 @@ public class ApproverMaster {
 
     // Audit
     @Column(name = "created_by", length = 100)
+    @CreatedBy
     private String createdBy;
 
     @Column(name = "updated_by", length = 100)
+    @LastModifiedBy
     private String updatedBy;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate = LocalDateTime.now();
+    @CreatedDate
+    private LocalDateTime createdDate;
 
     @Column(name = "updated_date")
-    private LocalDateTime updatedDate = LocalDateTime.now();
+    @LastModifiedDate
+    private LocalDateTime updatedDate;
 
     @PreUpdate
     public void preUpdate() {

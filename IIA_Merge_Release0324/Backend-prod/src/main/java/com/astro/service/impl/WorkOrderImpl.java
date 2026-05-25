@@ -79,8 +79,6 @@ public class WorkOrderImpl implements WorkOrderService {
         workOrder.setVendorsAccountNo(workOrderRequestDTO.getVendorsAccountNo());
         workOrder.setVendorsZRSCCode(workOrderRequestDTO.getVendorsZRSCCode());
         workOrder.setVendorsAccountName(workOrderRequestDTO.getVendorsAccountName());
-        workOrder.setCreatedBy(workOrderRequestDTO.getCreatedBy());
-        workOrder.setUpdatedBy(workOrderRequestDTO.getUpdatedBy());
         List<WorkOrderMaterial> workOrderMaterials = workOrderRequestDTO.getMaterials().stream()
                 .map(dto -> {
 
@@ -125,9 +123,6 @@ public class WorkOrderImpl implements WorkOrderService {
         existingWorkOrder.setVendorsAccountNo(workOrderRequestDTO.getVendorsAccountNo());
         existingWorkOrder.setVendorsZRSCCode(workOrderRequestDTO.getVendorsZRSCCode());
         existingWorkOrder.setVendorsAccountName(workOrderRequestDTO.getVendorsAccountName());
-
-        existingWorkOrder.setUpdatedBy(workOrderRequestDTO.getUpdatedBy());
-        existingWorkOrder.setCreatedBy(workOrderRequestDTO.getCreatedBy());
 
         List<WorkOrderMaterial> existingAttributes = existingWorkOrder.getMaterials();
 

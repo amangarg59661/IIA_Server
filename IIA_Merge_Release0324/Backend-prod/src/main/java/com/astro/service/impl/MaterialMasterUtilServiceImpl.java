@@ -92,7 +92,7 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
 
         material = materialMasterUtilRepository.save(material);
 
-       saveMaterialTracking(material.getMaterialCode(), "CREATED", material.getApprovalStatus().name(), material.getComments() , dto.getCreatedBy());
+       saveMaterialTracking(material.getMaterialCode(), "CREATED", material.getApprovalStatus().name(), material.getComments() , dto.getCreatedBy() != null ? Integer.parseInt(dto.getCreatedBy()) : null);
 
        // saveMaterialTracking(material.getMaterialCode(), "CREATED", request.getAction(), "Material created in MasterUtil", request.getActionBy());
 
@@ -312,7 +312,7 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
         materialMaster.setBriefDescription(material.getBriefDescription());
         materialMaster.setStatus("APPROVED");
         materialMaster.setStatusOfMaterialActiveOrDeactive("Active");
-        materialMaster.setCreatedBy(actionBy);
+        materialMaster.setCreatedBy(String.valueOf(actionBy));
         materialMaster.setUpdatedBy(material.getUpdatedBy());
         // Added by Aman 
         materialMaster.setAssetFlag(material.getAssetFlag());
@@ -332,7 +332,7 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
             materialStatus.setStatus(status);
             materialStatus.setAction(action);
             materialStatus.setComments(remarks);
-            materialStatus.setCreatedBy(actionBy);
+            materialStatus.setCreatedBy(String.valueOf(actionBy));
 
 
             materialStatusRepository.save(materialStatus);
@@ -346,7 +346,7 @@ private void saveMaterialTracking(String materialCode, String status, String act
     materialStatus.setStatus(status);
     materialStatus.setAction(action);
     materialStatus.setComments(remarks);
-    materialStatus.setCreatedBy(actionBy);
+    materialStatus.setCreatedBy(String.valueOf(actionBy));
 
     materialStatusRepository.save(materialStatus);
 }
@@ -426,8 +426,8 @@ private void saveMaterialTracking(String materialCode, String status, String act
 
         materialMasterUtilRepository.save(material);
 
-        Integer actionBy = dto.getCreatedBy();
-        saveMaterialTracking(material.getMaterialCode(), "PENDING","UPDATED", null, actionBy );
+        String actionBy = dto.getCreatedBy();
+        saveMaterialTracking(material.getMaterialCode(), "PENDING","UPDATED", null, Integer.parseInt(actionBy) );
 
 
         return mapToResponse(material);

@@ -3,6 +3,7 @@ import { Card, Input, Button, Table, Space, message, Modal, Form, Tag, Popconfir
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import dayjs from 'dayjs';
+import store from '../../../store';
 
 
 const ProjectManagement = () => {
@@ -184,7 +185,7 @@ const ProjectManagement = () => {
         endDate: values.endDate ? values.endDate.format('YYYY-MM-DD') : null,
         status: values.status,
         financialYear: values.startDate ? values.startDate.format('YYYY') : new Date().getFullYear().toString(),
-        createdBy: 'admin'
+        createdBy: String(store.getState().auth?.userId || 'admin')
       };
 
       if (editingProject) {

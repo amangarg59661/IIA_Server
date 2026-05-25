@@ -16,7 +16,7 @@ public class withinFieldStationGtDto {
     private String status;
     private LocalDate gtDate;
     private LocalDateTime createDate;
-    private Integer createdBy;
+    private String createdBy;
     private String type;
     private List<GtReportDtlDto> materialDetails;
 }

@@ -30,6 +30,6 @@ public class WorkOrderResponseDTO{
     private String projectName;
     private BigDecimal projectLimit;
     private List<WorkOrderMaterialResponseDTO> materials;
-    private Integer createdBy;
+    private String createdBy;
     private String updatedBy;
 }

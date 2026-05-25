@@ -74,8 +74,8 @@ public void createFromLOV(LOVMaster saved) {
     UomMaster uomMaster = new UomMaster();
     uomMaster.setUomCode(saved.getLovValue());
     uomMaster.setUomName(saved.getLovDisplayValue());
-    uomMaster.setCreatedBy("SYSTEM");
-    uomMaster.setUpdatedBy("SYSTEM");
+    uomMaster.setCreatedBy(saved.getCreatedBy());
+    uomMaster.setUpdatedBy(saved.getCreatedBy());
     uomMasterRepository.save(uomMaster);
 }
 
@@ -93,11 +93,11 @@ public void updateFromLOV(LOVMaster updated) {
     } else {
         uomMaster = new UomMaster();
         uomMaster.setUomCode(updated.getLovValue());
-        uomMaster.setCreatedBy("SYSTEM");
+        uomMaster.setCreatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
     }
 
     uomMaster.setUomName(updated.getLovDisplayValue());
-    uomMaster.setUpdatedBy("SYSTEM");
+    uomMaster.setUpdatedBy(updated.getUpdatedBy() != null ? updated.getUpdatedBy() : updated.getCreatedBy());
     uomMasterRepository.save(uomMaster);
 }
 // End

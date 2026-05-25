@@ -79,9 +79,9 @@ List<SearchTenderIdDto> findTenderIdsBySubmittedDate(@Param("startDate") LocalDa
     //  TenderRequest getByTenderId(String tenderId);
 
     @Query("SELECT t FROM TenderRequest t WHERE t.createdBy = :userId AND t.currentStatus = 'DRAFT'")
-List<TenderRequest> findDraftsByCreatedBy(@Param("userId") Integer userId);
+List<TenderRequest> findDraftsByCreatedBy(@Param("userId") String userId);
 
-List<TenderRequest> findByCreatedByAndCurrentStatus(Integer createdBy, String currentStatus);
+List<TenderRequest> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
 
  @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender , tr.bidType) " +

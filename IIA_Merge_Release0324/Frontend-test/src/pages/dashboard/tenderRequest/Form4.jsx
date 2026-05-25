@@ -65,15 +65,7 @@ const Form4 = () => {
       setLoading(true);
       try {
         // 1. Fetch approved indent IDs
-        const responseApproved = await fetch(
-          "http://103.181.158.220:8081/astro-service/approved-indents"
-        );
-
-        if (!responseApproved.ok) {
-          throw new Error(`HTTP error! status: ${responseApproved.status}`);
-        }
-
-        const dataApproved = await responseApproved.json();
+        const { data: dataApproved } = await axios.get("/approved-indents");
 
         // Check if response has the expected structure
         if (!Array.isArray(dataApproved.responseData)) {
@@ -83,15 +75,7 @@ const Form4 = () => {
         const approvedIndentIds = dataApproved.responseData;
 
         // 2. Fetch all indents
-        const responseIndents = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/indents"
-        );
-
-        if (!responseIndents.ok) {
-          throw new Error(`HTTP error! status: ${responseIndents.status}`);
-        }
-
-        const data = await responseIndents.json();
+        const { data } = await axios.get("/api/indents");
 
         // 3. Process data
         if (
@@ -118,9 +102,7 @@ const Form4 = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const response = await axios.get(
-          "http://103.181.158.220:8081/astro-service/api/location-master"
-        );
+        const response = await axios.get("/api/location-master");
         if (response.data.responseStatus.statusCode === 0) {
           setConsigneeOptions(
             response.data.responseData.map((location) => ({
@@ -223,10 +205,7 @@ const Form4 = () => {
       setLoading(true);
       try {
         // 1. Fetch all tenders to get used indent IDs
-        const tenderResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/tender-requests"
-        );
-        const tenderData = await tenderResponse.json();
+        const { data: tenderData } = await axios.get("/api/tender-requests");
 
         // Extract all indent IDs from all tenders
         const allUsedIndents = tenderData.responseData.flatMap(
@@ -235,16 +214,10 @@ const Form4 = () => {
         setUsedIndentIds(new Set(allUsedIndents));
 
         // 2. Fetch approved indents
-        const approvedResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/approved-indents"
-        );
-        const approvedData = await approvedResponse.json();
+        const { data: approvedData } = await axios.get("/approved-indents");
 
         // 3. Fetch all indents
-        const indentsResponse = await fetch(
-          "http://103.181.158.220:8081/astro-service/api/indents"
-        );
-        const indentsData = await indentsResponse.json();
+        const { data: indentsData } = await axios.get("/api/indents");
 
         // 4. Filter indents
         const filtered = indentsData.responseData.filter((indent) => {
@@ -371,16 +344,7 @@ const Form4 = () => {
       formData.append("file", file);
       formData.append("fileType", "Tender");
 
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/file/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) throw new Error("File upload failed");
-      const data = await response.json();
+      const { data } = await axios.post("/file/upload", formData);
       return data.responseData.fileName;
     } catch (error) {
       console.error("File upload error:", error);
@@ -485,24 +449,8 @@ const Form4 = () => {
 
       ;
 
-      // Create FormData
-      const response = await fetch(
-        "http://103.181.158.220:8081/astro-service/api/tender-requests",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Submission failed: ${errorText}`);
-      }
-
-      const result = await response.json();
+      // Submit tender request
+      const { data: result } = await axios.post("/api/tender-requests", payload);
       if (!values.tenderId && result.responseData?.tenderId) {
         form.setFieldsValue({ tenderId: result.responseData.tenderId });
         setSubmittedTenderId(result.responseData.tenderId);
