@@ -59,6 +59,12 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
    @Override
    public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto) {
 
+       TenderEvaluation tenderEval = tenderEvaluationRepository.findByTenderId(dto.getTenderId());
+       if (tenderEval != null && tenderEval.getInitiated() != null && tenderEval.getInitiated() == 1) {
+           throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                   "Tender already under evaluation. Cannot submit new quotations."));
+       }
+
        if (dto.getVendorId() == null && "GEM".equalsIgnoreCase(dto.getType())) {
            // get last vendorId
            Optional<GemVendorIdTracker> latest = gemVendorIdTrackerRepository.findTopByOrderByVendorIdDesc();

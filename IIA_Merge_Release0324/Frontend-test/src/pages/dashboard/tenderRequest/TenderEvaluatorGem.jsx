@@ -27,6 +27,7 @@ const TenderEvaluatorGem = () => {
   const [loadingRows, setLoadingRows] = useState({});
   const [savingAll, setSavingAll] = useState(false);
   const [allVendorVisible, setAllVendorVisible] = useState(false);
+  const [tenderInitiated, setTenderInitiated] = useState(false);
 
 
   // Fetch approved tenders
@@ -149,6 +150,25 @@ const fetchVendors = async (tenderId) => {
 useEffect(() => {
   fetchVendors(formData.tenderId);
 }, [formData.tenderId, token, role]);
+
+useEffect(() => {
+  const checkInitiation = async () => {
+    if (!formData.tenderId) {
+      setTenderInitiated(false);
+      return;
+    }
+    try {
+      const res = await axios.get("/api/tender-evaluation/status", {
+        params: { tenderId: formData.tenderId },
+      });
+      const evalStatus = res.data?.responseData?.evaluationStatus;
+      setTenderInitiated(!!evalStatus);
+    } catch {
+      setTenderInitiated(false);
+    }
+  };
+  checkInitiation();
+}, [formData.tenderId]);
 
 
 
@@ -377,7 +397,11 @@ useEffect(() => {
     }
   };*/
   const handleSubmit = async (record) => {
-    const rowKey = record.vendorId || record.vendorName; 
+    if (tenderInitiated) {
+      message.error("Tender already under evaluation. Cannot submit new quotations.");
+      return;
+    }
+    const rowKey = record.vendorId || record.vendorName;
   // When NEW -> normal quotation
   if (record.status === "NEW") {
     if (!record.technicalBidFile) {
@@ -467,6 +491,10 @@ useEffect(() => {
 };
 
 const handleSubmitAll = async () => {
+  if (tenderInitiated) {
+    message.error("Tender already under evaluation. Cannot submit new quotations.");
+    return;
+  }
   const newRows = vendorList.filter((v) => v.status === "NEW");
 
   if (newRows.length === 0) {
