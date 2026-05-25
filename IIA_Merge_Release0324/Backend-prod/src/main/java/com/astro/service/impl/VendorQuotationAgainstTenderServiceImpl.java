@@ -105,7 +105,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setIsLatest(true);
 
            quotation.setStatus("SUBMITTED");
-           quotation.setModifiedBy(1);
+           quotation.setUpdatedBy("1");
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -121,7 +121,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setVersion(maxVersion + 1);
            quotation.setIsLatest(true);
            quotation.setStatus("SUBMITTED");
-           quotation.setModifiedBy(1);
+           quotation.setUpdatedBy("1");
            quotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
            quotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
            quotation.setCreatedDate(LocalDateTime.now());
@@ -343,7 +343,6 @@ public VendorStatusDto getVendorStatus(String vendorId) {
     
     if (vendorLogin.isPresent()) {
         VendorLoginDetails vl = vendorLogin.get();
-        dto.setPassword(vl.getPassword());
         dto.setEmailStatus(vl.getEmailSent());
         dto.setIsFirstLogin(vl.getIsFirstLogin());
         dto.setIsTempPassword(vl.getIsTempPassword());
@@ -447,7 +446,7 @@ public boolean markQuotationForChangeRequest(VendorQuotationChangeRequestDto req
     newQuotation.setIndentorRemarks(request.getRemarks());
     newQuotation.setStatus("CHANGE_REQUESTED");
    // newQuotation.setRemarks(request.getRemarks());
-    newQuotation.setModifiedBy(request.getUserId());
+    newQuotation.setUpdatedBy(String.valueOf(request.getUserId()));
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
 
@@ -557,7 +556,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
   //  newQuotation.setRemarks("Accepted by indentor");
     newQuotation.setIndentorStatus("ACCEPTED");
    // newQuotation.setIndentorRemarks("Accepted by indentor");
-    newQuotation.setModifiedBy(userId);
+    newQuotation.setUpdatedBy(String.valueOf(userId));
     newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
     newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -601,7 +600,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setIndentorStatus(oldQuotation.getIndentorStatus());
         newQuotation.setIndentorRemarks(oldQuotation.getIndentorRemarks());
         newQuotation.setRemarks(oldQuotation.getIndentorRemarks());
-        newQuotation.setModifiedBy(userId);
+        newQuotation.setUpdatedBy(String.valueOf(userId));
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
         switch (action) {
@@ -679,7 +678,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         newQuotation.setRemarks(remarks);
         newQuotation.setIndentorStatus("REJECTED");
         newQuotation.setIndentorRemarks(remarks);
-        newQuotation.setModifiedBy(userId); // indentor
+        newQuotation.setUpdatedBy(String.valueOf(userId)); // indentor
         newQuotation.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
         newQuotation.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
 
@@ -730,7 +729,7 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
             dto.setSpoStatus(vq.getSpoStatus());
             dto.setSpoRemarks(vq.getSpoRemarks());
             dto.setChangeRequestToIndentor(vq.getChangeRequestToIndentor());
-            dto.setModifiedBy(vq.getModifiedBy());
+            dto.setUpdatedBy(vq.getUpdatedBy());
             dto.setCurrentRole(vq.getCurrentRole());
             dto.setNextRole(vq.getNextRole());
             return dto;
@@ -818,6 +817,33 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
 
         return resultList;
     }
+    @Override
+    public VendorStatusDto vendorLogin(VendorLoginRequestDto request) {
+        VendorStatusDto dto = new VendorStatusDto();
+        dto.setVendorId(request.getVendorId());
+
+        Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findByVendorId(request.getVendorId());
+        if (vendorLoginOpt.isEmpty()) {
+            dto.setStatus("NOT_FOUND");
+            dto.setComments("Vendor ID not found.");
+            return dto;
+        }
+
+        VendorLoginDetails vl = vendorLoginOpt.get();
+        if (!vl.getPassword().equals(request.getPassword())) {
+            dto.setStatus("INVALID_CREDENTIALS");
+            dto.setComments("Invalid password.");
+            return dto;
+        }
+
+        dto.setEmailStatus(vl.getEmailSent());
+        dto.setIsFirstLogin(vl.getIsFirstLogin());
+        dto.setIsTempPassword(vl.getIsTempPassword());
+        dto.setStatus("SUCCESS");
+        dto.setComments("Login successful.");
+        return dto;
+    }
+
     @Override
     public List<AllVendorStatus> getAllVendorStatusOnTenderidsForGem(String tenderId) {
         TenderRequest tenderRequest = tenderRepo.findById(tenderId)
