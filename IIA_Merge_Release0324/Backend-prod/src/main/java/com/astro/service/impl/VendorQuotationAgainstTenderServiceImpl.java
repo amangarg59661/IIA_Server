@@ -162,7 +162,21 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
        return mapToResponse(saved);
    }
 
+    @Override
+    @Transactional
+    public List<VendorQuotationAgainstTenderDto> saveBulkQuotations(BulkVendorQuotationRequest request) {
+        if (request.getQuotations() == null || request.getQuotations().isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "BULK_EMPTY", "No quotations provided in bulk request"));
+        }
 
+        List<VendorQuotationAgainstTenderDto> results = new ArrayList<>();
+        for (VendorQuotationAgainstTenderDto dto : request.getQuotations()) {
+            dto.setTenderId(request.getTenderId());
+            VendorQuotationAgainstTenderDto saved = saveQuotation(dto);
+            results.add(saved);
+        }
+        return results;
+    }
 
     @Override
    public List<VendorQuotationAgainstTenderDto> getQuotationsByTenderId(String tenderId, String loggedInRole) {

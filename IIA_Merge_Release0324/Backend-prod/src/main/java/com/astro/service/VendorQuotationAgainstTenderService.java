@@ -14,6 +14,8 @@ public interface VendorQuotationAgainstTenderService {
 
     public VendorQuotationAgainstTenderDto saveQuotation(VendorQuotationAgainstTenderDto dto);
 
+    public List<VendorQuotationAgainstTenderDto> saveBulkQuotations(BulkVendorQuotationRequest request);
+
     public List<VendorQuotationAgainstTenderDto> getQuotationsByTenderId(String tenderId, String loggedInRole);
 
     public VendorQuotationAcceptedAndRejectedDataDto getAllVendorQuotationsByTenderId(String tenderId);

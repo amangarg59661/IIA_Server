@@ -25,6 +25,7 @@ const TenderEvaluatorGem = () => {
   const [isUploading, setIsUploading] = useState(false);
   const role = useSelector((state) => state.auth.role);
   const [loadingRows, setLoadingRows] = useState({});
+  const [savingAll, setSavingAll] = useState(false);
   const [allVendorVisible, setAllVendorVisible] = useState(false);
 
 
@@ -465,6 +466,74 @@ useEffect(() => {
   }
 };
 
+const handleSubmitAll = async () => {
+  const newRows = vendorList.filter((v) => v.status === "NEW");
+
+  if (newRows.length === 0) {
+    message.warning("No new vendors to submit");
+    return;
+  }
+
+  const incomplete = newRows.filter(
+    (v) => !v.technicalBidFile || !v.priceBidFile
+  );
+  if (incomplete.length > 0) {
+    message.error(
+      `Please upload both files for: ${incomplete
+        .map((v) => v.vendorName)
+        .join(", ")}`
+    );
+    return;
+  }
+
+  setSavingAll(true);
+  try {
+    const upload = async (fileObj) => {
+      const fd = new FormData();
+      fd.append("file", fileObj.file);
+      const resp = await axios.post("/file/upload?fileType=Tender", fd, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Accept: "application/json",
+        },
+      });
+      return resp.data.responseData.fileName;
+    };
+
+    const uploadResults = await Promise.all(
+      newRows.map(async (row) => {
+        const techFileName = await upload(row.technicalBidFile);
+        const priceFileName = await upload(row.priceBidFile);
+        return {
+          vendorName: row.vendorName,
+          quotationFileName: techFileName,
+          priceBidFileName: priceFileName,
+          fileType: "Tender",
+          type: "GEM",
+        };
+      })
+    );
+
+    const response = await axios.post("/api/vendor-quotation/bulk", {
+      tenderId: formData.tenderId,
+      quotations: uploadResults,
+    });
+
+    if (response.data.responseStatus.statusCode === 0) {
+      message.success(
+        `All ${uploadResults.length} quotations submitted successfully`
+      );
+      await fetchVendors(formData.tenderId);
+    } else {
+      throw new Error("Bulk save failed");
+    }
+  } catch (error) {
+    console.error("Bulk submission error:", error);
+    message.error("An error occurred while submitting quotations");
+  } finally {
+    setSavingAll(false);
+  }
+};
 
   const handleClarificationSubmit = async (record) => {
     if (!record.clarificationFileName) {
@@ -638,6 +707,19 @@ useEffect(() => {
             rowKey="vendorName"
             pagination={false}
           />
+
+          {vendorList.some((v) => v.status === "NEW") && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+              <Button
+                type="primary"
+                onClick={handleSubmitAll}
+                loading={savingAll}
+                disabled={isUploading}
+              >
+                Send All Quotations for Evaluation
+              </Button>
+            </div>
+          )}
         </FormBody>
       </CustomForm>
     </FormContainer>

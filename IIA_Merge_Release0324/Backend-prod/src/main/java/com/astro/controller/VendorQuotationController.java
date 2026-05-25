@@ -29,6 +29,12 @@ public class VendorQuotationController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(vq), HttpStatus.OK);
     }
 
+    @PostMapping("/bulk")
+    public ResponseEntity<Object> createBulkVendorQuotations(@RequestBody BulkVendorQuotationRequest request) {
+        List<VendorQuotationAgainstTenderDto> results = vqService.saveBulkQuotations(request);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(results), HttpStatus.OK);
+    }
+
     @GetMapping
     public ResponseEntity<Object> getVendorQuotationByTenderId(@RequestParam String tenderId,@RequestParam String userRole) {
         List<VendorQuotationAgainstTenderDto> responseDTO = vqService.getQuotationsByTenderId(tenderId, userRole);
