@@ -1,5 +1,6 @@
 package com.astro.controller.AdminPanel;
 
+import com.astro.dto.workflow.CommitteeNominationDto;
 import com.astro.dto.workflow.TechnoFinancialCommitteeDto;
 import com.astro.service.TechnoFinancialCommitteeService;
 import com.astro.util.ResponseBuilder;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/techno-financial-committee")
@@ -60,5 +62,11 @@ public class TechnoFinancialCommitteeController {
     public ResponseEntity<Object> deactivateMember(@PathVariable Long id) {
         committeeService.deactivateMember(id);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse("Member deactivated successfully"), HttpStatus.OK);
+    }
+
+    @PostMapping("/nominate")
+    public ResponseEntity<Object> nominateMember(@RequestBody CommitteeNominationDto dto) {
+        Map<String, Object> result = committeeService.nominateMember(dto);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(result), HttpStatus.OK);
     }
 }

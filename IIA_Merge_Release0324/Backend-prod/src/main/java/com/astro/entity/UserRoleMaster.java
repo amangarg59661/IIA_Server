@@ -39,4 +39,7 @@ public class UserRoleMaster {
 
     @Column(name = "CREATEDDATE")
     private Date createdDate;
+
+    @Column(name = "IS_ACTIVE", columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private Boolean isActive = true;
 }
