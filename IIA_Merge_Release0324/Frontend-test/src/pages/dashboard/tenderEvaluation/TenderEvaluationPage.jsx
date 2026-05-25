@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Badge, Button, Input, message, Modal, Select, Space, Spin,
+  Alert, Badge, Button, Input, message, Modal, Select, Space, Spin,
   Table, Tag, Tooltip, Typography, Upload,
 } from "antd";
 import {
@@ -950,6 +950,35 @@ const TenderEvaluationPage = () => {
             <Tag>{indentCategory || "N/A"}</Tag>
           </Space>
 
+          {/* ── Clarification Info Banner ── */}
+          {(evalStatus === "PENDING_VENDOR_CLARIFICATION" || evalStatus === "PENDING_INDENTOR_CLARIFICATION") && (
+            <Alert
+              type="warning"
+              showIcon
+              className="mb-3"
+              message={`Clarification pending from: ${selectedEval.clarificationPendingFromName || selectedEval.clarificationPendingFrom || "—"}`}
+              description={
+                <div>
+                  {selectedEval.clarificationRemarks && (
+                    <div><Text strong>Remarks:</Text> {selectedEval.clarificationRemarks}</div>
+                  )}
+                  {selectedEval.clarificationRequestedByRole && (
+                    <div><Text strong>Requested by:</Text> {selectedEval.clarificationRequestedByRole}</div>
+                  )}
+                  {selectedEval.clarificationTargetVendorId && (() => {
+                    const targetVendor = vendors.find(v => v.vendorId === selectedEval.clarificationTargetVendorId);
+                    return (
+                      <div style={{ marginTop: 4 }}>
+                        <Text strong>Regarding Vendor:</Text>{" "}
+                        {targetVendor?.vendorName || selectedEval.clarificationTargetVendorId}
+                      </div>
+                    );
+                  })()}
+                </div>
+              }
+            />
+          )}
+
           {/* ── Sheet views + uploads (PP only for upload) ── */}
           {/* Technical Comparison Sheet: view (all roles) */}
           {selectedEval.comparisonSheetFileName && (
@@ -1395,6 +1424,20 @@ const TenderEvaluationPage = () => {
           )}
           {clarVendorId && (
             <Text type="secondary">Vendor: {clarVendorId}</Text>
+          )}
+          {/* Vendor selector when target is INDENTOR/PURCHASE_PERSONNEL (optional - for vendor-specific clarification) */}
+          {(clarTarget === "INDENTOR" || clarTarget === "PURCHASE_PERSONNEL") && vendors.length > 0 && (
+            <Select
+              placeholder="Regarding vendor (optional - leave blank for general)"
+              onChange={setClarVendorId}
+              value={clarVendorId || undefined}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {vendors.map((v) => (
+                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
+              ))}
+            </Select>
           )}
           <TextArea
             rows={4}

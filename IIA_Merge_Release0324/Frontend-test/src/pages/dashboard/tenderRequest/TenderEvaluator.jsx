@@ -1971,11 +1971,22 @@ useEffect(() => {
                 )
               ) : isPendingIndentorClarif &&
               (isIndentCreatorRole || isPurchasePersonnelRole) ? (
-                /* Standard indentor/PP global response card */
+                /* Standard indentor/PP response card — with optional vendor context */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
                     description={`Question: ${evalStatus.clarificationRemarks}`} />
+                  {evalStatus.clarificationTargetVendorId && (() => {
+                    const targetVendor = quotationData.find(q => q.vendorId === evalStatus.clarificationTargetVendorId);
+                    return (
+                      <Alert type="info" showIcon style={{ marginBottom: 8 }}
+                        message={`Regarding Vendor: ${targetVendor?.vendorName || evalStatus.clarificationTargetVendorId}`}
+                        description={targetVendor?.quotationFileName ? (
+                          <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer">View Quotation</a>
+                        ) : null}
+                      />
+                    );
+                  })()}
                   <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
                     Submit Response
                   </Button>
@@ -2412,6 +2423,22 @@ useEffect(() => {
             <Text strong>Target Vendor ID:</Text>
             <Input value={clarifTargetVendorId} onChange={e => setClarifTargetVendorId(e.target.value)}
               style={{ marginTop: 4 }} placeholder="Enter vendor ID (leave blank for approved vendor)" />
+          </div>
+        )}
+        {clarifTarget === 'INDENTOR' && quotationData.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Regarding Vendor (optional):</Text>
+            <Select
+              value={clarifTargetVendorId || undefined}
+              onChange={val => setClarifTargetVendorId(val || '')}
+              allowClear
+              placeholder="Select vendor (leave blank for general clarification)"
+              style={{ width: '100%', marginTop: 4 }}
+            >
+              {quotationData.map(q => (
+                <Option key={q.vendorId} value={q.vendorId}>{q.vendorName || q.vendorId}</Option>
+              ))}
+            </Select>
           </div>
         )}
         {(clarifTarget === 'SPECIFIC_MEMBER' || clarifTarget === 'INDENTOR') && (

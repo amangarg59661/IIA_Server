@@ -116,7 +116,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 .orElseGet(() -> {
                     TenderEvaluation e = new TenderEvaluation();
                     e.setTenderId(tenderId);
-                    e.setCreatedBy(initiatedByUserId);
+                    e.setCreatedBy(String.valueOf(initiatedByUserId));
                     return e;
                 });
 
@@ -787,6 +787,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         eval.setClarificationPendingFromName(dto.getTargetUserName());
         eval.setClarificationRequestedByRole(dto.getRequestedByRole());
         eval.setClarificationRemarks(dto.getRemarks());
+        // Store vendor context for INDENTOR/PP clarifications (null if general/tender-level)
+        eval.setClarificationTargetVendorId(dto.getTargetVendorId());
 
         switch (target.toUpperCase()) {
             case "VENDOR":
@@ -1057,6 +1059,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         eval.setClarificationPendingFromName(null);
         eval.setClarificationRequestedByRole(null);
         eval.setClarificationRemarks(null);
+        eval.setClarificationTargetVendorId(null);
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
@@ -1259,7 +1262,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setIndentorStatus(normalizedDecision);
             quotation.setIndentorRemarks(remarks);
         }
-        quotation.setModifiedBy(evaluatorUserId);
+        quotation.setUpdatedBy(String.valueOf(evaluatorUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1316,7 +1319,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             quotation.setSpoStatus(normalizedDecision);
             quotation.setSpoRemarks(remarks);
         }
-        quotation.setModifiedBy(spoUserId);
+        quotation.setUpdatedBy(String.valueOf(spoUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
@@ -1510,6 +1513,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         dto.setClarificationRequestedByRole(eval.getClarificationRequestedByRole());
         dto.setClarificationRemarks(eval.getClarificationRemarks());
         dto.setPreviousEvaluationStatus(eval.getPreviousEvaluationStatus());
+        dto.setClarificationTargetVendorId(eval.getClarificationTargetVendorId());
         dto.setRejectedByRole(eval.getRejectedByRole());
         dto.setRejectedByUserId(eval.getRejectedByUserId());
         dto.setFinancialBidPhase(eval.getFinancialBidPhase());
@@ -1712,7 +1716,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
         String firstIndentId = tender.getIndentIds().get(0).getIndentId();
         IndentCreation indent = indentCreationRepository.findByIndentId(firstIndentId);
-        return indent != null ? indent.getCreatedBy() : null;
+        if (indent == null || indent.getCreatedBy() == null) return null;
+        try {
+            return Integer.parseInt(indent.getCreatedBy());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @Override

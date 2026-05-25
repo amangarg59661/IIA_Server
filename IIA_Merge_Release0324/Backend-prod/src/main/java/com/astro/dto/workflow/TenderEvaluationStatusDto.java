@@ -40,6 +40,7 @@ public class TenderEvaluationStatusDto {
     private String clarificationRequestedByRole;   // INDENTOR, PURCHASE_PERSONNEL, SPO, CHAIRMAN, DIRECTOR
     private String clarificationRemarks;
     private String previousEvaluationStatus;
+    private String clarificationTargetVendorId;   // vendor-specific clarification to Indentor/PP (null = general)
 
     // ── Rejection info ──
     private String rejectedByRole;

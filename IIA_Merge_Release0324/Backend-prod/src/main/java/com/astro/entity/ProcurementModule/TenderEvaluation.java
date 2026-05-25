@@ -139,6 +139,10 @@ public class TenderEvaluation {
     @Column(name = "previous_evaluation_status", length = 50)
     private String previousEvaluationStatus;
 
+    /** When clarification to INDENTOR/PP is about a specific vendor (null = general/tender-level) */
+    @Column(name = "clarification_target_vendor_id", length = 100)
+    private String clarificationTargetVendorId;
+
     // ── Double Bid Under 10L: Financial Bid Phase ──
 
     /**
