@@ -179,6 +179,13 @@ const AdminDashboard = () => {
       description: 'Create user accounts and assign roles',
       path: '/admin/user',
       color: '#f0f5ff'
+    },
+    {
+      title: 'Committee Management',
+      icon: <TeamOutlined style={{ fontSize: 32, color: '#13c2c2' }} />,
+      description: 'Manage STEC committee members and roles',
+      path: '/admin/committee',
+      color: '#e6fffb'
     }
   ];
 
