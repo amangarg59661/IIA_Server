@@ -1,6 +1,7 @@
 package com.astro.entity.InventoryModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import org.springframework.data.annotation.CreatedBy;
@@ -23,6 +24,7 @@ public class AssetDisposalAuctionDetailEntity {
 
     @ManyToOne
     @JoinColumn(name = "auction_id", nullable = false)
+    @ToString.Exclude
     private AssetDisposalAuctionEntity auction;
 
     @Column(name = "disposal_id", nullable = false)

@@ -3,6 +3,7 @@ package com.astro.entity.ProcurementModule;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -125,10 +126,12 @@ public class IndentCreation {
 
     // Material Details (existing)
     @OneToMany(mappedBy = "indentCreation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<MaterialDetails> materialDetails = new ArrayList<>();
 
     // Job/Service Details
     @OneToMany(mappedBy = "indentCreation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
     private List<JobDetails> jobDetails = new ArrayList<>();
 
     // Indent Type - "material" or "job"

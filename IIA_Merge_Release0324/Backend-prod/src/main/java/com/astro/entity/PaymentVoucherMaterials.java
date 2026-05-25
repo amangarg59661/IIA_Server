@@ -1,6 +1,7 @@
 package com.astro.entity;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -43,6 +44,7 @@ public class PaymentVoucherMaterials {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "payment_voucher_id")
+    @ToString.Exclude
     private PaymentVoucher paymentVoucher;
 
     @CreatedBy

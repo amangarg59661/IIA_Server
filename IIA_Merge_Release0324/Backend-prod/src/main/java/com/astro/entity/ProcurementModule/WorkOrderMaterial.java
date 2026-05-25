@@ -1,6 +1,7 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -42,6 +43,7 @@ public class WorkOrderMaterial {
 
     @ManyToOne
     @JoinColumn(name = "wo_id", nullable = false)
+    @ToString.Exclude
     private WorkOrder workOrder;
 
     @CreatedBy

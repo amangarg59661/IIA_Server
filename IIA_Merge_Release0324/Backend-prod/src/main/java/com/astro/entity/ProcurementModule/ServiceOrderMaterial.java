@@ -2,6 +2,7 @@ package com.astro.entity.ProcurementModule;
 
 import com.astro.entity.ProcurementModule.ServiceOrder;
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -50,6 +51,7 @@ public class ServiceOrderMaterial {
     //private ServiceOrder serviceOrder;
    @ManyToOne
    @JoinColumn(name = "so_id", nullable = false, referencedColumnName = "so_id", insertable = false, updatable = false)
+   @ToString.Exclude
    private ServiceOrder serviceOrder;
 
     @CreatedBy

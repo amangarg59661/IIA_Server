@@ -3,6 +3,7 @@ package com.astro.entity.ProcurementModule;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 
 import javax.persistence.*;
@@ -66,6 +67,7 @@ public class MaterialDetails {
 
     @ManyToOne
     @JoinColumn(name = "indent_id", referencedColumnName = "indent_id")
+    @ToString.Exclude
     private IndentCreation indentCreation;
 
     @CreatedBy

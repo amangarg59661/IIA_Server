@@ -2,6 +2,7 @@ package com.astro.entity.ProcurementModule;
 
 import com.astro.entity.ProcurementModule.PurchaseOrder;
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -53,6 +54,7 @@ public class PurchaseOrderAttributes {
    // private PurchaseOrder purchaseOrder;
    @ManyToOne
    @JoinColumn(name = "po_id", referencedColumnName = "po_id")
+   @ToString.Exclude
    private PurchaseOrder purchaseOrder;
 
     @CreatedBy

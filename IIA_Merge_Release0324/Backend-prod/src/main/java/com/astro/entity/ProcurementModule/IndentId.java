@@ -1,6 +1,7 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 
@@ -17,6 +18,7 @@ public class IndentId {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tender_id", nullable = false)
+    @ToString.Exclude
     private TenderRequest tenderRequest;
 
 }

@@ -3,6 +3,7 @@ package com.astro.entity.ProcurementModule;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -69,6 +70,7 @@ public class JobDetails {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "indent_id", referencedColumnName = "indent_id")
+    @ToString.Exclude
     private IndentCreation indentCreation;
 
     @CreatedBy

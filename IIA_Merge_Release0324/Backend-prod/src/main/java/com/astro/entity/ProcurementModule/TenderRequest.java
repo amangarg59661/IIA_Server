@@ -1,6 +1,7 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -32,6 +33,7 @@ public class TenderRequest {
     @Column(name = "closing_date")
     private LocalDate closingDate;
     @OneToMany(mappedBy = "tenderRequest", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
     private List<IndentId> indentIds;
     //  @Column(name = "indent_id")
     //  private String indentId;

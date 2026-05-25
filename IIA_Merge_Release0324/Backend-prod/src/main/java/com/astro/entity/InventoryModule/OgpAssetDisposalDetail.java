@@ -1,6 +1,7 @@
 package com.astro.entity.InventoryModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -24,6 +25,7 @@ public class OgpAssetDisposalDetail {
 
     @ManyToOne
     @JoinColumn(name = "disposal_ogp_id", nullable = false)
+    @ToString.Exclude
     private OgpAssetDisposal disposal;
 
     @Column(name = "disposal_id")

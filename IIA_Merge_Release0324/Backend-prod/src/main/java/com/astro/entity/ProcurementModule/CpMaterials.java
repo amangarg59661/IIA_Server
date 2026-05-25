@@ -1,6 +1,7 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -59,6 +60,7 @@ public class CpMaterials {
     @ManyToOne
     // @JoinColumn(name = "contigency_id", referencedColumnName = "contigency_id", insertable = false, updatable = false)
     @JoinColumn(name = "contigency_id")
+    @ToString.Exclude
     private ContigencyPurchase contigencyPurchase;
 
     @CreatedBy

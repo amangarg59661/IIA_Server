@@ -1,6 +1,7 @@
 package com.astro.entity.ProcurementModule;
 
 import lombok.Data;
+import lombok.ToString;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -22,10 +23,12 @@ public class IndentMaterialMapping {
 
     @ManyToOne
     @JoinColumn(name = "indent_id", nullable = false)
+    @ToString.Exclude
     private IndentCreation indentCreation;
 
     @ManyToOne
     @JoinColumn(name = "material_code", nullable = false)
+    @ToString.Exclude
     private MaterialDetails materialDetails;
 
     @Column(name = "quantity")
