@@ -2243,15 +2243,13 @@ useEffect(() => {
       q.financialIndentorStatus === 'ACCEPTED' || q.financialIndentorStatus === 'REJECTED'
     );
 
-  const allVendorsSpoTechDecided = isDoubleBidEval && quotationData.length > 0 &&
-    quotationData
-      .filter(q => q.indentorStatus === 'ACCEPTED')
-      .every(q => q.sopStatus === 'ACCEPTED' || q.sopStatus === 'REJECTED');
+  const techAcceptedVendors = quotationData.filter(q => q.indentorStatus === 'ACCEPTED');
+  const allVendorsSpoTechDecided = isDoubleBidEval && techAcceptedVendors.length > 0 &&
+    techAcceptedVendors.every(q => q.sopStatus === 'ACCEPTED' || q.sopStatus === 'REJECTED');
 
-  const allVendorsSpoFinDecided = isDoubleBidEval && financialVendors.length > 0 &&
-    financialVendors
-      .filter(q => q.financialIndentorStatus === 'ACCEPTED')
-      .every(q => q.financialSpoStatus === 'ACCEPTED' || q.financialSpoStatus === 'REJECTED');
+  const finAcceptedVendors = financialVendors.filter(q => q.financialIndentorStatus === 'ACCEPTED');
+  const allVendorsSpoFinDecided = isDoubleBidEval && finAcceptedVendors.length > 0 &&
+    finAcceptedVendors.every(q => q.financialSpoStatus === 'ACCEPTED' || q.financialSpoStatus === 'REJECTED');
 
   const anyTechVendorPendingClarif = isDoubleBidEval &&
     quotationData.some(q => q.status === 'CHANGE_REQUESTED');
