@@ -455,6 +455,7 @@ const handleChange = (key, value) => {
         requestedByRole: 'SPO',
         requestedByUserId: userId,
         clarificationTarget: 'INDENTOR',
+        targetVendorId: record.vendorId,
         remarks: rejectComment,
       }, { params: { tenderId } });
     }
@@ -960,7 +961,7 @@ const baseColumns = [
         },
       ]
     : []),
-  ...(!isDouble ? [priceBidColumnForSingleBid] : []),
+  ...(!isDouble ? [priceBidColumnForSingleBid] : [priceBidColumn]),
 
  
 
@@ -1178,7 +1179,11 @@ if (isSpoRole) {
               />
               <Button
                 type="primary"
-                disabled={!spoCanAct}
+                disabled={
+                  evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                  || record.status === 'CHANGE_REQUESTED'
+                  || record.changeRequestToIndentor
+                }
                 onClick={() => {
                   const target = spoRowTarget || 'INDENTOR';
                   if (target === 'VENDOR') {
@@ -1324,6 +1329,7 @@ if (isSpoRole) {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
       if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
+      const clarificationForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
       return status === 'ACCEPTED' ? (
         <Tag color="green">Accepted</Tag>
       ) : (
@@ -1333,9 +1339,9 @@ if (isSpoRole) {
           disabled={
             status === 'ACCEPTED' ||
             status === 'REJECTED' ||
-            record.status === 'CHANGE_REQUESTED'
+            (!clarificationForIndentor && record.status === 'CHANGE_REQUESTED')
           }
-          title={record.status === 'CHANGE_REQUESTED' ? 'Cannot accept while clarification is pending for this vendor' : ''}
+          title={!clarificationForIndentor && record.status === 'CHANGE_REQUESTED' ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
           Accept
         </Button>
@@ -1348,6 +1354,7 @@ if (isSpoRole) {
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
+      const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
       if (techRejected) return <Tag color="default">N/A</Tag>;
       return status === 'REJECTED' ? (
         <span style={{ color: 'red' }}>Rejected</span>
@@ -1367,7 +1374,7 @@ if (isSpoRole) {
                 style={{ marginTop: 8 }}
                 disabled={
                   status === 'REJECTED' ||
-                  record.status === 'CHANGE_REQUESTED'
+                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
                 }
               >
                 Submit
@@ -1379,7 +1386,7 @@ if (isSpoRole) {
         >
           <Button danger type="link" disabled={
             status === 'REJECTED' ||
-            record.status === 'CHANGE_REQUESTED'
+            (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
           }>
             Reject
           </Button>
@@ -1393,14 +1400,15 @@ if (isSpoRole) {
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
+      const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
       if (techRejected) return <Tag color="default">N/A</Tag>;
-      return record.status === 'CHANGE_REQUESTED' ? (
+      return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
         <Tag color="orange">Pending</Tag>
       ) : (
         <Button
           type="link"
           style={{ color: '#fa8c16', padding: 0 }}
-          disabled={status === 'REJECTED' || record.status === 'CHANGE_REQUESTED'}
+          disabled={status === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
           onClick={() => openVendorClarificationModal(record.vendorId)}
         >
           Seek Clarification
