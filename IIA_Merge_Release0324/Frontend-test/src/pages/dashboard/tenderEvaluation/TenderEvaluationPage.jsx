@@ -460,6 +460,10 @@ const TenderEvaluationPage = () => {
 
   // Seek Clarification submit
   const handleSeekClarification = async () => {
+    if (!clarTarget) {
+      message.warning("Please select a clarification target (Vendor or Indentor).");
+      return;
+    }
     if (!clarRemarks.trim()) {
       message.warning("Clarification remarks are required.");
       return;
@@ -811,7 +815,7 @@ const TenderEvaluationPage = () => {
                 size="small" icon={<QuestionCircleOutlined />}
                 onClick={() => {
                   setClarVendorId(r.vendorId);
-                  setClarTarget("VENDOR");
+                  setClarTarget(null);
                   setClarDlgOpen(true);
                 }}
               >
@@ -1389,7 +1393,8 @@ const TenderEvaluationPage = () => {
             </Text>
           ) : (
             <Select
-              value={clarTarget}
+              value={clarTarget || undefined}
+              placeholder="Select clarification target..."
               onChange={(val) => { setClarTarget(val); if (val !== "VENDOR") setClarVendorId(null); }}
               style={{ width: "100%" }}
             >
