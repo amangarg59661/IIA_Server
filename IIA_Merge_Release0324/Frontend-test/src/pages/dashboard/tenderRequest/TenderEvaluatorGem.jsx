@@ -55,11 +55,12 @@ const TenderEvaluatorGem = () => {
     const fetchVendors = async () => {
       if (!formData.tenderId) return;
       try {
+        const tenderId = formData.tenderId;
         setLoadingTender(true);
         const res = await axios.get(
-          `/api/vendor-quotation/${formData.tenderId}`,
+          `/api/vendor-quotation`,
           {
-            params: { userRole: role },
+            params: { userRole: role  , tenderId: tenderId},
           }
         );
 
@@ -147,9 +148,6 @@ const fetchVendors = async (tenderId) => {
     setLoadingTender(false);
   }
 };
-useEffect(() => {
-  fetchVendors(formData.tenderId);
-}, [formData.tenderId, token, role]);
 
 useEffect(() => {
   const checkInitiation = async () => {
