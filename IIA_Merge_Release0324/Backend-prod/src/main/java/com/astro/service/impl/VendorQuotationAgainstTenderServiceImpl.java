@@ -182,6 +182,37 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            } catch (Exception e) {
             //    log.warn("Clarification history update in saveQuotation failed: {}", e.getMessage());
            }
+
+           // ── Auto-restore eval status when all vendors have responded ──
+           try {
+               String tenderId = dto.getTenderId();
+               TenderEvaluation eval = tenderEvaluationRepository.findByTenderId(tenderId);
+               if (eval != null && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
+                   long stillPending = vendorQuotationAgainstTenderRepository
+                           .findByTenderIdAndIsLatestTrue(tenderId)
+                           .stream()
+                           .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                           .count();
+                   if (stillPending == 0) {
+                       String restoreStatus = eval.getPreviousEvaluationStatus();
+                       if (restoreStatus == null || restoreStatus.isBlank()) {
+                           restoreStatus = "PENDING_APPROVAL";
+                       }
+                       eval.setEvaluationStatus(restoreStatus);
+                       eval.setPreviousEvaluationStatus(null);
+                       eval.setClarificationPendingFrom(null);
+                       eval.setClarificationPendingFromId(null);
+                       eval.setClarificationPendingFromName(null);
+                       eval.setClarificationRequestedByRole(null);
+                       eval.setClarificationRemarks(null);
+                       eval.setClarificationTargetVendorId(null);
+                       eval.setUpdatedDate(LocalDateTime.now());
+                       tenderEvaluationRepository.save(eval);
+                   }
+               }
+           } catch (Exception e) {
+               // non-fatal: eval status restore can be done manually if needed
+           }
        }
 
        return mapToResponse(saved);
