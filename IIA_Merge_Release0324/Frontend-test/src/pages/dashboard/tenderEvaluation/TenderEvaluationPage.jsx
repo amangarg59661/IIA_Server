@@ -142,6 +142,9 @@ const TenderEvaluationPage = () => {
   const [noSheetDlgOpen,        setNoSheetDlgOpen]        = useState(false);
   const [pendingInitiateTenderId, setPendingInitiateTenderId] = useState(null);
 
+  // PP clarification response (per vendor: { text, file })
+  const [ppResponseMap, setPpResponseMap] = useState({});
+
   // Clarification history dialog
   const [clarHistoryOpen,   setClarHistoryOpen]   = useState(false);
   const [clarHistoryData,   setClarHistoryData]   = useState([]);
@@ -492,6 +495,49 @@ const TenderEvaluationPage = () => {
     }
   };
 
+  // PP: respond to clarification per vendor
+  const handlePPRespondClarification = async (vendorId) => {
+    const entry = ppResponseMap[vendorId];
+    if (!entry?.text?.trim()) {
+      message.warning("Please enter a clarification response.");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      let responseFileName = null;
+      if (entry.file) {
+        const fd = new FormData();
+        fd.append("file", entry.file);
+        const uploadRes = await axios.post("/file/upload?fileType=Tender", fd, {
+          headers: { "Content-Type": "multipart/form-data", Accept: "application/json" },
+        });
+        responseFileName = uploadRes.data?.responseData?.fileName || null;
+      }
+      await axios.post(
+        '/api/tender-evaluation/respond-clarification',
+        {
+          respondedByRole: "PURCHASE_PERSONNEL",
+          respondedById:   String(auth.userId),
+          responseText:    entry.text,
+          responseFileName,
+          vendorId,
+        },
+        { params: { tenderId: selectedEval.tenderId } }
+      );
+      message.success(`Clarification response sent for vendor ${vendorId}.`);
+      setPpResponseMap((prev) => {
+        const next = { ...prev };
+        delete next[vendorId];
+        return next;
+      });
+      await loadEval(selectedEval.tenderId);
+    } catch (e) {
+      message.error(e?.response?.data?.message || "Failed to send response.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   // Reject entire evaluation
   const handleRejectEvalConfirm = async () => {
     if (!rejectEvalRemarks.trim()) {
@@ -607,6 +653,12 @@ const TenderEvaluationPage = () => {
   // Show evaluator action buttons
   const showEvaluatorActions =
     isEvaluator && isActiveEvaluatorPhase(evalStatus);
+
+  // PP needs to respond to clarification (GEM/Open/Global mode)
+  const showPPClarificationResponse =
+    isPP &&
+    evalStatus === "PENDING_INDENTOR_CLARIFICATION" &&
+    selectedEval?.clarificationPendingFrom === "PURCHASE_PERSONNEL";
 
   // Show SPO per-vendor actions
   const showSPOActions =
@@ -822,6 +874,66 @@ const TenderEvaluationPage = () => {
                 Seek Clarification
               </Button>
             ),
+          },
+        ]
+      : []),
+    // PP Clarification Response columns (GEM/Open/Global mode)
+    ...(showPPClarificationResponse
+      ? [
+          {
+            title: "Clarification Response",
+            key: "pp_response",
+            width: 220,
+            render: (_, r) =>
+              r.status === "CHANGE_REQUESTED" ? (
+                <div>
+                  <TextArea
+                    rows={2}
+                    placeholder="Enter response..."
+                    value={ppResponseMap[r.vendorId]?.text || ""}
+                    onChange={(e) =>
+                      setPpResponseMap((prev) => ({
+                        ...prev,
+                        [r.vendorId]: { ...prev[r.vendorId], text: e.target.value },
+                      }))
+                    }
+                    style={{ marginBottom: 4 }}
+                  />
+                  <Upload
+                    beforeUpload={(file) => {
+                      setPpResponseMap((prev) => ({
+                        ...prev,
+                        [r.vendorId]: { ...prev[r.vendorId], file },
+                      }));
+                      return false;
+                    }}
+                    showUploadList={false}
+                  >
+                    <Button size="small" icon={<UploadOutlined />}>
+                      {ppResponseMap[r.vendorId]?.file?.name || "Attach File"}
+                    </Button>
+                  </Upload>
+                </div>
+              ) : (
+                <Text type="secondary">—</Text>
+              ),
+          },
+          {
+            title: "Submit Response",
+            key: "pp_submit",
+            width: 130,
+            render: (_, r) =>
+              r.status === "CHANGE_REQUESTED" ? (
+                <Button
+                  size="small"
+                  type="primary"
+                  loading={actionLoading}
+                  disabled={!ppResponseMap[r.vendorId]?.text?.trim()}
+                  onClick={() => handlePPRespondClarification(r.vendorId)}
+                >
+                  Send Response
+                </Button>
+              ) : null,
           },
         ]
       : []),

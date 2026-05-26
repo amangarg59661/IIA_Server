@@ -808,7 +808,7 @@ const getDisplayStatus = (actionStatus) => {
       {/* Upload form: only when no submission yet OR clarification requested */}
       {selectedTenderId && (isChangeRequest || isSubmittedOrNone) && (
         <div style={{ marginTop: "40px" }}>
-          <TenderEvaluator key={selectedTenderId} tenderId={selectedTenderId}  actionStatus={actionStatus}/>
+          <TenderEvaluator key={selectedTenderId} tenderId={selectedTenderId}  actionStatus={actionStatus} onSubmitSuccess={() => handleTenderCardClick(selectedTenderId)}/>
         </div>
       )}
 
