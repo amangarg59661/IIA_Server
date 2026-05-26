@@ -116,6 +116,9 @@ private BudgetService budgetService;
     @Autowired
     private PurchaseOrderHistoryRepository purchaseOrderHistoryRepository;
 
+    @Autowired
+    private com.astro.service.TechnoFinancialCommitteeService technoFinancialCommitteeService;
+
     @Value("${filePath}")
     private String bp;
     private final String basePath;
@@ -289,6 +292,17 @@ purchaseOrder.setParentPoId(null);
         existing.setLockedDate(LocalDateTime.now());
 
         TenderRequest saved = trRepo.save(existing);
+
+        // Deactivate nominated committee member roles now that PO is generated
+        try {
+            technoFinancialCommitteeService.deactivateNominatedMemberRoles(purchaseOrderRequestDTO.getTenderId());
+        } catch (Exception e) {
+            // Non-fatal: log but don't fail PO creation
+            org.slf4j.LoggerFactory.getLogger(PurchaseOrderImpl.class)
+                    .warn("Failed to deactivate committee member roles for tender {}: {}",
+                            purchaseOrderRequestDTO.getTenderId(), e.getMessage());
+        }
+
         return mapToResponseDTO(purchaseOrder);
     }
 
@@ -2094,6 +2108,15 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         tender.setLockedForPO(poId);
         tender.setLockedDate(LocalDateTime.now());
         trRepo.save(tender);
+
+        // Deactivate nominated committee member roles now that PO is generated
+        try {
+            technoFinancialCommitteeService.deactivateNominatedMemberRoles(dto.getTenderId());
+        } catch (Exception e) {
+            org.slf4j.LoggerFactory.getLogger(PurchaseOrderImpl.class)
+                    .warn("Failed to deactivate committee member roles for tender {}: {}",
+                            dto.getTenderId(), e.getMessage());
+        }
 
         return mapToResponseDTO(existing);
     }

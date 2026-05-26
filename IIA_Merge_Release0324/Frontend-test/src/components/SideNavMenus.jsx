@@ -178,6 +178,12 @@ const adminMenuItems = [
         label: "User Creation",
         path: "/admin/user",
       },
+      {
+        key: "admin-committee",
+        icon: <TeamOutlined />,
+        label: "Committee Management",
+        path: "/admin/committee",
+      },
     ],
   },
 ];
