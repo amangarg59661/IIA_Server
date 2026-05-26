@@ -1663,6 +1663,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         // INDENTOR under 10L: auto-route based on procurement mode
         if ("INDENTOR".equalsIgnoreCase(role) && under10L) {
             if (isLimitedOrProprietary(mode)) {
+                // Preserve ALL_VENDORS so bulk clarification marks every quotation
+                if ("ALL_VENDORS".equalsIgnoreCase(target)) {
+                    return "ALL_VENDORS";
+                }
                 return "VENDOR";
             } else if (isGemOpenGlobal(mode)) {
                 return "PURCHASE_PERSONNEL";

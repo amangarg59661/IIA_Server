@@ -6,6 +6,7 @@ import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
 import com.astro.dto.workflow.ProcurementDtos.QuotationViewHistoryDto;
 import com.astro.dto.workflow.ProcurementDtos.VendorQuotationChangeRequestDto;
 import com.astro.entity.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import com.astro.entity.ProcurementModule.TenderEvaluation;
 import com.astro.entity.ProcurementModule.TenderRequest;
 import com.astro.exception.BusinessException;
@@ -19,7 +20,7 @@ import com.astro.service.VendorQuotationAgainstTenderService;
 import io.swagger.models.auth.In;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import com.astro.config.JwtUtil;
 import javax.transaction.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +38,10 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
     private VendorQuotationAgainstTenderRepository vendorQuotationAgainstTenderRepository;
     @Autowired
     private VendorMasterRepository vendorMasterRepository;
+    @Autowired
+    JwtUtil jwtUtil;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     @Autowired
     private VendorMasterUtilRepository vendorMasterUtilRepository;
     @Autowired
@@ -61,8 +66,22 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
 
        TenderEvaluation tenderEval = tenderEvaluationRepository.findByTenderId(dto.getTenderId());
        if (tenderEval != null && tenderEval.getInitiated() != null && tenderEval.getInitiated() == 1) {
-           throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
-                   "Tender already under evaluation. Cannot submit new quotations."));
+           String pendingFrom = tenderEval.getClarificationPendingFrom();
+           boolean vendorClarificationPending =
+                   "VENDOR".equalsIgnoreCase(pendingFrom) || "ALL_VENDORS".equalsIgnoreCase(pendingFrom);
+
+           if (!vendorClarificationPending) {
+               throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                       "Tender already under evaluation. Cannot submit new quotations."));
+           }
+           // For single-vendor clarification, only the targeted vendor may respond
+           if ("VENDOR".equalsIgnoreCase(pendingFrom)) {
+               String targetVid = tenderEval.getClarificationTargetVendorId();
+               if (targetVid != null && !targetVid.equalsIgnoreCase(dto.getVendorId())) {
+                   throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                           "Tender already under evaluation. Cannot submit new quotations."));
+               }
+           }
        }
 
        if (dto.getVendorId() == null && "GEM".equalsIgnoreCase(dto.getType())) {
@@ -106,7 +125,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            quotation.setFileType(v.getFileType());
            quotation.setClarificationFileName(dto.getClarificationFileName());
            quotation.setVendorResponse(dto.getVendorResponse());
-           quotation.setCreatedBy(v.getCreatedBy());
+           quotation.setCreatedBy(dto.getVendorId());
            quotation.setVersion(maxVersion + 1);
            quotation.setIsLatest(true);
 
@@ -499,12 +518,24 @@ public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request
     VendorLoginDetails vendorLogin = vendorLoginOpt.get();
 
     // Verify current password
-    if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
+    // ✅ Verify current password using BCrypt
+    if (!passwordEncoder.matches(request.getCurrentPassword(), vendorLogin.getPassword())) {
         return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
     }
 
-    // Update password
-    vendorLogin.setPassword(request.getNewPassword());
+    // ✅ Prevent reuse of the same password
+    if (passwordEncoder.matches(request.getNewPassword(), vendorLogin.getPassword())) {
+        return new ChangePasswordResponseDto(false, "New password must be different from current password", request.getVendorId());
+    }
+
+    // ✅ Encode new password before saving
+    vendorLogin.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    // if (!vendorLogin.getPassword().equals(request.getCurrentPassword())) {
+    //     return new ChangePasswordResponseDto(false, "Current password is incorrect", request.getVendorId());
+    // }
+
+    // // Update password
+    // vendorLogin.setPassword(request.getNewPassword());
     vendorLogin.setIsFirstLogin(false);
     vendorLogin.setIsTempPassword(false);
     vendorLogin.setPasswordChangedAt(LocalDateTime.now());
@@ -850,11 +881,25 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         }
 
         VendorLoginDetails vl = vendorLoginOpt.get();
-        if (!vl.getPassword().equals(request.getPassword())) {
-            dto.setStatus("INVALID_CREDENTIALS");
-            dto.setComments("Invalid password.");
-            return dto;
-        }
+         if (!passwordEncoder.matches(request.getPassword(), vl.getPassword())) {
+        dto.setStatus("INVALID_CREDENTIALS");
+        dto.setComments("Invalid password.");
+        return dto;
+    }
+        // if (!vl.getPassword().equals(request.getPassword())) {
+        //     dto.setStatus("INVALID_CREDENTIALS");
+        //     dto.setComments("Invalid password.");
+        //     return dto;
+        // }
+
+         // Generate JWT token
+         List<String> roleNames = null;
+               String token = jwtUtil.generateToken(
+                String.valueOf(request.getVendorId()),
+                roleNames,
+                "VENDOR"
+        );
+        dto.setToken(token);
 
         dto.setEmailStatus(vl.getEmailSent());
         dto.setIsFirstLogin(vl.getIsFirstLogin());
