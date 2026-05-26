@@ -163,6 +163,22 @@ const canPerformActions = showActionButtons;
 const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formData.modeOfProcurement);
 const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStatus === 'APPROVED' && isPurchasePersonnelRole;
 
+// ── Double bid: separate control flags per phase ──
+const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
+  ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval) ||
+   (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval)) &&
+  evalStatus !== null;
+
+const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
+  evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
+  (isIndentCreatorRole || isPurchasePersonnelRole);
+
+const showSpoTechActions = isDoubleBidEval && !isFinancialPhase &&
+  isSpoRole && evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL';
+
+const showSpoFinActions = isDoubleBidEval && isFinancialPhase &&
+  isSpoRole && evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL';
+
   useEffect(() => {
     if (showRegisteredVendorColumn && allRegisteredVendors.length === 0) {
       axios.get(`${baseURL}/api/vendor-master`)
@@ -1454,6 +1470,655 @@ if (isSpoRole) {
 
   ];
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ── Double Bid: Dedicated Column Arrays (no isFinancialPhase ternaries) ──
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Vendor info columns shared by all double-bid tables ──
+const vendorInfoColumns = [
+  {
+    title: 'Vendor ID',
+    dataIndex: 'vendorId',
+    key: 'vendorId',
+    render: (vid) => (
+      <a
+        style={{ color: '#1890ff' }}
+        onClick={() => {
+          setSelectedVendorForHistory(vid);
+          setHistoryVisible(true);
+        }}
+      >
+        {vid}
+      </a>
+    ),
+  },
+  {
+    title: 'Vendor Name',
+    dataIndex: 'vendorName',
+    key: 'vendorName',
+  },
+];
+
+// ── Technical Bid Columns (Indentor / Purchase Personnel) ──
+const doubleBidTechColumns = [
+  ...vendorInfoColumns,
+  {
+    title: 'Technical Document',
+    key: 'techDoc',
+    render: (_, record) =>
+      record.quotationFileName ? (
+        <a
+          href={`${baseURL}/file/view/Tender/${record.quotationFileName}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View
+        </a>
+      ) : 'No File',
+  },
+  ...(showVendorResponse
+    ? [{
+        title: 'Vendor Response',
+        dataIndex: 'vendorResponse',
+        key: 'vendorResponse',
+      }]
+    : []),
+  ...(showClarificationFile
+    ? [{
+        title: 'Clarification File',
+        dataIndex: 'clarificationFileName',
+        key: 'clarificationFileName',
+        render: (file) =>
+          file ? (
+            <a href={`${baseURL}/file/view/Tender/${file}`} target="_blank" rel="noopener noreferrer">View</a>
+          ) : 'N/A',
+      }]
+    : []),
+  {
+    title: `${role} Status`,
+    key: 'indentorStatus',
+    dataIndex: 'indentorStatus',
+    render: (val) => {
+      if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+      return val || 'N/A';
+    },
+  },
+  {
+    title: 'SPO Status',
+    key: 'sopStatus',
+    dataIndex: 'sopStatus',
+    render: (val) => {
+      if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+      return val || 'N/A';
+    },
+  },
+  ...(showTechActionButtons
+    ? [
+        {
+          title: 'Accept',
+          key: 'techAccept',
+          render: (_, record) => {
+            const st = record.indentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return st === 'ACCEPTED' ? (
+              <Tag color="green">Accepted</Tag>
+            ) : (
+              <Button
+                size="small"
+                onClick={() => handleAccept(record)}
+                disabled={
+                  st === 'ACCEPTED' || st === 'REJECTED' ||
+                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                }
+              >
+                Accept
+              </Button>
+            );
+          },
+        },
+        {
+          title: 'Reject',
+          key: 'techReject',
+          render: (_, record) => {
+            const st = record.indentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return st === 'REJECTED' ? (
+              <span style={{ color: 'red' }}>Rejected</span>
+            ) : (
+              <Popover
+                content={
+                  <div style={{ padding: 12 }}>
+                    <Input.TextArea
+                      placeholder="Enter reject comment"
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button
+                      type="primary"
+                      onClick={() => handleReject(record)}
+                      style={{ marginTop: 8 }}
+                      disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                    >
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="Reject Vendor"
+                trigger="click"
+              >
+                <Button danger type="link" disabled={
+                  st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                }>
+                  Reject
+                </Button>
+              </Popover>
+            );
+          },
+        },
+        {
+          title: 'Seek Clarification',
+          key: 'techClarif',
+          render: (_, record) => {
+            const st = record.indentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
+              <Tag color="orange">Pending</Tag>
+            ) : (
+              <Button
+                type="link"
+                style={{ color: '#fa8c16', padding: 0 }}
+                disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                onClick={() => openVendorClarificationModal(record.vendorId)}
+              >
+                Seek Clarification
+              </Button>
+            );
+          },
+        },
+      ]
+    : []),
+  ...(showRegisteredVendorColumn ? [{
+    title: 'Registered Vendor ID',
+    key: 'registeredVendor',
+    width: 250,
+    render: (_, record) => {
+      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      if (record.registeredVendorId) {
+        return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+      }
+      return (
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <Select showSearch placeholder="Select vendor" style={{ width: 160 }}
+            value={selectedRegisteredVendors[record.vendorId] || undefined}
+            onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+            filterOption={(input, option) => {
+              const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+              return text.toLowerCase().includes(input.toLowerCase());
+            }}>
+            {allRegisteredVendors.map(v => (
+              <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+            ))}
+          </Select>
+          <Button size="small" type="primary" onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>Submit</Button>
+        </div>
+      );
+    },
+  }] : []),
+];
+
+// ── Financial Bid Columns (Indentor / Purchase Personnel) ──
+const doubleBidFinColumns = [
+  ...vendorInfoColumns,
+  {
+    title: 'Financial Document',
+    dataIndex: 'priceBidFileName',
+    key: 'priceBidFileName',
+    render: (fileName) =>
+      fileName ? (
+        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
+      ) : 'No File',
+  },
+  {
+    title: 'Indentor/PP Financial Status',
+    key: 'financialIndentorStatus',
+    dataIndex: 'financialIndentorStatus',
+    render: (val) => {
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+      if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+      return val || <Tag>Pending</Tag>;
+    },
+  },
+  {
+    title: 'SPO Financial Status',
+    key: 'financialSpoStatus',
+    dataIndex: 'financialSpoStatus',
+    render: (val) => {
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+      if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
+      return val || <Tag>Pending</Tag>;
+    },
+  },
+  ...(showFinActionButtons
+    ? [
+        {
+          title: 'Accept',
+          key: 'finAccept',
+          render: (_, record) => {
+            const st = record.financialIndentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return st === 'ACCEPTED' ? (
+              <Tag color="green">Accepted</Tag>
+            ) : (
+              <Button
+                size="small"
+                onClick={() => handleAccept(record)}
+                disabled={
+                  st === 'ACCEPTED' || st === 'REJECTED' ||
+                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                }
+              >
+                Accept
+              </Button>
+            );
+          },
+        },
+        {
+          title: 'Reject',
+          key: 'finReject',
+          render: (_, record) => {
+            const st = record.financialIndentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return st === 'REJECTED' ? (
+              <span style={{ color: 'red' }}>Rejected</span>
+            ) : (
+              <Popover
+                content={
+                  <div style={{ padding: 12 }}>
+                    <Input.TextArea
+                      placeholder="Enter reject comment"
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button
+                      type="primary"
+                      onClick={() => handleReject(record)}
+                      style={{ marginTop: 8 }}
+                      disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                    >
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="Reject Vendor"
+                trigger="click"
+              >
+                <Button danger type="link" disabled={
+                  st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                }>
+                  Reject
+                </Button>
+              </Popover>
+            );
+          },
+        },
+        {
+          title: 'Seek Clarification',
+          key: 'finClarif',
+          render: (_, record) => {
+            const st = record.financialIndentorStatus;
+            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
+              <Tag color="orange">Pending</Tag>
+            ) : (
+              <Button
+                type="link"
+                style={{ color: '#fa8c16', padding: 0 }}
+                disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                onClick={() => openVendorClarificationModal(record.vendorId)}
+              >
+                Seek Clarification
+              </Button>
+            );
+          },
+        },
+      ]
+    : []),
+];
+
+// ── SPO Technical Bid Columns ──
+const spoTechColumns = [
+  ...vendorInfoColumns,
+  {
+    title: 'Technical Document',
+    key: 'techDoc',
+    render: (_, record) =>
+      record.quotationFileName ? (
+        <a href={`${baseURL}/file/view/Tender/${record.quotationFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+      ) : 'No File',
+  },
+  {
+    title: 'Indentor Status',
+    key: 'indentorStatus',
+    dataIndex: 'indentorStatus',
+    render: (indentorStatus, record) => {
+      if (indentorStatus === 'CHANGE_REQUESTED') return 'Pending Clarification';
+      if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return (
+        <Popover
+          content={record.remarks ? <span>{record.remarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
+          title="Rejection Reason"
+        >
+          <span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span>
+        </Popover>
+      );
+      if (indentorStatus === 'Completed' || indentorStatus === 'ACCEPTED') return <span style={{ color: 'green' }}>Accepted</span>;
+      return indentorStatus || 'N/A';
+    },
+  },
+  {
+    title: 'SPO Status',
+    key: 'sopStatus',
+    dataIndex: 'sopStatus',
+    render: (sopStatus) => {
+      if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
+      if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Rejected';
+      if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Accepted';
+      return sopStatus || 'Pending';
+    },
+  },
+  {
+    title: 'Qualification Status',
+    key: 'qualStatus',
+    dataIndex: 'sopStatus',
+    render: (sopStatus) => {
+      if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
+      if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Disqualified';
+      if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Qualified';
+      return sopStatus || 'Pending';
+    },
+  },
+  ...(showSpoTechActions
+    ? [{
+        title: 'SPO Actions',
+        key: 'spoTechActions',
+        render: (_, record) => {
+          const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+            && record.indentorStatus === 'ACCEPTED'
+            && !record.sopStatus
+            && record.status !== 'CHANGE_REQUESTED';
+          const pendingToIndentor = record.changeRequestToIndentor;
+
+          return (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                disabled={!spoCanAct || record.sopStatus === 'ACCEPTED'}
+                onClick={() => handleSpoReview(record, 'ACCEPT')}
+              >
+                {record.sopStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
+              </Button>
+              <Popover
+                content={
+                  <div style={{ padding: 12 }}>
+                    <Input.TextArea
+                      placeholder="Enter reject reason"
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button type="primary"
+                      disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
+                      onClick={() => handleSpoReview(record, 'REJECT')}
+                      style={{ marginTop: 8 }}>
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="SPO Reject Reason"
+                trigger="click"
+              >
+                <Button size="small" style={{ color: 'red' }}
+                  disabled={!spoCanAct || record.sopStatus === 'REJECTED'}>
+                  {record.sopStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
+                </Button>
+              </Popover>
+              <Popover
+                content={
+                  <div style={{ padding: 12, minWidth: 280 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong style={{ fontSize: 12 }}>Send To:</Text>
+                      <Select size="small"
+                        value={rejectedVendorId === record.vendorId ? (spoRowTarget || 'INDENTOR') : 'INDENTOR'}
+                        onChange={(val) => { setRejectedVendorId(record.vendorId); setSpoRowTarget(val); }}
+                        style={{ width: '100%', marginTop: 4 }}>
+                        <Option value="INDENTOR">Indentor / Purchase Personnel</Option>
+                        <Option value="VENDOR">Vendor (ask vendor directly)</Option>
+                      </Select>
+                    </div>
+                    <Input.TextArea
+                      placeholder={
+                        (rejectedVendorId === record.vendorId ? spoRowTarget : 'INDENTOR') === 'VENDOR'
+                          ? 'Enter clarification question for vendor'
+                          : 'Enter change request to Indentor'
+                      }
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button type="primary"
+                      disabled={
+                        evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                        || record.status === 'CHANGE_REQUESTED'
+                        || record.changeRequestToIndentor
+                      }
+                      onClick={() => {
+                        const target = spoRowTarget || 'INDENTOR';
+                        if (target === 'VENDOR') {
+                          handleSpoVendorClarification(record);
+                        } else {
+                          handleSpoReview(record, 'CHANGE_REQUEST_TO_INTENTOR');
+                        }
+                      }}
+                      style={{ marginTop: 8 }}>
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="Seek Revision"
+                trigger="click"
+              >
+                <Button size="small" style={{ color: '#fa8c16' }}>
+                  {pendingToIndentor ? 'Change Requested' : record.status === 'CHANGE_REQUESTED' ? 'Clarification Sent' : 'Seek Revision'}
+                </Button>
+              </Popover>
+            </div>
+          );
+        },
+      }]
+    : []),
+  ...(showRegisteredVendorColumn ? [{
+    title: 'Registered Vendor ID',
+    key: 'registeredVendor',
+    width: 250,
+    render: (_, record) => {
+      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      if (record.registeredVendorId) {
+        return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+      }
+      return (
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <Select showSearch placeholder="Select vendor" style={{ width: 160 }}
+            value={selectedRegisteredVendors[record.vendorId] || undefined}
+            onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+            filterOption={(input, option) => {
+              const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+              return text.toLowerCase().includes(input.toLowerCase());
+            }}>
+            {allRegisteredVendors.map(v => (
+              <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+            ))}
+          </Select>
+          <Button size="small" type="primary" onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>Submit</Button>
+        </div>
+      );
+    },
+  }] : []),
+];
+
+// ── SPO Financial Bid Columns ──
+const spoFinColumns = [
+  ...vendorInfoColumns,
+  {
+    title: 'Financial Document',
+    dataIndex: 'priceBidFileName',
+    key: 'priceBidFileName',
+    render: (fileName) =>
+      fileName ? (
+        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
+      ) : 'No File',
+  },
+  {
+    title: 'Indentor/PP Financial Status',
+    key: 'financialIndentorStatus',
+    dataIndex: 'financialIndentorStatus',
+    render: (val) => {
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+      if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+      return val || <Tag>Pending</Tag>;
+    },
+  },
+  {
+    title: 'SPO Financial Status',
+    key: 'financialSpoStatus',
+    dataIndex: 'financialSpoStatus',
+    render: (val) => {
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+      if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
+      return val || <Tag>Pending</Tag>;
+    },
+  },
+  {
+    title: 'Financial Qualification',
+    key: 'finQualStatus',
+    dataIndex: 'financialSpoStatus',
+    render: (val) => {
+      if (val === 'REJECTED' || val === 'Rejected') return 'Disqualified';
+      if (val === 'ACCEPTED' || val === 'Completed') return 'Qualified';
+      if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
+      return val || 'Pending';
+    },
+  },
+  ...(showSpoFinActions
+    ? [{
+        title: 'SPO Actions',
+        key: 'spoFinActions',
+        render: (_, record) => {
+          const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+            && record.financialIndentorStatus === 'ACCEPTED'
+            && !record.financialSpoStatus
+            && record.status !== 'CHANGE_REQUESTED';
+          const pendingToIndentor = record.changeRequestToIndentor;
+
+          return (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button
+                size="small"
+                disabled={!spoCanAct || record.financialSpoStatus === 'ACCEPTED'}
+                onClick={() => handleSpoReview(record, 'ACCEPT')}
+              >
+                {record.financialSpoStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
+              </Button>
+              <Popover
+                content={
+                  <div style={{ padding: 12 }}>
+                    <Input.TextArea
+                      placeholder="Enter reject reason"
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button type="primary"
+                      disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}
+                      onClick={() => handleSpoReview(record, 'REJECT')}
+                      style={{ marginTop: 8 }}>
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="SPO Reject Reason"
+                trigger="click"
+              >
+                <Button size="small" style={{ color: 'red' }}
+                  disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}>
+                  {record.financialSpoStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
+                </Button>
+              </Popover>
+              <Popover
+                content={
+                  <div style={{ padding: 12, minWidth: 280 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <Text strong style={{ fontSize: 12 }}>Send To:</Text>
+                      <Select size="small"
+                        value={rejectedVendorId === record.vendorId ? (spoRowTarget || 'INDENTOR') : 'INDENTOR'}
+                        onChange={(val) => { setRejectedVendorId(record.vendorId); setSpoRowTarget(val); }}
+                        style={{ width: '100%', marginTop: 4 }}>
+                        <Option value="INDENTOR">Indentor / Purchase Personnel</Option>
+                        <Option value="VENDOR">Vendor (ask vendor directly)</Option>
+                      </Select>
+                    </div>
+                    <Input.TextArea
+                      placeholder={
+                        (rejectedVendorId === record.vendorId ? spoRowTarget : 'INDENTOR') === 'VENDOR'
+                          ? 'Enter clarification question for vendor'
+                          : 'Enter change request to Indentor'
+                      }
+                      rows={3}
+                      value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                      onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                    />
+                    <Button type="primary"
+                      disabled={
+                        evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                        || record.status === 'CHANGE_REQUESTED'
+                        || record.changeRequestToIndentor
+                      }
+                      onClick={() => {
+                        const target = spoRowTarget || 'INDENTOR';
+                        if (target === 'VENDOR') {
+                          handleSpoVendorClarification(record);
+                        } else {
+                          handleSpoReview(record, 'CHANGE_REQUEST_TO_INTENTOR');
+                        }
+                      }}
+                      style={{ marginTop: 8 }}>
+                      Submit
+                    </Button>
+                  </div>
+                }
+                title="Seek Revision"
+                trigger="click"
+              >
+                <Button size="small" style={{ color: '#fa8c16' }}>
+                  {pendingToIndentor ? 'Change Requested' : record.status === 'CHANGE_REQUESTED' ? 'Clarification Sent' : 'Seek Revision'}
+                </Button>
+              </Popover>
+            </div>
+          );
+        },
+      }]
+    : []),
+];
+
 // Unified effect: all tender-level fetches triggered once when tenderId changes
 useEffect(() => {
   if (tenderId && tenderId.trim()) {
@@ -1564,6 +2229,33 @@ useEffect(() => {
   const isVotingMember = evalStatus?.committeeVotes?.some(
     v => String(v.committeeUserId) === String(userId)
   );
+
+  // ── Double bid: phase-specific computed state ──
+  const financialVendors = isDoubleBidEval
+    ? quotationData.filter(q => q.indentorStatus === 'ACCEPTED' && q.sopStatus === 'ACCEPTED')
+    : [];
+
+  const allVendorsTechDecided = isDoubleBidEval && quotationData.length > 0 &&
+    quotationData.every(q => q.indentorStatus === 'ACCEPTED' || q.indentorStatus === 'REJECTED');
+
+  const allVendorsFinDecided = isDoubleBidEval && financialVendors.length > 0 &&
+    financialVendors.every(q =>
+      q.financialIndentorStatus === 'ACCEPTED' || q.financialIndentorStatus === 'REJECTED'
+    );
+
+  const techAcceptedVendors = quotationData.filter(q => q.indentorStatus === 'ACCEPTED');
+  const allVendorsSpoTechDecided = isDoubleBidEval && techAcceptedVendors.length > 0 &&
+    techAcceptedVendors.every(q => q.sopStatus === 'ACCEPTED' || q.sopStatus === 'REJECTED');
+
+  const finAcceptedVendors = financialVendors.filter(q => q.financialIndentorStatus === 'ACCEPTED');
+  const allVendorsSpoFinDecided = isDoubleBidEval && finAcceptedVendors.length > 0 &&
+    finAcceptedVendors.every(q => q.financialSpoStatus === 'ACCEPTED' || q.financialSpoStatus === 'REJECTED');
+
+  const anyTechVendorPendingClarif = isDoubleBidEval &&
+    quotationData.some(q => q.status === 'CHANGE_REQUESTED');
+
+  const anyFinVendorPendingClarif = isDoubleBidEval &&
+    financialVendors.some(q => q.status === 'CHANGE_REQUESTED');
 
   // Human-readable committee type label
   const committeeLabel = {
@@ -1678,13 +2370,57 @@ useEffect(() => {
               />
             )}
 
-            {/* ── Main Quotation Table ── */}
-            <Table
-              dataSource={quotationData}
-              columns={columns}
-              rowKey="vendorId"
-              pagination={false}
-            />
+            {/* ── Single Bid: Original Table (unchanged) ── */}
+            {!isDoubleBidEval && (
+              <Table
+                dataSource={quotationData}
+                columns={columns}
+                rowKey="vendorId"
+                pagination={false}
+              />
+            )}
+
+            {/* ── Double Bid: Dual Tables ── */}
+            {isDoubleBidEval && (
+              <>
+                <Card
+                  title={
+                    <span>
+                      Technical Bid Evaluation
+                      {isFinancialPhase && <Tag color="green" style={{ marginLeft: 8 }}>Completed</Tag>}
+                    </span>
+                  }
+                  size="small"
+                  style={{ marginTop: 16 }}
+                >
+                  <Table
+                    dataSource={quotationData}
+                    columns={isSpoRole ? spoTechColumns : doubleBidTechColumns}
+                    rowKey="vendorId"
+                    size="small"
+                    bordered
+                    pagination={false}
+                  />
+                </Card>
+
+                {isFinancialPhase && (
+                  <Card title="Financial Bid Evaluation" size="small" style={{ marginTop: 16 }}>
+                    {financialVendors.length === 0 ? (
+                      <Alert type="info" message="No vendors qualified in technical evaluation." />
+                    ) : (
+                      <Table
+                        dataSource={financialVendors}
+                        columns={isSpoRole ? spoFinColumns : doubleBidFinColumns}
+                        rowKey="vendorId"
+                        size="small"
+                        bordered
+                        pagination={false}
+                      />
+                    )}
+                  </Card>
+                )}
+              </>
+            )}
 
             {/* ── Seek Clarification to All Vendors (PP / Indentor) ── */}
             {evalStatus?.evaluationStatus && !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
@@ -1820,7 +2556,12 @@ useEffect(() => {
                   )}
                   <Space wrap>
                     <Button type="primary" loading={isSubmitting}
-                      disabled={isAnyClarificationPending || anyVendorPendingClarif || !allVendorsDecided}
+                      disabled={
+                        isAnyClarificationPending ||
+                        (isDoubleBidEval
+                          ? (isFinancialPhase ? anyFinVendorPendingClarif || !allVendorsFinDecided : anyTechVendorPendingClarif || !allVendorsTechDecided)
+                          : (anyVendorPendingClarif || !allVendorsDecided))
+                      }
                       onClick={handleConfirmByIndentor}>
                       Confirm Evaluation Status
                     </Button>
@@ -1854,7 +2595,12 @@ useEffect(() => {
                   )}
                   <Space wrap>
                     <Button type="primary" loading={isSubmitting}
-                      disabled={isAnyClarificationPending || anyVendorPendingClarif || !allVendorsDecided}
+                      disabled={
+                        isAnyClarificationPending ||
+                        (isDoubleBidEval
+                          ? (isFinancialPhase ? anyFinVendorPendingClarif || !allVendorsFinDecided : anyTechVendorPendingClarif || !allVendorsTechDecided)
+                          : (anyVendorPendingClarif || !allVendorsDecided))
+                      }
                       onClick={handleConfirmByIndentor}>
                       Confirm Evaluation Status
                     </Button>
@@ -2092,7 +2838,12 @@ useEffect(() => {
                   )}
                   <Space wrap>
                     <Button type="primary"
-                      disabled={isAnyClarificationPending || !allVendorsSpoDecided}
+                      disabled={
+                        isAnyClarificationPending ||
+                        (isDoubleBidEval
+                          ? (isFinancialPhase ? !allVendorsSpoFinDecided : !allVendorsSpoTechDecided)
+                          : !allVendorsSpoDecided)
+                      }
                       onClick={() => { setApprovalType('spo'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
                       {isDoubleBidEval && !isFinancialPhase ? 'Approve Technical Phase' : 'Confirm Evaluation'}
                     </Button>

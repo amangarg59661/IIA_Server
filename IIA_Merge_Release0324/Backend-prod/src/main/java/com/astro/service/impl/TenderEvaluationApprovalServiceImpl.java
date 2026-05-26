@@ -381,10 +381,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        validateAllSpoDecided(tenderId);
-
         boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
         boolean isFinancialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
+
+        validateAllSpoDecided(tenderId, isDoubleBid && isFinancialPhase);
 
         if ("APPROVED".equalsIgnoreCase(decision)) {
             if (isDoubleBid && !isFinancialPhase) {
@@ -804,7 +804,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             .ifPresent(q -> {
                                 q.setStatus("CHANGE_REQUESTED");
                                 q.setRemarks(dto.getRemarks());
-                                applyClarificationRoleFields(q, dto);
+                                applyClarificationRoleFields(q, dto, eval);
                                 quotationRepository.save(q);
                             });
                 }
@@ -817,7 +817,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 allQuotations.forEach(q -> {
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
-                    applyClarificationRoleFields(q, dto);
+                    applyClarificationRoleFields(q, dto, eval);
                 });
                 quotationRepository.saveAll(allQuotations);
                 break;
@@ -929,19 +929,32 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     // ─────────────────────────────────────────────────────────────────
     // HELPER: set role-specific status fields on quotation during clarification
     // ─────────────────────────────────────────────────────────────────
-    private void applyClarificationRoleFields(VendorQuotationAgainstTender q, SeekClarificationDto dto) {
+    private void applyClarificationRoleFields(VendorQuotationAgainstTender q,
+                                               SeekClarificationDto dto,
+                                               TenderEvaluation eval) {
         q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.VENDOR);
         q.setUpdatedBy(dto.getRequestedByUserId() != null ? String.valueOf(dto.getRequestedByUserId()) : q.getUpdatedBy());
         q.setUpdatedDate(LocalDateTime.now());
 
+        boolean financialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
         String role = dto.getRequestedByRole();
         if ("SPO".equalsIgnoreCase(role) || "Store Purchase Officer".equalsIgnoreCase(role)) {
-            q.setSpoStatus("CHANGE_REQUESTED");
-            q.setSpoRemarks(dto.getRemarks());
+            if (financialPhase) {
+                q.setFinancialSpoStatus("CHANGE_REQUESTED");
+                q.setFinancialSpoRemarks(dto.getRemarks());
+            } else {
+                q.setSpoStatus("CHANGE_REQUESTED");
+                q.setSpoRemarks(dto.getRemarks());
+            }
             q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.STORE_PURCHASE_OFFICER);
         } else {
-            q.setIndentorStatus("CHANGE_REQUESTED");
-            q.setIndentorRemarks(dto.getRemarks());
+            if (financialPhase) {
+                q.setFinancialIndentorStatus("CHANGE_REQUESTED");
+                q.setFinancialIndentorRemarks(dto.getRemarks());
+            } else {
+                q.setIndentorStatus("CHANGE_REQUESTED");
+                q.setIndentorRemarks(dto.getRemarks());
+            }
             q.setCurrentRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
         }
     }
@@ -1234,8 +1247,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         List<VendorQuotationAgainstTender> quotations =
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
 
+        boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
+
         return quotations.stream()
                 .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                .filter(q -> !isDoubleBid || "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus()))
                 .map(q -> {
                     TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
                             new TenderEvaluationStatusDto.VendorQuotationEvalDto();
@@ -1474,6 +1490,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     }
 
     private void validateAllSpoDecided(String tenderId) {
+        validateAllSpoDecided(tenderId, false);
+    }
+
+    private void validateAllSpoDecided(String tenderId, boolean financialPhase) {
         List<VendorQuotationAgainstTender> quotations =
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
         List<String> underClarification = quotations.stream()
@@ -1487,10 +1507,20 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     + ". Please resolve clarification or reject the vendor(s) first."));
         }
         List<String> pendingSpo = quotations.stream()
-                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
-                .filter(q -> q.getSpoStatus() == null
-                        || (!"ACCEPTED".equalsIgnoreCase(q.getSpoStatus())
-                            && !"REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                .filter(q -> {
+                    if (financialPhase) {
+                        // Financial phase: only check vendors accepted in both technical rounds
+                        return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                            && "ACCEPTED".equalsIgnoreCase(q.getFinancialIndentorStatus());
+                    }
+                    return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus());
+                })
+                .filter(q -> {
+                    String spoSt = financialPhase ? q.getFinancialSpoStatus() : q.getSpoStatus();
+                    return spoSt == null
+                        || (!"ACCEPTED".equalsIgnoreCase(spoSt)
+                            && !"REJECTED".equalsIgnoreCase(spoSt));
+                })
                 .map(VendorQuotationAgainstTender::getVendorId)
                 .collect(Collectors.toList());
         if (!pendingSpo.isEmpty()) {
