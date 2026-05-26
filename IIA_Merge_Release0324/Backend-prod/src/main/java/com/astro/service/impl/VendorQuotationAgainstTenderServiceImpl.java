@@ -66,8 +66,22 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
 
        TenderEvaluation tenderEval = tenderEvaluationRepository.findByTenderId(dto.getTenderId());
        if (tenderEval != null && tenderEval.getInitiated() != null && tenderEval.getInitiated() == 1) {
-           throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
-                   "Tender already under evaluation. Cannot submit new quotations."));
+           String pendingFrom = tenderEval.getClarificationPendingFrom();
+           boolean vendorClarificationPending =
+                   "VENDOR".equalsIgnoreCase(pendingFrom) || "ALL_VENDORS".equalsIgnoreCase(pendingFrom);
+
+           if (!vendorClarificationPending) {
+               throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                       "Tender already under evaluation. Cannot submit new quotations."));
+           }
+           // For single-vendor clarification, only the targeted vendor may respond
+           if ("VENDOR".equalsIgnoreCase(pendingFrom)) {
+               String targetVid = tenderEval.getClarificationTargetVendorId();
+               if (targetVid != null && !targetVid.equalsIgnoreCase(dto.getVendorId())) {
+                   throw new BusinessException(new ErrorDetails(400, 1, "TENDER_INITIATED",
+                           "Tender already under evaluation. Cannot submit new quotations."));
+               }
+           }
        }
 
        if (dto.getVendorId() == null && "GEM".equalsIgnoreCase(dto.getType())) {

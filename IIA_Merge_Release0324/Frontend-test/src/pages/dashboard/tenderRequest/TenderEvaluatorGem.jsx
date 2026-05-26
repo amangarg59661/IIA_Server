@@ -148,9 +148,6 @@ const fetchVendors = async (tenderId) => {
     setLoadingTender(false);
   }
 };
-useEffect(() => {
-  fetchVendors(formData.tenderId);
-}, [formData.tenderId, token, role]);
 
 useEffect(() => {
   const checkInitiation = async () => {

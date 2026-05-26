@@ -825,6 +825,25 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             case "PURCHASE_PERSONNEL":
             case "CHAIRMAN":
                 eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
+                // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
+                if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
+                        && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
+                    final String clarVid = dto.getTargetVendorId();
+                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
+                            .ifPresent(q -> {
+                                if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                                    q.setFinancialIndentorStatus(null);
+                                    q.setFinancialIndentorRemarks(null);
+                                } else {
+                                    q.setIndentorStatus(null);
+                                    q.setIndentorRemarks(null);
+                                }
+                                q.setStatus("CHANGE_REQUESTED");
+                                q.setRemarks(dto.getRemarks());
+                                q.setUpdatedDate(LocalDateTime.now());
+                                quotationRepository.save(q);
+                            });
+                }
                 break;
             case "SPECIFIC_MEMBER":
             case "ALL_MEMBERS":
@@ -1644,6 +1663,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         // INDENTOR under 10L: auto-route based on procurement mode
         if ("INDENTOR".equalsIgnoreCase(role) && under10L) {
             if (isLimitedOrProprietary(mode)) {
+                // Preserve ALL_VENDORS so bulk clarification marks every quotation
+                if ("ALL_VENDORS".equalsIgnoreCase(target)) {
+                    return "ALL_VENDORS";
+                }
                 return "VENDOR";
             } else if (isGemOpenGlobal(mode)) {
                 return "PURCHASE_PERSONNEL";

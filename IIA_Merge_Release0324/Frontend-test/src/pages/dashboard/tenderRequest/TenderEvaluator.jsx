@@ -1221,9 +1221,10 @@ if (isSpoRole) {
           style={{ width: 160 }}
           value={selectedRegisteredVendors[record.vendorId] || undefined}
           onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
-          filterOption={(input, option) =>
-            (option?.children || '').toLowerCase().includes(input.toLowerCase())
-          }
+          filterOption={(input, option) => {
+            const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+            return text.toLowerCase().includes(input.toLowerCase());
+          }}
         >
           {allRegisteredVendors.map(v => (
             <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
@@ -1425,9 +1426,10 @@ if (isSpoRole) {
           style={{ width: 160 }}
           value={selectedRegisteredVendors[record.vendorId] || undefined}
           onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
-          filterOption={(input, option) =>
-            (option?.children || '').toLowerCase().includes(input.toLowerCase())
-          }
+          filterOption={(input, option) => {
+            const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+            return text.toLowerCase().includes(input.toLowerCase());
+          }}
         >
           {allRegisteredVendors.map(v => (
             <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
