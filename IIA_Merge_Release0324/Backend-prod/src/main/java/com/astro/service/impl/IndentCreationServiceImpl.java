@@ -381,6 +381,7 @@ budgetService.holdBudgetForIndent(
         // Save VendorNames for each Material (only for material indents)
         if ("material".equalsIgnoreCase(indentType)) {
             List<MaterialDetails> savedMaterials = materialDetailsRepository.findByIndentCreation_IndentId(indentId);
+            
 
             List<VendorNamesForJobWorkMaterial> vendorList = new ArrayList<>();
             for (int i = 0; i < savedMaterials.size(); i++) {
@@ -405,6 +406,31 @@ budgetService.holdBudgetForIndent(
                 vendorNameRepository.saveAll(vendorList);
             }
         }
+        else if ("job".equalsIgnoreCase(indentType)){
+                List<JobDetails> savedJobs = jobDetailsRepository.findByIndentCreation_IndentId(indentId);
+                List<VendorNamesForJobWorkMaterial> vendorList = new ArrayList<>();
+            for (int i = 0; i < savedJobs.size(); i++) {
+                JobDetails savedJob = savedJobs.get(i);
+                JobDetailsRequestDTO jobRequest = indentRequestDTO.getJobDetails().get(i);
+                System.out.println("Job ID: " + savedJob.getId() + ", Job Code: " + savedJob.getJobCode());
+
+                if (jobRequest.getVendorNames() != null && !jobRequest.getVendorNames().isEmpty()) {
+                    for (String vendorName : jobRequest.getVendorNames()) {
+                        VendorNamesForJobWorkMaterial vendor = new VendorNamesForJobWorkMaterial();
+                        vendor.setVendorName(vendorName);
+                        // vendor.setMaterialId(savedJobs.getId());
+                        vendor.setIndentId(indentId);
+                        vendor.setJobCode(savedJob.getJobCode());
+                        vendorList.add(vendor);
+                    }
+                }
+            }
+
+            // Save all vendor records
+            if (!vendorList.isEmpty()) {
+                vendorNameRepository.saveAll(vendorList);
+            }
+            }
 
         IndentCreation indentCreations = indentCreationRepository.findByIndentId(indentId);
         return mapToResponseDTO(indentCreations);
