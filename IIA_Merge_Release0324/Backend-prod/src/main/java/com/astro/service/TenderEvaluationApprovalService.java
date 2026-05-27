@@ -5,10 +5,12 @@ import com.astro.dto.workflow.DirectorFormCommitteeDto;
 import com.astro.dto.workflow.RespondClarificationDto;
 import com.astro.dto.workflow.SeekClarificationDto;
 import com.astro.dto.workflow.TenderCommitteeDecisionDto;
+import com.astro.dto.workflow.CommitteeVendorVoteDto;
 import com.astro.dto.workflow.TenderEvaluationStatusDto;
 import com.astro.dto.workflow.VendorTechnicalDecisionDto;
 import com.astro.entity.TenderClarificationHistory;
 import java.util.List;
+import java.util.Map;
 
 public interface TenderEvaluationApprovalService {
 
@@ -65,11 +67,29 @@ public interface TenderEvaluationApprovalService {
     TenderEvaluationStatusDto castCommitteeVote(String tenderId, String vote,
                                                  String remarks, Integer committeeUserId);
 
+    // Deprecated: expert assignment now handled by TechnoFinancialCommitteeService.nominateMember()
+    // with expert=true flag in CommitteeNominationDto.
+    // TenderEvaluationStatusDto assignExpert(String tenderId, Integer expertUserId,
+    //                                        String expertName, Integer chairmanUserId);
+
     /**
-     * Above 10L: Chairman assigns a dynamic expert for this tender.
+     * Above 10L double bid: committee member Accept/Reject per vendor.
      */
-    TenderEvaluationStatusDto assignExpert(String tenderId, Integer expertUserId,
-                                           String expertName, Integer chairmanUserId);
+    TenderEvaluationStatusDto committeeVendorDecision(String tenderId, String vendorId,
+                                                       String decision, String remarks,
+                                                       Integer committeeUserId);
+
+    /**
+     * Above 10L double bid: get all committee member votes per vendor.
+     */
+    Map<String, List<CommitteeVendorVoteDto>> getVendorVoteGrid(String tenderId, String phase);
+
+    /**
+     * Above 10L double bid: chairman resolves per-vendor decision.
+     */
+    TenderEvaluationStatusDto chairmanVendorResolve(String tenderId, String vendorId,
+                                                     String decision, String remarks,
+                                                     Integer chairmanUserId);
 
     /**
      * Above 10L: Chairman gives final decision (approve/reject or override committee).
@@ -127,12 +147,6 @@ public interface TenderEvaluationApprovalService {
      * Returns full clarification history for a tender (all rounds, questions + responses).
      */
     List<TenderClarificationHistory> getClarificationHistory(String tenderId);
-
-    /**
-     * Returns open (unanswered) clarification questions for a specific vendor on a tender.
-     * Excludes ALL_VENDORS rows (targetVendorId is null for those).
-     */
-    List<TenderClarificationHistory> getOpenClarifications(String tenderId, String vendorId);
 
     /**
      * Returns SPO-approved vendors for a tender, for use in PO vendor dropdown.
