@@ -7,4 +7,5 @@ public class CommitteeNominationDto {
     private String tenderId;
     private Integer userId;
     private Integer nominatedBy;
+    private boolean expert;
 }
