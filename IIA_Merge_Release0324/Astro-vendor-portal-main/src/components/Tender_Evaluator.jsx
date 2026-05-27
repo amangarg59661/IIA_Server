@@ -42,8 +42,8 @@ const TenderEvaluator = ({ tenderId, actionStatus, onSubmitSuccess }) => {
   const [tenderNumber, tenderVersion] = tenderId ? tenderId.split('/') : ['', '1'];
   const [clarificationFile, setClarificationFile] = useState(null);
   const [clarificationResponse, setClarificationResponse] = useState('');
-
-
+  const [openQuestions, setOpenQuestions] = useState([]);
+  const [questionResponses, setQuestionResponses] = useState({}); // { [historyId]: { text: '', file: null } }
 
 
 
@@ -70,6 +70,20 @@ const TenderEvaluator = ({ tenderId, actionStatus, onSubmitSuccess }) => {
       console.error('Failed to fetch closing date:', err);
     });
 }, [tenderId]);
+
+  // ─── FETCH OPEN CLARIFICATIONS WHEN CHANGE_REQUESTED ──────────────────────────
+  useEffect(() => {
+    if (actionStatus === 'CHANGE_REQUESTED' && vendorId) {
+      axios.get('/api/tender-evaluation/open-clarifications', {
+        params: { tenderId: tenderNumber, vendorId }
+      })
+      .then(res => {
+        const questions = res.data?.responseData || [];
+        setOpenQuestions(questions);
+      })
+      .catch(err => console.error('Failed to fetch open clarifications:', err));
+    }
+  }, [actionStatus, vendorId, tenderNumber]);
 
 
 /*
@@ -315,6 +329,52 @@ const handleFileChange = (docName, fileData) => {
       </div>
     </FormContainer>
   );*/
+  // ─── PER-QUESTION CLARIFICATION RESPONSE SUBMIT ────────────────────────────
+  const handleSubmitClarificationResponse = async (historyId) => {
+    const entry = questionResponses[historyId];
+    if (!entry?.text?.trim()) {
+      message.warning('Please enter a response');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      let responseFileName = null;
+      if (entry.file) {
+        const fd = new FormData();
+        fd.append('file', entry.file.file);
+        const uploadRes = await axios.post('/file/upload?fileType=Tender', fd, {
+          headers: { 'Content-Type': 'multipart/form-data', Accept: 'application/json' },
+        });
+        responseFileName = uploadRes.data?.responseData?.fileName || null;
+      }
+      await axios.post(
+        '/api/tender-evaluation/respond-clarification',
+        {
+          respondedByRole: 'VENDOR',
+          respondedById: vendorId,
+          responseText: entry.text,
+          responseFileName,
+          clarificationHistoryId: historyId,
+        },
+        { params: { tenderId: tenderNumber } }
+      );
+      message.success('Response submitted successfully');
+      // Remove answered question from local state
+      setOpenQuestions(prev => prev.filter(q => q.id !== historyId));
+      setQuestionResponses(prev => {
+        const next = { ...prev };
+        delete next[historyId];
+        return next;
+      });
+      if (onSubmitSuccess) onSubmitSuccess();
+    } catch (error) {
+      console.error('Response submission error:', error);
+      message.error(error?.response?.data?.message || 'Failed to submit response');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleOpenTenderFormat = () => {
   const url = `${baseURL}/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
   window.open(url, "_blank");
@@ -460,23 +520,68 @@ const handleFileChange = (docName, fileData) => {
   <>
     {actionStatus === "CHANGE_REQUESTED" ? (
       <>
-        <FileUpload
-          documentName="Upload Clarification Document"
-          fileType="document"
-          onChange={fileData => handleFileChange('clarificationUpload', fileData)}
-          fileName={clarificationFile ? clarificationFile.originalName : 'No file selected'}
-          value={clarificationFile ? { file: { ...clarificationFile } } : null}
-        />
-        <div style={{ marginTop: 16 }}>
-          <label><b>Clarification Response:</b></label>
-          <textarea
-            rows={4}
-            style={{ width: '100%', marginTop: 8 }}
-            placeholder="Enter clarification response"
-            value={clarificationResponse}
-            onChange={e => setClarificationResponse(e.target.value)}
-          />
-        </div>
+        {openQuestions.length > 0 ? (
+          openQuestions.map((q) => (
+            <div key={q.id} style={{
+              border: '1px solid #d9d9d9',
+              borderRadius: 8,
+              padding: 16,
+              marginBottom: 16,
+              background: '#fafafa'
+            }}>
+              <div style={{ marginBottom: 8 }}>
+                <b>Question (Round {q.roundNumber}):</b>
+                <p style={{ whiteSpace: 'pre-wrap', margin: '4px 0' }}>{q.questionRemarks}</p>
+                <small style={{ color: '#888' }}>
+                  Asked by: {q.requestedByRole} | {q.requestedAt ? new Date(q.requestedAt).toLocaleString('en-IN') : ''}
+                </small>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <label><b>Your Response:</b></label>
+                <textarea
+                  rows={3}
+                  style={{ width: '100%', marginTop: 4 }}
+                  placeholder="Enter your response to this question..."
+                  value={questionResponses[q.id]?.text || ''}
+                  onChange={e => setQuestionResponses(prev => ({
+                    ...prev,
+                    [q.id]: { ...prev[q.id], text: e.target.value }
+                  }))}
+                />
+              </div>
+              <FileUpload
+                documentName="Attach Supporting Document"
+                fileType="document"
+                onChange={fileData => {
+                  if (fileData === null) {
+                    setQuestionResponses(prev => ({
+                      ...prev,
+                      [q.id]: { ...prev[q.id], file: null }
+                    }));
+                  } else {
+                    setQuestionResponses(prev => ({
+                      ...prev,
+                      [q.id]: { ...prev[q.id], file: { file: fileData.file.originFileObj, originalName: fileData.file.name } }
+                    }));
+                  }
+                }}
+                fileName={questionResponses[q.id]?.file?.originalName || 'No file selected'}
+                value={questionResponses[q.id]?.file ? { file: { ...questionResponses[q.id].file } } : null}
+              />
+              <div style={{ marginTop: 8 }}>
+                <Btn
+                  onClick={() => handleSubmitClarificationResponse(q.id)}
+                  loading={isUploading}
+                  disabled={!questionResponses[q.id]?.text?.trim()}
+                >
+                  Submit Response
+                </Btn>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p style={{ color: '#888' }}>Loading clarification questions...</p>
+        )}
       </>
     ) : (
       <>
@@ -502,13 +607,13 @@ const handleFileChange = (docName, fileData) => {
       </>
     )}
 
-    <div className="custom-btn" style={{ display: 'flex', gap: '10px', marginTop: 16 }}>
-      <Btn onClick={handleSubmit} loading={isUploading}>
-        {actionStatus === "CHANGE_REQUESTED"
-          ? "Send Clarification Response"
-          : "Send Quotation for Evaluation"}
-      </Btn>
-    </div>
+    {actionStatus !== "CHANGE_REQUESTED" && (
+      <div className="custom-btn" style={{ display: 'flex', gap: '10px', marginTop: 16 }}>
+        <Btn onClick={handleSubmit} loading={isUploading}>
+          Send Quotation for Evaluation
+        </Btn>
+      </div>
+    )}
   </>
 )}
 

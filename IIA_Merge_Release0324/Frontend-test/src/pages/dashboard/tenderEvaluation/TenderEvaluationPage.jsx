@@ -657,7 +657,7 @@ const TenderEvaluationPage = () => {
   // PP needs to respond to clarification (GEM/Open/Global mode)
   const showPPClarificationResponse =
     isPP &&
-    evalStatus === "PENDING_INDENTOR_CLARIFICATION" &&
+    (evalStatus === "PENDING_INDENTOR_CLARIFICATION" || evalStatus === "PENDING_VENDOR_CLARIFICATION") &&
     selectedEval?.clarificationPendingFrom === "PURCHASE_PERSONNEL";
 
   // Show SPO per-vendor actions
@@ -1643,6 +1643,16 @@ const TenderEvaluationPage = () => {
             { title: "Round",        dataIndex: "roundNumber",         key: "roundNumber",         width: 60 },
             { title: "Requested By", dataIndex: "requestedByRole",     key: "requestedByRole" },
             { title: "Target",       dataIndex: "clarificationTarget", key: "clarificationTarget" },
+            {
+              title: "Target Vendor",
+              dataIndex: "targetVendorId",
+              key: "targetVendorId",
+              render: (vendorId) => {
+                if (!vendorId) return "--";
+                const v = vendors.find((v) => v.vendorId === vendorId);
+                return v?.vendorName || vendorId;
+              },
+            },
             {
               title: "Question Asked",
               dataIndex: "questionRemarks",

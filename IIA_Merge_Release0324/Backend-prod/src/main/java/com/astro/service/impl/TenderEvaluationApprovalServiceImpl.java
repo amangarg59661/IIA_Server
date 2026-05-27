@@ -981,7 +981,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
 
         // Save where to return after clarification is received
-        eval.setPreviousEvaluationStatus(eval.getEvaluationStatus());
+        // Only preserve the real pre-clarification status; do not overwrite it on subsequent seeks
+        String currentStatus = eval.getEvaluationStatus();
+        if (currentStatus == null
+                || (!currentStatus.contains("CLARIFICATION") && !currentStatus.contains("MEMBER_REVOTE"))) {
+            eval.setPreviousEvaluationStatus(currentStatus);
+        }
         eval.setClarificationPendingFrom(target.toUpperCase());
         eval.setClarificationPendingFromId(dto.getTargetUserId());
         eval.setClarificationPendingFromName(dto.getTargetUserName());
@@ -1214,18 +1219,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
         if ("VENDOR".equalsIgnoreCase(respondedByRole)) {
             String vendorId = dto.getRespondedById();
-            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
-                    .ifPresent(q -> {
-                        q.setVendorResponse(dto.getResponseText());
-                        if (dto.getResponseFileName() != null) {
-                            q.setClarificationFileName(dto.getResponseFileName());
-                        }
-                        q.setStatus("CHANGE_RESPONDED");
-                        q.setUpdatedDate(LocalDateTime.now());
-                        quotationRepository.save(q);
-                    });
 
-            // Update clarification history — PK-based when available, filtered fallback otherwise
+            // 1. Update clarification history FIRST — PK-based when available, filtered fallback otherwise
             try {
                 Optional<TenderClarificationHistory> historyRow;
                 if (dto.getClarificationHistoryId() != null) {
@@ -1252,23 +1247,42 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
+
+            // 2. Check remaining open questions for this vendor
+            List<TenderClarificationHistory> remainingOpen =
+                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
+
+            // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
+            if (remainingOpen.isEmpty()) {
+                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                        .ifPresent(q -> {
+                            q.setVendorResponse(dto.getResponseText());
+                            if (dto.getResponseFileName() != null) {
+                                q.setClarificationFileName(dto.getResponseFileName());
+                            }
+                            q.setStatus("CHANGE_RESPONDED");
+                            q.setUpdatedDate(LocalDateTime.now());
+                            quotationRepository.save(q);
+                        });
+            } else {
+                // Still has open questions — update response text on quotation but keep CHANGE_REQUESTED
+                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                        .ifPresent(q -> {
+                            q.setVendorResponse(dto.getResponseText());
+                            if (dto.getResponseFileName() != null) {
+                                q.setClarificationFileName(dto.getResponseFileName());
+                            }
+                            q.setUpdatedDate(LocalDateTime.now());
+                            quotationRepository.save(q);
+                        });
+            }
             // Fall through to unified restore gate below
         } else if ("PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole)
                     && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
             // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
             String ppVendorId = dto.getVendorId();
-            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
-                    .ifPresent(q -> {
-                        q.setVendorResponse(dto.getResponseText());
-                        if (dto.getResponseFileName() != null) {
-                            q.setClarificationFileName(dto.getResponseFileName());
-                        }
-                        q.setStatus("CHANGE_RESPONDED");
-                        q.setUpdatedDate(LocalDateTime.now());
-                        quotationRepository.save(q);
-                    });
 
-            // Update clarification history — PK-based when available, filtered fallback otherwise
+            // 1. Update clarification history FIRST — PK-based when available, filtered fallback otherwise
             try {
                 Optional<TenderClarificationHistory> historyRow;
                 if (dto.getClarificationHistoryId() != null) {
@@ -1292,6 +1306,35 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
+            }
+
+            // 2. Check remaining open questions for this vendor
+            List<TenderClarificationHistory> remainingOpen =
+                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, ppVendorId);
+
+            // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
+            if (remainingOpen.isEmpty()) {
+                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
+                        .ifPresent(q -> {
+                            q.setVendorResponse(dto.getResponseText());
+                            if (dto.getResponseFileName() != null) {
+                                q.setClarificationFileName(dto.getResponseFileName());
+                            }
+                            q.setStatus("CHANGE_RESPONDED");
+                            q.setUpdatedDate(LocalDateTime.now());
+                            quotationRepository.save(q);
+                        });
+            } else {
+                // Still has open questions — update response text on quotation but keep CHANGE_REQUESTED
+                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
+                        .ifPresent(q -> {
+                            q.setVendorResponse(dto.getResponseText());
+                            if (dto.getResponseFileName() != null) {
+                                q.setClarificationFileName(dto.getResponseFileName());
+                            }
+                            q.setUpdatedDate(LocalDateTime.now());
+                            quotationRepository.save(q);
+                        });
             }
             // Fall through to unified restore gate below
         } else {
