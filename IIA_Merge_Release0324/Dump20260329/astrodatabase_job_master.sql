@@ -1,0 +1,66 @@
+-- MySQL dump 10.13  Distrib 8.0.44, for Win64 (x86_64)
+--
+-- Host: localhost    Database: astrodatabase
+-- ------------------------------------------------------
+-- Server version	8.0.44
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `job_master`
+--
+
+DROP TABLE IF EXISTS `job_master`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `job_master` (
+  `job_code` varchar(255) NOT NULL,
+  `category` varchar(255) DEFAULT NULL,
+  `job_description` text,
+  `asset_id` varchar(255) DEFAULT NULL,
+  `uom` varchar(50) DEFAULT NULL,
+  `value` decimal(15,2) DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `updated_by` varchar(255) DEFAULT NULL,
+  `created_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_date` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `mode_of_procurement` varchar(255) DEFAULT NULL,
+  `sub_category` varchar(255) DEFAULT NULL,
+  `currency` varchar(255) DEFAULT NULL,
+  `estimated_price_with_ccy` decimal(15,2) DEFAULT NULL,
+  `brief_description` text,
+  `approval_status` varchar(255) DEFAULT NULL,
+  `comments` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`job_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `job_master`
+--
+
+LOCK TABLES `job_master` WRITE;
+/*!40000 ALTER TABLE `job_master` DISABLE KEYS */;
+INSERT INTO `job_master` VALUES ('J000001','CONSTRUCTION','Hi Description',NULL,'DAYS',NULL,96,'96','2026-03-23 11:26:19','2026-03-27 08:42:25',NULL,'ELECTRICAL_WORK','INR',3254.00,'sadsadsads','APPROVED',NULL),('J000002','CONSTRUCTION','Ritwik Material',NULL,'HOURS',NULL,96,'96','2026-03-23 11:31:26','2026-03-27 08:42:25',NULL,'PLUMBING','INR',342432.00,'fsdf','APPROVED',NULL),('J000003','MAINTENANCE','Hi Description',NULL,'HOURS',NULL,96,'96','2026-03-26 23:47:09','2026-03-27 08:42:25',NULL,'PLUMBING','INR',32423454.00,'Brief Description of Jobb','APPROVED',NULL),('J000004','CONSULTING','Ritwik Material',NULL,'SQM',NULL,96,'96','2026-03-27 03:28:41','2026-03-27 03:28:41',NULL,'PLUMBING','INR',343243242.00,'Description','APPROVED','Job approved'),('J000005','AMC','AMC Civil Work',NULL,'HOURS',NULL,96,'96','2026-03-27 05:53:44','2026-03-27 05:53:44',NULL,'CIVIL_WORK','INR',4534534.00,'Description AMC Civil Wor','AWAITING_APPROVAL','Change Job Description'),('J1761228988515','AMC','njk',NULL,'BATCH',NULL,18,'18','2025-10-23 14:16:29','2026-03-27 08:42:25',NULL,'Chemicals','USD',1200.00,'jij','APPROVED',NULL),('J1761229409227','Repair And Service','sahlk',NULL,'cart load',NULL,18,'18','2025-10-23 14:23:29','2026-03-27 08:42:25',NULL,'Computer & Peripherals','EUR',1200.00,'nkankl','APPROVED',NULL),('J1761285696520','AMC','Service',NULL,'BATCH',NULL,18,'18','2025-10-24 06:01:37','2026-03-27 08:42:25',NULL,'Computer & Peripherals','USD',100.00,'nkls','APPROVED',NULL),('J1764148045650','AMC','Hi Description',NULL,'BATCH',NULL,51,'51','2025-11-26 03:37:26','2026-03-27 08:42:25',NULL,'Chemicals','INR',4567.00,'ok','APPROVED',NULL),('J1771586266709','CONSTRUCTION','Hi Description',NULL,'HOURS',NULL,96,'96','2026-02-20 05:47:47','2026-03-27 08:42:25',NULL,'CIVIL_WORK','INR',3423432.00,'Aman Job','APPROVED',NULL),('J1774183279536','CONSTRUCTION','Civil Work',NULL,'DAYS',NULL,96,'96','2026-03-22 07:11:20','2026-03-27 08:42:25',NULL,'CIVIL_WORK','INR',1200.00,'Brief Description of Job Civil Work','APPROVED',NULL),('J1774183289586','CONSTRUCTION','Civil Work',NULL,'DAYS',NULL,96,'96','2026-03-22 07:11:30','2026-03-27 08:42:25',NULL,'CIVIL_WORK','INR',1200.00,'Brief Description of Job Civil Work','APPROVED',NULL),('J1774183293318','CONSTRUCTION','Civil Work',NULL,'DAYS',NULL,96,'96','2026-03-22 07:11:33','2026-03-27 08:42:25',NULL,'CIVIL_WORK','INR',1200.00,'Brief Description of Job Civil Work','APPROVED',NULL),('J1774183523031','CONSTRUCTION','Civil Work',NULL,'DAYS',NULL,96,'96','2026-03-22 07:15:23','2026-03-27 08:42:25',NULL,'CIVIL_WORK','INR',1200.00,'Brief Description of Job Civil Work','APPROVED',NULL),('J1774183523032','MAINTENANCE','Hi Description',NULL,'HOURS',NULL,96,'96','2026-03-26 23:46:01','2026-03-27 08:42:25',NULL,'ELECTRICAL_WORK','INR',324234.00,'Brief Description of Jobb','APPROVED',NULL);
+/*!40000 ALTER TABLE `job_master` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-03-29 21:41:29

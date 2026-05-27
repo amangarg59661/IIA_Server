@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Tender Evaluator Workflow Update</title>
+</head>
+<body>
+
+<p>Dear <span th:text="${actionOn}">[Role]</span>,</p>
+
+<p>This is to inform you that the following action has been completed in the Tender Evaluator Workflow. You are requested to take the next appropriate action.</p>
+
+<ul>
+    <li><strong>Workflow Name:</strong> <span th:text="${workflowName}">Tender Evaluator Workflow</span></li>
+    <li><strong>Request ID:</strong> <span th:text="${requestId}">T1075</span></li>
+    <li><strong>Created By (User ID):</strong> <span th:text="${createdBy}">26</span></li>
+    <li><strong>Status:</strong> <span th:text="${status}">Completed</span></li>
+</ul>
+
+<p>Please log in to the system and proceed with the required workflow step.</p>
+
+<br/>
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>

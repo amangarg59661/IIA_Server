@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Indent Assignment Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${employeeName}">Employee</span> (Employee ID: <span th:text="${employeeId}">EMP001</span>),</p>
+
+<p>The Purchase Department has assigned the following indent to you:</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Indent ID:</strong></td>
+        <td th:text="${indentId}">IND123</td>
+    </tr>
+    <tr>
+        <td><strong>Project Name:</strong></td>
+        <td th:text="${projectName}">Project XYZ</td>
+    </tr>
+    <tr>
+        <td><strong>Indentor Name:</strong></td>
+        <td th:text="${indentorName}">John Doe</td>
+    </tr>
+</table>
+
+<p>
+    Please log in to the Astro software to review this indent and generate the tender request.
+</p>
+
+<p>Regards,<br/>Astro Procurement Team</p>
+</body>
+</html>

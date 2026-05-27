@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Workflow Rejection Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear user,</p>
+
+<p>
+    The request <strong th:text="${workflowName}"></strong> with ID
+    <strong th:text="${requestId}">REQ12345</strong> has been <strong th:text="${status}"></strong>.
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Request ID:</strong></td>
+        <td th:text="${requestId}">REQ12345</td>
+    </tr>
+    <tr>
+        <td><strong>Workflow Name:</strong></td>
+        <td th:text="${workflowName}">Workflow name</td>
+    </tr>
+    <tr>
+        <td><strong>Status:</strong></td>
+        <td th:text="${status}">Rejected</td>
+    </tr>
+    <tr>
+        <td><strong>Rejected By (Role):</strong></td>
+        <td th:text="${modifiedBy}">Approver/Reviewer</td>
+    </tr>
+    <tr th:if="${nextRole != null}">
+        <td><strong>Next Role (if applicable):</strong></td>
+        <td th:text="${nextRole}">Next role</td>
+    </tr>
+    <tr>
+        <td><strong>Closure Reason:</strong></td>
+        <td th:text="${remarks}">Reason for rejection</td>
+    </tr>
+</table>
+
+<p>
+    This notification is sent to all recommenders/approvers for your reference.
+</p>
+
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>

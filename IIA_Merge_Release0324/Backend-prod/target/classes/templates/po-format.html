@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Purchase Order</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        @page { size: A4; margin: 20mm; }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        .page {
+            max-width: 170mm;
+            min-height: 257mm;
+            padding: 15mm;
+            margin: auto;
+            border: 2px solid black;
+            background: white;
+            box-sizing: border-box;
+        }
+        /* Header Table - No Borders */
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+        .header-table td {
+            border: none !important;
+            padding: 0;
+            background: none;
+        }
+        .header-logo {
+            width: 85px;
+            vertical-align: top;
+        }
+        .header-info {
+            vertical-align: top;
+            padding-left: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        body, .header-info, .header-po-title, .signature-block {
+    font-family: 'Noto Sans Devanagari', Arial, sans-serif;
+}
+
+      .header-po-title {
+        font-weight: bold;
+        font-size: 20px;
+        letter-spacing: 1px;
+        padding-top: 4px;
+        padding-bottom: 3px;
+       }
+
+        .logo-circle {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background-color: white;
+        }
+        .logo-circle img {
+            max-width: 70px;
+            max-height: 70px;
+            object-fit: contain;
+        }
+        .vendor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+            border: 1px solid black;
+        }
+        .vendor-table td {
+            padding: 8px 10px;
+            vertical-align: top;
+            width: 50%;
+            border: 1px solid black;
+            font-size: 12px;
+        }
+     .two-col-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 15px;
+    border: 1px solid black;
+    table-layout: fixed;
+}
+.two-col-table th,
+.two-col-table td {
+    padding: 8px;
+    border: none;
+    border-bottom: 1px solid #aaa;
+    vertical-align: top;
+    font-size: 12px;
+}
+.two-col-table th {
+    background: #f2f2f2;
+    font-weight: bold;
+    text-align: center;
+    border-top: 1px solid black;
+    border-bottom: 2px solid black;
+}
+
+/* The single middle line ONLY */
+.two-col-table th + th,
+.two-col-table td + td {
+    border-left: 1px solid black !important;
+}
+
+/* Outermost border (already handled by the table itself) */
+.two-col-table tr:last-child td {
+    border-bottom: 1px solid black;
+}
+
+        .material-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid black;
+            margin-bottom: 15px;
+            font-size: 12px;
+            table-layout: fixed;
+        }
+        .material-table th,
+        .material-table td {
+            border: 1px solid black;
+            padding: 8px 6px;
+            text-align: center;
+            word-wrap: break-word;
+        }
+        .material-table th {
+            background: #f2f2f2;
+            font-weight: bold;
+        }
+        .material-table tfoot td {
+            font-weight: bold;
+            text-align: right;
+            padding-right: 10px;
+        }
+        .material-table tfoot td:last-child {
+            text-align: center;
+        }
+        .terms-box {
+            border: 1px solid black;
+            padding: 10px 15px;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        .terms-bold {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .signature-block {
+            width: 100%;
+            font-size: 12px;
+            text-align: right;
+            margin-top: 40px;
+            padding-right: 30px;
+            line-height: 1.4;
+        }
+        a {
+            color: black;
+            text-decoration: underline;
+        }
+        @media print {
+            body, .page {
+                margin: 0;
+                box-shadow: none;
+                width: auto;
+                min-height: auto;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page" role="main" aria-label="Purchase order document">
+
+    <!-- HEADER TABLE, NO BORDERS -->
+    <table class="header-table" border="0">
+        <tr>
+            <td class="header-logo">
+                <div class="logo-circle">
+                    <img th:src="'data:image/png;base64,' + ${base64Logo}"
+                         alt="IIA Logo" style="width:120px; height:auto;"/>
+                </div>
+            </td>
+            <td class="header-info">
+                <strong style="font-family: 'Noto Sans Devanagari', Arial, sans-serif;">भारतीय खगोल भौतिकी संस्थान</strong><br/>
+                <div><strong>INDIAN INSTITUTE OF ASTROPHYSICS</strong></div>
+                <div>2nd Block, Koramangala,</div>
+                <div>Bengaluru, Karnataka, India</div>
+                <div>Pin– 560034</div>
+                <div>Email: purchase@iiap.res.in</div>
+                <div>PAN based GSTIN: 29AABTI0567R1ZZ</div>
+            </td>
+
+
+            <td class="header-po-title" style="text-align: center; vertical-align: middle; padding-left: 0;">
+                <div style="font-weight: bold; font-size: 20px; line-height: 1.2; font-family: 'Noto Sans Devanagari', Arial, sans-serif;">क्रय आदेश</div>
+                <div style="font-weight: bold; font-size: 20px; line-height: 1.2;">PURCHASE ORDER</div>
+            </td>
+
+        </tr>
+    </table>
+
+    <table class="vendor-table" role="table" aria-label="Vendor and Purchase Order details">
+        <tbody>
+        <tr>
+            <td>
+                Vendor Code: <span th:text="${po.vendorCode}"></span><br/>
+                Vendor Name: <span th:text="${po.vendorName}"></span><br/>
+                Address: <span th:text="${po.vendorAddress}"></span><br/>
+                GSTIN: <span th:text="${po.gstin}"></span><br/>
+                Contact: <span th:text="${po.contactNumber}"></span><br/>
+                Email: <span th:text="${po.email}"></span><br/>
+                Quotation No / Date: <span th:text="${po.quotationNo}"></span> / <span th:text="${po.quotationDate}"></span><br/>
+            </td>
+            <td>
+                PO No / Date: <span th:text="${po.poNumber}"></span> / <span th:text="${po.poDate}"></span><br/>
+                Indent No / Date: <span th:text="${po.indentIds}"></span> / <span th:text="${po.indentDates}"></span><br/>
+                Tender No / Date: <span th:text="${po.tenderNumber}"></span> / <span th:text="${po.tenderDate}"></span><br/>
+                Project: <span th:text="${po.projectName}"></span><br/>
+                Budget Code: <span th:text="${po.budgetCode}"></span>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+    <table class="two-col-table" style="table-layout:fixed;width:100%;" role="table" aria-label="Billing and Consignee Details">
+        <thead>
+        <tr>
+            <th>Bill To</th>
+            <th>Consignee (Delivery to)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>
+                Indian Institute of Astrophysics<br/>
+                2nd Block, Koramangala,<br/>
+                Bengaluru, Karnataka, India<br/>
+                Pin– 560034
+            </td>
+
+            <td th:text="${po.consigneeLocation}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+
+    <table class="material-table" role="table" aria-label="Material Details">
+        <thead>
+        <tr>
+            <th>S. No.</th>
+            <th>Material Description</th>
+            <th>Quantity</th>
+            <th>UOM</th>
+            <th>Unit Price (<span th:text="${po.materialDetails[0].currency}"></span>)</th>
+            <th>GST Rate</th>
+            <th>Total Price (<span th:text="${po.materialDetails[0].currency}"></span>)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="mat, iterStat : ${po.materialDetails}">
+            <td th:text="${iterStat.index + 1}"></td>
+            <td th:text="${mat.materialDescription}"></td>
+            <td th:text="${mat.quantity}"></td>
+            <td th:text="${mat.uom}"></td>
+            <td th:text="${mat.unitPrice}"></td>
+            <td th:text="${mat.gstRate}"></td>
+            <td th:text="${mat.totalMaterialPrice}"></td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+            <td colspan="6" style="text-align: right;">Total</td>
+            <td th:text="${po.totalAmount}"></td>
+        </tr>
+        <tr>
+            <td colspan="6" style="text-align: right;">(+) GST Amount</td>
+            <td th:text="${po.totalGst}"></td>
+        </tr>
+        <tr>
+            <td colspan="6" style="text-align: right;">(-) Buyback Amount</td>
+            <td th:text="${po.buyBackAmount}"></td>
+        </tr>
+        <tr>
+            <td colspan="6" style="text-align: right;">Grand Total</td>
+            <td th:text="${po.grandTotal}"></td>
+        </tr>
+        </tfoot>
+    </table>
+
+    <div class="terms-box" role="region" aria-label="Terms and Conditions">
+        <div class="terms-bold">Terms  Conditions:</div>
+        Warranty: <span th:text="${po.warranty}"></span><br/>
+        Inco Term: <span th:text="${po.incoTerms}"></span><br/>
+        Payment Term: <span th:text="${po.paymentTerms}"></span><br/>
+        Duties  Taxes: <span th:text="${po.duties}"></span><br/>
+        Delivery Period: <span th:text="${po.deliveryPeriod}"></span> weeks from date of PO.<br/>
+        Liquidated Damages: @ 0.5% per week to a maximum of 10% of PO value will be deducted for delay in delivery.<br/>
+        Performance And Warranty Security:
+        <span th:text="'CCY Amount ('
+    + ${po.currencyOfMaterial} + ' '
+    + ${po.performanceAndWarrantySecurity}
+    + ') (computed as per percentage '
+    + ${po.performanceAndWarranty}
+    + ' mentioned in PO) to be submitted within 14 days from the date of purchase order as Security towards performance and warranty whose validity shall be 60 days beyond warranty/contract period.'">
+</span><br/>
+
+        Freight Forwarder: <span th:text="${po.freightForwarderDetails}"></span><br/>
+        Additional Terms And Conditions (ATC): <span th:text="${po.additionalTermsAndConditions}"></span><br/>
+        General Terms  Conditions: ( link to Download the doc )
+    </div>
+
+    <p>Please confirm your acceptance to fulfil the purchase order under specified terms. If no acceptance is received within seven days from the date of receipt of this order, it will be deemed that this order and its terms has been accepted.</p>
+
+    <p>Mark any communications to <a href="mailto:purchase@iiap.res.in">purchase@iiap.res.in</a></p>
+    <p>For Purchase related queries contact: 080 2254 1384/ 1363/ 1244 </p>
+    <p>For Delivery and Payment related queries contact: 080 2254 1340/ 1234</p>
+
+    <div class="signature-block" role="contentinfo">
+        <span style="font-family: 'Noto Sans Devanagari', Arial, sans-serif;">भवदीय</span>
+        भवदीय Yours faithfully,<br/>
+        <img th:if="${po.officerSignatureBase64 != null}"
+             th:src="'data:image/png;base64,' + ${po.officerSignatureBase64}"
+             alt="Officer Signature"
+             style="width:150px; height:auto;"/><br/>
+        <span style="font-family: 'Noto Sans Devanagari', Arial, sans-serif;">भंडार एवं क्रय अधिकारी </span>Stores And Purchase Officer<br/>
+        <span style="font-family: 'Noto Sans Devanagari', Arial, sans-serif;">कृते निदेशक </span>
+         For And on behalf of Director
+    </div>
+
+    <p>This is a system generated document and hence ink Signature is not required.</p>
+
+</div>
+</body>
+</html>
+

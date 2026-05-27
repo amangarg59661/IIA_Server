@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Action Required: Workflow Approval</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${nextRole}">Approver</span>,</p>
+
+<p>
+    A request in the
+    <strong th:text="${workflowName}">Indent Workflow</strong> has been <td th:text="${action}">Pending</td> by
+    <strong th:text="${currentRole}">Reporting Officer</strong> and is now awaiting your approval as the
+    <strong th:text="${nextRole}">Project Head</strong>.
+</p>
+
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Request ID:</strong></td>
+        <td th:text="${requestId}">REQ12345</td>
+    </tr>
+    <tr>
+        <td><strong>Requested By:</strong></td>
+        <td th:text="${createdBy}">createdBy</td>
+    </tr>
+    <tr>
+        <td><strong>WorkFlow Name:</strong></td>
+        <td th:text="${workflowName}">createdBy</td>
+    </tr>
+    <tr>
+        <td><strong>Status:</strong></td>
+        <td th:text="${status}">Pending</td>
+    </tr>
+    <tr th:if="${action == 'Change requested'}">
+        <td><strong>Remarks:</strong></td>
+        <td th:text="${remarks}">Some remarks</td>
+    </tr>
+</table>
+
+<p>Please log in to the system to review and take necessary action.</p>
+
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>

@@ -1,0 +1,56 @@
+-- MySQL dump 10.13  Distrib 8.0.44, for Win64 (x86_64)
+--
+-- Host: localhost    Database: astrodatabase
+-- ------------------------------------------------------
+-- Server version	8.0.44
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `grn_workflow_status`
+--
+
+DROP TABLE IF EXISTS `grn_workflow_status`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `grn_workflow_status` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `process_id` varchar(255) DEFAULT NULL,
+  `sub_process_id` int DEFAULT NULL,
+  `action` varchar(50) DEFAULT NULL,
+  `remarks` varchar(1000) DEFAULT NULL,
+  `created_by` int DEFAULT NULL,
+  `create_date` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `grn_workflow_status`
+--
+
+LOCK TABLES `grn_workflow_status` WRITE;
+/*!40000 ALTER TABLE `grn_workflow_status` DISABLE KEYS */;
+INSERT INTO `grn_workflow_status` VALUES (1,'INV1005',17,'CREATED','GRN Created',43,'2025-07-18 11:30:56'),(2,'INV1005',17,'CHANGE REQUEST','change to store person',29,'2025-07-18 11:32:46'),(3,'INV1005',17,'Updated','GRN updated',43,'2025-07-18 11:34:03'),(4,'INV1005',17,'APPROVED','Approved',29,'2025-07-18 11:34:55'),(5,'INV1033',18,'CREATED','GRN Created',18,'2025-09-13 10:38:50'),(6,'INV1029',19,'CREATED','GRN Created',18,'2025-09-13 10:42:48'),(7,'INV1039',20,'CREATED','GRN Created',18,'2025-09-17 15:36:06'),(8,'INV1040',21,'CREATED','GRN Created',18,'2025-09-17 15:39:58'),(9,'INV1041',22,'CREATED','GRN Created',29,'2025-09-25 10:46:44'),(10,'INV1042',23,'CREATED','GRN Created',43,'2025-10-06 11:42:58'),(11,'INV1037',24,'CREATED','GRN Created',43,'2025-10-06 11:58:30'),(12,'INV1042',25,'CREATED','GRN Created',43,'2025-10-06 12:43:39'),(13,'INV1040',26,'CREATED','GRN Created',43,'2025-10-13 11:56:12'),(14,'INV1041',27,'CREATED','GRN Created',43,'2025-10-13 11:57:02'),(15,'INV1040',28,'CREATED','GRN Created',43,'2025-10-13 17:56:17'),(16,'INV1043',29,'CREATED','GRN Created',43,'2025-10-23 16:38:15'),(18,'INV1051',30,'CREATED','GRN Created',43,'2025-11-03 11:40:57'),(21,'INV1053',31,'CREATED','GRN Created',43,'2025-11-03 12:36:55'),(22,'INV1051',32,'CREATED','GRN Created',43,'2025-11-03 12:39:31');
+/*!40000 ALTER TABLE `grn_workflow_status` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-03-29 21:41:30

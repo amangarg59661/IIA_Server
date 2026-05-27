@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Action Required: Workflow Approval</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${nextRole}">Approver</span>,</p>
+
+<p>
+    A request in the
+    <strong th:text="${workflowName}">Workflow Name</strong> is pending your action.
+    The previous action was performed by
+    <strong th:text="${currentRole}">Current Role</strong>, and it now requires your approval as
+    <strong th:text="${nextRole}">Next Role</strong>.
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Request ID:</strong></td>
+        <td th:text="${requestId}">REQ12345</td>
+    </tr>
+    <tr>
+        <td><strong>Requested By (User ID):</strong></td>
+        <td th:text="${createdBy}">18</td>
+    </tr>
+    <tr>
+        <td><strong>Workflow Name:</strong></td>
+        <td th:text="${workflowName}">Indent Workflow</td>
+    </tr>
+    <tr>
+        <td><strong>Status:</strong></td>
+        <td th:text="${status}">Pending</td>
+    </tr>
+    <tr th:if="${action != null}">
+        <td><strong>Action:</strong></td>
+        <td th:text="${action}">Created</td>
+    </tr>
+    <tr th:if="${remarks != null}">
+        <td><strong>Remarks:</strong></td>
+        <td th:text="${remarks}">Some remarks</td>
+    </tr>
+</table>
+
+<p>Please log in to the system to review and take necessary action.</p>
+
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>

@@ -247,6 +247,16 @@ public class TenderEvaluationController {
                 HttpStatus.OK);
     }
 
+    @GetMapping("/open-clarifications")
+    public ResponseEntity<Object> getOpenClarifications(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId) {
+        log.info("Get open clarifications tenderId={} vendorId={}", tenderId, vendorId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getOpenClarifications(tenderId, vendorId)),
+                HttpStatus.OK);
+    }
+
     @GetMapping("/approved-vendors")
     public ResponseEntity<Object> getApprovedVendorsForPO(@RequestParam String tenderId) {
         return new ResponseEntity<>(

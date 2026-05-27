@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Workflow Status Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${userName}">User</span>,</p>
+
+<p>
+    Your request for <strong th:text="${workflowName}">Workflow</strong> has been <td th:text="${action}">Approved</td> with the following details:
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Request ID:</strong></td>
+        <td th:text="${requestId}">REQ12345</td>
+    </tr>
+    <tr>
+        <td><strong>WorkFlow Name:</strong></td>
+        <td th:text="${workflowName}">workflow name</td>
+    </tr>
+    <tr>
+        <td><strong>Status:</strong></td>
+        <td th:text="${status}">Approved</td>
+    </tr>
+    <tr th:if="${action == 'APPROVED'}">
+        <td><strong>Approved By:</strong></td>
+        <td th:text="${currentRole}">Approver</td>
+    </tr>
+
+    <tr th:if="${action == 'CHANGE_REQUEST'}">
+        <td><strong>Change Requested By:</strong></td>
+        <td th:text="${currentRole}">Change Requester</td>
+    </tr>
+
+    <tr th:if="${action == 'REJECTED'}">
+        <td><strong>Rejected By:</strong></td>
+        <td th:text="${currentRole}">Rejector</td>
+    </tr>
+    <tr th:if="${action == 'REJECTED' or status == 'Change requested'}">
+        <td><strong>Remarks:</strong></td>
+        <td th:text="${remarks}">Correction required</td>
+    </tr>
+</table>
+
+<p>We will notify you about further updates regarding this request.</p>
+
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>
+
+

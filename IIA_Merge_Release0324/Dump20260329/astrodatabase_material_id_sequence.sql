@@ -1,0 +1,51 @@
+-- MySQL dump 10.13  Distrib 8.0.44, for Win64 (x86_64)
+--
+-- Host: localhost    Database: astrodatabase
+-- ------------------------------------------------------
+-- Server version	8.0.44
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `material_id_sequence`
+--
+
+DROP TABLE IF EXISTS `material_id_sequence`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `material_id_sequence` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `material_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `material_id_sequence`
+--
+
+LOCK TABLES `material_id_sequence` WRITE;
+/*!40000 ALTER TABLE `material_id_sequence` DISABLE KEYS */;
+INSERT INTO `material_id_sequence` VALUES (1,1100),(2,1101),(3,1102),(4,1103),(5,1104),(6,1105),(7,1106),(8,1107),(9,1108),(10,1109),(11,1110),(12,1111),(13,1112),(14,1113),(15,1114),(16,1115),(17,1116),(18,1117),(19,1118),(20,1119),(21,1120),(22,1121),(23,1122),(24,1123),(25,1124),(26,1125),(27,1126),(28,1127),(29,1128),(30,1129),(31,1130),(32,1131),(33,1132),(34,1133),(35,1134),(36,1135),(37,1136),(38,1137),(39,1138),(40,1139),(41,1140),(42,1141),(43,1142),(44,1143),(45,1144),(46,1145),(47,1146),(48,1147),(49,1148),(50,1149);
+/*!40000 ALTER TABLE `material_id_sequence` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-03-29 21:41:31

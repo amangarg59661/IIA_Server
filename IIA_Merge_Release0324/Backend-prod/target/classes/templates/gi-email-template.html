@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>GI Inspection Status</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f6f6f6;
+            padding: 20px;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            width: 600px;
+            margin: auto;
+            box-shadow: 0px 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #333333;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .info-box {
+            background: #f1f1f1;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            text-transform: uppercase;
+        }
+
+        .approved { background: #d4edda; color: #155724; }
+        .rejected { background: #f8d7da; color: #721c24; }
+        .changeRequest { background: #fff3cd; color: #856404; }
+
+        .footer {
+            margin-top: 25px;
+            font-size: 12px;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h2>Hello <span th:text="${custodianName}">Custodian</span>,</h2>
+
+    <p>Your Goods Inspection request has been updated. Below are your GI details:</p>
+
+    <div class="info-box">
+        <p><span class="label">GI Number:</span>
+            INV<span th:text="${gprnProcessId}"></span>/<span th:text="${inspectionId}"></span>
+        </p>
+
+        <p><span class="label">Custodian ID:</span>
+            <span th:text="${custodianId}"></span>
+        </p>
+    </div>
+
+    <!-- Status Box -->
+    <div class="status"
+         th:classappend="${status}">
+        <span th:text="${statusMessage}">Status Message</span>
+    </div>
+
+    <p>If you have any questions, please contact the purchasing department.</p>
+
+    <div class="footer">
+        © 2025 IIA – Goods Inspection Notification
+    </div>
+</div>
+</body>
+</html>

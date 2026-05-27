@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Action Required: PO Delivery Expiring & GRN Not Generated</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear Purchase Department,</p>
+
+<p>
+    The following Purchase Order is approaching its delivery date, and a Provisional GRN has not yet been generated:
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>PO ID:</strong></td>
+        <td th:text="${poId}">PO123</td>
+    </tr>
+    <tr>
+        <td><strong>Vendor Name:</strong></td>
+        <td th:text="${vendorName}">ABC Pvt Ltd</td>
+    </tr>
+    <tr>
+        <td><strong>Project Name:</strong></td>
+        <td th:text="${projectName}">Project XYZ</td>
+    </tr>
+    <tr>
+        <td><strong>Delivery Date:</strong></td>
+        <td th:text="${deliveryDate}">2025-08-25</td>
+    </tr>
+    <tr>
+        <td><strong>Total Value:</strong></td>
+        <td th:text="${totalValue}">100000.00</td>
+    </tr>
+</table>
+
+<p>Please ensure that the necessary actions are taken to generate the Provisional GRN and avoid any delays in procurement processing.</p>
+
+<p>Regards,<br/>IIA Procurement System</p>
+</body>
+</html>

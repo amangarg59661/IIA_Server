@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Tender Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${vendor.vendorName}">Vendor</span>,</p>
+
+<p>
+    A new <strong>Tender</strong> has been initiated in the IIA system. Please find all the related tender documents attached with this email.
+</p>
+
+<p>
+    If you wish to participate and submit a quotation against this tender, please log in to the <strong>IIA Vendor Portal</strong> using your credentials.
+</p>
+
+<p>
+    Tender ID: <strong th:text="${tender.tenderId}">TENDER-001</strong>
+</p>
+
+<p>Regards,<br/>IIA Procurement Team</p>
+</body>
+</html>

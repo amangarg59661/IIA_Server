@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Purchase Order Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear <span th:text="${po.vendorName}">Vendor</span>,</p>
+
+<p>
+    We are pleased to inform you that a new <strong>Purchase Order (PO)</strong> has been
+    <strong>approved and generated</strong> based on your submitted quotation in the IIA system.
+    Please find the PO document attached with this email.
+</p>
+
+<p>
+    PO Number: <strong th:text="${po.poNumber}">PO-001</strong><br/>
+    PO Date: <strong th:text="${po.poDate}">2025-08-29</strong><br/>
+    Project Name: <strong th:text="${po.projectName}">Project Name</strong><br/>
+    Total Amount: <strong th:text="${po.grandTotal}">0.00</strong>
+</p>
+
+<p>
+    Kindly acknowledge the receipt of this PO and proceed as per the terms mentioned.
+</p>
+
+<p>Regards,<br/>IIA Procurement Team</p>
+</body>
+</html>

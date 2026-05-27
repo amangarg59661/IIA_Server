@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Tender Format</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm 25mm;
+        }
+
+        body {
+            font-family: sans-serif;
+            font-size: 13px;
+            margin: 0;
+            color: black;
+        }
+
+        .container {
+            width: 160mm;
+            margin: auto;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .underline {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 6px;
+            vertical-align: top;
+        }
+
+        .download-link {
+            color: blue;
+            text-decoration: underline;
+            word-break: break-word;
+        }
+
+        .small {
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        .no-border td {
+            border: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Institute Header -->
+    <table class="no-border">
+        <tr>
+            <td class="center">
+                <div><strong>Indian Institute of Astrophysics</strong></div>
+                <div><strong>2nd Block, Koramangala, Bangalore – 560034</strong></div>
+                <div><strong>Ph: 080-22541244, Email: <span class="download-link">purchase@iiap.res.in</span></strong></div>
+                <div><strong>Website: www.iiap.res.in</strong></div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Tender Heading -->
+    <div class="center underline" style="font-weight: bold; font-size: 16px; margin-bottom: 1rem;">TENDER</div>
+
+    <!-- Tender Basic Details -->
+    <!-- Tender ID and Date Row -->
+    <table style="width: 100%; border: none; margin-bottom: 0.5rem;">
+        <tr>
+            <td style="text-align: left; border: none;">
+                <strong>Tender Enquiry No.:</strong> <span th:text="${tender.tenderId}">__________</span>
+            </td>
+            <td style="text-align: right; border: none;">
+                <strong>Dated:</strong> <span th:text="${#dates.format(#dates.createNow(), 'dd-MM-yyyy')}">__________</span>
+            </td>
+        </tr>
+        <!-- Vendor Info Below Tender ID in Same Table -->
+        <tr>
+            <td colspan="2" style="text-align: left; border: none; padding-top: 0.5rem;">
+                <strong>M/s <span th:text="${vendor.vendorName}">__________</span></strong><br/>
+                <span th:text="${vendor.address}">Address Line 1</span><br/>
+                <!-- <span th:text="${vendor.addressLine2}">Address Line 2</span> -->
+            </td>
+        </tr>
+    </table>
+
+
+    <!-- Tender Details Section -->
+    <table>
+        <thead>
+        <tr><th colspan="2" class="center">Tender Details</th></tr>
+        </thead>
+        <tbody>
+        <tr><td><strong>Tender Inviting Authority</strong></td><td><strong>Indian Institute of Astrophysics</strong></td></tr>
+        <tr><td><strong>Tender Title</strong></td><td th:text="${tender.titleOfTender}">N/A</td></tr>
+        <tr><td><strong>Tender Start Date</strong></td><td th:text="${tender.openingDate}">N/A</td></tr>
+      <!--  <tr><td><strong>Pre-bid Meeting Time, Date & Place</strong></td><td th:text="${tender.preBidMeetingDetails}">N/A</td></tr>-->
+        <tr>
+            <td><strong>Pre-bid Meeting Date, Place</strong></td>
+            <td>N/A</td>
+        </tr>
+        <tr><td><strong>Tender End Date</strong></td><td th:text="${tender.closingDate}">N/A</td></tr>
+        <tr><td><strong>Tender Opening Date</strong></td><td th:text="${tender.openingDate}">N/A</td></tr>
+        <tr>
+            <td><strong>Tender Offer Validity</strong></td>
+            <td th:text="${tender.validityPeriod}">N/A</td>
+        </tr>
+        <tr><td><strong>Buyer Email</strong></td><td><strong class="download-link">purchase@iiap.res.in</strong></td></tr>
+        <tr><td><strong>Type of Tender</strong></td><td th:text="${tender.bidType == 'Double' ? 'Two Bid System' : 'Single Bid System'}">N/A</td></tr>
+        <tr><td><strong>Time allowed for technical clarifications</strong></td><td>2 Days</td></tr>
+        <tr><td><strong>Estimated Tender Value (₹)</strong></td><td th:text="${tender.totalTenderValue}">N/A</td></tr>
+      <!--  <tr><td><strong>Evaluation Method</strong></td><td th:text="${tender.evaluationMethod}">N/A</td></tr>-->
+        <tr><td><strong>Consignee and Address</strong></td><td th:text="${tender.consignes}">N/A</td></tr>
+     <!--   <tr><td><strong>Special Instructions</strong></td><td th:text="${tender.specialInstructions}">N/A</td></tr>-->
+        </tbody>
+    </table>
+
+    <!-- Material List -->
+    <div class="center underline" style="font-weight: bold; font-size: 14px; margin-bottom: 10px;">LIST OF MATERIALS / JOB</div>
+    <table>
+        <thead>
+        <tr style="background-color: #f0f0f0;">
+            <th style="width: 8%;">Sl No</th>
+            <th>Material / Job Description</th>
+            <th style="width: 15%;">Quantity</th>
+            <th style="width: 12%;">UOM</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="material, stat : ${materials}">
+            <td th:text="${stat.index + 1}">1</td>
+            <td th:text="${material.materialDescription}">Description</td>
+            <td th:text="${material.quantity}">0</td>
+            <td th:text="${material.uom}">UOM</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(materials)}">
+            <td colspan="4" class="center">No materials available</td>
+        </tr>
+        </tbody>
+    </table>
+<!--
+    <p style="margin-top: 30px;"><strong>DOCUMENTS</strong></p>
+    <ol>
+        <li>Technical Specifications/ RFP (if applicable)</li>
+        <li>Bid Security Declaration Format (if applicable)</li>
+        <li>Buyback Details (if applicable)</li>
+        <li>MII Local Content Declaration Format (if applicable)</li>
+        <li>Country of Origin Format</li>
+        <li>General Terms & Conditions</li>
+    </ol>-->
+    <!-- DOCUMENTS SECTION -->
+    <div style="margin-top: 2rem;">
+        <div style="text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 6px;">DOCUMENTS</div>
+
+        <div style="border: 1px solid black; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: bold;">Technical Specifications / RFP (if applicable)</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: bold;">Bid Security Declaration Format (if applicable)</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: bold;">Buyback Details (if applicable)</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: bold;">MII Local Content Declaration Format (if applicable)</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <div style="font-weight: bold;">Country of Origin Format</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between;">
+                <div style="font-weight: bold;">General Terms Conditions</div>
+                <div style="color: blue;">Attached to mail</div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div style="margin-top: 2rem;">
+        <div class="right" style="margin-right: 2rem;">
+            <p><strong>Regards,</strong></p>
+            <p style="margin: 1rem 0;"><strong>Sd/-</strong></p>
+            <p><strong>Sr. Stores Purchase Officer</strong></p>
+        </div>
+        <p class="small">*This is a system generated document and hence Signature is not required</p>
+    </div>
+
+</div>
+</body>
+</html>
+
+<!--<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Tender Format</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            font-size: 13px;
+            color: black;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: auto;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .underline {
+            text-decoration: underline;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 5px;
+            vertical-align: top;
+        }
+
+        .material-table {
+            width: 100%;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .download-link {
+            color: blue;
+            text-decoration: underline;
+            word-break: break-word;
+        }
+
+        .small {
+            font-size: 12px;
+            font-style: italic;
+        }
+
+        ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+
+<table style="width: 100%; margin-bottom: 1rem;">
+    <tr>
+        <td style="text-align: center;">
+            <div><strong>Indian Institute of Astrophysics</strong></div>
+            <div><strong>2nd Block, Koramangala, Bangalore – 560034</strong></div>
+            <div><strong>Ph: 080-22541244, Email: <span class="download-link">purchase@iiap.res.in</span></strong></div>
+            <div><strong>Website: www.iiap.res.in</strong></div>
+        </td>
+    </tr>
+</table>
+
+
+<div class="center underline" style="font-weight: bold; font-size: 16px; margin-bottom: 1rem;">TENDER</div>
+
+
+<table>
+    <tr>
+        <td><strong>Tender Enquiry No.:</strong> <span th:text="${tender.tenderId}">__________</span></td>
+        <td><strong>Dated:</strong> <span th:text="${#dates.format(#dates.createNow(), 'dd-MM-yyyy')}">__________</span></td>
+    </tr>
+</table>
+
+
+<div style="margin-bottom: 1rem;">
+    <strong>M/s <span th:text="${vendor.vendorName}">__________</span></strong><br />
+</div>
+
+
+<table>
+    <thead>
+    <tr><th colspan="2" class="center">Tender Details</th></tr>
+    </thead>
+    <tbody>
+    <tr><td><strong>Tender Inviting Authority</strong></td><td><strong>Indian Institute of Astrophysics</strong></td></tr>
+    <tr><td><strong>Tender Title</strong></td><td th:text="${tender.titleOfTender}">N/A</td></tr>
+    <tr><td><strong>Tender Start Date</strong></td><td th:text="${tender.openingDate}">N/A</td></tr>
+    <tr><td><strong>Tender End Date</strong></td><td th:text="${tender.closingDate}">N/A</td></tr>
+    <tr><td><strong>Tender Opening Date</strong></td><td th:text="${tender.openingDate}">N/A</td></tr>
+    <tr><td><strong>Buyer Email</strong></td><td><strong class="download-link">purchase@iiap.res.in</strong></td></tr>
+    <tr><td><strong>Type of Tender</strong></td><td th:text="${tender.bidType == 'Double' ? 'Two Bid System' : 'Single Bid System'}">N/A</td></tr>
+    <tr><td><strong>Time allowed for technical clarifications</strong></td><td>2 Days</td></tr>
+    <tr><td><strong>Total Tender Value</strong></td><td th:text="${tender.totalTenderValue}">N/A</td></tr>
+    <tr><td><strong>Consignee and Address</strong></td><td th:text="${tender.consignes}">N/A</td></tr>
+    </tbody>
+</table>
+
+
+<div class="center underline" style="font-weight: bold; font-size: 14px; margin-bottom: 10px;">LIST OF MATERIALS / JOB</div>
+<div class="material-table">
+    <table>
+        <thead>
+        <tr style="background-color: #f0f0f0;">
+            <th style="width: 8%;">Sl No</th>
+            <th>Material / Job Description</th>
+            <th style="width: 15%;">Quantity</th>
+            <th style="width: 12%;">UOM</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="material, stat : ${materials}">
+            <td th:text="${stat.index + 1}">1</td>
+            <td th:text="${material.materialDescription}">Description</td>
+            <td th:text="${material.quantity}">0</td>
+            <td th:text="${material.uom}">UOM</td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(materials)}">
+            <td colspan="4" class="center">No materials available</td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+
+<div style="margin-top: 2rem;">
+    <div class="right" style="margin-right: 2rem;">
+        <p><strong>Regards,</strong></p>
+        <p style="margin: 1rem 0;"><strong>Sd/-</strong></p>
+        <p><strong>Sr. Stores Purchase Officer</strong></p>
+    </div>
+    <p class="small">*This is a system generated document and hence Signature is not required</p>
+</div>
+
+</div>
+</body>
+</html>
+-->

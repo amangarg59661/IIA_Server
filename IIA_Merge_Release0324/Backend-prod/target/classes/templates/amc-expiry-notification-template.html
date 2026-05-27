@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<p>Dear User,</p>
+
+<p>
+  This is a reminder that the AMC for the following Service Order is nearing its expiry:
+</p>
+
+<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;">
+  <tr>
+    <th align="left">Service Order ID</th>
+    <td th:text="${soId}"></td>
+  </tr>
+  <tr>
+    <th align="left">Project</th>
+    <td th:text="${projectName}"></td>
+  </tr>
+  <tr>
+    <th align="left">Vendor</th>
+    <td th:text="${vendorName}"></td>
+  </tr>
+  <tr>
+    <th align="left">AMC Start Date</th>
+    <td th:text="${startDateAmc}"></td>
+  </tr>
+  <tr>
+    <th align="left">AMC End Date</th>
+    <td th:text="${endDateAmc}"></td>
+  </tr>
+</table>
+
+<p>
+  Please review the details above and raise an indent for renewal, if renewal is required.
+  This will help ensure that the AMC continues without interruption.
+</p>
+
+<p>Regards,<br/>Procurement Team</p>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Auto-Approval Notification</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<p>Dear Team,</p>
+
+<p>
+    The following request in the
+    <strong th:text="${workflowName}">Workflow Name</strong> has been <strong>auto-approved</strong>
+    because <strong th:text="${approverRole}">Approver Role</strong> did not take action within
+    <strong th:text="${autoApproveHours}">X</strong> hours.
+</p>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <tr>
+        <td><strong>Request ID:</strong></td>
+        <td th:text="${requestId}">REQ12345</td>
+    </tr>
+    <tr>
+        <td><strong>Workflow Name:</strong></td>
+        <td th:text="${workflowName}">Indent Workflow</td>
+    </tr>
+    <tr>
+        <td><strong>Approver Role:</strong></td>
+        <td th:text="${approverRole}">Computer Committee Chairman</td>
+    </tr>
+    <tr>
+        <td><strong>Auto-Approve After:</strong></td>
+        <td><span th:text="${autoApproveHours}">24</span> hours</td>
+    </tr>
+    <tr>
+        <td><strong>Action Taken:</strong></td>
+        <td>Auto-Approved</td>
+    </tr>
+    <tr>
+        <td><strong>Current Status:</strong></td>
+        <td th:text="${status}">In-progress</td>
+    </tr>
+    <tr th:if="${nextRole != null}">
+        <td><strong>Now Pending With:</strong></td>
+        <td th:text="${nextRole}">Next Approver</td>
+    </tr>
+    <tr th:if="${nextRole == null}">
+        <td><strong>Final Status:</strong></td>
+        <td>Fully Approved</td>
+    </tr>
+</table>
+
+<p th:if="${nextRole != null}">
+    The request has been forwarded to <strong th:text="${nextRole}">Next Role</strong> for further approval.
+</p>
+<p th:if="${nextRole == null}">
+    This was the final approval level. The request is now <strong>fully approved</strong>.
+</p>
+
+<p>Please log in to the system for more details.</p>
+
+<p>Regards,<br/>IIA Workflow System</p>
+</body>
+</html>
