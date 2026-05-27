@@ -1237,41 +1237,34 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         quotationRepository.save(q);
                     });
 
-            // Update clarification history with this vendor's response (non-fatal if table missing)
+            // Update clarification history — PK-based when available, filtered fallback otherwise
             try {
-                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
-                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
-                openRounds.stream()
-                        .filter(h -> h.getRespondedAt() == null
-                                && ("VENDOR".equals(h.getClarificationTarget())
-                                    || "ALL_VENDORS".equals(h.getClarificationTarget()))
-                                && (vendorId.equals(h.getTargetVendorId()) || h.getTargetVendorId() == null
-                                    || "ALL_VENDORS".equals(h.getClarificationTarget())))
-                        .findFirst()
-                        .ifPresent(h -> {
-                            h.setResponseText(dto.getResponseText());
-                            h.setResponseFileName(dto.getResponseFileName());
-                            h.setRespondedByRole(dto.getRespondedByRole());
-                            h.setRespondedById(dto.getRespondedById());
-                            h.setRespondedAt(LocalDateTime.now());
-                            clarificationHistoryRepository.save(h);
-                        });
+                Optional<TenderClarificationHistory> historyRow;
+                if (dto.getClarificationHistoryId() != null) {
+                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
+                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
+                } else {
+                    historyRow = clarificationHistoryRepository
+                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
+                            .filter(h -> h.getRespondedAt() == null
+                                    && ("VENDOR".equals(h.getClarificationTarget())
+                                        || "ALL_VENDORS".equals(h.getClarificationTarget()))
+                                    && (vendorId.equals(h.getTargetVendorId())
+                                        || h.getTargetVendorId() == null))
+                            .findFirst();
+                }
+                historyRow.ifPresent(h -> {
+                    h.setResponseText(dto.getResponseText());
+                    h.setResponseFileName(dto.getResponseFileName());
+                    h.setRespondedByRole(dto.getRespondedByRole());
+                    h.setRespondedById(dto.getRespondedById());
+                    h.setRespondedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(h);
+                });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
-            // Only restore eval status when NO vendor quotations remain CHANGE_REQUESTED
-            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
-                    .stream()
-                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
-                    .count();
-            if (stillPending > 0) {
-                // Other vendors haven't responded yet — keep PENDING_VENDOR_CLARIFICATION
-                eval.setUpdatedDate(LocalDateTime.now());
-                tenderEvaluationRepository.save(eval);
-                return buildStatusDto(eval, tender, tenderId);
-            }
-            // All vendors responded — fall through to restore status below
         } else if ("PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole)
                     && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
             // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
@@ -1287,62 +1280,77 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         quotationRepository.save(q);
                     });
 
-            // Update clarification history
+            // Update clarification history — PK-based when available, filtered fallback otherwise
             try {
-                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
-                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
-                openRounds.stream()
-                        .filter(h -> h.getRespondedAt() == null
-                                && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
-                                && ppVendorId.equals(h.getTargetVendorId()))
-                        .findFirst()
-                        .ifPresent(h -> {
-                            h.setResponseText(dto.getResponseText());
-                            h.setResponseFileName(dto.getResponseFileName());
-                            h.setRespondedByRole("PURCHASE_PERSONNEL");
-                            h.setRespondedById(dto.getRespondedById());
-                            h.setRespondedAt(LocalDateTime.now());
-                            clarificationHistoryRepository.save(h);
-                        });
+                Optional<TenderClarificationHistory> historyRow;
+                if (dto.getClarificationHistoryId() != null) {
+                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
+                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
+                } else {
+                    historyRow = clarificationHistoryRepository
+                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
+                            .filter(h -> h.getRespondedAt() == null
+                                    && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
+                                    && ppVendorId.equals(h.getTargetVendorId()))
+                            .findFirst();
+                }
+                historyRow.ifPresent(h -> {
+                    h.setResponseText(dto.getResponseText());
+                    h.setResponseFileName(dto.getResponseFileName());
+                    h.setRespondedByRole("PURCHASE_PERSONNEL");
+                    h.setRespondedById(dto.getRespondedById());
+                    h.setRespondedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(h);
+                });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
-            // Check if all vendors responded — if not, keep current status
-            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
-                    .stream()
-                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
-                    .count();
-            if (stillPending > 0) {
-                eval.setUpdatedDate(LocalDateTime.now());
-                tenderEvaluationRepository.save(eval);
-                return buildStatusDto(eval, tender, tenderId);
-            }
-            // All vendors responded — fall through to restore status below
         } else {
-            // Indentor/PP (global)/member response: update latest open history record (non-fatal if table missing)
+            // Indentor/PP (global)/member response — PK-based when available, target-type filtered fallback
             try {
-                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
-                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
-                openRounds.stream()
-                        .filter(h -> h.getRespondedAt() == null)
-                        .findFirst()
-                        .ifPresent(h -> {
-                            if (h.getResponseText() == null || h.getResponseText().isBlank()) {
-                                h.setResponseText(dto.getResponseText());
-                                h.setResponseFileName(dto.getResponseFileName());
-                                h.setRespondedByRole(dto.getRespondedByRole());
-                                h.setRespondedById(dto.getRespondedById());
-                            }
-                            h.setRespondedAt(LocalDateTime.now());
-                            clarificationHistoryRepository.save(h);
-                        });
+                Optional<TenderClarificationHistory> historyRow;
+                if (dto.getClarificationHistoryId() != null) {
+                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
+                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
+                } else {
+                    Set<String> allowedTargets = Set.of("INDENTOR", "CHAIRMAN",
+                            "PURCHASE_PERSONNEL", "SPECIFIC_MEMBER", "ALL_MEMBERS");
+                    historyRow = clarificationHistoryRepository
+                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
+                            .filter(h -> h.getRespondedAt() == null
+                                    && allowedTargets.contains(h.getClarificationTarget()))
+                            .findFirst();
+                }
+                historyRow.ifPresent(h -> {
+                    h.setResponseText(dto.getResponseText());
+                    h.setResponseFileName(dto.getResponseFileName());
+                    h.setRespondedByRole(dto.getRespondedByRole());
+                    h.setRespondedById(dto.getRespondedById());
+                    h.setRespondedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(h);
+                });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
         }
 
-        // Restore the previous evaluation status
+        // ── Unified restore gate ────────────────────────────────────────
+        // Only restore eval status when ALL clarifications are resolved:
+        //   1. No quotations still CHANGE_REQUESTED (covers ALL_VENDORS flow)
+        //   2. No history rows with respondedAt=null  (covers specific-row flows)
+        boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                .stream()
+                .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
+        long openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
+
+        if (!quotationsResolved || openHistoryRows > 0) {
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+            return buildStatusDto(eval, tender, tenderId);
+        }
+
+        // All resolved — restore the previous evaluation status
         String restoreStatus = eval.getPreviousEvaluationStatus();
         if (restoreStatus == null || restoreStatus.isBlank()) {
             restoreStatus = "PENDING_APPROVAL";
@@ -1465,6 +1473,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             log.warn("Clarification history fetch failed (table may not exist yet): {}", e.getMessage());
             return java.util.Collections.emptyList();
         }
+    }
+
+    @Override
+    public List<TenderClarificationHistory> getOpenClarifications(String tenderId, String vendorId) {
+        return clarificationHistoryRepository
+                .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
     }
 
     // ─────────────────────────────────────────────────────────────────
