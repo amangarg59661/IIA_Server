@@ -668,16 +668,49 @@ const handleCastVote = async () => {
 const handleAssignExpertSubmit = async () => {
   if (!expertUserId || !expertName) return message.warning('Enter expert details.');
   try {
-    await axios.post('/api/tender-evaluation/committee/expert', {
-      expertUserId: parseInt(expertUserId),
-      expertName,
-      chairmanUserId: userId,
-    }, { params: { tenderId } });
+    await axios.post('/api/admin/techno-financial-committee/nominate', {
+      tenderId,
+      userId: parseInt(expertUserId),
+      nominatedBy: userId,
+      expert: true,
+    });
     message.success('Expert assigned.');
     setExpertModal(false);
     await fetchEvalStatus(tenderId);
   } catch (e) {
-    message.error('Failed to assign expert.');
+    message.error(e.response?.data?.message || 'Failed to assign expert.');
+  }
+};
+
+// ── Committee per-vendor decision (above 10L double bid) ──
+const handleCommitteeVendorDecision = async (vendorId, decision, remarkText) => {
+  try {
+    await axios.post('/api/tender-evaluation/committee/vendor-decision', {
+      vendorId,
+      decision,
+      remarks: remarkText || '',
+      committeeUserId: userId,
+    }, { params: { tenderId } });
+    message.success(`Vendor ${vendorId} ${decision.toLowerCase()}.`);
+    await fetchEvalStatus(tenderId);
+  } catch (e) {
+    message.error(e.response?.data?.message || 'Failed to save vendor decision.');
+  }
+};
+
+// ── Chairman per-vendor resolve (above 10L double bid) ──
+const handleChairmanVendorResolve = async (vendorId, decision, remarkText) => {
+  try {
+    await axios.post('/api/tender-evaluation/committee/chairman-vendor-resolve', {
+      vendorId,
+      decision,
+      remarks: remarkText || '',
+      chairmanUserId: userId,
+    }, { params: { tenderId } });
+    message.success(`Vendor ${vendorId} resolved as ${decision.toLowerCase()}.`);
+    await fetchEvalStatus(tenderId);
+  } catch (e) {
+    message.error(e.response?.data?.message || 'Failed to resolve vendor.');
   }
 };
 
@@ -2271,6 +2304,214 @@ useEffect(() => {
     ABOVE_1_CRORE:              'Above ₹1 Crore (Director Ad Hoc)',
   }[evalStatus?.amountCategory] || evalStatus?.amountCategory?.replace(/_/g, ' ');
 
+  // ── Above 10L double bid: committee per-vendor actions ──
+  const showCommitteeTechActions = isDoubleBidEval && !isFinancialPhase &&
+    isAbove10L && isCommitteeMember && isVotingMember &&
+    evalStatus?.evaluationStatus === 'PENDING_TECHNICAL';
+
+  const showCommitteeFinActions = isDoubleBidEval && isFinancialPhase &&
+    isAbove10L && isCommitteeMember && isVotingMember &&
+    evalStatus?.evaluationStatus === 'PENDING_FINANCIAL';
+
+  const showChairmanTechResolve = isDoubleBidEval && !isFinancialPhase &&
+    isAbove10L && isChairman &&
+    evalStatus?.evaluationStatus === 'PENDING_TECHNICAL';
+
+  const showChairmanFinResolve = isDoubleBidEval && isFinancialPhase &&
+    isAbove10L && isChairman &&
+    evalStatus?.evaluationStatus === 'PENDING_FINANCIAL';
+
+  const showCommitteeVendorActions = showCommitteeTechActions || showCommitteeFinActions;
+  const showChairmanVendorResolve = showChairmanTechResolve || showChairmanFinResolve;
+
+  // ── Above 10L: Committee member per-vendor columns (tech) ──
+  const committeeTechColumns = [
+    ...vendorInfoColumns,
+    {
+      title: 'Technical Document',
+      dataIndex: 'quotationFileName',
+      render: (text) => text
+        ? <a href={`/file/download?fileName=${text}&fileType=Tender`} target="_blank" rel="noreferrer">{text}</a>
+        : '-',
+    },
+    {
+      title: 'My Vote',
+      key: 'myVote',
+      render: (_, record) => {
+        const votes = evalStatus?.committeeVendorVotes?.[record.vendorId] || [];
+        const myVote = votes.find(v => v.committeeUserId === userId);
+        if (!myVote?.decision) return <Tag>Pending</Tag>;
+        return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
+      },
+    },
+    ...(showCommitteeTechActions ? [{
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          <Popconfirm title="Accept this vendor's technical bid?"
+            onConfirm={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED', '')}>
+            <Button type="primary" size="small">Accept</Button>
+          </Popconfirm>
+          <Popconfirm title="Reject this vendor's technical bid?"
+            onConfirm={() => handleCommitteeVendorDecision(record.vendorId, 'REJECTED', '')}>
+            <Button danger size="small">Reject</Button>
+          </Popconfirm>
+        </Space>
+      ),
+    }] : []),
+  ];
+
+  // ── Above 10L: Committee member per-vendor columns (financial) ──
+  const committeeFinColumns = [
+    ...vendorInfoColumns,
+    {
+      title: 'Financial Document',
+      dataIndex: 'priceBidFileName',
+      render: (text) => text
+        ? <a href={`/file/download?fileName=${text}&fileType=Tender`} target="_blank" rel="noreferrer">{text}</a>
+        : '-',
+    },
+    {
+      title: 'My Vote',
+      key: 'myVote',
+      render: (_, record) => {
+        const votes = evalStatus?.committeeVendorVotes?.[record.vendorId] || [];
+        const myVote = votes.find(v => v.committeeUserId === userId);
+        if (!myVote?.decision) return <Tag>Pending</Tag>;
+        return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
+      },
+    },
+    ...(showCommitteeFinActions ? [{
+      title: 'Action',
+      key: 'action',
+      render: (_, record) => (
+        <Space>
+          <Popconfirm title="Accept this vendor's financial bid?"
+            onConfirm={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED', '')}>
+            <Button type="primary" size="small">Accept</Button>
+          </Popconfirm>
+          <Popconfirm title="Reject this vendor's financial bid?"
+            onConfirm={() => handleCommitteeVendorDecision(record.vendorId, 'REJECTED', '')}>
+            <Button danger size="small">Reject</Button>
+          </Popconfirm>
+        </Space>
+      ),
+    }] : []),
+  ];
+
+  // ── Above 10L: Chairman per-vendor resolve columns (tech) ──
+  const chairmanTechColumns = [
+    ...vendorInfoColumns,
+    {
+      title: 'Technical Document',
+      dataIndex: 'quotationFileName',
+      render: (text) => text
+        ? <a href={`/file/download?fileName=${text}&fileType=Tender`} target="_blank" rel="noreferrer">{text}</a>
+        : '-',
+    },
+    {
+      title: 'Committee Votes',
+      key: 'votes',
+      render: (_, record) => {
+        const votes = evalStatus?.committeeVendorVotes?.[record.vendorId] || [];
+        const accepted = votes.filter(v => v.decision === 'ACCEPTED').length;
+        const rejected = votes.filter(v => v.decision === 'REJECTED').length;
+        const pending = votes.filter(v => !v.decision).length;
+        return (
+          <Tooltip title={votes.map(v => `${v.memberName}: ${v.decision || 'Pending'}`).join('\n')}>
+            <Space size={4}>
+              {accepted > 0 && <Tag color="green">{accepted} Accept</Tag>}
+              {rejected > 0 && <Tag color="red">{rejected} Reject</Tag>}
+              {pending > 0 && <Tag>{pending} Pending</Tag>}
+            </Space>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: 'Resolved',
+      dataIndex: 'indentorStatus',
+      render: (val) => val && val !== 'PENDING'
+        ? <Tag color={val === 'ACCEPTED' ? 'green' : 'red'}>{val}</Tag>
+        : <Tag>Pending</Tag>,
+    },
+    ...(showChairmanTechResolve ? [{
+      title: 'Resolve',
+      key: 'resolve',
+      render: (_, record) => record.indentorStatus && record.indentorStatus !== 'PENDING'
+        ? <Tag color="blue">Resolved</Tag>
+        : (
+          <Space>
+            <Popconfirm title="Accept this vendor (tech)?"
+              onConfirm={() => handleChairmanVendorResolve(record.vendorId, 'ACCEPTED', '')}>
+              <Button type="primary" size="small">Accept</Button>
+            </Popconfirm>
+            <Popconfirm title="Reject this vendor (tech)?"
+              onConfirm={() => handleChairmanVendorResolve(record.vendorId, 'REJECTED', '')}>
+              <Button danger size="small">Reject</Button>
+            </Popconfirm>
+          </Space>
+        ),
+    }] : []),
+  ];
+
+  // ── Above 10L: Chairman per-vendor resolve columns (financial) ──
+  const chairmanFinColumns = [
+    ...vendorInfoColumns,
+    {
+      title: 'Financial Document',
+      dataIndex: 'priceBidFileName',
+      render: (text) => text
+        ? <a href={`/file/download?fileName=${text}&fileType=Tender`} target="_blank" rel="noreferrer">{text}</a>
+        : '-',
+    },
+    {
+      title: 'Committee Votes',
+      key: 'votes',
+      render: (_, record) => {
+        const votes = evalStatus?.committeeVendorVotes?.[record.vendorId] || [];
+        const accepted = votes.filter(v => v.decision === 'ACCEPTED').length;
+        const rejected = votes.filter(v => v.decision === 'REJECTED').length;
+        const pending = votes.filter(v => !v.decision).length;
+        return (
+          <Tooltip title={votes.map(v => `${v.memberName}: ${v.decision || 'Pending'}`).join('\n')}>
+            <Space size={4}>
+              {accepted > 0 && <Tag color="green">{accepted} Accept</Tag>}
+              {rejected > 0 && <Tag color="red">{rejected} Reject</Tag>}
+              {pending > 0 && <Tag>{pending} Pending</Tag>}
+            </Space>
+          </Tooltip>
+        );
+      },
+    },
+    {
+      title: 'Resolved',
+      dataIndex: 'financialIndentorStatus',
+      render: (val) => val && val !== 'PENDING'
+        ? <Tag color={val === 'ACCEPTED' ? 'green' : 'red'}>{val}</Tag>
+        : <Tag>Pending</Tag>,
+    },
+    ...(showChairmanFinResolve ? [{
+      title: 'Resolve',
+      key: 'resolve',
+      render: (_, record) => record.financialIndentorStatus && record.financialIndentorStatus !== 'PENDING'
+        ? <Tag color="blue">Resolved</Tag>
+        : (
+          <Space>
+            <Popconfirm title="Accept this vendor (financial)?"
+              onConfirm={() => handleChairmanVendorResolve(record.vendorId, 'ACCEPTED', '')}>
+              <Button type="primary" size="small">Accept</Button>
+            </Popconfirm>
+            <Popconfirm title="Reject this vendor (financial)?"
+              onConfirm={() => handleChairmanVendorResolve(record.vendorId, 'REJECTED', '')}>
+              <Button danger size="small">Reject</Button>
+            </Popconfirm>
+          </Space>
+        ),
+    }] : []),
+  ];
+
   return (
     <FormContainer>
       <Heading
@@ -2395,7 +2636,12 @@ useEffect(() => {
                 >
                   <Table
                     dataSource={quotationData}
-                    columns={isSpoRole ? spoTechColumns : doubleBidTechColumns}
+                    columns={
+                      isAbove10L && isChairman ? chairmanTechColumns
+                      : isAbove10L && isCommitteeMember ? committeeTechColumns
+                      : isSpoRole ? spoTechColumns
+                      : doubleBidTechColumns
+                    }
                     rowKey="vendorId"
                     size="small"
                     bordered
@@ -2410,7 +2656,12 @@ useEffect(() => {
                     ) : (
                       <Table
                         dataSource={financialVendors}
-                        columns={isSpoRole ? spoFinColumns : doubleBidFinColumns}
+                        columns={
+                          isAbove10L && isChairman ? chairmanFinColumns
+                          : isAbove10L && isCommitteeMember ? committeeFinColumns
+                          : isSpoRole ? spoFinColumns
+                          : doubleBidFinColumns
+                        }
                         rowKey="vendorId"
                         size="small"
                         bordered
@@ -2725,7 +2976,7 @@ useEffect(() => {
                   ))}
                 </Card>
                 )
-              ) : isPendingIndentorClarif &&
+              ) : isPendingVendorClarif &&
               (isIndentCreatorRole || isPurchasePersonnelRole) ? (
                 /* Standard indentor/PP response card — with optional vendor context */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
@@ -2751,7 +3002,7 @@ useEffect(() => {
 
             {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
             {isPendingVendorClarif &&
-              (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && (
+              (isIndentCreatorRole || isSpoRole || isChairman || isDirector) && (
                 <Card title="Vendor Clarification Response" size="small" style={{ marginTop: 16 }}>
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message="Clarification Sent to Vendor"
