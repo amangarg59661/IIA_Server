@@ -15,9 +15,4 @@ public interface TenderClarificationHistoryRepository extends JpaRepository<Tend
 
     @Query("SELECT COALESCE(MAX(h.roundNumber), 0) FROM TenderClarificationHistory h WHERE h.tenderId = :tenderId")
     int findMaxRoundByTenderId(@Param("tenderId") String tenderId);
-
-    List<TenderClarificationHistory> findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(
-            String tenderId, String targetVendorId);
-
-    long countByTenderIdAndRespondedAtIsNull(String tenderId);
 }

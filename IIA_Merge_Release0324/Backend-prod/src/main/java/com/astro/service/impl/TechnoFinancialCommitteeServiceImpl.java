@@ -218,44 +218,21 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
         boolean roleAssigned = ensureCommitteeMemberRole(dto.getUserId());
 
         // 7. Create TenderCommitteeDecision row
-        String displayName = dto.isExpert()
-                ? user.getUserName() + " (Expert)"
-                : user.getUserName();
-
         TenderCommitteeDecision decision = new TenderCommitteeDecision();
         decision.setTenderId(dto.getTenderId());
         decision.setCommitteeUserId(dto.getUserId());
-        decision.setCommitteeMemberName(displayName);
+        decision.setCommitteeMemberName(user.getUserName());
         decision.setCreatedDate(LocalDateTime.now());
         decision.setUpdatedDate(LocalDateTime.now());
         committeeDecisionRepository.save(decision);
 
-        // 8. Audit trail: record expert assignment on chairman's row
-        if (dto.isExpert()) {
-            TenderCommitteeDecision chairRow = committeeDecisionRepository
-                    .findByTenderIdAndCommitteeUserId(dto.getTenderId(), dto.getNominatedBy())
-                    .orElseGet(() -> {
-                        TenderCommitteeDecision r = new TenderCommitteeDecision();
-                        r.setTenderId(dto.getTenderId());
-                        r.setCommitteeUserId(dto.getNominatedBy());
-                        r.setCreatedDate(LocalDateTime.now());
-                        return r;
-                    });
-            chairRow.setExpertUserId(dto.getUserId());
-            chairRow.setExpertName(user.getUserName());
-            chairRow.setExpertAssignedDate(LocalDateTime.now());
-            chairRow.setUpdatedDate(LocalDateTime.now());
-            committeeDecisionRepository.save(chairRow);
-        }
-
-        log.info("Chairman {} nominated user {} (expert={}) for tender {}. Role assigned: {}",
-                dto.getNominatedBy(), dto.getUserId(), dto.isExpert(), dto.getTenderId(), roleAssigned);
+        log.info("Chairman {} nominated user {} for tender {}. Role assigned: {}",
+                dto.getNominatedBy(), dto.getUserId(), dto.getTenderId(), roleAssigned);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("userId", dto.getUserId());
-        result.put("userName", displayName);
+        result.put("userName", user.getUserName());
         result.put("tenderId", dto.getTenderId());
-        result.put("expert", dto.isExpert());
         result.put("roleAssigned", roleAssigned);
         result.put("message", roleAssigned
                 ? "Member nominated and Committee Member role assigned."

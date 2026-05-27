@@ -1,6 +1,5 @@
 package com.astro.service.impl;
 
-import com.astro.dto.workflow.CommitteeVendorVoteDto;
 import com.astro.dto.workflow.DirectorFormCommitteeDto;
 import com.astro.dto.workflow.RespondClarificationDto;
 import com.astro.dto.workflow.SeekClarificationDto;
@@ -10,7 +9,6 @@ import com.astro.dto.workflow.VendorTechnicalDecisionDto;
 import com.astro.entity.TechnoFinancialCommittee;
 import com.astro.entity.TenderClarificationHistory;
 import com.astro.entity.TenderCommitteeDecision;
-import com.astro.entity.TenderCommitteeVendorDecision;
 import com.astro.entity.VendorLoginDetails;
 import com.astro.entity.VendorMaster;
 import com.astro.entity.ProcurementModule.IndentCreation;
@@ -20,16 +18,13 @@ import com.astro.entity.ProcurementModule.TenderRequest;
 import com.astro.entity.VendorQuotationAgainstTender;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
-import com.astro.entity.UserMaster;
 import com.astro.repository.TechnoFinancialCommitteeRepository;
 import com.astro.repository.TenderClarificationHistoryRepository;
 import com.astro.repository.TenderCommitteeDecisionRepository;
-import com.astro.repository.UserMasterRepository;
 import com.astro.repository.VendorLoginDetailsRepository;
 import com.astro.repository.VendorMasterRepository;
 import com.astro.repository.VendorQuotationAgainstTenderRepository;
 import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
-import com.astro.repository.ProcurementModule.TenderCommitteeVendorDecisionRepository;
 import com.astro.repository.ProcurementModule.TenderEvaluationRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.TenderEvaluationApprovalService;
@@ -60,8 +55,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     private final VendorQuotationAgainstTenderRepository quotationRepository;
     private final TechnoFinancialCommitteeRepository committeeRepository;
     private final TenderCommitteeDecisionRepository committeeDecisionRepository;
-    private final TenderCommitteeVendorDecisionRepository committeeVendorDecisionRepository;
-    private final UserMasterRepository userMasterRepository;
     private final VendorMasterRepository vendorMasterRepository;
     private final VendorLoginDetailsRepository vendorLoginDetailsRepository;
     private final TenderClarificationHistoryRepository clarificationHistoryRepository;
@@ -76,8 +69,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             VendorQuotationAgainstTenderRepository quotationRepository,
             TechnoFinancialCommitteeRepository committeeRepository,
             TenderCommitteeDecisionRepository committeeDecisionRepository,
-            TenderCommitteeVendorDecisionRepository committeeVendorDecisionRepository,
-            UserMasterRepository userMasterRepository,
             VendorMasterRepository vendorMasterRepository,
             VendorLoginDetailsRepository vendorLoginDetailsRepository,
             TenderClarificationHistoryRepository clarificationHistoryRepository,
@@ -90,8 +81,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         this.quotationRepository = quotationRepository;
         this.committeeRepository = committeeRepository;
         this.committeeDecisionRepository = committeeDecisionRepository;
-        this.committeeVendorDecisionRepository = committeeVendorDecisionRepository;
-        this.userMasterRepository = userMasterRepository;
         this.vendorMasterRepository = vendorMasterRepository;
         this.vendorLoginDetailsRepository = vendorLoginDetailsRepository;
         this.clarificationHistoryRepository = clarificationHistoryRepository;
@@ -238,30 +227,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         row.setUpdatedDate(LocalDateTime.now());
                         committeeDecisionRepository.save(row);
                     });
-        }
-
-        // Pre-create per-vendor committee decision rows for above-10L DOUBLE_BID
-        if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat))
-                && "DOUBLE_BID".equalsIgnoreCase(bidType)) {
-            String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
-            List<TechnoFinancialCommittee> members = committeeRepository.findByCommitteeTypeAndIsActiveTrue(stecType)
-                    .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole()))
-                    .collect(Collectors.toList());
-            List<VendorQuotationAgainstTender> vendors =
-                    quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-
-            for (TechnoFinancialCommittee member : members) {
-                for (VendorQuotationAgainstTender vendor : vendors) {
-                    TenderCommitteeVendorDecision row = new TenderCommitteeVendorDecision();
-                    row.setTenderId(tenderId);
-                    row.setVendorId(vendor.getVendorId());
-                    row.setCommitteeUserId(member.getUserId());
-                    row.setMemberName(member.getMemberName());
-                    row.setPhase("TECHNICAL");
-                    row.setCreatedDate(LocalDateTime.now());
-                    committeeVendorDecisionRepository.save(row);
-                }
-            }
         }
 
         return buildStatusDto(eval, tender, tenderId);
@@ -539,181 +504,44 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         return buildStatusDto(eval, tender, tenderId);
     }
 
-    // Deprecated: expert assignment now handled by TechnoFinancialCommitteeService.nominateMember()
-    // with expert=true flag. That method has stronger validation (chairman check, self-block,
-    // PO lock guard, auto role assignment) and also records audit trail on chairman's row.
-    // @Transactional
-    // @Override
-    // public TenderEvaluationStatusDto assignExpert(String tenderId, Integer expertUserId,
-    //                                                String expertName, Integer chairmanUserId) { ... }
-
     // ─────────────────────────────────────────────────────────────────
-    // 8a. COMMITTEE VENDOR DECISION (Above 10L Double Bid)
+    // 8. ASSIGN EXPERT (Above 10L - Chairman only)
+    //    FIX: Creates a separate vote row for the expert so they can vote
     // ─────────────────────────────────────────────────────────────────
     @Transactional
     @Override
-    public TenderEvaluationStatusDto committeeVendorDecision(String tenderId, String vendorId,
-                                                              String decision, String remarks,
-                                                              Integer committeeUserId) {
+    public TenderEvaluationStatusDto assignExpert(String tenderId, Integer expertUserId,
+                                                   String expertName, Integer chairmanUserId) {
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
-                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION");
-        if (lockedStatuses.contains(eval.getEvaluationStatus())) {
-            throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
-                    "Committee vendor decisions are locked. Current status: "
-                    + eval.getEvaluationStatus()));
-        }
-
-        committeeDecisionRepository.findByTenderIdAndCommitteeUserId(tenderId, committeeUserId)
-                .orElseThrow(() -> new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                        "User " + committeeUserId + " is not a committee member for tender " + tenderId)));
-
-        quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
-                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
-                        "No quotation found for vendor " + vendorId + " in tender " + tenderId)));
-
-        String normalizedDecision = decision.toUpperCase();
-        if (!"ACCEPTED".equals(normalizedDecision) && !"REJECTED".equals(normalizedDecision)) {
-            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Decision must be ACCEPTED or REJECTED"));
-        }
-
-        String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
-
-        TenderCommitteeVendorDecision voteRow = committeeVendorDecisionRepository
-                .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, committeeUserId, phase)
+        // Store expert info on the chairman row
+        TenderCommitteeDecision chairRow = committeeDecisionRepository
+                .findByTenderIdAndCommitteeUserId(tenderId, chairmanUserId)
                 .orElseGet(() -> {
-                    TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
+                    TenderCommitteeDecision r = new TenderCommitteeDecision();
                     r.setTenderId(tenderId);
-                    r.setVendorId(vendorId);
-                    r.setCommitteeUserId(committeeUserId);
-                    r.setPhase(phase);
-                    r.setCreatedDate(LocalDateTime.now());
-                    return r;
-                });
-
-        UserMaster user = userMasterRepository.findByUserId(committeeUserId);
-        voteRow.setMemberName(user != null ? user.getUserName() : String.valueOf(committeeUserId));
-        voteRow.setDecision(normalizedDecision);
-        voteRow.setRemarks(remarks);
-        voteRow.setDecisionDate(LocalDateTime.now());
-        voteRow.setUpdatedDate(LocalDateTime.now());
-        committeeVendorDecisionRepository.save(voteRow);
-
-        return buildStatusDto(eval, tender, tenderId);
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 8b. GET VENDOR VOTE GRID (Above 10L Double Bid)
-    // ─────────────────────────────────────────────────────────────────
-    @Override
-    public Map<String, List<CommitteeVendorVoteDto>> getVendorVoteGrid(String tenderId, String phase) {
-        List<TenderCommitteeVendorDecision> rows =
-                committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, phase);
-        return rows.stream()
-                .map(r -> {
-                    CommitteeVendorVoteDto dto = new CommitteeVendorVoteDto();
-                    dto.setCommitteeUserId(r.getCommitteeUserId());
-                    dto.setMemberName(r.getMemberName());
-                    dto.setDecision(r.getDecision());
-                    dto.setRemarks(r.getRemarks());
-                    dto.setDecisionDate(r.getDecisionDate());
-                    return Map.entry(r.getVendorId(), dto);
-                })
-                .collect(Collectors.groupingBy(
-                        Map.Entry::getKey,
-                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 8c. CHAIRMAN VENDOR RESOLVE (Above 10L Double Bid)
-    // ─────────────────────────────────────────────────────────────────
-    @Transactional
-    @Override
-    public TenderEvaluationStatusDto chairmanVendorResolve(String tenderId, String vendorId,
-                                                            String decision, String remarks,
-                                                            Integer chairmanUserId) {
-        TenderEvaluation eval = requireEval(tenderId);
-        TenderRequest tender = requireTender(tenderId);
-
-        String amtCat = eval.getAmountCategory();
-        if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat)
-                || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat)) {
-            String expectedType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
-            TechnoFinancialCommittee chairman = committeeRepository
-                    .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", expectedType)
-                    .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
-                            "CONFIGURATION_ERROR", "No active Chairman for " + expectedType)));
-            if (!chairman.getUserId().equals(chairmanUserId)) {
-                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                        "Only the " + expectedType + " Chairman can resolve vendor decisions."));
-            }
-        }
-
-        String normalizedDecision = decision.toUpperCase();
-        if (!"ACCEPTED".equals(normalizedDecision) && !"REJECTED".equals(normalizedDecision)) {
-            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Decision must be ACCEPTED or REJECTED"));
-        }
-
-        String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
-
-        VendorQuotationAgainstTender quotation = quotationRepository
-                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
-                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
-                        "No quotation found for vendor " + vendorId)));
-
-        if ("FINANCIAL".equals(phase)) {
-            quotation.setFinancialIndentorStatus(normalizedDecision);
-            quotation.setFinancialIndentorRemarks(remarks);
-        } else {
-            quotation.setIndentorStatus(normalizedDecision);
-            quotation.setIndentorRemarks(remarks);
-        }
-        quotation.setUpdatedBy(String.valueOf(chairmanUserId));
-        quotation.setUpdatedDate(LocalDateTime.now());
-        quotationRepository.save(quotation);
-
-        // Audit: record chairman resolution
-        TenderCommitteeVendorDecision chairVoteRow = committeeVendorDecisionRepository
-                .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, chairmanUserId, phase)
-                .orElseGet(() -> {
-                    TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
-                    r.setTenderId(tenderId);
-                    r.setVendorId(vendorId);
                     r.setCommitteeUserId(chairmanUserId);
-                    r.setPhase(phase);
                     r.setCreatedDate(LocalDateTime.now());
                     return r;
                 });
-        chairVoteRow.setMemberName("Chairman (Resolved)");
-        chairVoteRow.setDecision(normalizedDecision);
-        chairVoteRow.setRemarks(remarks);
-        chairVoteRow.setDecisionDate(LocalDateTime.now());
-        chairVoteRow.setUpdatedDate(LocalDateTime.now());
-        committeeVendorDecisionRepository.save(chairVoteRow);
+        chairRow.setExpertUserId(expertUserId);
+        chairRow.setExpertName(expertName);
+        chairRow.setExpertAssignedDate(LocalDateTime.now());
+        chairRow.setUpdatedDate(LocalDateTime.now());
+        committeeDecisionRepository.save(chairRow);
 
-        // Check if ALL vendors resolved → auto-transition
-        List<VendorQuotationAgainstTender> allQuotations =
-                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-        boolean allResolved;
-        if ("FINANCIAL".equals(phase)) {
-            allResolved = allQuotations.stream()
-                    .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
-                    .allMatch(q -> q.getFinancialIndentorStatus() != null
-                            && !"PENDING".equalsIgnoreCase(q.getFinancialIndentorStatus()));
-        } else {
-            allResolved = allQuotations.stream()
-                    .allMatch(q -> q.getIndentorStatus() != null
-                            && !"PENDING".equalsIgnoreCase(q.getIndentorStatus()));
-        }
-
-        if (allResolved) {
-            eval.setEvaluationStatus("PENDING_DIRECTOR_APPROVAL");
-            eval.setUpdatedDate(LocalDateTime.now());
-            tenderEvaluationRepository.save(eval);
+        // Create a dedicated vote row for the expert (if not already present)
+        boolean expertVoteRowExists = committeeDecisionRepository
+                .findByTenderIdAndCommitteeUserId(tenderId, expertUserId).isPresent();
+        if (!expertVoteRowExists) {
+            TenderCommitteeDecision expertRow = new TenderCommitteeDecision();
+            expertRow.setTenderId(tenderId);
+            expertRow.setCommitteeUserId(expertUserId);
+            expertRow.setCommitteeMemberName(expertName + " (Expert)");
+            expertRow.setCreatedDate(LocalDateTime.now());
+            expertRow.setUpdatedDate(LocalDateTime.now());
+            committeeDecisionRepository.save(expertRow);
         }
 
         return buildStatusDto(eval, tender, tenderId);
@@ -847,34 +675,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             v.setUpdatedDate(LocalDateTime.now());
                         });
                 committeeDecisionRepository.saveAll(existingVotes);
-
-                // Reset per-vendor committee decisions for financial phase
-                committeeVendorDecisionRepository.deleteByTenderIdAndPhase(tenderId, "FINANCIAL");
-
-                // Pre-create FINANCIAL phase rows for technically-approved vendors
-                List<TenderCommitteeDecision> committeeMembers =
-                        committeeDecisionRepository.findByTenderId(tenderId).stream()
-                        .filter(d -> d.getCommitteeMemberName() != null
-                                && d.getCommitteeUserId() != null)
-                        .collect(Collectors.toList());
-
-                List<VendorQuotationAgainstTender> approvedVendors = quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                && "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
-                        .collect(Collectors.toList());
-
-                for (TenderCommitteeDecision member : committeeMembers) {
-                    for (VendorQuotationAgainstTender vendor : approvedVendors) {
-                        TenderCommitteeVendorDecision row = new TenderCommitteeVendorDecision();
-                        row.setTenderId(tenderId);
-                        row.setVendorId(vendor.getVendorId());
-                        row.setCommitteeUserId(member.getCommitteeUserId());
-                        row.setMemberName(member.getCommitteeMemberName());
-                        row.setPhase("FINANCIAL");
-                        row.setCreatedDate(LocalDateTime.now());
-                        committeeVendorDecisionRepository.save(row);
-                    }
-                }
             } else {
                 eval.setEvaluationStatus("APPROVED");
                 eval.setFinancialBidPhase(false);
@@ -1021,39 +821,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 });
                 quotationRepository.saveAll(allQuotations);
                 break;
-                
-                
-                
-            case "PURCHASE_PERSONNEL":
-                if (reroutedVendorToPP) {
-        eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");  // ✅ correct status
-        
-                }
-     else {
-        eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
-    }
-
-
-     // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
-                if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
-                        && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
-                    final String clarVid = dto.getTargetVendorId();
-                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
-                            .ifPresent(q -> {
-                                if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
-                                    q.setFinancialIndentorStatus(null);
-                                    q.setFinancialIndentorRemarks(null);
-                                } else {
-                                    q.setIndentorStatus(null);
-                                    q.setIndentorRemarks(null);
-                                }
-                                q.setStatus("CHANGE_REQUESTED");
-                                q.setRemarks(dto.getRemarks());
-                                q.setUpdatedDate(LocalDateTime.now());
-                                quotationRepository.save(q);
-                            });}
-    break;
             case "INDENTOR":
+            case "PURCHASE_PERSONNEL":
             case "CHAIRMAN":
                 eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
                 // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
@@ -1114,18 +883,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
         // Save to clarification history (table may not exist on first deploy; non-fatal)
         try {
-              clarificationHistoryRepository
-                .findByTenderIdOrderByRequestedAtDesc(tenderId)
-                .stream()
-                .filter(h -> h.getRespondedAt() == null
-                        && target.equalsIgnoreCase(h.getClarificationTarget())
-                        && Objects.equals(dto.getTargetVendorId(), h.getTargetVendorId()))
-                .forEach(h -> {
-                    h.setRespondedAt(LocalDateTime.now());
-                    h.setResponseText("[Superseded by new clarification round]");
-                    clarificationHistoryRepository.save(h);
-                });
-
             int nextRound = clarificationHistoryRepository.findMaxRoundByTenderId(tenderId) + 1;
 
             if (reroutedVendorToPP) {
@@ -1237,34 +994,41 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         quotationRepository.save(q);
                     });
 
-            // Update clarification history — PK-based when available, filtered fallback otherwise
+            // Update clarification history with this vendor's response (non-fatal if table missing)
             try {
-                Optional<TenderClarificationHistory> historyRow;
-                if (dto.getClarificationHistoryId() != null) {
-                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
-                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
-                } else {
-                    historyRow = clarificationHistoryRepository
-                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
-                            .filter(h -> h.getRespondedAt() == null
-                                    && ("VENDOR".equals(h.getClarificationTarget())
-                                        || "ALL_VENDORS".equals(h.getClarificationTarget()))
-                                    && (vendorId.equals(h.getTargetVendorId())
-                                        || h.getTargetVendorId() == null))
-                            .findFirst();
-                }
-                historyRow.ifPresent(h -> {
-                    h.setResponseText(dto.getResponseText());
-                    h.setResponseFileName(dto.getResponseFileName());
-                    h.setRespondedByRole(dto.getRespondedByRole());
-                    h.setRespondedById(dto.getRespondedById());
-                    h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
-                });
+                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
+                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
+                openRounds.stream()
+                        .filter(h -> h.getRespondedAt() == null
+                                && ("VENDOR".equals(h.getClarificationTarget())
+                                    || "ALL_VENDORS".equals(h.getClarificationTarget()))
+                                && (vendorId.equals(h.getTargetVendorId()) || h.getTargetVendorId() == null
+                                    || "ALL_VENDORS".equals(h.getClarificationTarget())))
+                        .findFirst()
+                        .ifPresent(h -> {
+                            h.setResponseText(dto.getResponseText());
+                            h.setResponseFileName(dto.getResponseFileName());
+                            h.setRespondedByRole(dto.getRespondedByRole());
+                            h.setRespondedById(dto.getRespondedById());
+                            h.setRespondedAt(LocalDateTime.now());
+                            clarificationHistoryRepository.save(h);
+                        });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
+            // Only restore eval status when NO vendor quotations remain CHANGE_REQUESTED
+            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                    .stream()
+                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                    .count();
+            if (stillPending > 0) {
+                // Other vendors haven't responded yet — keep PENDING_VENDOR_CLARIFICATION
+                eval.setUpdatedDate(LocalDateTime.now());
+                tenderEvaluationRepository.save(eval);
+                return buildStatusDto(eval, tender, tenderId);
+            }
+            // All vendors responded — fall through to restore status below
         } else if ("PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole)
                     && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
             // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
@@ -1280,77 +1044,62 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         quotationRepository.save(q);
                     });
 
-            // Update clarification history — PK-based when available, filtered fallback otherwise
+            // Update clarification history
             try {
-                Optional<TenderClarificationHistory> historyRow;
-                if (dto.getClarificationHistoryId() != null) {
-                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
-                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
-                } else {
-                    historyRow = clarificationHistoryRepository
-                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
-                            .filter(h -> h.getRespondedAt() == null
-                                    && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
-                                    && ppVendorId.equals(h.getTargetVendorId()))
-                            .findFirst();
-                }
-                historyRow.ifPresent(h -> {
-                    h.setResponseText(dto.getResponseText());
-                    h.setResponseFileName(dto.getResponseFileName());
-                    h.setRespondedByRole("PURCHASE_PERSONNEL");
-                    h.setRespondedById(dto.getRespondedById());
-                    h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
-                });
+                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
+                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
+                openRounds.stream()
+                        .filter(h -> h.getRespondedAt() == null
+                                && "PURCHASE_PERSONNEL".equals(h.getClarificationTarget())
+                                && ppVendorId.equals(h.getTargetVendorId()))
+                        .findFirst()
+                        .ifPresent(h -> {
+                            h.setResponseText(dto.getResponseText());
+                            h.setResponseFileName(dto.getResponseFileName());
+                            h.setRespondedByRole("PURCHASE_PERSONNEL");
+                            h.setRespondedById(dto.getRespondedById());
+                            h.setRespondedAt(LocalDateTime.now());
+                            clarificationHistoryRepository.save(h);
+                        });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
+            // Check if all vendors responded — if not, keep current status
+            long stillPending = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                    .stream()
+                    .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                    .count();
+            if (stillPending > 0) {
+                eval.setUpdatedDate(LocalDateTime.now());
+                tenderEvaluationRepository.save(eval);
+                return buildStatusDto(eval, tender, tenderId);
+            }
+            // All vendors responded — fall through to restore status below
         } else {
-            // Indentor/PP (global)/member response — PK-based when available, target-type filtered fallback
+            // Indentor/PP (global)/member response: update latest open history record (non-fatal if table missing)
             try {
-                Optional<TenderClarificationHistory> historyRow;
-                if (dto.getClarificationHistoryId() != null) {
-                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
-                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
-                } else {
-                    Set<String> allowedTargets = Set.of("INDENTOR", "CHAIRMAN",
-                            "PURCHASE_PERSONNEL", "SPECIFIC_MEMBER", "ALL_MEMBERS");
-                    historyRow = clarificationHistoryRepository
-                            .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
-                            .filter(h -> h.getRespondedAt() == null
-                                    && allowedTargets.contains(h.getClarificationTarget()))
-                            .findFirst();
-                }
-                historyRow.ifPresent(h -> {
-                    h.setResponseText(dto.getResponseText());
-                    h.setResponseFileName(dto.getResponseFileName());
-                    h.setRespondedByRole(dto.getRespondedByRole());
-                    h.setRespondedById(dto.getRespondedById());
-                    h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
-                });
+                List<TenderClarificationHistory> openRounds = clarificationHistoryRepository
+                        .findByTenderIdOrderByRequestedAtDesc(tenderId);
+                openRounds.stream()
+                        .filter(h -> h.getRespondedAt() == null)
+                        .findFirst()
+                        .ifPresent(h -> {
+                            if (h.getResponseText() == null || h.getResponseText().isBlank()) {
+                                h.setResponseText(dto.getResponseText());
+                                h.setResponseFileName(dto.getResponseFileName());
+                                h.setRespondedByRole(dto.getRespondedByRole());
+                                h.setRespondedById(dto.getRespondedById());
+                            }
+                            h.setRespondedAt(LocalDateTime.now());
+                            clarificationHistoryRepository.save(h);
+                        });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
         }
 
-        // ── Unified restore gate ────────────────────────────────────────
-        // Only restore eval status when ALL clarifications are resolved:
-        //   1. No quotations still CHANGE_REQUESTED (covers ALL_VENDORS flow)
-        //   2. No history rows with respondedAt=null  (covers specific-row flows)
-        boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
-                .stream()
-                .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
-        long openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
-
-        if (!quotationsResolved || openHistoryRows > 0) {
-            eval.setUpdatedDate(LocalDateTime.now());
-            tenderEvaluationRepository.save(eval);
-            return buildStatusDto(eval, tender, tenderId);
-        }
-
-        // All resolved — restore the previous evaluation status
+        // Restore the previous evaluation status
         String restoreStatus = eval.getPreviousEvaluationStatus();
         if (restoreStatus == null || restoreStatus.isBlank()) {
             restoreStatus = "PENDING_APPROVAL";
@@ -1475,12 +1224,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         }
     }
 
-    @Override
-    public List<TenderClarificationHistory> getOpenClarifications(String tenderId, String vendorId) {
-        return clarificationHistoryRepository
-                .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
-    }
-
     // ─────────────────────────────────────────────────────────────────
     // 17. GET APPROVED VENDORS FOR PO (SPO-accepted vendors only)
     //     Called by PO vendor dropdown — returns only vendors finally
@@ -1557,9 +1300,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     "Decision must be ACCEPTED or REJECTED"));
         }
         if ("CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus())) {
-            boolean canIndentorAct = VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR
-                                .equals(quotation.getNextRole());
-            if ("ACCEPTED".equals(normalizedDecision) && !canIndentorAct ) {
+            if ("ACCEPTED".equals(normalizedDecision)) {
                 throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                         "Cannot accept a vendor that is under seek clarification. "
                         + "Resolve the clarification first, or reject the vendor."));
@@ -1925,27 +1666,6 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         dto.setExpertUserId(d.getExpertUserId());
                         dto.setExpertName(d.getExpertName());
                     });
-
-            // Per-vendor committee votes (above-10L double bid)
-            if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
-                String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
-                List<TenderCommitteeVendorDecision> vendorVotes =
-                        committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, phase);
-                Map<String, List<CommitteeVendorVoteDto>> voteMap = vendorVotes.stream()
-                        .map(v -> {
-                            CommitteeVendorVoteDto vDto = new CommitteeVendorVoteDto();
-                            vDto.setCommitteeUserId(v.getCommitteeUserId());
-                            vDto.setMemberName(v.getMemberName());
-                            vDto.setDecision(v.getDecision());
-                            vDto.setRemarks(v.getRemarks());
-                            vDto.setDecisionDate(v.getDecisionDate());
-                            return Map.entry(v.getVendorId(), vDto);
-                        })
-                        .collect(Collectors.groupingBy(
-                                Map.Entry::getKey,
-                                Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-                dto.setCommitteeVendorVotes(voteMap);
-            }
         }
         return dto;
     }

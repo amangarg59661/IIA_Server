@@ -4,7 +4,6 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 @Data
 public class TenderEvaluationStatusDto {
@@ -53,7 +52,6 @@ public class TenderEvaluationStatusDto {
 
     // ── Double Bid Under 10L financial phase ──
     private Boolean financialBidPhase;
-    private Map<String, List<CommitteeVendorVoteDto>> committeeVendorVotes;
 
     // ── Ad-hoc committee (Above 1 Crore) ──
     private Integer adHocChairmanUserId;

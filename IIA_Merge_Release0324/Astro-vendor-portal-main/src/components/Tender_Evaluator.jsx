@@ -17,7 +17,7 @@ import { HistoryOutlined } from '@ant-design/icons';
 import { baseURL } from '../App';
 
 //const TenderEvaluator = ({ tenderId }) => {
-const TenderEvaluator = ({ tenderId, actionStatus, onSubmitSuccess }) => {
+const TenderEvaluator = ({ tenderId, actionStatus }) => {
 
   //const { userId } = useSelector(state => state.auth);
   const vendorId = useSelector((state) => state.auth.vendorId);
@@ -279,10 +279,7 @@ const handleFileChange = (docName, fileData) => {
       message.success('Quotation submitted successfully');
       setQuotationFile(null);
       setPriceBidFile(null);
-      setClarificationFile(null);
-      setClarificationResponse('');
       setShowPopup(true);
-      if (onSubmitSuccess) onSubmitSuccess();
     } else {
       throw new Error('Failed to submit quotation');
     }

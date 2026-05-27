@@ -6,7 +6,6 @@ import com.astro.constant.WorkflowName; // added by abhinav
 import com.astro.dto.workflow.ApprovedIndentsDto;
 import com.astro.dto.workflow.ApprovedTenderDto;
 import java.util.Comparator;
-import com.astro.repository.ProcurementModule.IndentCreation.JobDetailsRepository;
 import com.astro.dto.workflow.ProcurementDtos.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.CancelIndentRequestDto;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCreationResponseDTO;
@@ -60,8 +59,6 @@ public class TenderRequestServiceImpl implements TenderRequestService {
     private IndentCreationService indentCreationService;
     @Autowired
     private IndentIdRepository indentIdRepository;
-    @Autowired                                          // ← ADD THIS
-private JobDetailsRepository jobDetailsRepository;
     @Autowired
     private IndentCreationRepository indentCreationRepository;
     @Autowired
@@ -221,13 +218,9 @@ private JobDetailsRepository jobDetailsRepository;
         tenderRequest.setIndentMaterials(tenderRequestDto.getIndentMaterials());
         String anyIndentId = tenderRequestDto.getIndentId().get(0);
         List<MaterialDetails> mdList = materialDetailsRepository.findByIndentCreation_IndentId(anyIndentId);
-        List<JobDetails> jdList = jobDetailsRepository.findByIndentCreation_IndentId(anyIndentId);
         if (!mdList.isEmpty()) {
             MaterialDetails m = mdList.get(0);
             tenderRequest.setModeOfProcurement(m.getModeOfProcurement());
-        } else if (!jdList.isEmpty()) {
-            JobDetails j = jdList.get(0);
-            tenderRequest.setModeOfProcurement(j.getModeOfProcurement());
         } else {
             tenderRequest.setModeOfProcurement(null);
         }
