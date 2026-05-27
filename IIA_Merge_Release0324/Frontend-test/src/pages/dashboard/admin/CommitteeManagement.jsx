@@ -176,7 +176,7 @@ const CommitteeManagement = () => {
           <Button icon={<EditOutlined />} size="small" onClick={() => openEdit(record)}>
             Edit
           </Button>
-          <Popconfirm
+          {/* <Popconfirm
             title="Deactivate this member?"
             onConfirm={() => handleDeactivate(record.id)}
             okText="Yes"
@@ -185,7 +185,7 @@ const CommitteeManagement = () => {
             <Button icon={<DeleteOutlined />} size="small" danger>
               Deactivate
             </Button>
-          </Popconfirm>
+          </Popconfirm> */}
         </div>
       ),
     },

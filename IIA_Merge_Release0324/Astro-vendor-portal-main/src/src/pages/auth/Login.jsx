@@ -7,6 +7,7 @@ import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import FormContainer from '../../components/DKG_FormContainer';
 import { fetchMasters } from '../../store/slice/masterSlice';
+import { login } from '../../store/slice/authSlice';
 import { setVendor } from '../../store/slice/authSlice';
 import axios from 'axios';
 import { message } from 'antd';
@@ -24,15 +25,18 @@ const Login = () => {
   const [messageText, setMessageText] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Check if redirected from change password page
   useEffect(() => {
     if (location.state?.message) {
       setSuccessMessage(location.state.message);
+      // Pre-fill vendor ID if available
       if (location.state?.vendorId) {
         setFormData(prev => ({
           ...prev,
           userId: location.state.vendorId
         }));
       }
+      // Clear the state to prevent showing message on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -55,57 +59,69 @@ const Login = () => {
     }
 
     try {
-      // Server-side login — password validated on backend
-      const response = await axios.post('/api/vendor-quotation/vendor-login', {
-        vendorId: userId,
-        password: password
-      });
+      const response = await axios.get(`/api/vendor-quotation/VendorStatus/${userId}`);
       const data = response.data;
-      const responseData = data.responseData;
-      const status = responseData.status;
+      const status = data.responseData.status;
+      const Password = data.responseData.password;
+      const isFirstLogin = data.responseData.isFirstLogin;
 
+      // First check password
+      if (Password !== password) {
+        setMessageText("Incorrect password.");
+        return;
+      }
+
+      // Handle different statuses
       if (status === "APPROVED") {
-        if (responseData.isFirstLogin === true) {
+        // Check if this is first login - redirect to change password page
+        if (isFirstLogin === true) {
           message.info('Please change your temporary password to continue.');
-          navigate('/change-password', {
-            state: {
+          navigate('/change-password', { 
+            state: { 
               vendorId: userId,
-              isFirstLogin: true
-            }
+              isFirstLogin: true 
+            } 
           });
           return;
         }
 
-        dispatch(setVendor(responseData));
-        navigate(`/vendor/${userId}`);
+        // Normal login flow - password already changed
+        try {
+          dispatch(setVendor(data.responseData));
+          navigate(`/vendor/${userId}`);
+        } catch (error) {
+          setMessageText("Invalid credentials");
+        }
       } else if (status === "REJECTED") {
-        const comments = responseData.comments || "Your request was rejected with no comments provided.";
+        const comments = data.responseData.comments || "Your request was rejected with no comments provided.";
         setMessageText(`Sorry, your request has been rejected. Reason: ${comments}`);
       } else if (status === "AWAITING_APPROVAL") {
-        if (responseData.isFirstLogin === true) {
+        // For AWAITING_APPROVAL, also check if first login for password change
+        if (isFirstLogin === true) {
           message.info('Please change your temporary password. Your registration is still under review.');
-          navigate('/change-password', {
-            state: {
+          navigate('/change-password', { 
+            state: { 
               vendorId: userId,
               isFirstLogin: true,
               pendingApproval: true
-            }
+            } 
           });
           return;
         }
         setMessageText("Your registration is in review stage. Please wait for sometime...");
       } else if (status === "CHANGE_REQUEST") {
-        if (responseData.isFirstLogin === true) {
+        // Handle change request status
+        if (isFirstLogin === true) {
           message.info('Please change your temporary password first.');
-          navigate('/change-password', {
-            state: {
+          navigate('/change-password', { 
+            state: { 
               vendorId: userId,
-              isFirstLogin: true
-            }
+              isFirstLogin: true 
+            } 
           });
           return;
         }
-        const comments = responseData.comments || "Admin has requested changes to your registration.";
+        const comments = data.responseData.comments || "Admin has requested changes to your registration.";
         setMessageText(`Change requested: ${comments}`);
       } else if (status === "NOT_FOUND") {
         setMessageText("Vendor ID not found");
@@ -116,10 +132,8 @@ const Login = () => {
       console.error('Login error:', error);
       if (error.response?.status === 404) {
         setMessageText("Vendor ID not found");
-      } else if (error.response?.data?.responseStatus?.message) {
-        setMessageText(error.response.data.responseStatus.message);
       } else {
-        setMessageText("Error during login. Please try again.");
+        setMessageText("Error fetching vendor status. Please try again.");
       }
     }
   };
@@ -136,7 +150,8 @@ const Login = () => {
       <FormContainer className='mt-20 main-content border-none !shadow-none'>
         <main className='w-full p-4 flex flex-col h-fit justify-center items-center gap-8 bg-white relative z-20 rounded-md'>
           <img src={MyLogo} width={200} height={150} alt="Logo" />
-
+          
+          {/* Success message banner */}
           {successMessage && (
             <div style={{
               backgroundColor: '#d4edda',
@@ -153,26 +168,26 @@ const Login = () => {
           )}
 
           <FormBody onFinish={handleFormSubmit} initialValues={formData}>
-            <FormInputItem
-              label="Vendor ID"
-              placeholder="COMP001"
-              name='userId'
+            <FormInputItem 
+              label="Vendor ID" 
+              placeholder="COMP001" 
+              name='userId' 
               onChange={handleFormValueChange}
               value={formData.userId}
-              required
+              required 
             />
-            <FormInputItem
-              type='password'
-              label="Password"
-              placeholder="*****"
-              name='password'
-              onChange={handleFormValueChange}
-              required
+            <FormInputItem 
+              type='password' 
+              label="Password" 
+              placeholder="*****" 
+              name='password' 
+              onChange={handleFormValueChange} 
+              required 
             />
             {messageText && (
-              <p className="text-red-500" style={{
-                backgroundColor: '#fee2e2',
-                padding: '10px',
+              <p className="text-red-500" style={{ 
+                backgroundColor: '#fee2e2', 
+                padding: '10px', 
                 borderRadius: '6px',
                 border: '1px solid #fecaca'
               }}>

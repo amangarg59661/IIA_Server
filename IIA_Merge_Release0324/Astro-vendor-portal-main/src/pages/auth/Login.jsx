@@ -64,7 +64,7 @@ const Login = () => {
       const responseData = data.responseData;
       const status = responseData.status;
 
-      if (status === "APPROVED") {
+      if (status === "APPROVED" || status === "SUCCESS") {
         if (responseData.isFirstLogin === true) {
           message.info('Please change your temporary password to continue.');
           navigate('/change-password', {
@@ -81,6 +81,8 @@ const Login = () => {
       } else if (status === "REJECTED") {
         const comments = responseData.comments || "Your request was rejected with no comments provided.";
         setMessageText(`Sorry, your request has been rejected. Reason: ${comments}`);
+      } else if (status === "INVALID_CREDENTIALS") {
+        setMessageText(`Incorrect Username Or Password.`);
       } else if (status === "AWAITING_APPROVAL") {
         if (responseData.isFirstLogin === true) {
           message.info('Please change your temporary password. Your registration is still under review.');
