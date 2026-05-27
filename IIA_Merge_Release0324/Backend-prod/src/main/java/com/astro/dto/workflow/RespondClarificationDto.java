@@ -28,4 +28,8 @@ public class RespondClarificationDto {
 
     /** When PP responds on behalf of a vendor (GEM/OPEN/GLOBAL mode) */
     private String vendorId;
+
+    /** PK of TenderClarificationHistory row — targets exact clarification question.
+        Null = fallback to filtered lookup (backward compat). */
+    private Long clarificationHistoryId;
 }

@@ -1,5 +1,6 @@
 package com.astro.controller.ProcurementModuleController;
 
+import com.astro.dto.workflow.CommitteeVendorVoteDto;
 import com.astro.dto.workflow.CommitteeVoteRequestDto;
 import com.astro.dto.workflow.ConfirmByIndentorRequestDto;
 import com.astro.dto.workflow.RejectEvaluationRequestDto;
@@ -166,6 +167,48 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    // ─── COMMITTEE PER-VENDOR DECISION ENDPOINTS (Above 10L Double Bid) ─
+
+    @PostMapping("/committee/vendor-decision")
+    public ResponseEntity<Object> committeeVendorDecision(
+            @RequestParam String tenderId,
+            @RequestBody Map<String, Object> body) {
+        String vendorId = (String) body.get("vendorId");
+        String decision = (String) body.get("decision");
+        String remarks = (String) body.get("remarks");
+        Integer committeeUserId = (Integer) body.get("committeeUserId");
+        log.info("Committee vendor decision tenderId={} vendorId={} decision={} by={}",
+                tenderId, vendorId, decision, committeeUserId);
+        TenderEvaluationStatusDto status = approvalService.committeeVendorDecision(
+                tenderId, vendorId, decision, remarks, committeeUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @GetMapping("/committee/vendor-votes")
+    public ResponseEntity<Object> getVendorVoteGrid(
+            @RequestParam String tenderId,
+            @RequestParam String phase) {
+        log.info("Get vendor vote grid tenderId={} phase={}", tenderId, phase);
+        Map<String, List<CommitteeVendorVoteDto>> grid =
+                approvalService.getVendorVoteGrid(tenderId, phase);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(grid), HttpStatus.OK);
+    }
+
+    @PostMapping("/committee/chairman-vendor-resolve")
+    public ResponseEntity<Object> chairmanVendorResolve(
+            @RequestParam String tenderId,
+            @RequestBody Map<String, Object> body) {
+        String vendorId = (String) body.get("vendorId");
+        String decision = (String) body.get("decision");
+        String remarks = (String) body.get("remarks");
+        Integer chairmanUserId = (Integer) body.get("chairmanUserId");
+        log.info("Chairman vendor resolve tenderId={} vendorId={} decision={} by={}",
+                tenderId, vendorId, decision, chairmanUserId);
+        TenderEvaluationStatusDto status = approvalService.chairmanVendorResolve(
+                tenderId, vendorId, decision, remarks, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     @PostMapping("/committee/chairman-decision")
     public ResponseEntity<Object> chairmanDecide(
             @RequestParam String tenderId,
@@ -242,6 +285,16 @@ public class TenderEvaluationController {
     public ResponseEntity<Object> getClarificationHistory(@RequestParam String tenderId) {
         return new ResponseEntity<>(
                 ResponseBuilder.getSuccessResponse(approvalService.getClarificationHistory(tenderId)),
+                HttpStatus.OK);
+    }
+
+    @GetMapping("/open-clarifications")
+    public ResponseEntity<Object> getOpenClarifications(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId) {
+        log.info("Get open clarifications tenderId={} vendorId={}", tenderId, vendorId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getOpenClarifications(tenderId, vendorId)),
                 HttpStatus.OK);
     }
 
