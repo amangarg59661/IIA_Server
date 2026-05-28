@@ -11,7 +11,7 @@ axios.defaults.baseURL = baseURL;
 
 // Send Authorization header with every request
 axios.interceptors.request.use((config) => {
-  const token = store.getState().auth?.token || localStorage.getItem('token');
+  const token = store.getState().auth?.token || localStorage.getItem('vendorToken');
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }

@@ -1316,9 +1316,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
-            // 2. Check remaining open questions for this vendor
+            // 2. Check remaining open VENDOR-targeted questions for this vendor
             List<TenderClarificationHistory> remainingOpen =
-                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
+                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId)
+                            .stream()
+                            .filter(h -> Set.of("VENDOR", "ALL_VENDORS").contains(h.getClarificationTarget()))
+                            .collect(Collectors.toList());
 
             // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
             if (remainingOpen.isEmpty()) {
@@ -1376,9 +1379,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
 
-            // 2. Check remaining open questions for this vendor
+            // 2. Check remaining open PP-targeted questions for this vendor
             List<TenderClarificationHistory> remainingOpen =
-                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, ppVendorId);
+                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, ppVendorId)
+                            .stream()
+                            .filter(h -> "PURCHASE_PERSONNEL".equals(h.getClarificationTarget()))
+                            .collect(Collectors.toList());
 
             // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
             if (remainingOpen.isEmpty()) {
@@ -1441,6 +1447,44 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         long openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
 
         if (!quotationsResolved || openHistoryRows > 0) {
+            // Vendor-side resolved but non-vendor clarifications still open:
+            // revert status from PENDING_VENDOR_CLARIFICATION to match what's actually pending
+            if (quotationsResolved && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
+                List<TenderClarificationHistory> openRows =
+                        clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId)
+                                .stream()
+                                .filter(h -> h.getRespondedAt() == null)
+                                .collect(Collectors.toList());
+
+                boolean hasVendorPending = openRows.stream()
+                        .anyMatch(h -> Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL")
+                                .contains(h.getClarificationTarget()));
+
+                if (!hasVendorPending) {
+                    boolean hasIndentorPending = openRows.stream()
+                            .anyMatch(h -> Set.of("INDENTOR", "CHAIRMAN")
+                                    .contains(h.getClarificationTarget()));
+                    boolean hasMemberPending = openRows.stream()
+                            .anyMatch(h -> Set.of("SPECIFIC_MEMBER", "ALL_MEMBERS")
+                                    .contains(h.getClarificationTarget()));
+
+                    if (hasIndentorPending) {
+                        eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
+                        openRows.stream()
+                                .filter(h -> Set.of("INDENTOR", "CHAIRMAN").contains(h.getClarificationTarget()))
+                                .findFirst()
+                                .ifPresent(h -> {
+                                    eval.setClarificationPendingFrom(h.getClarificationTarget());
+                                    eval.setClarificationPendingFromId(h.getTargetUserId());
+                                    eval.setClarificationPendingFromName(h.getTargetUserName());
+                                    eval.setClarificationRequestedByRole(h.getRequestedByRole());
+                                    eval.setClarificationRemarks(h.getQuestionRemarks());
+                                });
+                    } else if (hasMemberPending) {
+                        eval.setEvaluationStatus("PENDING_MEMBER_REVOTE");
+                    }
+                }
+            }
             eval.setUpdatedDate(LocalDateTime.now());
             tenderEvaluationRepository.save(eval);
             return buildStatusDto(eval, tender, tenderId);
