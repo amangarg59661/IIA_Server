@@ -1117,24 +1117,43 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
-        // Save to clarification history (table may not exist on first deploy; non-fatal)
+        // Save to clarification history
         try {
             int nextRound = clarificationHistoryRepository.findMaxRoundByTenderId(tenderId) + 1;
 
-            if (reroutedVendorToPP) {
-                // GEM/OPEN/GLOBAL: create per-vendor history records so PP responses map cleanly
-                List<VendorQuotationAgainstTender> markedQuotations =
-                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
-                        .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
-                        .collect(Collectors.toList());
-                for (VendorQuotationAgainstTender q : markedQuotations) {
+            // Determine which vendors need history rows
+            boolean isAllVendors = "ALL_VENDORS".equalsIgnoreCase(originalTarget);
+            boolean isVendorTarget = "VENDOR".equalsIgnoreCase(originalTarget)
+                    || "ALL_VENDORS".equalsIgnoreCase(originalTarget);
+
+            if (isVendorTarget || reroutedVendorToPP) {
+                // Vendor-targeted clarifications: create per-vendor rows
+                List<String> vendorIds;
+                if (isAllVendors) {
+                    // ALL_VENDORS: explode into one row per vendor
+                    vendorIds = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                            .stream()
+                            .map(VendorQuotationAgainstTender::getVendorId)
+                            .collect(Collectors.toList());
+                } else {
+                    // Specific VENDOR: single row
+                    String vid = dto.getTargetVendorId();
+                    if (vid == null || vid.isBlank()) {
+                        vid = eval.getApprovedVendorId();
+                    }
+                    vendorIds = vid != null ? List.of(vid) : Collections.emptyList();
+                }
+
+                String historyTarget = reroutedVendorToPP ? "PURCHASE_PERSONNEL" : target.toUpperCase();
+
+                for (String vid : vendorIds) {
                     TenderClarificationHistory history = new TenderClarificationHistory();
                     history.setTenderId(tenderId);
                     history.setRoundNumber(nextRound);
                     history.setRequestedByRole(dto.getRequestedByRole());
                     history.setRequestedByUserId(dto.getRequestedByUserId());
-                    history.setClarificationTarget("PURCHASE_PERSONNEL");
-                    history.setTargetVendorId(q.getVendorId());
+                    history.setClarificationTarget(historyTarget);
+                    history.setTargetVendorId(vid);
                     history.setTargetUserId(dto.getTargetUserId());
                     history.setTargetUserName(dto.getTargetUserName());
                     history.setQuestionRemarks(dto.getRemarks());
@@ -1142,6 +1161,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     clarificationHistoryRepository.save(history);
                 }
             } else {
+                // Non-vendor targets (INDENTOR, CHAIRMAN, PURCHASE_PERSONNEL direct,
+                // SPECIFIC_MEMBER, ALL_MEMBERS): single row, no vendorId explosion
                 TenderClarificationHistory history = new TenderClarificationHistory();
                 history.setTenderId(tenderId);
                 history.setRoundNumber(nextRound);

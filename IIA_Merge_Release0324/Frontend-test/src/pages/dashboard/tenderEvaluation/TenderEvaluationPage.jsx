@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert, Badge, Button, Input, message, Modal, Select, Space, Spin,
+  Alert, Badge, Button, Card, Input, message, Modal, Select, Space, Spin,
   Table, Tag, Tooltip, Typography, Upload,
 } from "antd";
 import {
   CheckCircleOutlined, CloseCircleOutlined, EyeOutlined,
-  QuestionCircleOutlined, UploadOutlined,
+  MinusCircleOutlined, PlusOutlined, QuestionCircleOutlined, UploadOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -112,11 +112,20 @@ const TenderEvaluationPage = () => {
   const [loading,       setLoading]       = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Clarification dialog
-  const [clarDlgOpen,  setClarDlgOpen]  = useState(false);
-  const [clarVendorId, setClarVendorId] = useState(null);
-  const [clarRemarks,  setClarRemarks]  = useState("");
-  const [clarTarget,   setClarTarget]   = useState("VENDOR");
+  // Clarification dialog — multi-question support
+  const [clarDlgOpen,   setClarDlgOpen]   = useState(false);
+  const [clarQuestions, setClarQuestions] = useState([]);
+  // helpers for multi-question state
+  const addClarQuestion = (target = null, vendorId = null) =>
+    setClarQuestions(prev => [...prev, { id: Date.now() + Math.random(), target, vendorId, remarks: "" }]);
+  const removeClarQuestion = (id) =>
+    setClarQuestions(prev => prev.filter(q => q.id !== id));
+  const updateClarQuestion = (id, field, value) =>
+    setClarQuestions(prev => prev.map(q =>
+      q.id === id
+        ? { ...q, [field]: value, ...(field === "target" && value !== "VENDOR" ? { vendorId: null } : {}) }
+        : q
+    ));
 
   // Reject dialog (evaluator per-vendor)
   const [rejectDlgOpen,  setRejectDlgOpen]  = useState(false);
@@ -142,8 +151,10 @@ const TenderEvaluationPage = () => {
   const [noSheetDlgOpen,        setNoSheetDlgOpen]        = useState(false);
   const [pendingInitiateTenderId, setPendingInitiateTenderId] = useState(null);
 
-  // PP clarification response (per vendor: { text, file })
-  const [ppResponseMap, setPpResponseMap] = useState({});
+  // PP clarification response — per-question (GEM/OPEN/GLOBAL)
+  const [ppResponseMap, setPpResponseMap] = useState({});         // legacy single-response fallback
+  const [ppOpenQuestions,      setPpOpenQuestions]      = useState({});  // vendorId → [{id, roundNumber, questionRemarks, ...}]
+  const [ppQuestionResponses,  setPpQuestionResponses]  = useState({}); // historyId → { text, file }
 
   // Clarification history dialog
   const [clarHistoryOpen,   setClarHistoryOpen]   = useState(false);
@@ -461,32 +472,37 @@ const TenderEvaluationPage = () => {
     }
   };
 
-  // Seek Clarification submit
+  // Seek Clarification submit — sends each question as a separate round
   const handleSeekClarification = async () => {
-    if (!clarTarget) {
-      message.warning("Please select a clarification target (Vendor or Indentor).");
+    const valid = clarQuestions.filter(q => q.remarks?.trim());
+    if (valid.length === 0) {
+      message.warning("At least one question with remarks is required.");
       return;
     }
-    if (!clarRemarks.trim()) {
-      message.warning("Clarification remarks are required.");
-      return;
+    for (const q of valid) {
+      if (!q.target) {
+        message.warning("Please select a clarification target for every question.");
+        return;
+      }
     }
     setActionLoading(true);
     try {
-      await axios.post(
-        '/api/tender-evaluation/seek-clarification',
-        {
-          requestedByRole:     backendRole,
-          requestedByUserId:   auth.userId,
-          clarificationTarget: clarTarget || null,
-          targetVendorId:      clarVendorId || null,
-          remarks:             clarRemarks,
-        },
-        { params: { tenderId: selectedEval.tenderId } }
-      );
-      message.success("Clarification sent.");
+      for (const q of valid) {
+        await axios.post(
+          '/api/tender-evaluation/seek-clarification',
+          {
+            requestedByRole:     backendRole,
+            requestedByUserId:   auth.userId,
+            clarificationTarget: q.target || null,
+            targetVendorId:      q.vendorId || null,
+            remarks:             q.remarks,
+          },
+          { params: { tenderId: selectedEval.tenderId } }
+        );
+      }
+      message.success(`${valid.length} clarification(s) sent.`);
       setClarDlgOpen(false);
-      setClarRemarks("");
+      setClarQuestions([]);
       await loadEval(selectedEval.tenderId);
     } catch (e) {
       message.error(e?.response?.data?.message || "Clarification failed.");
@@ -528,6 +544,74 @@ const TenderEvaluationPage = () => {
       setPpResponseMap((prev) => {
         const next = { ...prev };
         delete next[vendorId];
+        return next;
+      });
+      await loadEval(selectedEval.tenderId);
+    } catch (e) {
+      message.error(e?.response?.data?.message || "Failed to send response.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ── PP: fetch open clarification questions per vendor (GEM/OPEN/GLOBAL) ──
+  useEffect(() => {
+    if (!showPPClarificationResponse || !selectedEval?.tenderId) return;
+    const changeRequested = vendors.filter(v => v.status === "CHANGE_REQUESTED");
+    if (changeRequested.length === 0) { setPpOpenQuestions({}); return; }
+    Promise.all(
+      changeRequested.map(v =>
+        axios.get("/api/tender-evaluation/open-clarifications", {
+          params: { tenderId: selectedEval.tenderId, vendorId: v.vendorId }
+        }).then(res => ({ vendorId: v.vendorId, questions: res.data?.responseData || [] }))
+          .catch(() => ({ vendorId: v.vendorId, questions: [] }))
+      )
+    ).then(results => {
+      const map = {};
+      results.forEach(r => { map[r.vendorId] = r.questions; });
+      setPpOpenQuestions(map);
+    });
+  }, [showPPClarificationResponse, selectedEval?.tenderId, vendors]);
+
+  // PP: per-question clarification response submit
+  const handlePPRespondPerQuestion = async (historyId, vendorId) => {
+    const entry = ppQuestionResponses[historyId];
+    if (!entry?.text?.trim()) {
+      message.warning("Please enter a response.");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      let responseFileName = null;
+      if (entry.file) {
+        const fd = new FormData();
+        fd.append("file", entry.file);
+        const uploadRes = await axios.post("/file/upload?fileType=Tender", fd, {
+          headers: { "Content-Type": "multipart/form-data", Accept: "application/json" },
+        });
+        responseFileName = uploadRes.data?.responseData?.fileName || null;
+      }
+      await axios.post(
+        "/api/tender-evaluation/respond-clarification",
+        {
+          respondedByRole: "PURCHASE_PERSONNEL",
+          respondedById:   String(auth.userId),
+          responseText:    entry.text,
+          responseFileName,
+          vendorId,
+          clarificationHistoryId: historyId,
+        },
+        { params: { tenderId: selectedEval.tenderId } }
+      );
+      message.success("Response submitted.");
+      // Remove answered question from local state
+      setPpOpenQuestions(prev => ({
+        ...prev,
+        [vendorId]: (prev[vendorId] || []).filter(q => q.id !== historyId),
+      }));
+      setPpQuestionResponses(prev => {
+        const next = { ...prev };
+        delete next[historyId];
         return next;
       });
       await loadEval(selectedEval.tenderId);
@@ -810,8 +894,7 @@ const TenderEvaluationPage = () => {
                 size="small" icon={<QuestionCircleOutlined />}
                 disabled={r.status === "CHANGE_REQUESTED"}
                 onClick={() => {
-                  setClarVendorId(r.vendorId);
-                  setClarTarget("VENDOR");
+                  setClarQuestions([{ id: Date.now(), target: "VENDOR", vendorId: r.vendorId, remarks: "" }]);
                   setClarDlgOpen(true);
                 }}
               >
@@ -866,8 +949,7 @@ const TenderEvaluationPage = () => {
               <Button
                 size="small" icon={<QuestionCircleOutlined />}
                 onClick={() => {
-                  setClarVendorId(r.vendorId);
-                  setClarTarget(null);
+                  setClarQuestions([{ id: Date.now(), target: null, vendorId: r.vendorId, remarks: "" }]);
                   setClarDlgOpen(true);
                 }}
               >
@@ -877,63 +959,107 @@ const TenderEvaluationPage = () => {
           },
         ]
       : []),
-    // PP Clarification Response columns (GEM/Open/Global mode)
+    // PP Clarification Response columns — per-question (GEM/Open/Global mode)
     ...(showPPClarificationResponse
       ? [
           {
-            title: "Clarification Response",
+            title: "Clarification Questions & Response",
             key: "pp_response",
-            width: 220,
-            render: (_, r) =>
-              r.status === "CHANGE_REQUESTED" ? (
-                <div>
-                  <TextArea
-                    rows={2}
-                    placeholder="Enter response..."
-                    value={ppResponseMap[r.vendorId]?.text || ""}
-                    onChange={(e) =>
-                      setPpResponseMap((prev) => ({
-                        ...prev,
-                        [r.vendorId]: { ...prev[r.vendorId], text: e.target.value },
-                      }))
-                    }
-                    style={{ marginBottom: 4 }}
-                  />
-                  <Upload
-                    beforeUpload={(file) => {
-                      setPpResponseMap((prev) => ({
-                        ...prev,
-                        [r.vendorId]: { ...prev[r.vendorId], file },
-                      }));
-                      return false;
-                    }}
-                    showUploadList={false}
-                  >
-                    <Button size="small" icon={<UploadOutlined />}>
-                      {ppResponseMap[r.vendorId]?.file?.name || "Attach File"}
-                    </Button>
-                  </Upload>
-                </div>
-              ) : (
-                <Text type="secondary">—</Text>
-              ),
-          },
-          {
-            title: "Submit Response",
-            key: "pp_submit",
-            width: 130,
-            render: (_, r) =>
-              r.status === "CHANGE_REQUESTED" ? (
-                <Button
-                  size="small"
-                  type="primary"
-                  loading={actionLoading}
-                  disabled={!ppResponseMap[r.vendorId]?.text?.trim()}
-                  onClick={() => handlePPRespondClarification(r.vendorId)}
-                >
-                  Send Response
-                </Button>
-              ) : null,
+            width: 360,
+            render: (_, r) => {
+              if (r.status !== "CHANGE_REQUESTED") return <Text type="secondary">—</Text>;
+              const questions = ppOpenQuestions[r.vendorId] || [];
+              if (questions.length === 0) {
+                // Fallback: single response (legacy or no history rows)
+                return (
+                  <div>
+                    <TextArea
+                      rows={2}
+                      placeholder="Enter response..."
+                      value={ppResponseMap[r.vendorId]?.text || ""}
+                      onChange={(e) =>
+                        setPpResponseMap((prev) => ({
+                          ...prev,
+                          [r.vendorId]: { ...prev[r.vendorId], text: e.target.value },
+                        }))
+                      }
+                      style={{ marginBottom: 4 }}
+                    />
+                    <Space>
+                      <Upload
+                        beforeUpload={(file) => {
+                          setPpResponseMap((prev) => ({
+                            ...prev,
+                            [r.vendorId]: { ...prev[r.vendorId], file },
+                          }));
+                          return false;
+                        }}
+                        showUploadList={false}
+                      >
+                        <Button size="small" icon={<UploadOutlined />}>
+                          {ppResponseMap[r.vendorId]?.file?.name || "Attach"}
+                        </Button>
+                      </Upload>
+                      <Button
+                        size="small" type="primary" loading={actionLoading}
+                        disabled={!ppResponseMap[r.vendorId]?.text?.trim()}
+                        onClick={() => handlePPRespondClarification(r.vendorId)}
+                      >
+                        Send
+                      </Button>
+                    </Space>
+                  </div>
+                );
+              }
+              // Per-question cards
+              return (
+                <Space direction="vertical" style={{ width: "100%" }} size="small">
+                  {questions.map((q, idx) => (
+                    <Card key={q.id} size="small" title={`Q${idx + 1} (Round ${q.roundNumber})`}
+                      style={{ background: "#fafafa" }}>
+                      <Text type="secondary" style={{ display: "block", marginBottom: 6 }}>
+                        {q.questionRemarks}
+                      </Text>
+                      <TextArea
+                        rows={2}
+                        placeholder="Your response..."
+                        value={ppQuestionResponses[q.id]?.text || ""}
+                        onChange={(e) =>
+                          setPpQuestionResponses(prev => ({
+                            ...prev,
+                            [q.id]: { ...prev[q.id], text: e.target.value },
+                          }))
+                        }
+                        style={{ marginBottom: 4 }}
+                      />
+                      <Space>
+                        <Upload
+                          beforeUpload={(file) => {
+                            setPpQuestionResponses(prev => ({
+                              ...prev,
+                              [q.id]: { ...prev[q.id], file },
+                            }));
+                            return false;
+                          }}
+                          showUploadList={false}
+                        >
+                          <Button size="small" icon={<UploadOutlined />}>
+                            {ppQuestionResponses[q.id]?.file?.name || "Attach"}
+                          </Button>
+                        </Upload>
+                        <Button
+                          size="small" type="primary" loading={actionLoading}
+                          disabled={!ppQuestionResponses[q.id]?.text?.trim()}
+                          onClick={() => handlePPRespondPerQuestion(q.id, r.vendorId)}
+                        >
+                          Send
+                        </Button>
+                      </Space>
+                    </Card>
+                  ))}
+                </Space>
+              );
+            },
           },
         ]
       : []),
@@ -1171,8 +1297,7 @@ const TenderEvaluationPage = () => {
               <Button
                 icon={<QuestionCircleOutlined />}
                 onClick={() => {
-                  setClarVendorId(null);
-                  setClarTarget("ALL_VENDORS");
+                  setClarQuestions([{ id: Date.now(), target: "ALL_VENDORS", vendorId: null, remarks: "" }]);
                   setClarDlgOpen(true);
                 }}
               >
@@ -1249,8 +1374,7 @@ const TenderEvaluationPage = () => {
               <Button
                 icon={<QuestionCircleOutlined />}
                 onClick={() => {
-                  setClarVendorId(null);
-                  setClarTarget("INDENTOR");
+                  setClarQuestions([{ id: Date.now(), target: "INDENTOR", vendorId: null, remarks: "" }]);
                   setClarDlgOpen(true);
                 }}
               >
@@ -1486,82 +1610,118 @@ const TenderEvaluationPage = () => {
         </div>
       )}
 
-      {/* ── Seek Clarification Dialog ── */}
+      {/* ── Seek Clarification Dialog (multi-question) ── */}
       <Modal
-        title="Seek Clarification"
+        title={`Seek Clarification (${clarQuestions.length} question${clarQuestions.length !== 1 ? "s" : ""})`}
         open={clarDlgOpen}
-        onCancel={() => { setClarDlgOpen(false); setClarRemarks(""); }}
+        onCancel={() => { setClarDlgOpen(false); setClarQuestions([]); }}
         onOk={handleSeekClarification}
         confirmLoading={actionLoading}
-        okText="Send"
+        okText={`Send ${clarQuestions.length > 1 ? `All (${clarQuestions.length})` : ""}`}
+        width={640}
       >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          {/* INDENTOR under 10L & COMMITTEE_MEMBER: auto-routed, no target selection */}
-          {(backendRole === "INDENTOR" || backendRole === "COMMITTEE_MEMBER") ? (
-            <Text type="secondary">
-              {backendRole === "COMMITTEE_MEMBER"
-                ? "Clarification will be sent to Chairman for review."
-                : "Clarification will be routed automatically based on procurement mode."}
-            </Text>
-          ) : (
-            <Select
-              value={clarTarget || undefined}
-              placeholder="Select clarification target..."
-              onChange={(val) => { setClarTarget(val); if (val !== "VENDOR") setClarVendorId(null); }}
-              style={{ width: "100%" }}
+        {/* Auto-route notice for INDENTOR / COMMITTEE_MEMBER */}
+        {(backendRole === "INDENTOR" || backendRole === "COMMITTEE_MEMBER") && (
+          <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
+            {backendRole === "COMMITTEE_MEMBER"
+              ? "Clarification will be sent to Chairman for review."
+              : "Clarification will be routed automatically based on procurement mode."}
+          </Text>
+        )}
+
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          {clarQuestions.map((q, idx) => (
+            <Card
+              key={q.id}
+              size="small"
+              title={`Question ${idx + 1}`}
+              extra={clarQuestions.length > 1 && (
+                <Button
+                  type="text" danger size="small"
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => removeClarQuestion(q.id)}
+                />
+              )}
             >
-              {/* SPO options */}
-              {isSPO && <Option value="VENDOR">To Vendor</Option>}
-              {isSPO && <Option value="INDENTOR">To Indentor</Option>}
-              {/* CHAIRMAN options */}
-              {isChairman && <Option value="SPECIFIC_MEMBER">To Specific Member</Option>}
-              {isChairman && <Option value="ALL_MEMBERS">To All Members</Option>}
-              {isChairman && <Option value="VENDOR">To Vendor / PP (auto-routed)</Option>}
-              {/* DIRECTOR options */}
-              {isDirector && <Option value="VENDOR">To Vendor / PP (auto-routed)</Option>}
-              {isDirector && <Option value="INDENTOR">To Indentor</Option>}
-              {isDirector && <Option value="CHAIRMAN">To Chairman</Option>}
-              {isDirector && <Option value="SPECIFIC_MEMBER">To Specific Member</Option>}
-              {isDirector && <Option value="ALL_MEMBERS">To All Members</Option>}
-              {isDirector && <Option value="PURCHASE_PERSONNEL">To Purchase Personnel</Option>}
-            </Select>
-          )}
-          {/* Vendor selector when target is VENDOR and vendorId not pre-set */}
-          {clarTarget === "VENDOR" && !clarVendorId && vendors.length > 0 && (
-            <Select
-              placeholder="Select vendor..."
-              onChange={setClarVendorId}
-              style={{ width: "100%" }}
-              allowClear
-            >
-              {vendors.map((v) => (
-                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
-              ))}
-            </Select>
-          )}
-          {clarVendorId && (
-            <Text type="secondary">Vendor: {clarVendorId}</Text>
-          )}
-          {/* Vendor selector when target is INDENTOR/PURCHASE_PERSONNEL (optional - for vendor-specific clarification) */}
-          {(clarTarget === "INDENTOR" || clarTarget === "PURCHASE_PERSONNEL") && vendors.length > 0 && (
-            <Select
-              placeholder="Regarding vendor (optional - leave blank for general)"
-              onChange={setClarVendorId}
-              value={clarVendorId || undefined}
-              style={{ width: "100%" }}
-              allowClear
-            >
-              {vendors.map((v) => (
-                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
-              ))}
-            </Select>
-          )}
-          <TextArea
-            rows={4}
-            placeholder="Enter clarification remarks..."
-            value={clarRemarks}
-            onChange={(e) => setClarRemarks(e.target.value)}
-          />
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {/* Target selector — hidden for INDENTOR / COMMITTEE_MEMBER */}
+                {backendRole !== "INDENTOR" && backendRole !== "COMMITTEE_MEMBER" && (
+                  <Select
+                    value={q.target || undefined}
+                    placeholder="Select clarification target..."
+                    onChange={(val) => updateClarQuestion(q.id, "target", val)}
+                    style={{ width: "100%" }}
+                  >
+                    {isSPO && <Option value="VENDOR">To Vendor</Option>}
+                    {isSPO && <Option value="ALL_VENDORS">To All Vendors</Option>}
+                    {isSPO && <Option value="INDENTOR">To Indentor</Option>}
+                    {isChairman && <Option value="SPECIFIC_MEMBER">To Specific Member</Option>}
+                    {isChairman && <Option value="ALL_MEMBERS">To All Members</Option>}
+                    {isChairman && <Option value="VENDOR">To Vendor / PP (auto-routed)</Option>}
+                    {isChairman && <Option value="ALL_VENDORS">To All Vendors</Option>}
+                    {isDirector && <Option value="VENDOR">To Vendor / PP (auto-routed)</Option>}
+                    {isDirector && <Option value="ALL_VENDORS">To All Vendors</Option>}
+                    {isDirector && <Option value="INDENTOR">To Indentor</Option>}
+                    {isDirector && <Option value="CHAIRMAN">To Chairman</Option>}
+                    {isDirector && <Option value="SPECIFIC_MEMBER">To Specific Member</Option>}
+                    {isDirector && <Option value="ALL_MEMBERS">To All Members</Option>}
+                    {isDirector && <Option value="PURCHASE_PERSONNEL">To Purchase Personnel</Option>}
+                  </Select>
+                )}
+                {/* Vendor selector when target is VENDOR */}
+                {q.target === "VENDOR" && !q.vendorId && vendors.length > 0 && (
+                  <Select
+                    placeholder="Select vendor..."
+                    onChange={(val) => updateClarQuestion(q.id, "vendorId", val)}
+                    style={{ width: "100%" }}
+                    allowClear
+                  >
+                    {vendors.map((v) => (
+                      <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
+                    ))}
+                  </Select>
+                )}
+                {q.vendorId && q.target === "VENDOR" && (
+                  <Text type="secondary">Vendor: {vendors.find(v => v.vendorId === q.vendorId)?.vendorName || q.vendorId}</Text>
+                )}
+                {/* Vendor selector for INDENTOR/PP target (optional — vendor-specific clarification) */}
+                {(q.target === "INDENTOR" || q.target === "PURCHASE_PERSONNEL") && vendors.length > 0 && (
+                  <Select
+                    placeholder="Regarding vendor (optional — leave blank for general)"
+                    onChange={(val) => updateClarQuestion(q.id, "vendorId", val)}
+                    value={q.vendorId || undefined}
+                    style={{ width: "100%" }}
+                    allowClear
+                  >
+                    {vendors.map((v) => (
+                      <Option key={v.vendorId} value={v.vendorId}>{v.vendorName || v.vendorId}</Option>
+                    ))}
+                  </Select>
+                )}
+                <TextArea
+                  rows={3}
+                  placeholder="Enter clarification remarks..."
+                  value={q.remarks}
+                  onChange={(e) => updateClarQuestion(q.id, "remarks", e.target.value)}
+                />
+              </Space>
+            </Card>
+          ))}
+
+          <Button
+            type="dashed" block
+            icon={<PlusOutlined />}
+            onClick={() => {
+              const autoTarget = backendRole === "INDENTOR"
+                ? "INDENTOR"
+                : backendRole === "COMMITTEE_MEMBER"
+                ? "CHAIRMAN"
+                : null;
+              addClarQuestion(autoTarget, null);
+            }}
+          >
+            Add Another Question
+          </Button>
         </Space>
       </Modal>
 
@@ -1706,6 +1866,16 @@ const TenderEvaluationPage = () => {
               dataIndex: "respondedAt",
               key: "respondedAt",
               render: (t) => (t ? new Date(t).toLocaleString("en-IN") : "--"),
+            },
+            {
+              title: "Status",
+              key: "status",
+              width: 90,
+              render: (_, row) => (
+                row.respondedAt
+                  ? <Tag color="green">Answered</Tag>
+                  : <Tag color="orange">Pending</Tag>
+              ),
             },
           ]}
         />
