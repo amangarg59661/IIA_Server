@@ -1430,8 +1430,7 @@ if (isSpoRole) {
                 onClick={() => handleReject(record)}
                 style={{ marginTop: 8 }}
                 disabled={
-                  status === 'REJECTED' ||
-                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                  status === 'REJECTED' 
                 }
               >
                 Submit
@@ -1442,8 +1441,7 @@ if (isSpoRole) {
           trigger="click"
         >
           <Button danger type="link" disabled={
-            status === 'REJECTED' ||
-            (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+            status === 'REJECTED' 
           }>
             Reject
           </Button>
@@ -1644,7 +1642,7 @@ const doubleBidTechColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                      disabled={st === 'REJECTED' }
                     >
                       Submit
                     </Button>
@@ -1654,7 +1652,7 @@ const doubleBidTechColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                  st === 'REJECTED'
                 }>
                   Reject
                 </Button>
@@ -1793,7 +1791,7 @@ const doubleBidFinColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                      disabled={st === 'REJECTED' }
                     >
                       Submit
                     </Button>
@@ -1803,7 +1801,7 @@ const doubleBidFinColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                  st === 'REJECTED' 
                 }>
                   Reject
                 </Button>
@@ -1823,7 +1821,7 @@ const doubleBidFinColumns = [
               <Button
                 type="link"
                 style={{ color: '#fa8c16', padding: 0 }}
-                disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                disabled={st === 'REJECTED' }
                 onClick={() => openVendorClarificationModal(record.vendorId)}
               >
                 Seek Clarification
