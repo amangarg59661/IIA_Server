@@ -1001,22 +1001,21 @@ const baseColumns = [
   ...(showClarificationFile
     ? [
         {
-          title: 'Clarification File',
-          dataIndex: 'clarificationFileName',
-          key: 'clarificationFileName',
-          render: (file) =>
-            file ? (
-              <a
-        href={`${baseURL}/file/view/Tender/${file}`}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+  title: 'Clarification File',
+  dataIndex: 'clarificationFileName',
+  key: 'clarificationFileName',
+  render: (file, record) => {
+    const latest = [...clarificationHistory]
+      .filter(h => h.targetVendorId === record.vendorId)
+      .sort((a, b) => b.roundNumber - a.roundNumber)[0];
+    // only show if latest round itself has a file — no fallback to older rounds
+    return latest?.responseFileName ? (
+      <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">
         View
       </a>
-            ) : (
-              'N/A'
-            ),
-        },
+    ) : null;
+  },
+},
       ]
     : []),
   ...(!isDouble ? [priceBidColumnForSingleBid] : [priceBidColumn]),
@@ -2681,7 +2680,7 @@ useEffect(() => {
 
 
             {/* ── Clarification Pending Banner ── */}
-            {isAnyClarificationPending && (
+            {isAnyClarificationPending &&  !(isPurchasePersonnelRole && isOpenGlobalGem) && (
               <Alert
                 type="warning"
                 showIcon
@@ -2694,22 +2693,22 @@ useEffect(() => {
                   evalStatus.clarificationPendingFromName
                     ? `Waiting from: ${evalStatus.clarificationPendingFromName}`
                     : null,
-                  evalStatus.clarificationRemarks ? `Question: "${evalStatus.clarificationRemarks}"` : null,
+                  // evalStatus.clarificationRemarks ? `Question: "${evalStatus.clarificationRemarks}"` : null,
                 ].filter(Boolean).join(' — ') || ''}
                 style={{ marginTop: 12 }}
               />
             )}
 
             {/* ── Indentor/PP Responds to Clarification ── */}
-            {isPendingIndentorClarif &&
+            {isPendingVendorClarif  &&
               (isIndentCreatorRole || isPurchasePersonnelRole) &&
               evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL' ? (
                 /* PP per-vendor clarification card (GEM/OPEN/GLOBAL) */
                 isPurchasePersonnelRole && (
                 <Card title="Respond to Vendor Clarification (on behalf of vendors)" size="small" style={{ marginTop: 16 }}>
-                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                  {/* <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
-                    description={evalStatus.clarificationRemarks ? `Question: "${evalStatus.clarificationRemarks}"` : ''} />
+                    description={evalStatus.clarificationRemarks ? `Question: "${evalStatus.clarificationRemarks}"` : ''} /> */}
                   {quotationData.filter(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED').length === 0 && (
                     <Alert type="info" showIcon style={{ marginBottom: 8 }}
                       message="No vendors are pending clarification response." />
@@ -2727,6 +2726,10 @@ useEffect(() => {
                           ? <Tag color="green" style={{ marginLeft: 8 }}>Response Submitted</Tag>
                           : <Tag color="orange" style={{ marginLeft: 8 }}>Pending Response</Tag>}
                       </div>
+                      {q.remarks && (
+  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+    message={`Clarification Question: "${q.remarks}"`} />
+)}
                       {q.status === 'CHANGE_REQUESTED' && (
                         <>
                           <div style={{ marginBottom: 8 }}>
@@ -2796,11 +2799,11 @@ useEffect(() => {
 
             {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
             {isPendingVendorClarif &&
-              (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && (
+              (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && !(isPurchasePersonnelRole && isOpenGlobalGem) && (
                 <Card title="Vendor Clarification Response" size="small" style={{ marginTop: 16 }}>
-                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                  {/* <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message="Clarification Sent to Vendor"
-                    description={evalStatus.clarificationRemarks ? `"${evalStatus.clarificationRemarks}"` : ''} />
+                    description={evalStatus.clarificationRemarks ? `"${evalStatus.clarificationRemarks}"` : ''} /> */}
                   {/* Show per-vendor response status */}
                   {quotationData.filter(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED' || q.vendorResponse).map(q => (
                     <div key={q.vendorId} style={{ marginBottom: 8, padding: '8px 12px', background: q.status === 'CHANGE_REQUESTED' ? '#fff7e6' : '#f6ffed', border: `1px solid ${q.status === 'CHANGE_REQUESTED' ? '#ffd591' : '#b7eb8f'}`, borderRadius: 4 }}>
