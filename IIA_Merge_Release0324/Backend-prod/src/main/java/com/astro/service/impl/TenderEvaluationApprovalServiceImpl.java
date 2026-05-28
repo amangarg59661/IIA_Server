@@ -1352,8 +1352,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     && dto.getVendorId() != null && !dto.getVendorId().isBlank()) {
             // PP responding per-vendor on behalf of vendor (GEM/OPEN/GLOBAL mode)
             String ppVendorId = dto.getVendorId();
+            log.info("PP respond-clarification: tenderId={}, ppVendorId={}, historyId={}", tenderId, ppVendorId, dto.getClarificationHistoryId());
 
             // 1. Update clarification history FIRST — PK-based when available, filtered fallback otherwise
+            boolean historyMarkedResponded = false;
             try {
                 Optional<TenderClarificationHistory> historyRow;
                 if (dto.getClarificationHistoryId() != null) {
@@ -1367,27 +1369,37 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                                     && ppVendorId.equals(h.getTargetVendorId()))
                             .findFirst();
                 }
-                historyRow.ifPresent(h -> {
+                if (historyRow.isPresent()) {
+                    TenderClarificationHistory h = historyRow.get();
+                    log.info("PP respond: found history row id={}, target={}, vendorId={}", h.getId(), h.getClarificationTarget(), h.getTargetVendorId());
                     h.setResponseText(dto.getResponseText());
                     h.setResponseFileName(dto.getResponseFileName());
                     h.setRespondedByRole("PURCHASE_PERSONNEL");
                     h.setRespondedById(dto.getRespondedById());
                     h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
-                });
+                    clarificationHistoryRepository.saveAndFlush(h);
+                    historyMarkedResponded = true;
+                } else {
+                    log.warn("PP respond: NO history row found for tenderId={}, vendorId={}, historyId={}", tenderId, ppVendorId, dto.getClarificationHistoryId());
+                }
             } catch (Exception e) {
-                log.warn("Clarification history update failed: {}", e.getMessage());
+                log.warn("Clarification history update failed: {}", e.getMessage(), e);
             }
 
             // 2. Check remaining open PP-targeted questions for this vendor
-            List<TenderClarificationHistory> remainingOpen =
-                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, ppVendorId)
+            List<TenderClarificationHistory> allOpenForVendor =
+                    clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, ppVendorId);
+            log.info("PP respond: allOpenForVendor count={}, targets={}", allOpenForVendor.size(),
+                    allOpenForVendor.stream().map(TenderClarificationHistory::getClarificationTarget).collect(Collectors.toList()));
+            List<TenderClarificationHistory> remainingOpen = allOpenForVendor
                             .stream()
                             .filter(h -> "PURCHASE_PERSONNEL".equals(h.getClarificationTarget()))
                             .collect(Collectors.toList());
+            log.info("PP respond: remainingOpen (PP-targeted only) count={}", remainingOpen.size());
 
             // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
             if (remainingOpen.isEmpty()) {
+                log.info("PP respond: marking quotation CHANGE_RESPONDED for vendorId={}", ppVendorId);
                 quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
                         .ifPresent(q -> {
                             q.setVendorResponse(dto.getResponseText());
@@ -1399,6 +1411,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             quotationRepository.save(q);
                         });
             } else {
+                log.info("PP respond: keeping CHANGE_REQUESTED, still {} open PP questions", remainingOpen.size());
                 // Still has open questions — update response text on quotation but keep CHANGE_REQUESTED
                 quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, ppVendorId)
                         .ifPresent(q -> {
@@ -1621,8 +1634,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     @Transactional(readOnly = true)
     @Override
     public List<TenderClarificationHistory> getOpenClarifications(String tenderId, String vendorId) {
+        // Only return vendor/PP-targeted open questions (not INDENTOR/CHAIRMAN rows that happen to share the vendorId)
         return clarificationHistoryRepository
-                .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
+                .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId)
+                .stream()
+                .filter(h -> Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL").contains(h.getClarificationTarget()))
+                .collect(Collectors.toList());
     }
 
     // ─────────────────────────────────────────────────────────────────
