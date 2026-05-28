@@ -1657,7 +1657,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Decision must be ACCEPTED or REJECTED"));
         }
-        if ("CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus())) {
+        boolean wasChangeRequested = "CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus());
+        if (wasChangeRequested) {
             boolean canIndentorAct = VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR
                                 .equals(quotation.getNextRole());
             if ("ACCEPTED".equals(normalizedDecision) && !canIndentorAct ) {
@@ -1683,6 +1684,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         quotation.setUpdatedBy(String.valueOf(evaluatorUserId));
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
+
+        // Close pending clarifications when a CHANGE_REQUESTED vendor is rejected
+        if (wasChangeRequested && "REJECTED".equals(normalizedDecision)) {
+            closePendingClarificationsForVendor(tenderId, vendorId,
+                    "INDENTOR", evaluatorUserId, remarks, eval);
+        }
 
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -1716,7 +1723,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Decision must be ACCEPTED or REJECTED"));
         }
-        if ("CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus())) {
+        boolean wasChangeRequested = "CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus());
+        if (wasChangeRequested) {
             if ("ACCEPTED".equals(normalizedDecision)) {
                 throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                         "Cannot accept a vendor that is under seek clarification. "
@@ -1741,7 +1749,80 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
+        // Close pending clarifications when a CHANGE_REQUESTED vendor is rejected
+        if (wasChangeRequested && "REJECTED".equals(normalizedDecision)) {
+            closePendingClarificationsForVendor(tenderId, vendorId,
+                    "SPO", spoUserId, remarks, eval);
+        }
+
         return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // HELPER: Close pending clarifications when a vendor is rejected
+    // ─────────────────────────────────────────────────────────────────
+    /**
+     * Closes all open {@link TenderClarificationHistory} rows for a specific vendor,
+     * then runs the unified restore gate to potentially restore the evaluation status
+     * if no other clarifications remain open.
+     *
+     * <p>Called from {@code saveVendorIndentorDecision} and {@code saveVendorSpoDecision}
+     * when a CHANGE_REQUESTED vendor is rejected.</p>
+     */
+    private void closePendingClarificationsForVendor(String tenderId,
+                                                     String vendorId,
+                                                     String rejectingRole,
+                                                     Integer rejectingUserId,
+                                                     String remarks,
+                                                     TenderEvaluation eval) {
+        // 1. Close all open clarification history rows for the vendor
+        List<TenderClarificationHistory> rowsToClose =
+                clarificationHistoryRepository.findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(
+                        tenderId, vendorId);
+
+        for (TenderClarificationHistory h : rowsToClose) {
+            h.setRespondedAt(LocalDateTime.now());
+            h.setRespondedByRole(rejectingRole);
+            h.setRespondedById(String.valueOf(rejectingUserId));
+            h.setResponseText("Vendor rejected by " + rejectingRole + ": "
+                    + (remarks != null ? remarks : ""));
+        }
+        if (!rowsToClose.isEmpty()) {
+            clarificationHistoryRepository.saveAll(rowsToClose);
+        }
+
+        // 2. Unified restore gate — restore evaluation status if ALL
+        //    clarifications and CHANGE_REQUESTED quotations are resolved
+        boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                .stream()
+                .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
+        long openHistoryRows = clarificationHistoryRepository
+                .countByTenderIdAndRespondedAtIsNull(tenderId);
+
+        if (!quotationsResolved || openHistoryRows > 0) {
+            // Not fully resolved yet — just save timestamp, caller continues
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+            return;
+        }
+
+        // All resolved — restore the previous evaluation status
+        String restoreStatus = eval.getPreviousEvaluationStatus();
+        if (restoreStatus == null || restoreStatus.isBlank()) {
+            restoreStatus = "PENDING_APPROVAL";
+        }
+        eval.setEvaluationStatus(restoreStatus);
+
+        // Clear clarification fields
+        eval.setPreviousEvaluationStatus(null);
+        eval.setClarificationPendingFrom(null);
+        eval.setClarificationPendingFromId(null);
+        eval.setClarificationPendingFromName(null);
+        eval.setClarificationRequestedByRole(null);
+        eval.setClarificationRemarks(null);
+        eval.setClarificationTargetVendorId(null);
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
     }
 
     // ─────────────────────────────────────────────────────────────────
