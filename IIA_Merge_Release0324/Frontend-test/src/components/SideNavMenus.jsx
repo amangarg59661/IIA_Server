@@ -616,10 +616,49 @@ export const sidebarMenus = {
     ...commonMenu,
   ],
 
-  // Computer Committee Chairman role
-  "Computer Committee Chairman": [
-    ...commonMenu,
-  ],
+ 
+"Committee Member": [ ...commonMenu,
+ 
+  {
+    key: "4",
+    label: "Procurement",
+    items: [
+      {
+        key: "4.1",
+        label: "Tender",
+        items: [
+          {
+            key: "4.1.1",
+            icon: <FileTextOutlined />,
+            label: "Tender Evaluation",
+            path: "/procurement/tender/evaluation",
+          },
+        ],
+      },
+    ],
+  },
+],
 
+"Committee Chairman": [ ...commonMenu,
+  
+  {
+    key: "4",
+    label: "Procurement",
+    items: [
+      {
+        key: "4.1",
+        label: "Tender",
+        items: [
+          {
+            key: "4.1.1",
+            icon: <FileTextOutlined />,
+            label: "Tender Evaluation",
+            path: "/procurement/tender/evaluation",
+          },
+        ],
+      },
+    ],
+  },
+],
   default: [...commonMenu],
 };
