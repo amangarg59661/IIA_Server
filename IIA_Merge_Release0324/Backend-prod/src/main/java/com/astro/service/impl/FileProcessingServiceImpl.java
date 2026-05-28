@@ -246,5 +246,24 @@ public Resource downloadFile(String fileType, String fileName) {
         return isBase64Encoded(fileName) ? decodeBase64(fileName) : fileName;
     }
 
-
+@Override
+public void deleteFile(String fileType, String fileName) {
+    if (!FILE_TYPE_LIST.contains(fileType)) {
+        throw new FilesNotFoundException(new ErrorDetails(AppConstant.INVALID_FILE_TYPE,
+                AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION, "Invalid File type."));
+    }
+    try {
+        Path path = Path.of(basePath + fileType + "//" + fileName);
+        boolean deleted = Files.deleteIfExists(path);
+        if (deleted) {
+            log.info("Deleted file: {} of type: {}", fileName, fileType);
+        } else {
+            log.warn("File not found for deletion: {} of type: {}", fileName, fileType);
+        }
+    } catch (IOException e) {
+        log.warn("Could not delete file: {} of type: {}", fileName, fileType);
+        // swallow — don't break frontend flow
+    }
+}
 }

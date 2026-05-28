@@ -1,6 +1,6 @@
 package com.astro.controller;
 
-
+import org.springframework.web.bind.annotation.DeleteMapping;
 import com.astro.service.FileProcessingService;
 import com.astro.util.ResponseBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +64,12 @@ public class FileProcessingController {
         map.put("fileName", fileName);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(map), HttpStatus.CREATED);
     }
+ 
+@DeleteMapping("/delete")
+public ResponseEntity<?> deleteFile(@RequestParam String fileType, @RequestParam String fileName) {
+    fileProcessingService.deleteFile(fileType, fileName);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
+}
 /*
 
     @GetMapping(value = "/view/{fileType}/{fileName}")

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Table, Input, Button, Spin, message } from "antd";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -28,7 +28,7 @@ const TenderEvaluatorGem = () => {
   const [savingAll, setSavingAll] = useState(false);
   const [allVendorVisible, setAllVendorVisible] = useState(false);
   const [tenderInitiated, setTenderInitiated] = useState(false);
-
+  const uploadAbortRefs = useRef({});
 
   // Fetch approved tenders
   useEffect(() => {
@@ -92,23 +92,106 @@ const TenderEvaluatorGem = () => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleFileChange = (vendorName, docType, fileData) => {
-    setVendorList((prevList) =>
-      prevList.map((vendor) => {
-        if (vendor.vendorName === vendorName) {
-          if (fileData === null) {
-            return { ...vendor, [docType]: null };
-          }
-          const payload = {
-            file: fileData.file.originFileObj,
-            originalName: fileData.file.name,
-          };
-          return { ...vendor, [docType]: payload };
-        }
-        return vendor;
-      })
+  // const handleFileChange = (vendorName, docType, fileData) => {
+  //   setVendorList((prevList) =>
+  //     prevList.map((vendor) => {
+  //       if (vendor.vendorName === vendorName) {
+  //         if (fileData === null) {
+  //           return { ...vendor, [docType]: null };
+  //         }
+  //         const payload = {
+  //           file: fileData.file.originFileObj,
+  //           originalName: fileData.file.name,
+  //         };
+  //         return { ...vendor, [docType]: payload };
+  //       }
+  //       return vendor;
+  //     })
+  //   );
+  // };
+
+
+// NEW lines 95–111
+const handleFileChange = async (vendorName, docType, fileData) => {
+  const abortKey = `${vendorName}_${docType}`;
+
+  if (fileData === null) {
+    // abort in-flight upload if running
+    uploadAbortRefs.current[abortKey]?.abort();
+    delete uploadAbortRefs.current[abortKey];
+
+    // delete already-uploaded file from server
+    const existing = vendorList.find((v) => v.vendorName === vendorName);
+    const uploadedName = existing?.[`${docType}UploadedName`];
+    if (uploadedName) {
+      axios.delete(`/file/delete`, {
+        params: { fileName: uploadedName, fileType: "Tender" },
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch((err) => console.warn("Cleanup failed:", uploadedName, err));
+    }
+
+    setVendorList((prev) =>
+      prev.map((v) =>
+        v.vendorName === vendorName
+          ? { ...v, [docType]: null, [`${docType}UploadedName`]: null, [`${docType}Uploading`]: false }
+          : v
+      )
     );
+    return;
+  }
+
+  const payload = {
+    file: fileData.file.originFileObj,
+    originalName: fileData.file.name,
   };
+
+  // show file selected + uploading spinner
+  setVendorList((prev) =>
+    prev.map((v) =>
+      v.vendorName === vendorName
+        ? { ...v, [docType]: payload, [`${docType}UploadedName`]: null, [`${docType}Uploading`]: true }
+        : v
+    )
+  );
+
+  // eager upload
+  const controller = new AbortController();
+  uploadAbortRefs.current[abortKey] = controller;
+
+  try {
+    const fd = new FormData();
+    fd.append("file", payload.file);
+    const resp = await axios.post("/file/upload?fileType=Tender", fd, {
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const uploadedName = resp.data.responseData.fileName;
+    delete uploadAbortRefs.current[abortKey];
+
+    setVendorList((prev) =>
+      prev.map((v) =>
+        v.vendorName === vendorName
+          ? { ...v, [`${docType}UploadedName`]: uploadedName, [`${docType}Uploading`]: false }
+          : v
+      )
+    );
+  } catch (err) {
+    if (axios.isCancel(err) || err.name === "CanceledError") return; // aborted = user deselected, ignore
+    console.error(`Upload failed — Vendor: "${vendorName}" | File: "${docType}" (${payload.originalName})`, err);
+    message.error(`Failed to upload ${docType} for ${vendorName} (${payload.originalName})`);
+    setVendorList((prev) =>
+      prev.map((v) =>
+        v.vendorName === vendorName
+          ? { ...v, [docType]: null, [`${docType}UploadedName`]: null, [`${docType}Uploading`]: false }
+          : v
+      )
+    );
+  }
+};
 
   const handleInputChange = (vendorId, field, value) => {
     setVendorList((prev) =>
@@ -500,78 +583,77 @@ const handleSubmitAll = async () => {
     return;
   }
 
-  const incomplete = newRows.filter(
-    (v) => !v.technicalBidFile || !v.priceBidFile
-  );
-  if (incomplete.length > 0) {
-    message.error(
-      `Please upload both files for: ${incomplete
-        .map((v) => v.vendorName)
-        .join(", ")}`
-    );
-    return;
-  }
+  // const incomplete = newRows.filter(
+  //   (v) => !v.technicalBidFile || !v.priceBidFile
+  // );
+  // if (incomplete.length > 0) {
+  //   message.error(
+  //     `Please upload both files for: ${incomplete
+  //       .map((v) => v.vendorName)
+  //       .join(", ")}`
+  //   );
+  //   return;
+  // }
 
+
+// NEW
+const stillUploading = newRows.filter(
+  (v) => v.technicalBidFileUploading || v.priceBidFileUploading
+);
+if (stillUploading.length > 0) {
+  message.warning(`Still uploading, please wait: ${stillUploading.map((v) => v.vendorName).join(", ")}`);
+  return;
+}
+const incomplete = newRows.filter(
+  (v) => !v.technicalBidFileUploadedName || !v.priceBidFileUploadedName
+);
+if (incomplete.length > 0) {
+  message.error(`Files missing or upload failed for: ${incomplete.map((v) => v.vendorName).join(", ")}`);
+  return;
+}
   setSavingAll(true);
   try {
-    // const upload = async (fileObj) => {
-    //   const fd = new FormData();
-    //   fd.append("file", fileObj.file);
-    //   const resp = await axios.post("/file/upload?fileType=Tender", fd, {
-    //     headers: {
-    //       "Content-Type": "multipart/form-data",
-    //       Accept: "application/json",
-    //     },
-    //   });
-    //   return resp.data.responseData.fileName;
-    // };
+  const uploadResults = newRows.map((row) => ({
+    vendorName: row.vendorName,
+    quotationFileName: row.technicalBidFileUploadedName,
+    priceBidFileName: row.priceBidFileUploadedName,
+    fileType: "Tender",
+    type: "GEM",
+  }));
+//   try {
+// const upload = async (fileObj, vendorName, fileLabel) => {
+//   const fd = new FormData();
+//   fd.append("file", fileObj.file);
+//   try {
+//     const resp = await axios.post("/file/upload?fileType=Tender", fd, {
+//       headers: {
+//         "Content-Type": "multipart/form-data",
+//         Accept: "application/json",
+//       },
+//     });
+//     return resp.data.responseData.fileName;
+//   } catch (err) {
+//     const enriched = new Error(
+//       `Upload failed — Vendor: "${vendorName}" | File: "${fileLabel}" (${fileObj.originalName})`
+//     );
+//     enriched.originalError = err;
+//     throw enriched;
+//   }
+// };
 
-    // const uploadResults = await Promise.all(
-    //   newRows.map(async (row) => {
-    //     const techFileName = await upload(row.technicalBidFile);
-    //     const priceFileName = await upload(row.priceBidFile);
-    //     return {
-    //       vendorName: row.vendorName,
-    //       quotationFileName: techFileName,
-    //       priceBidFileName: priceFileName,
-    //       fileType: "Tender",
-    //       type: "GEM",
-    //     };
-    //   })
-    // );
-const upload = async (fileObj, vendorName, fileLabel) => {
-  const fd = new FormData();
-  fd.append("file", fileObj.file);
-  try {
-    const resp = await axios.post("/file/upload?fileType=Tender", fd, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        Accept: "application/json",
-      },
-    });
-    return resp.data.responseData.fileName;
-  } catch (err) {
-    const enriched = new Error(
-      `Upload failed — Vendor: "${vendorName}" | File: "${fileLabel}" (${fileObj.originalName})`
-    );
-    enriched.originalError = err;
-    throw enriched;
-  }
-};
-
-const uploadResults = await Promise.all(
-  newRows.map(async (row) => {
-    const techFileName = await upload(row.technicalBidFile, row.vendorName, "Technical Bid");
-    const priceFileName = await upload(row.priceBidFile, row.vendorName, "Price Bid");
-    return {
-      vendorName: row.vendorName,
-      quotationFileName: techFileName,
-      priceBidFileName: priceFileName,
-      fileType: "Tender",
-      type: "GEM",
-    };
-  })
-);
+// const uploadResults = await Promise.all(
+//   newRows.map(async (row) => {
+//     const techFileName = await upload(row.technicalBidFile, row.vendorName, "Technical Bid");
+//     const priceFileName = await upload(row.priceBidFile, row.vendorName, "Price Bid");
+//     return {
+//       vendorName: row.vendorName,
+//       quotationFileName: techFileName,
+//       priceBidFileName: priceFileName,
+//       fileType: "Tender",
+//       type: "GEM",
+//     };
+//   })
+// );
     const response = await axios.post("/api/vendor-quotation/bulk", {
       tenderId: formData.tenderId,
       quotations: uploadResults,
