@@ -30,12 +30,14 @@
             { label: "Global Tender", value: "GLOBAL_TENDER" },
             { label: "Limited Tender", value: "LIMITED_TENDER" },
             { label: "Proprietary Purchase", value: "PROPRIETARY" },
-            { label: "BRAND PAC", value: "BRAND_PAC" },
+            // { label: "BRAND PAC", value: "BRAND_PAC" },
             { label: "GEM Government e-Marketplace", value: "GEM" },
         ];
     
         // Modes that do NOT allow vendor selection
-        const NO_VENDOR_MODES = ["OPEN_TENDER", "GLOBAL_TENDER", "BRAND_PAC", "GEM"];
+        const NO_VENDOR_MODES = ["OPEN_TENDER", "GLOBAL_TENDER"
+            // , "BRAND_PAC"
+            , "GEM"];
         // Modes that require vendor selection
         const VENDOR_REQUIRED_MODES = ["LIMITED_TENDER", "PROPRIETARY"];
     
@@ -1342,7 +1344,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             name: "brandPac",
                             type: "checkbox",
                             label: "Is a Brand PAC?",
-                            required: selectedModeOfProcurement === "Brand PAC",
+                            // required: selectedModeOfProcurement === "Brand PAC",
                             disabled: !formData.isEditable
                         },
                         ...(formData.brandPac ? [{
@@ -1418,20 +1420,20 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                 },
             ]
     
-            useEffect(() => {
-                if (selectedModeOfProcurement === "Brand PAC") {
-                    setFormData({
-                        ...formData,
-                        brandPac: true
-                    })
-                }
-                else {
-                    setFormData({
-                        ...formData,
-                        brandPac: false
-                    })
-                }
-            }, [selectedModeOfProcurement])
+            // useEffect(() => {
+            //     if (selectedModeOfProcurement === "Brand PAC") {
+            //         setFormData({
+            //             ...formData,
+            //             brandPac: true
+            //         })
+            //     }
+            //     else {
+            //         setFormData({
+            //             ...formData,
+            //             brandPac: false
+            //         })
+            //     }
+            // }, [selectedModeOfProcurement])
     
             const replaceMaterial = (prevMaterial, newMaterial) => {
                 const prevMtlrDtl = materialMaster.find((item) => item.materialCode === prevMaterial.materialCode)
