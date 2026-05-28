@@ -30,4 +30,7 @@ public interface TechnoFinancialCommitteeService {
 
     /** Deactivate Committee Member role for nominated members when PO is generated. */
     void deactivateNominatedMemberRoles(String tenderId);
+
+    /** Returns all active users NOT already assigned to this tender's committee. */
+    List<Map<String, Object>> getEligibleExperts(String tenderId);
 }

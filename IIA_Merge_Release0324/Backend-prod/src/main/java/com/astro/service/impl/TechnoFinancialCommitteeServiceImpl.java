@@ -218,8 +218,11 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
         boolean roleAssigned = ensureCommitteeMemberRole(dto.getUserId());
 
         // 7. Create TenderCommitteeDecision row
+        String resolvedExpertName = (dto.getExpertName() != null && !dto.getExpertName().isBlank())
+                ? dto.getExpertName()
+                : user.getUserName();
         String displayName = dto.isExpert()
-                ? user.getUserName() + " (Expert)"
+                ? resolvedExpertName + " (Expert)"
                 : user.getUserName();
 
         TenderCommitteeDecision decision = new TenderCommitteeDecision();
@@ -242,7 +245,7 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                         return r;
                     });
             chairRow.setExpertUserId(dto.getUserId());
-            chairRow.setExpertName(user.getUserName());
+            chairRow.setExpertName(resolvedExpertName);
             chairRow.setExpertAssignedDate(LocalDateTime.now());
             chairRow.setUpdatedDate(LocalDateTime.now());
             committeeDecisionRepository.save(chairRow);
@@ -335,6 +338,26 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                         userId, tenderId);
             }
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> getEligibleExperts(String tenderId) {
+        Set<Integer> committeeUserIds = committeeDecisionRepository.findByTenderId(tenderId)
+                .stream()
+                .map(TenderCommitteeDecision::getCommitteeUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        return userMasterRepository.findAll().stream()
+                .filter(u -> u.getUserId() != null && !committeeUserIds.contains(u.getUserId()))
+                .map(u -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("userId", u.getUserId());
+                    m.put("userName", u.getUserName());
+                    m.put("roleName", u.getRoleName());
+                    return m;
+                })
+                .collect(Collectors.toList());
     }
 
     private TechnoFinancialCommitteeDto toDto(TechnoFinancialCommittee e) {

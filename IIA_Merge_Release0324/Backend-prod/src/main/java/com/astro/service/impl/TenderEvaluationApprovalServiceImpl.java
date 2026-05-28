@@ -179,6 +179,9 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
         String indentCat = eval.getIndentCategory();
 
+        boolean needsChairmanReview = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat)
+                || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat);
+
         // Set bid visibility and initial status
         if ("SINGLE_BID".equalsIgnoreCase(bidType)) {
             // Single bid: all vendors go directly to financial evaluation
@@ -189,7 +192,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setTechnicalStatus("APPROVED");
             });
             quotationRepository.saveAll(quotations);
-            eval.setEvaluationStatus("PENDING_FINANCIAL");
+            eval.setEvaluationStatus(needsChairmanReview ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_FINANCIAL");
         } else if ("MULTIPLE_INDENT".equals(indentCat)) {
             // Double Bid + Multiple Indent (Case 4): technical phase first, PP acts as evaluator.
             List<VendorQuotationAgainstTender> quotations =
@@ -201,7 +204,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setFinancialBidVisible(false);
             });
             quotationRepository.saveAll(quotations);
-            eval.setEvaluationStatus("PENDING_TECHNICAL");
+            eval.setEvaluationStatus(needsChairmanReview ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_TECHNICAL");
         } else {
             // Double Bid + Single Indent (Case 2): technical phase first
             List<VendorQuotationAgainstTender> doubleQuotations =
@@ -213,7 +216,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setFinancialBidVisible(false);
             });
             quotationRepository.saveAll(doubleQuotations);
-            eval.setEvaluationStatus("PENDING_TECHNICAL");
+            eval.setEvaluationStatus(needsChairmanReview ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_TECHNICAL");
         }
 
         eval.setUpdatedDate(LocalDateTime.now());
@@ -548,6 +551,49 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     //                                                String expertName, Integer chairmanUserId) { ... }
 
     // ─────────────────────────────────────────────────────────────────
+    // 7b. CHAIRMAN CONFIRMS COMMITTEE (Above 10L — STEC-I / STEC-II)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto chairmanConfirmCommittee(String tenderId, Integer chairmanUserId) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if (!"PENDING_CHAIRMAN_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Committee confirmation can only be done in PENDING_CHAIRMAN_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
+        }
+
+        String amtCat = eval.getAmountCategory();
+        String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
+
+        TechnoFinancialCommittee chairman = committeeRepository
+                .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
+                        "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
+
+        if (!chairman.getUserId().equals(chairmanUserId)) {
+            throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                    "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
+                    + ") can confirm committee composition."));
+        }
+
+        // Advance to next status based on bid type
+        String nextStatus = "SINGLE_BID".equalsIgnoreCase(eval.getBidType())
+                ? "PENDING_FINANCIAL"
+                : "PENDING_TECHNICAL";
+        eval.setEvaluationStatus(nextStatus);
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        log.info("Chairman {} confirmed committee for tender {}. Status → {}",
+                chairmanUserId, tenderId, nextStatus);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // 8a. COMMITTEE VENDOR DECISION (Above 10L Double Bid)
     // ─────────────────────────────────────────────────────────────────
     @Transactional
@@ -559,7 +605,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         TenderRequest tender = requireTender(tenderId);
 
         Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
-                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION");
+                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION",
+                "PENDING_CHAIRMAN_REVIEW");
         if (lockedStatuses.contains(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
                     "Committee vendor decisions are locked. Current status: "
@@ -1592,7 +1639,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         TenderRequest tender = requireTender(tenderId);
 
         Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
-                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION");
+                "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION",
+                "PENDING_CHAIRMAN_REVIEW");
         if (lockedStatuses.contains(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
                     "Evaluator decisions are locked after Confirm Evaluation. Current status: "

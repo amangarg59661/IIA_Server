@@ -79,6 +79,8 @@ const TenderEvaluator = () => {
   const [expertModal, setExpertModal] = useState(false);
   const [expertUserId, setExpertUserId] = useState('');
   const [expertName, setExpertName] = useState('');
+  const [eligibleExperts, setEligibleExperts] = useState([]);
+  const [eligibleExpertsLoading, setEligibleExpertsLoading] = useState(false);
 
   // Committee vote modal
   const [voteModal, setVoteModal] = useState(false);
@@ -665,19 +667,59 @@ const handleCastVote = async () => {
   }
 };
 
-const handleAssignExpertSubmit = async () => {
-  if (!expertUserId || !expertName) return message.warning('Enter expert details.');
+const fetchEligibleExperts = async () => {
+  if (!tenderId) return;
+  setEligibleExpertsLoading(true);
   try {
-    await axios.post('/api/tender-evaluation/committee/expert', {
-      expertUserId: parseInt(expertUserId),
+    const res = await axios.get('/api/admin/techno-financial-committee/eligible-experts', { params: { tenderId } });
+    setEligibleExperts(res.data?.data || []);
+  } catch (e) {
+    message.error('Failed to load eligible experts.');
+  } finally {
+    setEligibleExpertsLoading(false);
+  }
+};
+
+const openExpertModal = () => {
+  setExpertUserId('');
+  setExpertName('');
+  fetchEligibleExperts();
+  setExpertModal(true);
+};
+
+const handleExpertSelect = (selectedUserId) => {
+  setExpertUserId(selectedUserId);
+  const selected = eligibleExperts.find(e => e.userId === selectedUserId);
+  setExpertName(selected?.userName || '');
+};
+
+const handleAssignExpertSubmit = async () => {
+  if (!expertUserId) return message.warning('Select an expert.');
+  try {
+    await axios.post('/api/admin/techno-financial-committee/nominate', {
+      tenderId,
+      userId: expertUserId,
+      nominatedBy: userId,
+      expert: true,
       expertName,
-      chairmanUserId: userId,
-    }, { params: { tenderId } });
+    });
     message.success('Expert assigned.');
     setExpertModal(false);
     await fetchEvalStatus(tenderId);
   } catch (e) {
-    message.error('Failed to assign expert.');
+    message.error(e.response?.data?.message || 'Failed to assign expert.');
+  }
+};
+
+const handleChairmanConfirmCommittee = async () => {
+  try {
+    const res = await axios.post('/api/tender-evaluation/chairman/confirm-committee', null, {
+      params: { tenderId, chairmanUserId: userId },
+    });
+    message.success('Committee confirmed. Evaluation proceeding.');
+    await fetchEvalStatus(tenderId);
+  } catch (e) {
+    message.error(e.response?.data?.message || 'Failed to confirm committee.');
   }
 };
 
@@ -2178,6 +2220,7 @@ useEffect(() => {
     PENDING_SPO_APPROVAL: 'geekblue',
     PENDING_DIRECTOR_APPROVAL: 'volcano',
     PENDING_COMMITTEE_FORMATION: 'magenta',
+    PENDING_CHAIRMAN_REVIEW: 'magenta',
     PENDING_VENDOR_CLARIFICATION: 'gold',
     PENDING_INDENTOR_CLARIFICATION: 'lime',
     PENDING_MEMBER_REVOTE: 'cyan',
@@ -2322,6 +2365,8 @@ useEffect(() => {
                 <Tag color={evalStatusColor[evalStatus.evaluationStatus] || 'default'} style={{ fontSize: 13 }}>
                   Status: {evalStatus.evaluationStatus === 'PENDING_FINANCIAL' && evalStatus.bidType === 'SINGLE_BID'
                     ? 'PENDING EVALUATION'
+                    : evalStatus.evaluationStatus === 'PENDING_CHAIRMAN_REVIEW'
+                    ? 'PENDING CHAIRMAN REVIEW'
                     : evalStatus.evaluationStatus?.replace(/_/g, ' ')}
                 </Tag>
                 <Tag color="cyan">{amountCategoryLabel}</Tag>
@@ -2879,6 +2924,37 @@ useEffect(() => {
                 </Card>
               )}
 
+            {/* ── Above 10L: Waiting for Chairman (non-chairman info) ── */}
+            {isAbove10L && !isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_REVIEW' && (
+              <Alert type="info" showIcon style={{ marginTop: 16 }}
+                message="Waiting for Committee Chairman"
+                description="The Chairman is reviewing the committee composition and assigning an expert. Please wait." />
+            )}
+
+            {/* ── Above 10L: Chairman Reviews Committee (PENDING_CHAIRMAN_REVIEW) ── */}
+            {isAbove10L && isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_REVIEW' && (
+              <Card title={`${committeeLabel || 'Committee'} — Chairman: Review Committee & Add Expert`} size="small" style={{ marginTop: 16 }}>
+                <Alert type="info" showIcon style={{ marginBottom: 12 }}
+                  message="Review the committee members below (read-only). You may add an expert, then confirm to proceed." />
+                {evalStatus.committeeVotes && (
+                  <Table size="small" dataSource={evalStatus.committeeVotes} rowKey="committeeUserId"
+                    pagination={false} style={{ marginBottom: 12 }}
+                    columns={[
+                      { title: 'Member', dataIndex: 'committeeMemberName' },
+                      { title: 'Role', dataIndex: 'role', render: (r) => r || 'Member' },
+                    ]} />
+                )}
+                <Space wrap>
+                  <Button onClick={openExpertModal}>
+                    {evalStatus.expertName ? 'Change Expert' : 'Add Expert'}
+                  </Button>
+                  <Button type="primary" onClick={handleChairmanConfirmCommittee}>
+                    Confirm Committee &amp; Proceed
+                  </Button>
+                </Space>
+              </Card>
+            )}
+
             {/* ── Above 10L: Committee Member Vote ──
                 PENDING_APPROVAL: single-bid committee vote OR financial phase vote for double-bid.
                 PENDING_TECHNICAL: first (technical) committee vote for double-bid cases (6/8/10). */}
@@ -2938,7 +3014,7 @@ useEffect(() => {
                   />
                 )}
                 <Space wrap>
-                  <Button onClick={() => setExpertModal(true)}>
+                  <Button onClick={openExpertModal}>
                     {evalStatus.expertName ? 'Change Expert' : 'Assign Expert'}
                   </Button>
                   <Button type="primary"
@@ -3113,12 +3189,25 @@ useEffect(() => {
         okText="Assign"
       >
         <div style={{ marginBottom: 12 }}>
-          <Text strong>Expert User ID:</Text>
-          <Input value={expertUserId} onChange={e => setExpertUserId(e.target.value)} style={{ marginTop: 4 }} placeholder="Enter user ID" />
-        </div>
-        <div>
-          <Text strong>Expert Name:</Text>
-          <Input value={expertName} onChange={e => setExpertName(e.target.value)} style={{ marginTop: 4 }} placeholder="Enter expert name" />
+          <Text strong>Select Expert:</Text>
+          <Select
+            showSearch
+            loading={eligibleExpertsLoading}
+            placeholder="Search by name or user ID"
+            value={expertUserId || undefined}
+            onChange={handleExpertSelect}
+            style={{ width: '100%', marginTop: 4 }}
+            filterOption={(input, option) => {
+              const label = option?.children?.toString().toLowerCase() || '';
+              return label.includes(input.toLowerCase());
+            }}
+          >
+            {eligibleExperts.map(e => (
+              <Option key={e.userId} value={e.userId}>
+                {e.userName} ({e.userId}){e.roleName ? ` — ${e.roleName}` : ''}
+              </Option>
+            ))}
+          </Select>
         </div>
       </Modal>
 

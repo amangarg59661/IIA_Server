@@ -8,4 +8,5 @@ public class CommitteeNominationDto {
     private Integer userId;
     private Integer nominatedBy;
     private boolean expert;
+    private String expertName;
 }

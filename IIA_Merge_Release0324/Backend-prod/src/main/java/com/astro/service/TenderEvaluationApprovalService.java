@@ -73,6 +73,13 @@ public interface TenderEvaluationApprovalService {
     //                                        String expertName, Integer chairmanUserId);
 
     /**
+     * Above 10L (STEC-I/STEC-II): Chairman reviews committee composition, optionally adds expert,
+     * then confirms. Advances status from PENDING_CHAIRMAN_REVIEW → PENDING_FINANCIAL (single bid)
+     * or PENDING_TECHNICAL (double bid).
+     */
+    TenderEvaluationStatusDto chairmanConfirmCommittee(String tenderId, Integer chairmanUserId);
+
+    /**
      * Above 10L double bid: committee member Accept/Reject per vendor.
      */
     TenderEvaluationStatusDto committeeVendorDecision(String tenderId, String vendorId,

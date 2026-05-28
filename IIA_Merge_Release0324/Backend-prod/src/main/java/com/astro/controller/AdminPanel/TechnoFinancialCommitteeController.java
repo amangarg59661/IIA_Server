@@ -64,6 +64,12 @@ public class TechnoFinancialCommitteeController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse("Member deactivated successfully"), HttpStatus.OK);
     }
 
+    @GetMapping("/eligible-experts")
+    public ResponseEntity<Object> getEligibleExperts(@RequestParam String tenderId) {
+        List<Map<String, Object>> experts = committeeService.getEligibleExperts(tenderId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(experts), HttpStatus.OK);
+    }
+
     @PostMapping("/nominate")
     public ResponseEntity<Object> nominateMember(@RequestBody CommitteeNominationDto dto) {
         Map<String, Object> result = committeeService.nominateMember(dto);

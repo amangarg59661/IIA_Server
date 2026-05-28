@@ -168,6 +168,15 @@ public class TenderEvaluationController {
     //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     // }
 
+    @PostMapping("/chairman/confirm-committee")
+    public ResponseEntity<Object> chairmanConfirmCommittee(
+            @RequestParam String tenderId,
+            @RequestParam Integer chairmanUserId) {
+        log.info("Chairman confirms committee tenderId={} chairmanUserId={}", tenderId, chairmanUserId);
+        TenderEvaluationStatusDto status = approvalService.chairmanConfirmCommittee(tenderId, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     @PostMapping("/committee/chairman-decision")
     public ResponseEntity<Object> chairmanDecide(
             @RequestParam String tenderId,
