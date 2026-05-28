@@ -514,32 +514,64 @@ const handleSubmitAll = async () => {
 
   setSavingAll(true);
   try {
-    const upload = async (fileObj) => {
-      const fd = new FormData();
-      fd.append("file", fileObj.file);
-      const resp = await axios.post("/file/upload?fileType=Tender", fd, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Accept: "application/json",
-        },
-      });
-      return resp.data.responseData.fileName;
-    };
+    // const upload = async (fileObj) => {
+    //   const fd = new FormData();
+    //   fd.append("file", fileObj.file);
+    //   const resp = await axios.post("/file/upload?fileType=Tender", fd, {
+    //     headers: {
+    //       "Content-Type": "multipart/form-data",
+    //       Accept: "application/json",
+    //     },
+    //   });
+    //   return resp.data.responseData.fileName;
+    // };
 
-    const uploadResults = await Promise.all(
-      newRows.map(async (row) => {
-        const techFileName = await upload(row.technicalBidFile);
-        const priceFileName = await upload(row.priceBidFile);
-        return {
-          vendorName: row.vendorName,
-          quotationFileName: techFileName,
-          priceBidFileName: priceFileName,
-          fileType: "Tender",
-          type: "GEM",
-        };
-      })
+    // const uploadResults = await Promise.all(
+    //   newRows.map(async (row) => {
+    //     const techFileName = await upload(row.technicalBidFile);
+    //     const priceFileName = await upload(row.priceBidFile);
+    //     return {
+    //       vendorName: row.vendorName,
+    //       quotationFileName: techFileName,
+    //       priceBidFileName: priceFileName,
+    //       fileType: "Tender",
+    //       type: "GEM",
+    //     };
+    //   })
+    // );
+const upload = async (fileObj, vendorName, fileLabel) => {
+  const fd = new FormData();
+  fd.append("file", fileObj.file);
+  try {
+    const resp = await axios.post("/file/upload?fileType=Tender", fd, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        Accept: "application/json",
+      },
+    });
+    return resp.data.responseData.fileName;
+  } catch (err) {
+    const enriched = new Error(
+      `Upload failed — Vendor: "${vendorName}" | File: "${fileLabel}" (${fileObj.originalName})`
     );
+    enriched.originalError = err;
+    throw enriched;
+  }
+};
 
+const uploadResults = await Promise.all(
+  newRows.map(async (row) => {
+    const techFileName = await upload(row.technicalBidFile, row.vendorName, "Technical Bid");
+    const priceFileName = await upload(row.priceBidFile, row.vendorName, "Price Bid");
+    return {
+      vendorName: row.vendorName,
+      quotationFileName: techFileName,
+      priceBidFileName: priceFileName,
+      fileType: "Tender",
+      type: "GEM",
+    };
+  })
+);
     const response = await axios.post("/api/vendor-quotation/bulk", {
       tenderId: formData.tenderId,
       quotations: uploadResults,
@@ -553,10 +585,14 @@ const handleSubmitAll = async () => {
     } else {
       throw new Error("Bulk save failed");
     }
-  } catch (error) {
-    console.error("Bulk submission error:", error);
-    message.error("An error occurred while submitting quotations");
-  } finally {
+    } catch (error) {
+  console.error("Bulk submission error:", error.message, error.originalError || "");
+  message.error(error.message || "An error occurred while submitting quotations");
+} finally{
+  // } catch (error) {
+  //   console.error("Bulk submission error:", error);
+  //   message.error("An error occurred while submitting quotations");
+  // } finally {
     setSavingAll(false);
   }
 };
