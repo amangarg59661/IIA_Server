@@ -1453,6 +1453,14 @@ if (isSpoRole) {
     title: 'Seek Clarification',
     key: 'seekClarification',
     render: (_, record) => {
+      // ── PP visibility gate ──
+  if (isPurchasePersonnelRole && (
+    isOpenGlobalGem ||
+    (evalStatus?.evaluationStatus &&
+      !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
+      !(isMultipleIndentEval && isBelow10L))
+  )) return null;
+
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && record.indentorStatus === 'REJECTED';
       const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
@@ -1664,6 +1672,13 @@ const doubleBidTechColumns = [
           title: 'Seek Clarification',
           key: 'techClarif',
           render: (_, record) => {
+            // ── PP visibility gate ──
+  if (isPurchasePersonnelRole && (
+    isOpenGlobalGem ||
+    (evalStatus?.evaluationStatus &&
+      !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
+      !(isMultipleIndentEval && isBelow10L))
+  )) return null;
             const st = record.indentorStatus;
             const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
             return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
@@ -1813,6 +1828,13 @@ const doubleBidFinColumns = [
           title: 'Seek Clarification',
           key: 'finClarif',
           render: (_, record) => {
+            // ── PP visibility gate ──
+  if (isPurchasePersonnelRole && (
+    isOpenGlobalGem ||
+    (evalStatus?.evaluationStatus &&
+      !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
+      !(isMultipleIndentEval && isBelow10L))
+  )) return null;
             const st = record.financialIndentorStatus;
             const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
             return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
@@ -2465,9 +2487,21 @@ useEffect(() => {
             )}
 
             {/* ── Seek Clarification to All Vendors (PP / Indentor) ── */}
-            {evalStatus?.evaluationStatus && !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
+            {/* {evalStatus?.evaluationStatus && !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
               (isPurchasePersonnelRole || isIndentCreatorRole) &&
-              quotationData.length > 0 && (
+              quotationData.length > 0 && ( */}
+              {((isPurchasePersonnelRole && !isOpenGlobalGem && (
+    !evalStatus?.evaluationStatus ||
+    (evalStatus?.evaluationStatus &&
+      !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
+      isMultipleIndentEval &&
+      isBelow10L)
+  )) ||
+  (isIndentCreatorRole &&
+    evalStatus?.evaluationStatus &&
+    !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus)
+  )) &&
+  quotationData.length > 0 && (
                 <div style={{ marginTop: 8, marginBottom: 4 }}>
                   <Button
                     style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
