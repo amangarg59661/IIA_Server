@@ -1044,7 +1044,7 @@ if (isSpoRole) {
             if (indentorStatus === 'CHANGE_REQUESTED') return 'Pending Clarification';
             if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return (
               <Popover
-                content={record.remarks ? <span>{record.remarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
+                content={record.indentorRemarks ? <span>{record.indentorRemarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
                 title="Rejection Reason"
               >
                 <span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span>
@@ -1874,7 +1874,7 @@ const spoTechColumns = [
       if (indentorStatus === 'CHANGE_REQUESTED') return 'Pending Clarification';
       if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return (
         <Popover
-          content={record.remarks ? <span>{record.remarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
+          content={record.indentorRemarks ? <span>{record.indentorRemarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
           title="Rejection Reason"
         >
           <span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span>

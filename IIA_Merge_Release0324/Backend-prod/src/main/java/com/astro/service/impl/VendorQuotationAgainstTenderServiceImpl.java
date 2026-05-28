@@ -272,6 +272,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                    dto.setRemarks(vq.getRemarks());
                    dto.setStatus(vq.getStatus()); //  SUBMITTED, CHANGE_REQUESTED, Rejected
                    dto.setIndentorStatus(vq.getIndentorStatus());
+                   dto.setIndentorRemarks(vq.getIndentorRemarks());
                    dto.setSopStatus(vq.getSpoStatus());
                    dto.setPriceBidFileName(vq.getPriceBidFileName());
                    dto.setClarificationFileName(vq.getClarificationFileName());
