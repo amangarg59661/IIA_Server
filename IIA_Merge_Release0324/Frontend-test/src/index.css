@@ -43,7 +43,7 @@ label{
 }
 
 .ant-menu-item-selected{
-  @apply !bg-[#327979] !text-white
+  @apply !bg-darkBlueHover !text-white
 }
 
 .dashboard-search .ant-input, .dashboard-search .ant-btn{
@@ -160,7 +160,7 @@ label{
   @apply !bg-darkBlue
 }
 
-.ant-dropdown-trigger.active, .ant-dropdown-trigger.active>*{
+.ant-dropdown-trigger.active, .ant-dropdown-trigger.active>*, .ant-dropdown-open, .ant-dropdown-open>*{
   color:#E74C3C !important
 }
 
@@ -195,6 +195,7 @@ label{
 .no-margin{
   @apply !m-0;
 }
+
 
 /* @media print {
   .print-css-tandc{
@@ -384,6 +385,20 @@ label{
   @apply !text-sm
 }
 
+.ant-btn-primary{
+  @apply !bg-darkBlue hover:!bg-darkBlueHover !text-offWhite
+}
+
+@media print {
+  /* Simulate `md` breakpoint when printing */
+  html {
+    width: 768px; /* Force medium breakpoint */
+  }
+
+  body {
+    @apply md:text-lg md:p-10 md:bg-white md:text-black;
+  }
+}
 /* .ant-form-item{
   @apply !m-0
 }
@@ -399,3 +414,16 @@ input{
 .ant-picker{
   @apply !px-[0.1rem] !py-0
 } */
+
+/* Custom checkbox color */
+.ant-checkbox-checked .ant-checkbox-inner {
+  @apply bg-darkBlueHover border-darkBlueHover  /* Change the border color */
+}
+
+.ant-checkbox-checked:hover .ant-checkbox-inner {
+  @apply bg-darkBlueHover /* Change hover color */
+}
+
+.ant-popover-inner{
+  width: 40rem;
+}

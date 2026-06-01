@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+/*import React, { useState, useEffect, useMemo } from "react";
 import TableComponent from "../../../components/DKG_Table";
-import { PlayCircleOutlined, FileTextOutlined, FileDoneOutlined, FileSearchOutlined } from '@ant-design/icons';
+import { FileTextOutlined, FileDoneOutlined, FileSearchOutlined } from '@ant-design/icons';
 
 const MainDashboard = () => {
   const [activeTab, setActiveTab] = useState(1);
@@ -292,8 +292,8 @@ const MainDashboard = () => {
       >
         <span className="dashboard-tab-icon text-white">{item.icon}</span>
         <div className="flex flex-col items-center justify-center gap-1 col-span-2">
-          {/* You can replace this hard-coded number with a dynamic value if needed */}
-          <h3 className="font-semibold !text-2xl text-white text-left w-full">
+          {/* You can replace this hard-coded number with a dynamic value if needed */
+         /* <h3 className="font-semibold !text-2xl text-white text-left w-full">
             54
           </h3>
           <div className="w-full text-white text-left">{item.title}</div>
@@ -308,11 +308,622 @@ const MainDashboard = () => {
         {renderTiles()}
       </section>
       <section>
-        {/* Pass the filteredColumns to your TableComponent */}
-        <TableComponent dataSource={tableData} columns={filteredColumns} />
+        {/* Pass the filteredColumns to your TableComponent */
+      /*  <TableComponent dataSource={tableData} columns={filteredColumns} />
       </section>
     </div>
   );
 };
 
+export default MainDashboard;*/
+import React, { useState ,useEffect} from "react";
+import { FileTextOutlined, BarChartOutlined, SolutionOutlined,PieChartOutlined  } from '@ant-design/icons';
+import CpReport from '../../reports/CpReport';
+import IndentReport from '../../reports/IndentReport';
+import PoList from '../../reports/PoList';
+import SoList from '../../reports/SoList';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import PoStatus from "../../reports/PoStatus";
+import TechnoMom from "../../reports/TechnoMom";
+import VendorContract from "../../reports/VendorContractReport";
+import SoStatus from "../../reports/SoStatus";
+import IndentList from "../../reports/IndentList";
+import QuarterlyVigilanceSoReport from "../../reports/QuarterlyVigilanceSoReport";
+import ShortClosedCancelledOrderReport from "../../reports/ShortClosedCancelledOrderReport";
+import MonthlyProcurementReport from "../../reports/MonthlyProcurementReport";
+import PerformanceAndWarrantySecurity from "../../reports/PerformanceAndWarrantySecurity";
+import IndentStatus from "../../reports/IndentStatus";
+import { useSelector } from "react-redux";  
+import PendingRecordsReport from "../../reports/pendingRecords";
+import axios from "axios";
+import AssetReport from "../../reports/AssetReport";
+import StockReport from "../../reports/StockReport";
+import GoodsIssueReport from "../../reports/GoodsIssueReport";
+import IgpReport from "../../reports/IgpReport";
+import OgpReport from "../../reports/OgpReport";
+import RejectedGiReport from "../../reports/RejectedGiReport";
+import IgpMaterialInReport from "../../reports/IgpMaterialInReport";
+import WithInFieldStationGtReport from "../../reports/withInFieldStationGtReport";
+import DemandAndIssueReport from "../../reports/DemandAndIssueReport";
+import AssetDisposalReport from "../../reports/ApprovedAssetDisposalReport";
+import DisposalReport from "../../reports/DisposalReport";
+
+const MainDashboard = () => {
+  const [activeTab, setActiveTab] = useState(1);
+  const [chartDataMap, setChartDataMap] = useState({}); // Store chart data per report
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+  const [selectedBarKey, setSelectedBarKey] = useState("vendorName"); // NEW: default bar attribute
+  const [selectedPieKey, setSelectedPieKey] = useState("project");
+  const auth = useSelector((state) => state.auth);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  const roleName = auth.role; 
+  const userId = auth.userId;
+
+/*
+  useEffect(() => {
+  if (roleName) {
+     fetch(`http://localhost:8081/astro-service/allPendingRecords?roleName=${encodeURIComponent(roleName)}`) 
+      .then(res => res.json())
+      .then(data => setPendingCount(data.responseData.length))
+      .catch(err => console.error(err));
+  }
+}, [roleName]);*/
+useEffect(() => {
+  if (roleName && userId) {
+    axios
+      .get("/allPendingRecords", {
+        params: {
+          roleName: roleName
+        }
+      })
+      .then((res) => setPendingCount(res.data.responseData.length))
+      .catch((err) => console.error(err));
+  }
+}, [roleName, userId]);
+
+
+
+  // Callback to update chart data dynamically
+const handleChartData = (id, barData, pieData) => {
+  setChartDataMap(prev => ({
+    ...prev,
+    [id]: { chart1: barData, chart2: pieData }
+  }));
+};
+
+  // Only store component class/functions, not JSX
+  const tiles = [
+      { id: 1, title: `Pending Total Records: ${pendingCount}`, icon: <BarChartOutlined />, component: PendingRecordsReport, attributes:["status"],  roles:[roleName]},
+    { id: 19, title: "Contingency Purchase", icon: <FileTextOutlined />, component: CpReport, attributes: [ 
+  "contigencyId",
+  "vendorName",
+  "projectName",
+  "paymentToVendor",
+  "paymentToEmployee",
+  "purpose",
+  "createdBy",
+  "pendingWith",
+  "pendingFrom",
+  "status",
+  "action",], roles: [
+      "CP Creator",
+      "Store Personnel",
+      "Reporting Officer",
+      "Project Head",
+      "Billing Section Personnel",
+      "Accounts Officer",
+      "Administrative Officer",
+      "Store Purchase Officer", "Purchase personnel",
+    ] },
+    { id: 2, title: "Indent", icon: <BarChartOutlined />, component: IndentReport ,attributes:[
+    "indentId",
+    "approvedDate",
+    "assignedTo",
+    "tenderRequest",
+    "modeOfTendering",
+    "correspondingPoSo",
+    "statusOfPoSo",
+    "submittedDate",
+    "pendingApprovalWith",
+    "poSoApprovedDate",
+    "material",
+    "materialCategory",
+    "materialSubCategory",
+    "vendorName",
+    "indentorName",
+    "valueOfIndent",
+    "valueOfPo",
+    "project",
+    "grinNo",
+    "invoiceNo",
+    "gissNo",
+    "valuePendingToBePaid",
+    "currentStageOfIndent",
+    "shortClosedAndCancelled",
+    "reasonForShortClosure",
+    "gemContractFileName"
+  ], roles:[roleName]},
+    {
+  id: 3,
+  title: "Techno MOM",
+  icon: <PieChartOutlined />,
+  component: TechnoMom, // your component
+  attributes: [
+    "date",
+    "uploadedTechnoCommercialMoMReports",
+    "poWoNumber",
+    "value",
+  ], roles:["Store Purchase Officer", "Purchase personnel"],
+},
+    { id: 6, title: "PO List", icon: <SolutionOutlined />, component: PoList, attributes: [ "approvedDate",
+  "poId",
+  "vendorName",
+  "value",
+  "tenderId",
+  "project",
+  "vendorId",
+  "indentIds",
+  "modeOfProcurement"], roles:["PO Creator","Store Purchase Officer", "Purchase personnel", "Administrative Officer", "Account Officer", "Project Head", "Director", "Dean", "Head SEG", "Store Person", "Indent Creator", "Reporting Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Purchase Head"] },
+    { id: 7, title: "PO Status", icon: <SolutionOutlined />, component: PoStatus, attributes: [  "poId",
+    "tenderId",
+    "indentIds",
+    "vendorName",
+    "value",
+    "submittedDate",
+    "pendingWith",
+    "pendingFrom",
+    "status",
+    "asOnDate",
+], roles:["PO Creator", "Store Purchase Officer", "Purchase personnel", "Administrative Officer", "Account Officer", "Project Head", "Director", "Dean", "Head SEG", "Store Person", "Indent Creator", "Reporting Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Purchase Head"] },
+{
+  id: 4,
+  title: "Vendor Contract",
+  icon: <FileTextOutlined />,
+  component: VendorContract,  
+  attributes: [
+    "orderId",
+    "modeOfProcurement",
+    "underAmc",
+    "amcExpiryDate",
+    "amcFor",
+    "endUser",
+    "noOfParticipants",
+    "value",
+    "location",
+    "vendorName",
+    "previouslyRenewedAmcs",
+    "categoryOfSecurity",
+    "validityOfSecurity"
+  ], roles:["Store Purchase Officer", "Purchase personnel","Store Person"]
+},
+
+    { id: 8, title: "SO List", icon: <SolutionOutlined />, component: SoList, attributes:["approvedDate",
+  "soId",
+  "vendorName",
+  "value",
+  "tenderId",
+  "project",
+  "vendorId",
+  "indentIds",
+  "modeOfProcurement"], roles:["SO Creator", "Store Purchase Officer", "Purchase personnel", "Administrative Officer", "Account Officer", "Project Head", "Director", "Dean", "Head SEG", "Store Person", "Indent Creator", "Reporting Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Purchase Head"]
+},
+    {
+  id: 9,
+  title: "SO Status",
+  icon: <BarChartOutlined />,
+  component: SoStatus,
+  attributes: [
+    "soId",
+    "tenderId",
+    "indentIds",
+    "vendorName",
+    "value",
+    "submittedDate",
+    "pendingWith",
+    "pendingFrom",
+    "status",
+    "asOnDate"
+  ], roles:["SO Creator", "Indent Creator", "Store Purchase Officer", "Purchase personnel", "Administrative Officer", "Account Officer", "Project Head", "Director", "Dean", "Head SEG", "Store Person", "Reporting Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Purchase Head"]
+},{
+  id: 10,
+  title: "Indent List",
+  icon: <SolutionOutlined />,
+  component: IndentList,
+  attributes: [
+    "indentId",
+    "indentorName",
+    "indentorMobileNo",
+    "indentorEmailAddress",
+    "consignesLocation",
+    "projectName",
+    "submittedDate",
+    "pendingWith",
+    "pendingFrom",
+    "status",
+    "asOnDate",
+    "createdBy",
+  ], roles:["Indent Creator", "Reporting Officer", "Administrative Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Dean", "Head SEG", "Director", "Project Head", "Purchase Head", "Store Purchase Officer", "Purchase personnel", "Store Person"]
+},{
+  id: 11,
+  title: "Quarterly Vigilance",
+  icon: <SolutionOutlined />,
+  component: QuarterlyVigilanceSoReport,
+  attributes: [
+    "orderNo",
+    "orderDate",
+    "value",
+    "vendorName",
+    "location",
+    "deliveryDate"
+  ] , roles:["Store Purchase Officer", "Purchase personnel","Store Person"]
+},{
+  id: 12,
+  title: "Short Closed Cancelled Order",
+  icon: <SolutionOutlined />,
+  component: ShortClosedCancelledOrderReport,
+  attributes: [
+    "poId",
+    "tenderId",
+    "indentIds",
+    "value",
+    "vendorName",
+    "submittedDate",
+    "reason",
+    "materials"
+  ],roles:["Store Purchase Officer", "Purchase personnel","Store Person"]
+},{
+  id: 13,
+  title: "Monthly Procurement Report",
+  icon: <SolutionOutlined />,
+  component: MonthlyProcurementReport,
+  attributes: [
+    "month",
+    "poNumber",
+    "modeOfProcurement",
+    "date",
+    "indentIds",
+    "value",
+    "vendorName"
+  ],roles:["Store Purchase Officer", "Purchase personnel","Store Person"]
+},{
+    id: 15,
+    title: "Performance & Warranty Security",
+    icon: <SolutionOutlined />,
+    component: PerformanceAndWarrantySecurity,
+    attributes: [
+        "poId",
+        "createdDate",
+        "modeOfProcurement",
+        "vendorName",
+        "titleOfTender",
+        "totalValueOfPo",
+        "typeOfSecurity",
+        "securityNumber",
+        "securityDate",
+        "expiryDate",
+        "securityAmount"
+    ],roles:["Store Purchase Officer", "Purchase personnel","Store Person"]
+},{
+  id: 16,
+  title: "Indent Status",
+  icon: <SolutionOutlined />,
+  component: IndentStatus,
+  attributes: [
+    "requestId",
+    "createdBy",
+    "modifiedBy",
+    "status",
+    "nextAction",
+    "action",
+    "currentRole",
+    "nextRole",
+    "remarks",
+    "modificationDate",
+    "createdDate"
+  ],roles:["Indent Creator", "Reporting Officer", "Administrative Officer", "Engineer In-Charge", "Professor In-Charge", "Computer Committee Chairman", "Dean", "Head SEG", "Director", "Project Head", "Purchase Head", "Store Purchase Officer", "Purchase personnel", "Store Person"]
+},{
+  id: 17,
+  title: "Asset",
+  icon: <SolutionOutlined />,
+  component: AssetReport,
+  attributes: [
+    "Asset ID",
+    "materialCode",
+    "materialDesc",
+    "assetDesc",
+    "makeNo",
+    "serialNo",
+    "modelNo",
+    "uomId",
+    "poId",
+    "poValue",
+    "vendorId"
+  ],roles:[roleName]
+},
+{
+  id: 18,
+  title: "Stock",
+  icon: <SolutionOutlined />,
+  component: StockReport,
+  attributes: [
+    "assetId",
+    "assetDesc",
+    "materialCode",
+    "materialDesc",
+    "uomId",
+    "totalQuantity",
+    "bookValue",
+    "depriciationRate",
+    "unitPrice",
+  ],
+  roles: [roleName]
+},
+{
+  id: 20,
+  title: "GoodsIssue",
+  icon: <SolutionOutlined />,
+  component: GoodsIssueReport,
+  attributes: [
+    "issueNoteId",
+    "issueNoteType",
+    "issueDate",
+    "consigneeDetail",
+    "indentorName",
+    "fieldStation",
+    "locationId",
+  ],
+  roles: [roleName]
+},
+{
+  id: 21,
+  title: "IGP Report",
+  icon: <SolutionOutlined />,
+  component: IgpReport,
+  attributes: [
+    "igpProcessId",
+    "ogpSubProcessId",
+    "igpDate",
+    "locationId",
+    "createdBy"
+  ],
+  roles: [roleName]
+},
+{
+  id: 22,
+  title: "OGP Report",
+  icon: <SolutionOutlined />,
+  component: OgpReport,
+  attributes: [
+    "ogpProcessId",
+    "issueNoteId",
+    "ogpDate",
+    "locationId",
+    "createdBy"
+  ],
+  roles: [roleName]
+},
+{
+  id: 23,
+  title: "Rejected GI Report",
+  icon: <SolutionOutlined />,
+  component: RejectedGiReport,
+  attributes: [
+    "ogpSubProcessId",
+    "giId",
+    "ogpType",
+    "status",
+    "locationId",
+    "createdBy",
+    "senderName",
+    "receiverName",
+    "receiverLocation",
+    "ogpDate",
+    "returnDate"
+  ],
+  roles: [roleName]
+},
+{
+  id: 24,
+  title: "IGP Material In",
+  icon: <SolutionOutlined />,
+  component: IgpMaterialInReport,
+  attributes: [
+    "id",
+    "igpType",
+    "status",
+    "locationId",
+    "createdBy",
+    "indentId",
+    "igpDate"
+  ],
+  roles: [roleName]
+},
+{
+  id: 25,
+  title: "Goods Transfer",
+  icon: <SolutionOutlined />,
+  component: WithInFieldStationGtReport,
+  attributes: [
+    "gtId",
+    "type",
+    "senderLocationId",
+    "receiverLocationId",
+    "senderCustodianId",
+    "receiverCustodianId",
+    "status",
+    "gtDate",
+    "createDate",
+    "createdBy"
+  ],
+  roles: [roleName]
+},
+{
+  id: 26,
+  title: "Demand And Issue",
+  icon: <SolutionOutlined />,
+  component: DemandAndIssueReport,
+  attributes: [
+    "id",
+    "senderLocationId",
+    "status",
+    "senderCustodianId",
+    "issueDate",
+    "issueBy",
+  ],
+  roles: [roleName]
+},
+{
+  id: 27,
+  title: "Asset Disposal",
+  icon: <SolutionOutlined />,
+  component: AssetDisposalReport,
+  attributes: [
+    "disposalId",
+    "disposalDate",
+    "locationId",
+    "custodianId",
+    "status",
+    "action"
+  ],
+  roles: [roleName]
+},
+{
+  id: 28,
+  title: "Auction Asset Disposal",
+  icon: <SolutionOutlined />,
+  component: DisposalReport,
+  attributes: [
+    "auctionId",
+    "auctionCode",
+    "auctionDate",
+    "reservePrice",
+    "auctionPrice",
+    "vendorName"
+  ],
+  roles: [roleName]
+}
+
+
+
+
+  ];
+
+  const activeTile = tiles.find(tile => tile.id === activeTab);
+//  const activeChartData = chartDataMap[activeTab] || []; // Get chart data for active tab
+const activeChartData = chartDataMap[activeTab] || { chart1: [], chart2: [] };
+
+const visibleTiles = tiles.filter(tile =>
+  tile.roles?.includes(roleName) // only show tiles that allow the user role
+);
+useEffect(() => {
+  if (activeTile) {
+    // Set defaults only if nothing is selected yet
+    setSelectedBarKey(prev => prev || activeTile.attributes[0] || "status");
+    setSelectedPieKey(prev => prev || activeTile.attributes[0] || "status");
+  }
+}, [activeTile]);
+
+
+
+  return (
+    <div className="px-4 flex flex-col gap-6">
+      <h1 className="font-semibold !text-3xl text-center">Dashboard</h1>
+
+      {/* Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {visibleTiles.map(tile => (
+          <div
+            key={tile.id}
+            className={`flex gap-2 bg-gray-200 border-darkBlue rounded-md h-24 items-center p-4 cursor-pointer ${
+              activeTab === tile.id ? "border-b-2 border-pink scale-105" : ""
+            }`}
+            onClick={() => setActiveTab(tile.id)}
+          >
+            <div className="dashboard-tab-icon">{tile.icon}</div>
+            <div className="flex-1 text-right !text-md font-semibold">{tile.title}</div>
+          </div>
+        ))}
+      
+      </div>
+      {activeTile && (
+  <div className="flex gap-4 mt-4 items-center">
+    <div>
+      <label>Bar Chart Attribute: </label>
+      <select value={selectedBarKey} onChange={e => setSelectedBarKey(e.target.value)}>
+        {activeTile.attributes.map(attr => (
+          <option key={attr} value={attr}>{attr}</option>
+        ))}
+      </select>
+    </div>
+    <div>
+      <label>Pie Chart Attribute: </label>
+      <select value={selectedPieKey} onChange={e => setSelectedPieKey(e.target.value)}>
+        {activeTile.attributes.map(attr => (
+          <option key={attr} value={attr}>{attr}</option>
+        ))}
+      </select>
+    </div>
+  </div>
+)}
+
+
+      {/* Bar Chart */}
+    
+{activeTile && (chartDataMap[activeTab]?.chart1?.length > 0 || chartDataMap[activeTab]?.chart2?.length > 0) && (
+  <div className="grid md:grid-cols-2 gap-6 mt-6">
+
+    {/* Bar Chart */}
+    <div style={{ height: 300 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chartDataMap[activeTab]?.chart1 || []}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis domain={[0, 'auto']} />
+          <Tooltip />
+          <Bar dataKey="value" fill="#8884d8" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+
+    {/* Pie Chart */}
+    <div style={{ height: 300 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={chartDataMap[activeTab]?.chart2 || []}  // safe check
+            dataKey="value"
+            nameKey="name"
+            outerRadius={100}
+            fill="#82ca9d"
+            label
+          >
+            {(chartDataMap[activeTab]?.chart2 || []).map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+
+  </div>
+)}
+
+      {/* Report Table Component */}
+      <div className="mt-6">
+        {activeTile  && React.createElement(activeTile.component, {selectedBarKey,
+          selectedPieKey,
+          roleName,
+         onChartData: (barData, pieData) => handleChartData(activeTile.id, barData, pieData)
+
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default MainDashboard;
+
+

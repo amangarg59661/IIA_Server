@@ -741,6 +741,32 @@ const handleChairmanDecisionSubmit = async () => {
   }
 };
 
+const handleCommitteeVendorDecision = async (vendorId, decision, remarks = '') => {
+  try {
+    await axios.post('/api/tender-evaluation/committee/vendor-decision', null, {
+      params: { tenderId, vendorId, decision, remarks, committeeUserId: userId }
+    });
+    message.success(`Vendor ${decision.toLowerCase()} successfully.`);
+    await fetchEvalStatus(tenderId);
+    await fetchQuotationsAndPending(tenderId);
+  } catch (e) {
+    message.error(e.response?.data?.message || 'Failed to save decision.');
+  }
+};
+
+const handleChairmanVendorResolve = async (vendorId, decision, remarks = '') => {
+  try {
+    await axios.post('/api/tender-evaluation/chairman/vendor-resolve', null, {
+      params: { tenderId, vendorId, decision, remarks, chairmanUserId: userId }
+    });
+    message.success(`Vendor resolved: ${decision}`);
+    await fetchEvalStatus(tenderId);
+    await fetchQuotationsAndPending(tenderId);
+  } catch (e) {
+    message.error(e.response?.data?.message || 'Failed to resolve vendor.');
+  }
+};
+
 // fetchEvalStatus + fetchClarificationHistory are called in the unified useEffect[tenderId] below
 
 // ── Seek Clarification ────────────────────────────────────────────
@@ -944,7 +970,7 @@ const priceBidColumnForSingleBid = {
 };
 
 const showVendorResponse = quotationData.some(item => item.vendorResponse);
-const showClarificationFile = quotationData.some(item => item.clarificationFileName);
+const showClarificationFile = quotationData.some(item => item.clarificationFileName) || clarificationHistory.some(h => h.targetVendorId);
 
 const baseColumns = [
   {
@@ -1576,10 +1602,14 @@ const doubleBidTechColumns = [
         title: 'Clarification File',
         dataIndex: 'clarificationFileName',
         key: 'clarificationFileName',
-        render: (file) =>
-          file ? (
-            <a href={`${baseURL}/file/view/Tender/${file}`} target="_blank" rel="noopener noreferrer">View</a>
-          ) : 'N/A',
+        render: (file, record) => {
+          const latest = [...clarificationHistory]
+            .filter(h => h.targetVendorId === record.vendorId)
+            .sort((a, b) => b.roundNumber - a.roundNumber)[0];
+          return latest?.responseFileName ? (
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+          ) : null;
+        },
       }]
     : []),
   {
@@ -3020,6 +3050,54 @@ useEffect(() => {
                 {isVotingMember && !evalStatus.committeeVotes?.find(v => String(v.committeeUserId) === String(userId))?.vote && (
                   <Button type="primary" onClick={() => setVoteModal(true)}>Cast My Vote</Button>
                 )}
+                {/* Per-vendor committee Accept/Reject (Double Bid above 10L) */}
+                {isDoubleBidEval && quotationData.length > 0 && (
+                  <>
+                    <h4 style={{ marginTop: 16, marginBottom: 8 }}>Per-Vendor Decision ({isFinancialPhase ? 'Financial' : 'Technical'} Phase)</h4>
+                    <Table
+                      size="small"
+                      dataSource={isFinancialPhase
+                        ? quotationData.filter(q => q.indentorStatus === 'ACCEPTED' && q.sopStatus === 'ACCEPTED')
+                        : quotationData}
+                      rowKey="vendorId"
+                      pagination={false}
+                      style={{ marginBottom: 12 }}
+                      columns={[
+                        { title: 'Vendor', dataIndex: 'vendorId', render: (v, r) => r.vendorName || v },
+                        {
+                          title: 'My Decision', key: 'myDecision',
+                          render: (_, record) => {
+                            const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
+                              v => String(v.committeeUserId) === String(userId)
+                            );
+                            if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
+                            return <Tag color="orange">Pending</Tag>;
+                          }
+                        },
+                        {
+                          title: 'Action', key: 'action',
+                          render: (_, record) => {
+                            const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
+                              v => String(v.committeeUserId) === String(userId)
+                            );
+                            if (myVote?.decision) return <span style={{ color: '#999' }}>Decided</span>;
+                            return (
+                              <Space>
+                                <Button size="small" type="primary" onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
+                                <Button size="small" danger onClick={() => handleCommitteeVendorDecision(record.vendorId, 'REJECTED')}>Reject</Button>
+                              </Space>
+                            );
+                          }
+                        },
+                      ]}
+                    />
+                  </>
+                )}
+                {/* Committee Member: Seek Clarification from Chairman */}
+                <Button style={{ marginTop: 12, color: '#1890ff', borderColor: '#1890ff' }}
+                  onClick={() => openClarificationModal('COMMITTEE_MEMBER')}>
+                  Seek Clarification from Chairman
+                </Button>
               </Card>
             )}
 
@@ -3047,6 +3125,42 @@ useEffect(() => {
                       { title: 'Remarks', dataIndex: 'voteRemarks', render: (r) => r || '-' },
                     ]}
                   />
+                )}
+                {/* Per-vendor committee vote grid (Double Bid) */}
+                {isDoubleBidEval && evalStatus.committeeVendorVotes && Object.keys(evalStatus.committeeVendorVotes).length > 0 && (
+                  <>
+                    <h4 style={{ marginTop: 16, marginBottom: 8 }}>Per-Vendor Member Decisions ({isFinancialPhase ? 'Financial' : 'Technical'} Phase)</h4>
+                    {Object.entries(evalStatus.committeeVendorVotes).map(([vendorId, votes]) => {
+                      const vendorName = quotationData.find(q => q.vendorId === vendorId)?.vendorName || vendorId;
+                      const acceptCount = votes.filter(v => v.decision === 'ACCEPTED').length;
+                      const rejectCount = votes.filter(v => v.decision === 'REJECTED').length;
+                      const pendingCount = votes.filter(v => !v.decision).length;
+                      return (
+                        <Card key={vendorId} size="small" type="inner" style={{ marginBottom: 8 }}
+                          title={<span>{vendorName} — <Tag color="green">{acceptCount} Accept</Tag><Tag color="red">{rejectCount} Reject</Tag>{pendingCount > 0 && <Tag color="orange">{pendingCount} Pending</Tag>}</span>}>
+                          <Table
+                            size="small"
+                            dataSource={votes}
+                            rowKey="committeeUserId"
+                            pagination={false}
+                            columns={[
+                              { title: 'Member', dataIndex: 'memberName' },
+                              { title: 'Decision', dataIndex: 'decision', render: (d) => d ? <Tag color={d === 'ACCEPTED' ? 'green' : 'red'}>{d}</Tag> : <Tag color="orange">Pending</Tag> },
+                              { title: 'Remarks', dataIndex: 'remarks', render: (r) => r || '-' },
+                            ]}
+                          />
+                          <Space style={{ marginTop: 8 }}>
+                            <Button size="small" type="primary" onClick={() => handleChairmanVendorResolve(vendorId, 'ACCEPTED')}>
+                              Resolve: Accept
+                            </Button>
+                            <Button size="small" danger onClick={() => handleChairmanVendorResolve(vendorId, 'REJECTED')}>
+                              Resolve: Reject
+                            </Button>
+                          </Space>
+                        </Card>
+                      );
+                    })}
+                  </>
                 )}
                 <Space wrap>
                   <Button onClick={openExpertModal}>

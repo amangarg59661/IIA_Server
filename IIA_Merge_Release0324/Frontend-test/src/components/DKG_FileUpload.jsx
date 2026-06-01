@@ -7,12 +7,12 @@ const FileUpload = ({ documentName, fileType, onChange, value, fileName }) => {
   const [previewTitle, setPreviewTitle] = useState('');
   const [previewContent, setPreviewContent] = useState('');
 
+
   // Function to get base64 representation of file for preview
   const getBase64 = (file) => {
     return new Promise((resolve, reject) => {
       // Make sure file is a valid File or Blob object
       if (!file || !(file instanceof File || file instanceof Blob)) {
-        console.log("Invalid file object:", file);
         reject(new Error('Not a valid file'));
         return;
       }
@@ -23,10 +23,9 @@ const FileUpload = ({ documentName, fileType, onChange, value, fileName }) => {
       reader.onerror = (error) => reject(error);
     });
   };
-/*
+
   // Handle file preview
   const handlePreview = async () => {
-    console.log("handlePreview called",value)
     if (!value?.file) return;
     
     try {
@@ -57,54 +56,6 @@ const FileUpload = ({ documentName, fileType, onChange, value, fileName }) => {
       message.error('Failed to generate preview');
     }
   };
-*/
-const handlePreview = async () => {
-  console.log("handlePreview called", value);
-  
-  // Exit early if no file data exists
-  //if (!value?.file || !value.file.file) return;
-  if (!value?.file || !value.file.file) {
-    message.error('No file selected for preview');
-    return;
-  }
-
-  const file = value.file.file;  // Adjusting based on the provided structure
-
-  try {
-    let preview;
-
-    // Check if the file already has a preview
-    if (file.preview) {
-      preview = file.preview;
-    } 
-    // Check if the file URL exists (in case of uploaded files from cloud storage)
-    else if (file.url) {
-      preview = file.url;
-    } 
-    // Otherwise, generate preview for file (base64)
-    else if (file.originFileObj) {
-      preview = await getBase64(file.originFileObj);  // Using your getBase64 function
-    }
-
-    // If no preview could be generated, show an error
-    if (!preview) {
-      message.error('Unable to generate preview');
-      return;
-    }
-
-    // Set the preview content and title
-    setPreviewContent(preview);
-    setPreviewTitle(file.name || 'Document Preview');
-    
-    // Display the preview modal
-    setPreviewVisible(true);
-
-  } catch (error) {
-    console.error('Preview error:', error);
-    message.error('Failed to generate preview');
-  }
-};
-
 
   // Handle file upload
   const handleUpload = async (info) => {
@@ -124,12 +75,10 @@ const handlePreview = async () => {
         fileType: file.type,
         file: {
           uid: file.uid || Date.now().toString(),
-         // name: fileName || file.name,
-          name: file.name,
+          name: fileName || file.name,
           status: 'done',
-          type: file.type,
           originFileObj: file,
-          preview: preview,
+          preview: preview
         }
       };
       
@@ -167,13 +116,14 @@ const handlePreview = async () => {
                 handleUpload({ file: info.file.originFileObj || info.file });
               }
             }}
-            accept={fileType === 'pdf' ? '.pdf' : fileType === 'image' ? 'image/*' : undefined}
+           // accept={fileType === 'pdf' ? '.pdf' : fileType === 'image' ? 'image/*' : undefined}
+           accept="*"
           >
             <Button icon={<UploadOutlined />}>Upload</Button>
           </Upload>
         ) : (
           <>
-            {/*<Button icon={<EyeOutlined />} onClick={handlePreview}>Preview</Button>*/}
+            <Button icon={<EyeOutlined />} onClick={handlePreview}>Preview</Button>
             <Button danger onClick={handleDelete}>Delete</Button>
             <span className="ml-2">
               {value?.file?.name || fileName} {/* Display fileName if available */}
@@ -189,20 +139,12 @@ const handlePreview = async () => {
         onCancel={() => setPreviewVisible(false)}
         width={800}
       >
-        {/*previewContent && (
-          value?.file?.type?.includes('pdf') || fileType === 'pdf' ? 
+        {previewContent && (
+         // value?.file?.type?.includes('pdf') || fileType === 'pdf' ? 
+         fileType !== 'image' ?
             <iframe src={previewContent} width="100%" height="500px" title={previewTitle} /> :
             <img alt={previewTitle} style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }} src={previewContent} />
-        )*/}
-         {previewContent && (
-        fileType === 'pdf' || value?.file?.type?.includes('pdf') ? (
-        <iframe src={previewContent} width="100%" height="500px" title={previewTitle} />
-        ) : (
-        <img alt={previewTitle} style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain' }} src={previewContent} />
-        )
         )}
-    
-
       </Modal>
     </div>
   );
