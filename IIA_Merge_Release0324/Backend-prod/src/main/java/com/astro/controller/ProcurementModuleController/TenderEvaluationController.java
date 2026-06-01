@@ -197,6 +197,46 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    // ─── COMMITTEE PER-VENDOR DECISION (Above 10L, Double Bid) ───────
+
+    @PostMapping("/committee/vendor-decision")
+    public ResponseEntity<Object> committeeVendorDecision(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @RequestParam String decision,
+            @RequestParam(required = false) String remarks,
+            @RequestParam Integer committeeUserId) {
+        log.info("Committee vendor decision tenderId={} vendorId={} decision={} userId={}",
+                tenderId, vendorId, decision, committeeUserId);
+        TenderEvaluationStatusDto status = approvalService.committeeVendorDecision(
+                tenderId, vendorId, decision, remarks, committeeUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @PostMapping("/chairman/vendor-resolve")
+    public ResponseEntity<Object> chairmanVendorResolve(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @RequestParam String decision,
+            @RequestParam(required = false) String remarks,
+            @RequestParam Integer chairmanUserId) {
+        log.info("Chairman vendor resolve tenderId={} vendorId={} decision={} chairmanUserId={}",
+                tenderId, vendorId, decision, chairmanUserId);
+        TenderEvaluationStatusDto status = approvalService.chairmanVendorResolve(
+                tenderId, vendorId, decision, remarks, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @GetMapping("/committee/vendor-vote-grid")
+    public ResponseEntity<Object> getVendorVoteGrid(
+            @RequestParam String tenderId,
+            @RequestParam(defaultValue = "TECHNICAL") String phase) {
+        log.info("Get vendor vote grid tenderId={} phase={}", tenderId, phase);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getVendorVoteGrid(tenderId, phase)),
+                HttpStatus.OK);
+    }
+
     @PostMapping("/vendor-portal-check")
     public ResponseEntity<Object> checkVendorPortalRegistration(@RequestParam String vendorId) {
         boolean registered = approvalService.checkAndRegisterVendorOnPortal(vendorId);
