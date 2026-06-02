@@ -139,10 +139,7 @@ const TenderEvaluator = () => {
 // SPO can act only if comparison sheet is already submitted
 const isSpoRole = normalizedRole === 'store purchase officer';
 const canSpoAct = isSpoRole && hasComparisonSheet;
-// ── PP: hide Confirm when responding on behalf of vendors ──
-const ppRespondingOnBehalfOfVendor = isPendingVendorClarif
-  && evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
-  && quotationData.some(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED');
+
 // ── PP: Seek Clarification before evaluation is initiated (Limited/Prop, under 10L) ──
 const showPpPreInitiateClarif = isPurchasePersonnelRole
   && evalStatus === null
@@ -150,6 +147,7 @@ const showPpPreInitiateClarif = isPurchasePersonnelRole
   && ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement)
   && quotationData.length > 0;
 const showEvaluationSection = true;
+// ── PP: hide Confirm when responding on behalf of vendors ──
 
 // Whether the evaluation is a double-bid (from the eval status, not form data, for accuracy)
 const isDoubleBidEval = evalStatus?.bidType === 'DOUBLE_BID';
@@ -2312,6 +2310,9 @@ useEffect(() => {
   const isPendingMemberRevote = evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE';
   const isPendingCommitteeFormation = evalStatus?.evaluationStatus === 'PENDING_COMMITTEE_FORMATION';
   const isAnyClarificationPending = isPendingVendorClarif || isPendingIndentorClarif || isPendingMemberRevote;
+  const ppRespondingOnBehalfOfVendor = isPendingVendorClarif
+  && evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
+  && quotationData.some(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED');
   // Per-vendor: any vendor still has CHANGE_REQUESTED status
   const anyVendorPendingClarif = quotationData.some(q => q.status === 'CHANGE_REQUESTED');
   // All eligible vendors have been accepted or rejected by Indentor/PP
