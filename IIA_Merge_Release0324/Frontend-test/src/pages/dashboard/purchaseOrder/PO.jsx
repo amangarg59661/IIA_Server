@@ -243,7 +243,7 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
                   ...field,
                   options: [
                     ...vendorOptions,
-                    { label: "OTHERS (Manual Vendor)", value: "OTHERS" }
+                    // { label: "OTHERS (Manual Vendor)", value: "OTHERS" }
                   ],
                 };
               }

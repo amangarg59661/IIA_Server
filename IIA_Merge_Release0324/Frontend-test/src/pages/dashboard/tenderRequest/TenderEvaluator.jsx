@@ -139,7 +139,16 @@ const TenderEvaluator = () => {
 // SPO can act only if comparison sheet is already submitted
 const isSpoRole = normalizedRole === 'store purchase officer';
 const canSpoAct = isSpoRole && hasComparisonSheet;
-
+// ── PP: hide Confirm when responding on behalf of vendors ──
+const ppRespondingOnBehalfOfVendor = isPendingVendorClarif
+  && evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
+  && quotationData.some(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED');
+// ── PP: Seek Clarification before evaluation is initiated (Limited/Prop, under 10L) ──
+const showPpPreInitiateClarif = isPurchasePersonnelRole
+  && evalStatus === null
+  && isBelow10L
+  && ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement)
+  && quotationData.length > 0;
 const showEvaluationSection = true;
 
 // Whether the evaluation is a double-bid (from the eval status, not form data, for accuracy)
@@ -1479,6 +1488,18 @@ if (isSpoRole) {
     title: 'Seek Clarification',
     key: 'seekClarification',
     render: (_, record) => {
+      // ── PP pre-initiate: Limited/Prop, under 10L, not yet initiated ──
+    if (showPpPreInitiateClarif) {
+      return (
+        <Button
+          type="link"
+          style={{ color: '#fa8c16', padding: 0 }}
+          onClick={() => openVendorClarificationModal(record.vendorId, 'PURCHASE_PERSONNEL')}
+        >
+          Seek Clarification
+        </Button>
+      );
+    }
       // ── PP visibility gate ──
   if (isPurchasePersonnelRole && (
     isOpenGlobalGem ||
@@ -2620,6 +2641,25 @@ useEffect(() => {
                   )}
                 </div>
               )}
+              {/* ── PP: Seek Clarification (All Vendors) — Limited/Prop, under 10L, pre-initiate ── */}
+{showPpPreInitiateClarif && (
+  <div style={{ marginTop: 8 }}>
+    <Button
+      style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+      onClick={() => {
+        setClarifRequestedByRole('PURCHASE_PERSONNEL');
+        setClarifTarget('ALL_VENDORS');
+        setClarifTargetVendorId('');
+        setClarifTargetUserId('');
+        setClarifTargetUserName('');
+        setClarifRemarks('');
+        setClarificationModal(true);
+      }}
+    >
+      Seek Clarification (All Vendors)
+    </Button>
+  </div>
+)}
 
             {/* ── Financial Comparison Sheet: View (all roles) + Upload (PP, PENDING_FINANCIAL_SHEET_UPLOAD) ── */}
             {evalStatus?.financialComparisonSheetFileName && (
@@ -2689,7 +2729,7 @@ useEffect(() => {
             {(evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' || evalStatus?.evaluationStatus === 'PENDING_TECHNICAL') &&
               evalStatus?.amountCategory === 'UNDER_10_LAKH' &&
               isMultipleIndentEval &&
-              isPurchasePersonnelRole && (
+              isPurchasePersonnelRole && !ppRespondingOnBehalfOfVendor && (
                 <Card title="Purchase Personnel — Review &amp; Confirm" size="small" style={{ marginTop: 16 }}>
                   {isAnyClarificationPending && (
                     <Alert type="warning" showIcon style={{ marginBottom: 8 }}
@@ -2853,9 +2893,17 @@ useEffect(() => {
                       />
                     );
                   })()}
-                  <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
+                  {!allVendorsDecided ? (
+                    <Alert type="info" showIcon style={{ marginTop: 8 }}
+                      message="Please Accept or Reject all vendors before submitting response." />
+                  ) : (
+                    <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
+                      Submit Response
+                    </Button>
+                  )}
+                  {/* <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
                     Submit Response
-                  </Button>
+                  </Button> */}
                 </Card>
               ) : null}
 
