@@ -250,13 +250,7 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                   }*/
                    String vendorId = vq.getVendorId();
 
-                   if (vendorId.startsWith("V")) {
-                       Optional<VendorMaster> vm = vendorMasterRepository.findByVendorId(vendorId);
-                       if(vm.isPresent()){
-                           VendorMaster vendor = vm.get();
-                           dto.setVendorName(vendor.getVendorName());
-                       }
-                   } else if (vendorId.startsWith("GEM")) {
+                   if (vendorId.startsWith("GEM")) {
                        Optional<GemVendorIdTracker> gemVendor =
                                gemVendorIdTrackerRepository.findByGemVendorId(vendorId);
                        if (gemVendor.isPresent()) {
@@ -264,6 +258,13 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                           dto.setVendorName(gem.getVendorName());
                        }
                    }
+                   else  {
+                       Optional<VendorMaster> vm = vendorMasterRepository.findByVendorId(vendorId);
+                       if(vm.isPresent()){
+                           VendorMaster vendor = vm.get();
+                           dto.setVendorName(vendor.getVendorName());
+                       }
+                   } 
                    dto.setVendorId(vq.getVendorId());
                    dto.setQuotationFileName(vq.getQuotationFileName());
                    dto.setFileType(vq.getFileType());

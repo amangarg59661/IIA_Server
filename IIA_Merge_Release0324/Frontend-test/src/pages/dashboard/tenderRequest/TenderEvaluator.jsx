@@ -927,7 +927,12 @@ const fetchClarificationHistory = async (tid) => {
 };
 
 // ─────────────────────────────────────────────────────────────────
-
+// ── Indentor status column label ──
+const indentorStatusLabel =
+  (evalStatus?.amountCategory !== 'UNDER_10_LAKH' && evalStatus?.amountCategory != null)
+    ? 'Committee Status'
+  : isMultipleIndentEval ? 'Purchase Personnel Status'
+  : 'Indentor Status';
 // Use evalStatus.bidType as primary source (reliable after initiation),
 // fall back to formData.bidType (available before initiation from tender data).
 const isDouble = evalStatus?.bidType === 'DOUBLE_BID'
@@ -1064,7 +1069,7 @@ if (isSpoRole) {
   columns = [
     ...baseColumns,
   /* {
-          title: `${role} Status`,
+          title: indentorStatusLabel,
           key: 'status',
           dataIndex: 'status',
           render: (status) => status || 'N/A',
@@ -1088,7 +1093,7 @@ if (isSpoRole) {
           }
         },
         {
-          title: `${role} Status`,
+          title: indentorStatusLabel,
           key: 'sopStatus',
           dataIndex: 'sopStatus',
           render: (sopStatus) =>{
@@ -1364,7 +1369,7 @@ if (isSpoRole) {
         status === 'CHANGE_REQUESTED' ? 'Pending Clarification' : (status || 'N/A'),
     },
     {
-      title: `${role} Status`,
+      title: indentorStatusLabel,
       key: 'indentorStatus',
       dataIndex: 'indentorStatus',
       render: (indentorStatus) => {
@@ -1632,7 +1637,7 @@ const doubleBidTechColumns = [
       }]
     : []),
   {
-    title: `${role} Status`,
+    title: indentorStatusLabel,
     key: 'indentorStatus',
     dataIndex: 'indentorStatus',
     render: (val) => {
@@ -2298,6 +2303,7 @@ useEffect(() => {
 
   // True for any tier that uses a committee (STEC-I, STEC-II, or Director ad hoc)
   const isAbove10L = evalStatus?.amountCategory !== 'UNDER_10_LAKH' && evalStatus?.amountCategory != null;
+  
   const isAbove1Crore = evalStatus?.amountCategory === 'ABOVE_1_CRORE';
   const isChairman = role === 'Committee Chairman';
   const isCommitteeMember = role === 'Committee Member';
@@ -2343,6 +2349,7 @@ useEffect(() => {
   const isVotingMember = evalStatus?.committeeVotes?.some(
     v => String(v.committeeUserId) === String(userId)
   );
+
 
   // ── Double bid: phase-specific computed state ──
   const financialVendors = isDoubleBidEval
