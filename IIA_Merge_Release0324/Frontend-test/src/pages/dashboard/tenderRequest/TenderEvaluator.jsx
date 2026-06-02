@@ -1263,7 +1263,7 @@ if (isSpoRole) {
               <Button
                 type="primary"
                 disabled={
-                  evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                  !['PENDING_SPO_APPROVAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
                   || record.status === 'CHANGE_REQUESTED'
                   || record.changeRequestToIndentor
                 }
@@ -2006,7 +2006,7 @@ const spoTechColumns = [
                     />
                     <Button type="primary"
                       disabled={
-                        evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                        !['PENDING_SPO_APPROVAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
                         || record.status === 'CHANGE_REQUESTED'
                         || record.changeRequestToIndentor
                       }
@@ -2179,7 +2179,7 @@ const spoFinColumns = [
                     />
                     <Button type="primary"
                       disabled={
-                        evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL'
+                        !['PENDING_SPO_APPROVAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
                         || record.status === 'CHANGE_REQUESTED'
                         || record.changeRequestToIndentor
                       }

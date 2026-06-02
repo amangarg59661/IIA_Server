@@ -1019,6 +1019,13 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             } else {
                 List<VendorQuotationAgainstTender> allQuotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                // Double-bid financial phase: skip technically disqualified vendors
+                if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                        && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                    allQuotations = allQuotations.stream()
+                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                            .collect(Collectors.toList());
+                }
                 allQuotations.forEach(q -> {
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
@@ -1066,6 +1073,13 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
                 List<VendorQuotationAgainstTender> allQuotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                // Double-bid financial phase: skip technically disqualified vendors
+                if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                        && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                    allQuotations = allQuotations.stream()
+                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                            .collect(Collectors.toList());
+                }
                 allQuotations.forEach(q -> {
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
@@ -1087,7 +1101,9 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
 
      // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
-                if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
+     // Only when actually targeting indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)
+                if (!reroutedVendorToPP
+                        && "SPO".equalsIgnoreCase(dto.getRequestedByRole())
                         && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
                     final String clarVid = dto.getTargetVendorId();
                     quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
@@ -1178,8 +1194,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 List<String> vendorIds;
                 if (isAllVendors) {
                     // ALL_VENDORS: explode into one row per vendor
+                    boolean isDoubleBidFinancial = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                            && Boolean.TRUE.equals(eval.getFinancialBidPhase());
                     vendorIds = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                             .stream()
+                            .filter(q -> !isDoubleBidFinancial
+                                    || "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
                             .map(VendorQuotationAgainstTender::getVendorId)
                             .collect(Collectors.toList());
                 } else {
