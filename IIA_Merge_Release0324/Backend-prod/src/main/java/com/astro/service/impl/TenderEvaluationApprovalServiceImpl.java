@@ -1330,7 +1330,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     h.setRespondedByRole(dto.getRespondedByRole());
                     h.setRespondedById(dto.getRespondedById());
                     h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
+                    clarificationHistoryRepository.saveAndFlush(h);
                 });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
@@ -1477,7 +1477,19 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                 .stream()
                 .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
-        long openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
+         long openHistoryRows;
+        if (quotationsResolved) {
+            openHistoryRows = clarificationHistoryRepository
+                    .findByTenderIdOrderByRequestedAtDesc(tenderId)
+                    .stream()
+                    .filter(h -> h.getRespondedAt() == null)
+                    .filter(h -> !Set.of("VENDOR", "ALL_VENDORS").contains(h.getClarificationTarget()))
+                    .count();
+        } else {
+            openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
+        }
+
+
 
         if (!quotationsResolved || openHistoryRows > 0) {
             // Vendor-side resolved but non-vendor clarifications still open:

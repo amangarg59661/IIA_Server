@@ -140,13 +140,7 @@ const TenderEvaluator = () => {
 const isSpoRole = normalizedRole === 'store purchase officer';
 const canSpoAct = isSpoRole && hasComparisonSheet;
 
-// ── PP: Seek Clarification before evaluation is initiated (Limited/Prop, under 10L) ──
-const showPpPreInitiateClarif = isPurchasePersonnelRole
-  && evalStatus === null
-  && isBelow10L
-  && ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement)
-  && quotationData.length > 0;
-const showEvaluationSection = true;
+
 // ── PP: hide Confirm when responding on behalf of vendors ──
 
 // Whether the evaluation is a double-bid (from the eval status, not form data, for accuracy)
@@ -154,15 +148,19 @@ const isDoubleBidEval = evalStatus?.bidType === 'DOUBLE_BID';
 const isMultipleIndentEval = evalStatus?.indentCategory === 'MULTIPLE_INDENT';
 
 // Financial phase: financialBidPhase=true AND status is PENDING_FINANCIAL or beyond (not PENDING_FINANCIAL_SHEET_UPLOAD)
+// const isFinancialPhase = Boolean(evalStatus?.financialBidPhase) &&
+//   evalStatus?.evaluationStatus !== 'PENDING_FINANCIAL_SHEET_UPLOAD';
 const isFinancialPhase = Boolean(evalStatus?.financialBidPhase) &&
-  evalStatus?.evaluationStatus !== 'PENDING_FINANCIAL_SHEET_UPLOAD';
+  (evalStatus?.evaluationStatus !== 'PENDING_FINANCIAL_SHEET_UPLOAD' ||
+   (isPurchasePersonnelRole && isDoubleBidEval));
 
 // Accept/Reject/Seek-Clarification in quotation table:
 //   Technical phase: Indentor (single-indent) or PP (multiple-indent), under 10L only
 //   Financial phase: same roles can act again for financial evaluation
 const showActionButtons =
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval && evalStatus !== null) ||
-   (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null)) ||
+   (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null)) || 
+   
   (isFinancialPhase && evalStatus !== null &&
     (evalStatus.evaluationStatus === 'PENDING_FINANCIAL') &&
     (isIndentCreatorRole || isPurchasePersonnelRole));
@@ -171,7 +169,27 @@ const canPerformActions = showActionButtons;
 
 const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formData.modeOfProcurement);
 const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStatus === 'APPROVED' && isPurchasePersonnelRole;
+// ── PP: Seek Clarification before evaluation is initiated (Limited/Prop, under 10L) ──
+const showPpPreInitiateClarif = isPurchasePersonnelRole
+  && evalStatus === null
+  && isBelow10L
+  && ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement)
+  && quotationData.length > 0;
 
+  // ── PP: line-level Seek Clarification — Double Bid, Limited/Prop only ──
+const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement);
+
+const showPpTechLineClarif = isPurchasePersonnelRole
+  // && isDoubleBidEval
+  && isLimitedOrProp
+  && (evalStatus === null || evalStatus?.evaluationStatus === 'PENDING_INITIATION')
+  && quotationData.length > 0;
+
+const showPpFinLineClarif = isPurchasePersonnelRole
+  && isDoubleBidEval
+  && isLimitedOrProp
+  && evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD';
+const showEvaluationSection = true;
 // ── Double bid: separate control flags per phase ──
 const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval) ||
@@ -1196,7 +1214,7 @@ if (isSpoRole) {
     const indStatus = finPhase ? record.financialIndentorStatus : record.indentorStatus;
     const spStatus = finPhase ? record.financialSpoStatus : record.sopStatus;
     const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
-      && indStatus === 'ACCEPTED'
+      // && indStatus === 'ACCEPTED'
       && !spStatus
       && record.status !== 'CHANGE_REQUESTED';
     const pendingToIndentor = record.changeRequestToIndentor;
@@ -1565,6 +1583,24 @@ if (isSpoRole) {
   }
 }] : []),
 
+...(showPpPreInitiateClarif || showPpTechLineClarif ? [
+  {
+    title: 'Seek Clarification',
+    key: 'ppLineClarif',
+    render: (_, record) => (
+      <Button
+        type="link"
+        style={{ color: '#fa8c16', padding: 0 }}
+        disabled={record.status === 'CHANGE_REQUESTED'}
+        onClick={() => openVendorClarificationModal(record.vendorId, 'PURCHASE_PERSONNEL')}
+      >
+        {record.status === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
+      </Button>
+    ),
+  }
+] : []),
+
+
   ];
 }
 
@@ -1778,6 +1814,24 @@ const doubleBidTechColumns = [
       );
     },
   }] : []),
+  ...(showPpTechLineClarif
+  ? [
+      {
+        title: 'Seek Clarification',
+        key: 'ppTechLineClarif',
+        render: (_, record) => (
+          <Button
+            type="link"
+            style={{ color: '#fa8c16', padding: 0 }}
+            disabled={record.status === 'CHANGE_REQUESTED'}
+            onClick={() => openVendorClarificationModal(record.vendorId, 'PURCHASE_PERSONNEL')}
+          >
+            {record.status === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
+          </Button>
+        ),
+      },
+    ]
+  : []),
 ];
 
 // ── Financial Bid Columns (Indentor / Purchase Personnel) ──
@@ -1907,6 +1961,24 @@ const doubleBidFinColumns = [
         },
       ]
     : []),
+    ...(showPpFinLineClarif
+  ? [
+      {
+        title: 'Seek Clarification',
+        key: 'ppFinLineClarif',
+        render: (_, record) => (
+          <Button
+            type="link"
+            style={{ color: '#fa8c16', padding: 0 }}
+            disabled={record.financialStatus === 'CHANGE_REQUESTED'}
+            onClick={() => openVendorClarificationModal(record.vendorId, 'PURCHASE_PERSONNEL')}
+          >
+            {record.financialStatus === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
+          </Button>
+        ),
+      },
+    ]
+  : []),
 ];
 
 // ── SPO Technical Bid Columns ──
@@ -2526,11 +2598,24 @@ useEffect(() => {
                   />
                 </Card>
 
-                {isFinancialPhase && (
+                {/* {isFinancialPhase && (
                   <Card title="Financial Bid Evaluation" size="small" style={{ marginTop: 16 }}>
                     {financialVendors.length === 0 ? (
                       <Alert type="info" message="No vendors qualified in technical evaluation." />
-                    ) : (
+                    ) : ( */}
+                    {isFinancialPhase && (
+  <Card title="Financial Bid Evaluation" size="small" style={{ marginTop: 16 }}>
+    {evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD' && isPurchasePersonnelRole && (
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+        message="Financial sheet upload pending. Review qualified vendors below before uploading."
+      />
+    )}
+    {financialVendors.length === 0 ? (
+      <Alert type="info" message="No vendors qualified in technical evaluation." />
+    ) : (
                       <Table
                         dataSource={financialVendors}
                         columns={isSpoRole ? spoFinColumns : doubleBidFinColumns}
