@@ -252,7 +252,7 @@ public ResponseEntity<Object> submitIndentDraft(
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
 }
 @GetMapping("/my-assignments")
-public ResponseEntity<Object> getMyAssignments(@RequestParam Integer assignedByUserId) {
+public ResponseEntity<Object> getMyAssignments(@RequestParam(required = false) Integer assignedByUserId) {
     List<IndentAssignmentResponseDto> result = indentCreationService.getMyAssignments(assignedByUserId);
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(result), HttpStatus.OK);
 }

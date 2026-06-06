@@ -15,4 +15,5 @@ public interface IndentAssignmentRepository extends JpaRepository<IndentAssignme
     Optional<IndentAssignment> findByIndentIdAndStatus(String indentId, String status);
 List<IndentAssignment> findByAssignedByEmployeeIdAndStatus(String assignedByEmployeeId, String status);
     List<IndentAssignment> findByIndentId(String indentId);
+    List<IndentAssignment> findByStatus(String status);
 }

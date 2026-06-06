@@ -398,9 +398,7 @@ const fetchEmployees = () => {
 const fetchMyAssignments = async () => {
   setAssignmentLoading(true);
   try {
-    const res = await axios.get("/api/indents/my-assignments", {
-      params: { assignedByUserId: userId },
-    });
+    const res = await axios.get("/api/indents/my-assignments");
     setAssignedIndents(res.data.responseData || []);
   } catch {
     message.error("Failed to load assignments.");
@@ -2361,7 +2359,7 @@ const columnsToRender =
       fetchEmployees(); // pre-load employee list for reassign
     }}
   >
-    My Assignments
+    Active Assignments
   </Button>
 )}
         {Object.entries(workflowCounts).map(([id, count]) => (
@@ -2803,7 +2801,7 @@ const columnsToRender =
       </Modal>
       {auth.role === "Purchase Head" && (
         <Modal
-          title="My Assignments"
+          title="Active Assignments"
           open={assignmentModalOpen}
           onCancel={() => {
             setAssignmentModalOpen(false);

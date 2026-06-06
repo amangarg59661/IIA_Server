@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { message, Spin, Tag, Table, Checkbox, Popover, Input, Button, Modal, Select, Alert, Divider, Card, Badge, Typography, Steps, List, Space } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
@@ -81,6 +81,8 @@ const TenderEvaluator = () => {
   const [expertName, setExpertName] = useState('');
   const [eligibleExperts, setEligibleExperts] = useState([]);
   const [eligibleExpertsLoading, setEligibleExpertsLoading] = useState(false);
+  const [expertSearchText, setExpertSearchText] = useState('');
+  const expertSearchTimer = useRef(null);
 
   // Committee vote modal
   const [voteModal, setVoteModal] = useState(false);
@@ -697,7 +699,7 @@ const fetchEligibleExperts = async () => {
   setEligibleExpertsLoading(true);
   try {
     const res = await axios.get('/api/admin/techno-financial-committee/eligible-experts', { params: { tenderId } });
-    setEligibleExperts(res.data?.data || []);
+    setEligibleExperts(res.data?.responseData || []);
   } catch (e) {
     message.error('Failed to load eligible experts.');
   } finally {
@@ -708,9 +710,27 @@ const fetchEligibleExperts = async () => {
 const openExpertModal = () => {
   setExpertUserId('');
   setExpertName('');
+  setExpertSearchText('');
   fetchEligibleExperts();
   setExpertModal(true);
 };
+
+const handleExpertSearch = useCallback((searchValue) => {
+  if (expertSearchTimer.current) clearTimeout(expertSearchTimer.current);
+  expertSearchTimer.current = setTimeout(() => {
+    setExpertSearchText(searchValue.toLowerCase());
+  }, 300);
+}, []);
+
+const filteredExperts = useMemo(() => {
+  if (!expertSearchText) return eligibleExperts;
+  return eligibleExperts.filter(e => {
+    const name = (e.userName || '').toLowerCase();
+    const id = String(e.userId || '').toLowerCase();
+    const role = (e.roleName || '').toLowerCase();
+    return name.includes(expertSearchText) || id.includes(expertSearchText) || role.includes(expertSearchText);
+  });
+}, [eligibleExperts, expertSearchText]);
 
 const handleExpertSelect = (selectedUserId) => {
   setExpertUserId(selectedUserId);
@@ -1523,7 +1543,6 @@ if (isSpoRole) {
     }
       // ── PP visibility gate ──
   if (isPurchasePersonnelRole && (
-    isOpenGlobalGem ||
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
       !(isMultipleIndentEval && isBelow10L))
@@ -1764,7 +1783,6 @@ const doubleBidTechColumns = [
           render: (_, record) => {
             // ── PP visibility gate ──
   if (isPurchasePersonnelRole && (
-    isOpenGlobalGem ||
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
       !(isMultipleIndentEval && isBelow10L))
@@ -1938,7 +1956,6 @@ const doubleBidFinColumns = [
           render: (_, record) => {
             // ── PP visibility gate ──
   if (isPurchasePersonnelRole && (
-    isOpenGlobalGem ||
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
       !(isMultipleIndentEval && isBelow10L))
@@ -2388,7 +2405,8 @@ useEffect(() => {
   const isPendingMemberRevote = evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE';
   const isPendingCommitteeFormation = evalStatus?.evaluationStatus === 'PENDING_COMMITTEE_FORMATION';
   const isAnyClarificationPending = isPendingVendorClarif || isPendingIndentorClarif || isPendingMemberRevote;
-  const ppRespondingOnBehalfOfVendor = isPendingVendorClarif
+  const ppRespondingOnBehalfOfVendor = isPurchasePersonnelRole
+  && isPendingVendorClarif
   && evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
   && quotationData.some(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED');
   // Per-vendor: any vendor still has CHANGE_REQUESTED status
@@ -2875,7 +2893,7 @@ useEffect(() => {
 
 
             {/* ── Clarification Pending Banner ── */}
-            {isAnyClarificationPending &&  !(isPurchasePersonnelRole && isOpenGlobalGem) && (
+            {isAnyClarificationPending && !(ppRespondingOnBehalfOfVendor) && (
               <Alert
                 type="warning"
                 showIcon
@@ -3001,8 +3019,8 @@ useEffect(() => {
               ) : null}
 
             {/* ── Indentor / SPO / PP / Chairman / Director Acknowledges Vendor Clarification ── */}
-            {isPendingVendorClarif &&
-              (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && !(isPurchasePersonnelRole && isOpenGlobalGem) && (
+            {(isPendingVendorClarif || quotationData.some(q => q.status === 'CHANGE_REQUESTED' || q.status === 'CHANGE_RESPONDED')) &&
+              (isIndentCreatorRole || isPurchasePersonnelRole || isSpoRole || isChairman || isDirector) && !(ppRespondingOnBehalfOfVendor) && (
                 <Card title="Vendor Clarification Response" size="small" style={{ marginTop: 16 }}>
                   {/* <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message="Clarification Sent to Vendor"
@@ -3486,13 +3504,12 @@ useEffect(() => {
             placeholder="Search by name or user ID"
             value={expertUserId || undefined}
             onChange={handleExpertSelect}
+            onSearch={handleExpertSearch}
+            filterOption={false}
             style={{ width: '100%', marginTop: 4 }}
-            filterOption={(input, option) => {
-              const label = option?.children?.toString().toLowerCase() || '';
-              return label.includes(input.toLowerCase());
-            }}
+            notFoundContent={eligibleExpertsLoading ? <Spin size="small" /> : 'No experts found'}
           >
-            {eligibleExperts.map(e => (
+            {filteredExperts.map(e => (
               <Option key={e.userId} value={e.userId}>
                 {e.userName} ({e.userId}){e.roleName ? ` — ${e.roleName}` : ''}
               </Option>

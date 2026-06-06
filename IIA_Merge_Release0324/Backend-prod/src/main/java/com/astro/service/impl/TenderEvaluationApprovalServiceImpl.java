@@ -1041,12 +1041,12 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 || (!currentStatus.contains("CLARIFICATION") && !currentStatus.contains("MEMBER_REVOTE"))) {
             eval.setPreviousEvaluationStatus(currentStatus);
         }
+        // Always update metadata to reflect the CURRENT/latest clarification
         eval.setClarificationPendingFrom(target.toUpperCase());
         eval.setClarificationPendingFromId(dto.getTargetUserId());
         eval.setClarificationPendingFromName(dto.getTargetUserName());
         eval.setClarificationRequestedByRole(dto.getRequestedByRole());
         eval.setClarificationRemarks(dto.getRemarks());
-        // Store vendor context for INDENTOR/PP clarifications (null if general/tender-level)
         eval.setClarificationTargetVendorId(dto.getTargetVendorId());
 
         switch (target.toUpperCase()) {
@@ -1092,16 +1092,37 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 
             case "PURCHASE_PERSONNEL":
                 if (reroutedVendorToPP) {
-        eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");  // ✅ correct status
-        
+                    eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                    // Apply role-specific status fields on the rerouted vendor quotations
+                    if ("VENDOR".equalsIgnoreCase(originalTarget)) {
+                        String vid = dto.getTargetVendorId();
+                        if (vid == null || vid.isBlank()) vid = eval.getApprovedVendorId();
+                        if (vid != null) {
+                            final String fVid = vid;
+                            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, fVid)
+                                    .ifPresent(q -> {
+                                        applyClarificationRoleFields(q, dto, eval);
+                                        quotationRepository.save(q);
+                                    });
+                        }
+                    } else {
+                        List<VendorQuotationAgainstTender> rerouted =
+                                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                        if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                                && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                            rerouted = rerouted.stream()
+                                    .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                                    .collect(Collectors.toList());
+                        }
+                        rerouted.forEach(q -> applyClarificationRoleFields(q, dto, eval));
+                        quotationRepository.saveAll(rerouted);
+                    }
+                } else {
+                    eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
                 }
-     else {
-        eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
-    }
 
-
-     // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
-     // Only when actually targeting indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)
+                // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
+                // Only when actually targeting indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)
                 if (!reroutedVendorToPP
                         && "SPO".equalsIgnoreCase(dto.getRequestedByRole())
                         && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
@@ -1119,29 +1140,56 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                                 q.setRemarks(dto.getRemarks());
                                 q.setUpdatedDate(LocalDateTime.now());
                                 quotationRepository.save(q);
-                            });}
-    break;
+                            });
+                }
+                break;
             case "INDENTOR":
             case "CHAIRMAN":
                 eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
-                // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
-                if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
-                        && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
-                    final String clarVid = dto.getTargetVendorId();
-                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
-                            .ifPresent(q -> {
-                                if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
-                                    q.setFinancialIndentorStatus(null);
-                                    q.setFinancialIndentorRemarks(null);
-                                } else {
-                                    q.setIndentorStatus(null);
-                                    q.setIndentorRemarks(null);
-                                }
-                                q.setStatus("CHANGE_REQUESTED");
-                                q.setRemarks(dto.getRemarks());
-                                q.setUpdatedDate(LocalDateTime.now());
-                                quotationRepository.save(q);
-                            });
+                if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())) {
+                    if (dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
+                        // SPO seeking clarification for a specific vendor: reset that vendor's indentor decision
+                        final String clarVid = dto.getTargetVendorId();
+                        quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
+                                .ifPresent(q -> {
+                                    if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                                        q.setFinancialIndentorStatus(null);
+                                        q.setFinancialIndentorRemarks(null);
+                                    } else {
+                                        q.setIndentorStatus(null);
+                                        q.setIndentorRemarks(null);
+                                    }
+                                    q.setStatus("CHANGE_REQUESTED");
+                                    q.setRemarks(dto.getRemarks());
+                                    q.setUpdatedDate(LocalDateTime.now());
+                                    quotationRepository.save(q);
+                                });
+                    } else {
+                        // SPO seeking revision for ALL vendors: reset indentor decisions
+                        // In financial phase: only affect vendors that passed both technical rounds
+                        List<VendorQuotationAgainstTender> allQ =
+                                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                        if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                                && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                            allQ = allQ.stream()
+                                    .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                            && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                                    .collect(Collectors.toList());
+                        }
+                        allQ.forEach(q -> {
+                            if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                                q.setFinancialIndentorStatus(null);
+                                q.setFinancialIndentorRemarks(null);
+                            } else {
+                                q.setIndentorStatus(null);
+                                q.setIndentorRemarks(null);
+                            }
+                            q.setStatus("CHANGE_REQUESTED");
+                            q.setRemarks(dto.getRemarks());
+                            q.setUpdatedDate(LocalDateTime.now());
+                        });
+                        quotationRepository.saveAll(allQ);
+                    }
                 }
                 break;
             case "SPECIFIC_MEMBER":
@@ -1227,9 +1275,36 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     history.setRequestedAt(LocalDateTime.now());
                     clarificationHistoryRepository.save(history);
                 }
+            } else if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
+                    && "INDENTOR".equalsIgnoreCase(target)
+                    && (dto.getTargetVendorId() == null || dto.getTargetVendorId().isBlank())) {
+                // SPO all-vendor INDENTOR revision: create per-vendor history rows
+                boolean isDoubleBidFinancial = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                        && Boolean.TRUE.equals(eval.getFinancialBidPhase());
+                List<String> affectedVendorIds = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                        .stream()
+                        .filter(q -> !isDoubleBidFinancial
+                                || ("ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                    && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus())))
+                        .map(VendorQuotationAgainstTender::getVendorId)
+                        .collect(Collectors.toList());
+                for (String vid : affectedVendorIds) {
+                    TenderClarificationHistory history = new TenderClarificationHistory();
+                    history.setTenderId(tenderId);
+                    history.setRoundNumber(nextRound);
+                    history.setRequestedByRole(dto.getRequestedByRole());
+                    history.setRequestedByUserId(dto.getRequestedByUserId());
+                    history.setClarificationTarget(target.toUpperCase());
+                    history.setTargetVendorId(vid);
+                    history.setTargetUserId(dto.getTargetUserId());
+                    history.setTargetUserName(dto.getTargetUserName());
+                    history.setQuestionRemarks(dto.getRemarks());
+                    history.setRequestedAt(LocalDateTime.now());
+                    clarificationHistoryRepository.save(history);
+                }
             } else {
-                // Non-vendor targets (INDENTOR, CHAIRMAN, PURCHASE_PERSONNEL direct,
-                // SPECIFIC_MEMBER, ALL_MEMBERS): single row, no vendorId explosion
+                // Non-vendor targets (INDENTOR per-vendor, CHAIRMAN, PURCHASE_PERSONNEL direct,
+                // SPECIFIC_MEMBER, ALL_MEMBERS): single row
                 TenderClarificationHistory history = new TenderClarificationHistory();
                 history.setTenderId(tenderId);
                 history.setRoundNumber(nextRound);
@@ -1778,8 +1853,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
-        // Close pending clarifications when a CHANGE_REQUESTED vendor is rejected
-        if (wasChangeRequested && "REJECTED".equals(normalizedDecision)) {
+        // Close pending clarifications when a CHANGE_REQUESTED vendor is accepted or rejected
+        if (wasChangeRequested) {
             closePendingClarificationsForVendor(tenderId, vendorId,
                     "INDENTOR", evaluatorUserId, remarks, eval);
         }
