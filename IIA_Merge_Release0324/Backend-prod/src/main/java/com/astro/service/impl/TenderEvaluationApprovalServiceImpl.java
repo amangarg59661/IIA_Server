@@ -431,7 +431,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 List<VendorQuotationAgainstTender> quotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                         .forEach(q -> {
                             q.setFinancialBidVisible(true);
                             q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
@@ -870,7 +871,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 List<VendorQuotationAgainstTender> quotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                         .forEach(q -> {
                             q.setFinancialBidVisible(true);
                             q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
@@ -1023,7 +1025,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                         && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                     allQuotations = allQuotations.stream()
-                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                      || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                             .collect(Collectors.toList());
                 }
                 allQuotations.forEach(q -> {
@@ -1077,7 +1080,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                         && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                     allQuotations = allQuotations.stream()
-                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                      || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                             .collect(Collectors.toList());
                 }
                 allQuotations.forEach(q -> {
@@ -1111,7 +1115,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                                 && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                             rerouted = rerouted.stream()
-                                    .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                                    .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                              || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                                     .collect(Collectors.toList());
                         }
                         rerouted.forEach(q -> applyClarificationRoleFields(q, dto, eval));
@@ -1247,7 +1252,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     vendorIds = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                             .stream()
                             .filter(q -> !isDoubleBidFinancial
-                                    || "APPROVED".equalsIgnoreCase(q.getTechnicalStatus()))
+                                    || "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
+                                    || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
                             .map(VendorQuotationAgainstTender::getVendorId)
                             .collect(Collectors.toList());
                 } else {

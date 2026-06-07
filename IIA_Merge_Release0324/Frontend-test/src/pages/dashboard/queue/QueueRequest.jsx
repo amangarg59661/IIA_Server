@@ -374,6 +374,7 @@ const QueueRequest = ({ workflowId, requestType, data = [], loading = false, ref
 const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
 const [assignedIndents, setAssignedIndents] = useState([]);
 const [assignmentLoading, setAssignmentLoading] = useState(false);
+const [assignmentSearch, setAssignmentSearch] = useState("");
 const [reassignTarget, setReassignTarget] = useState(null); // { indentId, assignedToEmployeeName }
 const [reassignEmployee, setReassignEmployee] = useState(null);
 const [reassignLoading, setReassignLoading] = useState(false);
@@ -2807,14 +2808,32 @@ const columnsToRender =
             setAssignmentModalOpen(false);
             setReassignTarget(null);
             setReassignEmployee(null);
+            setAssignmentSearch("");
           }}
           footer={null}
           width={820}
           destroyOnClose
         >
+          <Input
+            placeholder="Search by Indent ID, Indentor, Subject or Assigned To"
+            prefix={<SearchOutlined />}
+            value={assignmentSearch}
+            onChange={(e) => setAssignmentSearch(e.target.value)}
+            allowClear
+            style={{ marginBottom: 12, width: 400 }}
+          />
           <Table
             loading={assignmentLoading}
-            dataSource={assignedIndents}
+            dataSource={assignedIndents.filter((item) => {
+              if (!assignmentSearch) return true;
+              const term = assignmentSearch.toLowerCase();
+              return (
+                (item.indentId || "").toLowerCase().includes(term) ||
+                (item.indentorName || "").toLowerCase().includes(term) ||
+                (item.subject || "").toLowerCase().includes(term) ||
+                (item.assignedToEmployeeName || "").toLowerCase().includes(term)
+              );
+            })}
             rowKey="indentId"
             size="small"
             pagination={{ pageSize: 8 }}

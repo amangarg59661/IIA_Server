@@ -1131,10 +1131,12 @@ if (isSpoRole) {
           }
         },
         {
-          title: indentorStatusLabel,
+          title: 'SPO Status',
           key: 'sopStatus',
           dataIndex: 'sopStatus',
-          render: (sopStatus) =>{
+          render: (sopStatus, record) =>{
+            const indStatus = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+            if (indStatus === 'REJECTED' || indStatus === 'Rejected') return 'Auto-Rejected';
             if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
             if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Rejected';
             if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Accepted';
@@ -1145,7 +1147,9 @@ if (isSpoRole) {
           title: 'Qualification Status',
           key: 'qualStatus',
           dataIndex: 'sopStatus',
-          render: (sopStatus) =>{
+          render: (sopStatus, record) =>{
+            const indStatus = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
+            if (indStatus === 'REJECTED' || indStatus === 'Rejected') return 'Disqualified';
             if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
             if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Disqualified';
             if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Qualified';
@@ -1234,7 +1238,7 @@ if (isSpoRole) {
     const indStatus = finPhase ? record.financialIndentorStatus : record.indentorStatus;
     const spStatus = finPhase ? record.financialSpoStatus : record.sopStatus;
     const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
-      // && indStatus === 'ACCEPTED'
+      && indStatus === 'ACCEPTED'
       && !spStatus
       && record.status !== 'CHANGE_REQUESTED';
     const pendingToIndentor = record.changeRequestToIndentor;
@@ -2031,7 +2035,8 @@ const spoTechColumns = [
     title: 'SPO Status',
     key: 'sopStatus',
     dataIndex: 'sopStatus',
-    render: (sopStatus) => {
+    render: (sopStatus, record) => {
+      if (record.indentorStatus === 'REJECTED' || record.indentorStatus === 'Rejected') return 'Auto-Rejected';
       if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
       if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Rejected';
       if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Accepted';
@@ -2042,7 +2047,8 @@ const spoTechColumns = [
     title: 'Qualification Status',
     key: 'qualStatus',
     dataIndex: 'sopStatus',
-    render: (sopStatus) => {
+    render: (sopStatus, record) => {
+      if (record.indentorStatus === 'REJECTED' || record.indentorStatus === 'Rejected') return 'Disqualified';
       if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
       if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return 'Disqualified';
       if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return 'Qualified';
@@ -2204,7 +2210,8 @@ const spoFinColumns = [
     title: 'SPO Financial Status',
     key: 'financialSpoStatus',
     dataIndex: 'financialSpoStatus',
-    render: (val) => {
+    render: (val, record) => {
+      if (record.financialIndentorStatus === 'REJECTED' || record.financialIndentorStatus === 'Rejected') return <Tag color="red">Auto-Rejected</Tag>;
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
       if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
       if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
@@ -2215,7 +2222,8 @@ const spoFinColumns = [
     title: 'Financial Qualification',
     key: 'finQualStatus',
     dataIndex: 'financialSpoStatus',
-    render: (val) => {
+    render: (val, record) => {
+      if (record.financialIndentorStatus === 'REJECTED' || record.financialIndentorStatus === 'Rejected') return 'Disqualified';
       if (val === 'REJECTED' || val === 'Rejected') return 'Disqualified';
       if (val === 'ACCEPTED' || val === 'Completed') return 'Qualified';
       if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
