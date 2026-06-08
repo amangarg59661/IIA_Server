@@ -1840,11 +1840,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         if (wasChangeRequested) {
             boolean canIndentorAct = VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR
                                 .equals(quotation.getNextRole());
-            if ("ACCEPTED".equals(normalizedDecision) && !canIndentorAct ) {
-                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                        "Cannot accept a vendor that is under seek clarification. "
-                        + "Resolve the clarification first, or reject the vendor."));
-            }
+            // if ("ACCEPTED".equals(normalizedDecision) && !canIndentorAct ) {
+            //     throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+            //             "Cannot accept a vendor that is under seek clarification. "
+            //             + "Resolve the clarification first, or reject the vendor."));
+            // }
             quotation.setStatus("SUBMITTED");
         }
 
@@ -1864,11 +1864,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
 
-        // Close pending clarifications when a CHANGE_REQUESTED vendor is accepted or rejected
-        if (wasChangeRequested) {
-            closePendingClarificationsForVendor(tenderId, vendorId,
-                    "INDENTOR", evaluatorUserId, remarks, eval);
-        }
+        // // Close pending clarifications when a CHANGE_REQUESTED vendor is accepted or rejected
+        // if (wasChangeRequested) {
+        //     closePendingClarificationsForVendor(tenderId, vendorId,
+        //             "INDENTOR", evaluatorUserId, remarks, eval);
+        // }
 
         return buildStatusDto(eval, tender, tenderId);
     }
