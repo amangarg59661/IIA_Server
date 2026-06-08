@@ -216,10 +216,10 @@ const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
    (isPurchasePersonnelRole && isMultipleIndentEval));
 
 const showSpoTechActions = isDoubleBidEval && !isFinancialPhase &&
-  isSpoRole && evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL';
+  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
 
 const showSpoFinActions = isDoubleBidEval && isFinancialPhase &&
-  isSpoRole && evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL';
+  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
 
   useEffect(() => {
     if (showRegisteredVendorColumn && allRegisteredVendors.length === 0) {
@@ -2689,9 +2689,9 @@ const spoFinColumns = [
             && record.financialIndentorStatus === 'ACCEPTED'
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
-          const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
-  && record.indentorStatus === 'ACCEPTED'
-  && (!record.sopStatus || record.sopStatus === 'PENDING');
+         const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+  && record.financialIndentorStatus === 'ACCEPTED'
+  && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING' || record.financialSpoStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
 
           return (
