@@ -98,7 +98,7 @@ List<TenderRequest> findByCreatedByAndCurrentStatus(String createdBy, String cur
             "    SELECT ic.indentId FROM IndentCreation ic WHERE ic.createdBy = :userId" +
             "  )" +
             ")")
-    List<ApprovedTenderIdDtos> findApprovedTenderIdsAndTitlesForPOANDSOByCreator(@Param("userId") Integer userId);
+    List<ApprovedTenderIdDtos> findApprovedTenderIdsAndTitlesForPOANDSOByCreator(@Param("userId") String userId);
 
     @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
             "FROM WorkflowTransition wt " +

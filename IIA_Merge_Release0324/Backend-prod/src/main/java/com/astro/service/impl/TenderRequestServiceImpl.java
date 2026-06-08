@@ -629,7 +629,7 @@ private String extractBaseTenderId(String tenderId) {
 }
 @Override
   public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByUser(Integer userId) {
-      return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(userId);
+      return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(String.valueOf(userId));
   }
 
 @Override
@@ -641,7 +641,7 @@ public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByRole(
             return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSO();
 
         case "indent creator":
-            return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(userId);
+            return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(String.valueOf(userId));
 
         case "store purchase officer":
             return TRrepo.findApprovedTendersUnder10Lakh();
