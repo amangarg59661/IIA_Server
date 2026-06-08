@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Button, Card, Form, message , Tag, Modal} from "antd";
+import { HistoryOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -720,7 +721,7 @@ updated[index].estimatedItemTotal = (
         </span>
       </div>
     )}
-    <Button onClick={() => fetchPoVersionHistory(formData.poId)}>
+    <Button icon={<HistoryOutlined />} onClick={() => fetchPoVersionHistory(formData.poId)}>
       View Version History
     </Button>
   </div>
@@ -776,7 +777,11 @@ updated[index].estimatedItemTotal = (
 
         const HEADER_FIELDS = [
             { key: 'vendorName',          label: 'Vendor Name' },
+            { key: 'vendorId',            label: 'Vendor ID' },
             { key: 'vendorAddress',       label: 'Vendor Address' },
+            { key: 'vendorAccountNumber', label: 'Vendor Account No.' },
+            { key: 'vendorsIfscCode',     label: 'Vendor IFSC Code' },
+            { key: 'vendorAccountName',   label: 'Vendor Account Name' },
             { key: 'deliveryPeriod',      label: 'Delivery Period' },
             { key: 'deliveryDate',        label: 'Delivery Date' },
             { key: 'incoTerms',           label: 'Inco Terms' },
@@ -786,17 +791,32 @@ updated[index].estimatedItemTotal = (
             { key: 'consignesAddress',    label: 'Consignee Address' },
             { key: 'billingAddress',      label: 'Billing Address' },
             { key: 'projectName',         label: 'Project Name' },
+            { key: 'quotationNumber',     label: 'Quotation Number' },
+            { key: 'quotationDate',       label: 'Quotation Date' },
+            { key: 'buyBackAmount',       label: 'Buy Back Amount' },
+            { key: 'additionalTermsAndConditions', label: 'Additional T&C' },
+            { key: 'applicablePbgToBeSubmitted',   label: 'Applicable PBG' },
+            { key: 'transporterAndFreightForWarderDetails', label: 'Transporter/Freight Details' },
+            { key: 'comparativeStatementFileName', label: 'Comparative Statement File' },
+            { key: 'gemContractFileName',          label: 'GeM Contract File' },
+            { key: 'typeOfSecurity',      label: 'Type of Security' },
+            { key: 'securityNumber',      label: 'Security Number' },
+            { key: 'securityDate',        label: 'Security Date' },
+            { key: 'expiryDate',          label: 'Expiry Date' },
         ];
 
         const LINE_FIELDS = [
+            { key: 'materialCode',        label: 'Material Code' },
             { key: 'materialDescription', label: 'Description' },
             { key: 'quantity',            label: 'Quantity' },
             { key: 'rate',                label: 'Rate' },
             { key: 'currency',            label: 'Currency' },
+            { key: 'exchangeRate',        label: 'Exchange Rate' },
             { key: 'gst',                 label: 'GST' },
             { key: 'duties',              label: 'Duties' },
             { key: 'freightCharge',       label: 'Freight' },
             { key: 'budgetCode',          label: 'Budget Code' },
+            { key: 'uom',                 label: 'UOM' },
         ];
 
         const headerDiffs = prev

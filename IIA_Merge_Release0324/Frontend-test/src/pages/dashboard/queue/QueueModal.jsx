@@ -1818,8 +1818,8 @@ const QueueModal = ({
 
         const wId = parseInt(curr.workflowId || versionHistoryList[0]?.workflowId, 10);
 
-        // ── Header fields — covers every field a user can change ──
-        const HEADER_FIELDS = [
+        // ── Per-workflow header fields ──
+        const INDENT_HEADER_FIELDS = [
           { key: 'indentorName',                     label: 'Indentor' },
           { key: 'indentorMobileNo',                 label: 'Mobile No.' },
           { key: 'indentorEmailAddress',             label: 'Email' },
@@ -1858,7 +1858,97 @@ const QueueModal = ({
           { key: 'draftEOIOrRFPFileName',            label: 'Draft EOI/RFP File' },
           { key: 'uploadPACOrBrandPACFileName',      label: 'PAC/Brand PAC File' },
           { key: 'uploadBuyBackFileNames',           label: 'Buy Back File' },
-        ].filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
+        ];
+
+        const PO_HEADER_FIELDS = [
+          { key: 'vendorName',            label: 'Vendor Name' },
+          { key: 'vendorId',              label: 'Vendor ID' },
+          { key: 'vendorAddress',         label: 'Vendor Address' },
+          { key: 'vendorAccountNumber',   label: 'Vendor Account No.' },
+          { key: 'vendorsIfscCode',       label: 'Vendor IFSC Code' },
+          { key: 'vendorAccountName',     label: 'Vendor Account Name' },
+          { key: 'deliveryPeriod',        label: 'Delivery Period' },
+          { key: 'deliveryDate',          label: 'Delivery Date' },
+          { key: 'incoTerms',             label: 'Inco Terms' },
+          { key: 'paymentTerms',          label: 'Payment Terms' },
+          { key: 'warranty',              label: 'Warranty' },
+          { key: 'ifLdClauseApplicable',  label: 'LD Clause' },
+          { key: 'consignesAddress',      label: 'Consignee Address' },
+          { key: 'billingAddress',        label: 'Billing Address' },
+          { key: 'projectName',           label: 'Project Name' },
+          { key: 'quotationNumber',       label: 'Quotation Number' },
+          { key: 'quotationDate',         label: 'Quotation Date' },
+          { key: 'buyBackAmount',         label: 'Buy Back Amount' },
+          { key: 'additionalTermsAndConditions', label: 'Additional T&C' },
+          { key: 'applicablePbgToBeSubmitted',   label: 'Applicable PBG' },
+          { key: 'transporterAndFreightForWarderDetails', label: 'Transporter/Freight Details' },
+          { key: 'comparativeStatementFileName', label: 'Comparative Statement File' },
+          { key: 'gemContractFileName',          label: 'GeM Contract File' },
+          { key: 'typeOfSecurity',        label: 'Type of Security' },
+          { key: 'securityNumber',        label: 'Security Number' },
+          { key: 'securityDate',          label: 'Security Date' },
+          { key: 'expiryDate',            label: 'Expiry Date' },
+        ];
+
+        const TENDER_HEADER_FIELDS = [
+          { key: 'titleOfTender',         label: 'Title' },
+          { key: 'modeOfProcurement',     label: 'Mode of Procurement' },
+          { key: 'bidType',               label: 'Bid Type' },
+          { key: 'openingDate',           label: 'Opening Date' },
+          { key: 'closingDate',           label: 'Closing Date' },
+          { key: 'lastDateOfSubmission',  label: 'Last Date of Submission' },
+          { key: 'applicableTaxes',       label: 'Applicable Taxes' },
+          { key: 'incoTerms',             label: 'Inco Terms' },
+          { key: 'paymentTerms',          label: 'Payment Terms' },
+          { key: 'ldClause',              label: 'LD Clause' },
+          { key: 'projectName',           label: 'Project Name' },
+          { key: 'singleAndMultipleVendors', label: 'Vendor Type' },
+          { key: 'consignes',             label: 'Consignee Address' },
+          { key: 'billinngAddress',       label: 'Billing Address' },
+          { key: 'performanceAndWarrantySecurity', label: 'Performance & Warranty Security' },
+          { key: 'bidSecurityDeclaration',         label: 'Bid Security Declaration' },
+          { key: 'mllStatusDeclaration',           label: 'MLL Status Declaration' },
+          { key: 'buyBack',               label: 'Buy Back' },
+          { key: 'buyBackAmount',         label: 'Buy Back Amount' },
+          { key: 'modelNumber',           label: 'Model Number' },
+          { key: 'serialNumber',          label: 'Serial Number' },
+          { key: 'dateOfPurchase',        label: 'Date of Purchase' },
+          { key: 'uploadTenderDocuments',              label: 'Tender Documents File' },
+          { key: 'uploadGeneralTermsAndConditions',    label: 'General T&C File' },
+          { key: 'uploadSpecificTermsAndConditions',   label: 'Specific T&C File' },
+          { key: 'uploadBuyBackFileNames',             label: 'Buy Back File' },
+        ];
+
+        const SO_HEADER_FIELDS = [
+          { key: 'vendorName',             label: 'Vendor Name' },
+          { key: 'vendorId',               label: 'Vendor ID' },
+          { key: 'vendorAddress',          label: 'Vendor Address' },
+          { key: 'vendorsAccountNo',       label: 'Vendor Account No.' },
+          { key: 'vendorsZRSCCode',        label: 'Vendor IFSC Code' },
+          { key: 'vendorsAccountName',     label: 'Vendor Account Name' },
+          { key: 'tenderId',               label: 'Tender ID' },
+          { key: 'jobCompletionPeriod',    label: 'Job Completion Period' },
+          { key: 'startDateAmc',           label: 'AMC Start Date' },
+          { key: 'endDateAmc',             label: 'AMC End Date' },
+          { key: 'incoTerms',              label: 'Inco Terms' },
+          { key: 'paymentTerms',           label: 'Payment Terms' },
+          { key: 'ifLdClauseApplicable',   label: 'LD Clause' },
+          { key: 'consignesAddress',       label: 'Consignee Address' },
+          { key: 'billingAddress',         label: 'Billing Address' },
+          { key: 'applicablePBGToBeSubmitted', label: 'Applicable PBG' },
+          { key: 'projectName',            label: 'Project Name' },
+        ];
+
+        const CP_HEADER_FIELDS = INDENT_HEADER_FIELDS;
+
+        const HEADER_FIELDS = (
+          wId === 1 ? INDENT_HEADER_FIELDS
+          : wId === 3 ? PO_HEADER_FIELDS
+          : [4, 7].includes(wId) ? TENDER_HEADER_FIELDS
+          : wId === 5 ? SO_HEADER_FIELDS
+          : wId === 2 ? CP_HEADER_FIELDS
+          : INDENT_HEADER_FIELDS
+        ).filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
 
         const MAT_FIELDS = [
           { key: 'materialCode',        label: 'Material Code' },

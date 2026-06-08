@@ -1,6 +1,6 @@
 // import React, { useRef, useState, useEffect } from "react";
 // import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag } from "antd";
-// import { SearchOutlined, PrinterOutlined } from "@ant-design/icons";
+// import { HistoryOutlined, PrinterOutlined } from "@ant-design/icons";
 // import { useReactToPrint } from "react-to-print";
 // import axios from "axios";
 // import { useSelector } from "react-redux";
@@ -1375,7 +1375,7 @@
 //         Version {formData.tenderVersion} — This tender has been revised {formData.tenderVersion - 1} time(s).
 //       </div>
 //     )}
-//     <Button icon={<SearchOutlined />} onClick={() => fetchVersionHistory(formData.tenderId)}>
+//     <Button icon={<HistoryOutlined />} onClick={() => fetchVersionHistory(formData.tenderId)}>
 //       View Version History
 //     </Button>
 //   </div>
@@ -1613,7 +1613,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag } from "antd";
-import { SearchOutlined, PrinterOutlined } from "@ant-design/icons";
+import { HistoryOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
 import { useSelector } from "react-redux";
@@ -2984,7 +2984,7 @@ useEffect(() => {
         Version {formData.tenderVersion} — This tender has been revised {formData.tenderVersion - 1} time(s).
       </div>
     )}
-    <Button icon={<SearchOutlined />} onClick={() => fetchVersionHistory(formData.tenderId)}>
+    <Button icon={<HistoryOutlined />} onClick={() => fetchVersionHistory(formData.tenderId)}>
       View Version History
     </Button>
   </div>
@@ -3078,6 +3078,34 @@ useEffect(() => {
             { key: 'ldClause',             label: 'LD Clause' },
             { key: 'projectName',          label: 'Project Name' },
             { key: 'singleAndMultipleVendors', label: 'Vendor Type' },
+            { key: 'consignes',            label: 'Consignee Address' },
+            { key: 'billinngAddress',      label: 'Billing Address' },
+            { key: 'performanceAndWarrantySecurity', label: 'Performance & Warranty Security' },
+            { key: 'bidSecurityDeclaration',         label: 'Bid Security Declaration' },
+            { key: 'mllStatusDeclaration',           label: 'MLL Status Declaration' },
+            { key: 'buyBack',              label: 'Buy Back' },
+            { key: 'buyBackAmount',        label: 'Buy Back Amount' },
+            { key: 'modelNumber',          label: 'Model Number' },
+            { key: 'serialNumber',         label: 'Serial Number' },
+            { key: 'dateOfPurchase',       label: 'Date of Purchase' },
+            { key: 'uploadTenderDocuments',              label: 'Tender Documents File' },
+            { key: 'uploadGeneralTermsAndConditions',    label: 'General T&C File' },
+            { key: 'uploadSpecificTermsAndConditions',   label: 'Specific T&C File' },
+            { key: 'uploadBuyBackFileNames',             label: 'Buy Back File' },
+        ];
+
+        const LINE_FIELDS = [
+            { key: 'materialCode',        label: 'Material Code' },
+            { key: 'materialDescription', label: 'Description' },
+            { key: 'uom',                 label: 'UOM' },
+            { key: 'quantity',            label: 'Quantity' },
+            { key: 'unitPrice',           label: 'Unit Price' },
+            { key: 'currency',            label: 'Currency' },
+            { key: 'budgetCode',          label: 'Budget Code' },
+            { key: 'totalPrice',          label: 'Total Price' },
+            { key: 'materialCategory',    label: 'Category' },
+            { key: 'materialSubCategory', label: 'Sub-Category' },
+            { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
         ];
 
         const headerDiffs = prev
@@ -3092,12 +3120,32 @@ useEffect(() => {
         const removedIndents = prevIndents.filter(id => !currIndents.includes(id));
         const indentsChanged = addedIndents.length > 0 || removedIndents.length > 0;
 
+        // Material details diff
+        const currLines = curr.materialDetails || [];
+        const prevLines = prev ? (prev.materialDetails || []) : [];
+        const lineDiffs = [];
+        const maxLen = Math.max(prevLines.length, currLines.length);
+        for (let i = 0; i < maxLen; i++) {
+            const p = prevLines[i];
+            const c = currLines[i];
+            if (!p) {
+                lineDiffs.push({ idx: i, type: 'added', item: c });
+            } else if (!c) {
+                lineDiffs.push({ idx: i, type: 'removed', item: p });
+            } else {
+                const changed = LINE_FIELDS
+                    .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
+                    .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
+                if (changed.length) lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c.materialDescription || `Item ${i + 1}` });
+            }
+        }
+
         // Total value diff
         const prevTotal = prev ? Number(prev.totalTenderValue || 0) : null;
         const currTotal = Number(curr.totalTenderValue || 0);
         const totalChanged = prev && prevTotal !== currTotal;
 
-        const totalChanges = headerDiffs.length + (indentsChanged ? 1 : 0) + (totalChanged ? 1 : 0);
+        const totalChanges = headerDiffs.length + (indentsChanged ? 1 : 0) + lineDiffs.length + (totalChanged ? 1 : 0);
         const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
         const fmtVal = val => (val == null || val === '') ? '—' : String(val);
 
@@ -3223,6 +3271,46 @@ useEffect(() => {
                                             − {id}
                                         </div>
                                     ))}
+                                </div>
+                            )}
+
+                            {/* Material detail changes */}
+                            {lineDiffs.length > 0 && (
+                                <div style={{ marginTop: '16px' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>MATERIAL DETAILS</div>
+                                    {lineDiffs.map((diff, i) => {
+                                        const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
+                                        const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
+                                        const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
+                                        const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
+                                        return (
+                                            <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
+                                                <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
+                                                    {prefix}Material {diff.idx + 1}
+                                                    {diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}
+                                                    {diff.type !== 'modified' && diff.item?.materialDescription ? ` — ${diff.item.materialDescription}` : ''}
+                                                </div>
+                                                <div style={{ padding: '8px 12px', background: '#fff' }}>
+                                                    {diff.type === 'modified'
+                                                        ? diff.changes.map(c => (
+                                                            <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
+                                                                <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
+                                                                <span style={{ color: '#bbb' }}>→</span>
+                                                                <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
+                                                            </div>
+                                                        ))
+                                                        : LINE_FIELDS.map(f => (
+                                                            <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
+                                                                <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
+                                                                <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
+                                                            </div>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </>

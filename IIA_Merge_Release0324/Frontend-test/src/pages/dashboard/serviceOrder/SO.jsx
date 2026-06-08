@@ -379,22 +379,31 @@ const fetchSoVersionHistory = async (sid) => {
 
         const HEADER_FIELDS = [
             { key: 'vendorName',               label: 'Vendor Name' },
+            { key: 'vendorId',                 label: 'Vendor ID' },
             { key: 'vendorAddress',            label: 'Vendor Address' },
+            { key: 'vendorsAccountNo',         label: 'Vendor Account No.' },
+            { key: 'vendorsZRSCCode',          label: 'Vendor IFSC Code' },
+            { key: 'vendorsAccountName',       label: 'Vendor Account Name' },
+            { key: 'tenderId',                 label: 'Tender ID' },
             { key: 'jobCompletionPeriod',      label: 'Job Completion Period' },
+            { key: 'startDateAmc',             label: 'AMC Start Date' },
+            { key: 'endDateAmc',               label: 'AMC End Date' },
             { key: 'incoTerms',                label: 'Inco Terms' },
             { key: 'paymentTerms',             label: 'Payment Terms' },
             { key: 'ifLdClauseApplicable',     label: 'LD Clause' },
             { key: 'consignesAddress',         label: 'Consignee Address' },
             { key: 'billingAddress',           label: 'Billing Address' },
-            { key: 'applicablePBGToBeSubmitted', label: 'PBG' },
+            { key: 'applicablePBGToBeSubmitted', label: 'Applicable PBG' },
             { key: 'projectName',              label: 'Project Name' },
         ];
 
         const LINE_FIELDS = [
+            { key: 'materialCode',        label: 'Material Code' },
             { key: 'materialDescription', label: 'Description' },
             { key: 'quantity',            label: 'Quantity' },
             { key: 'rate',                label: 'Rate' },
             { key: 'currency',            label: 'Currency' },
+            { key: 'exchangeRate',        label: 'Exchange Rate' },
             { key: 'gst',                 label: 'GST' },
             { key: 'duties',              label: 'Duties' },
             { key: 'budgetCode',          label: 'Budget Code' },
