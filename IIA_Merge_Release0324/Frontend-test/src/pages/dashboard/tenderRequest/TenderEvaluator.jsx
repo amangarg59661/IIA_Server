@@ -1402,7 +1402,7 @@ if (isSpoRole) {
     // Reject always allowed even if vendor hasn't responded — prevents flow from getting stuck
    const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
   && record.indentorStatus === 'ACCEPTED'
-  && (!record.sopStatus || record.sopStatus === 'PENDING');
+  && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
     const pendingToIndentor = record.changeRequestToIndentor;
 
     return (
