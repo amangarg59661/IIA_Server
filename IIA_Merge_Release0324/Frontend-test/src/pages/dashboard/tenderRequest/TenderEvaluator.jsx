@@ -210,8 +210,9 @@ const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
   evalStatus !== null;
 
 const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
-  evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
-  ((isIndentCreatorRole && !isMultipleIndentEval) ||
+  ['PENDING_FINANCIAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION']
+    .includes(evalStatus?.evaluationStatus) &&
+  ((isIndentCreatorRole && !isMultipleIndentEval)  ||
    (isPurchasePersonnelRole && isMultipleIndentEval));
 
 const showSpoTechActions = isDoubleBidEval && !isFinancialPhase &&
