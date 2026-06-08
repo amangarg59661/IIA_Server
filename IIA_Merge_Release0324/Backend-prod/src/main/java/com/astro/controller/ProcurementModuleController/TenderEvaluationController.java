@@ -11,6 +11,7 @@ import com.astro.dto.workflow.ProcurementDtos.TenderEvaluationRequestDto;
 import com.astro.dto.workflow.ProcurementDtos.TenderEvaluationResponseDto;
 import com.astro.dto.workflow.ProcurementDtos.TenderEvaluationResponseWithBitTypeAndValueDto;
 import com.astro.dto.workflow.RespondClarificationDto;
+import com.astro.dto.workflow.MemberClarificationResolutionDto;
 import com.astro.dto.workflow.SeekClarificationDto;
 import com.astro.dto.workflow.SpoApprovalRequestDto;
 import com.astro.dto.workflow.TenderCommitteeDecisionDto;
@@ -224,6 +225,16 @@ public class TenderEvaluationController {
                 tenderId, vendorId, decision, chairmanUserId);
         TenderEvaluationStatusDto status = approvalService.chairmanVendorResolve(
                 tenderId, vendorId, decision, remarks, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @PostMapping("/chairman/resolve-member-clarification")
+    public ResponseEntity<Object> resolveMemberClarification(
+            @RequestParam String tenderId,
+            @Valid @RequestBody MemberClarificationResolutionDto dto) {
+        log.info("Chairman resolve member clarification tenderId={} action={} chairmanUserId={}",
+                tenderId, dto.getAction(), dto.getChairmanUserId());
+        TenderEvaluationStatusDto status = approvalService.resolveMemberClarification(tenderId, dto);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 

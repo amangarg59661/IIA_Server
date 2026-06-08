@@ -99,4 +99,64 @@ List<TenderRequest> findByCreatedByAndCurrentStatus(String createdBy, String cur
             "  )" +
             ")")
     List<ApprovedTenderIdDtos> findApprovedTenderIdsAndTitlesForPOANDSOByCreator(@Param("userId") Integer userId);
+
+    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
+            "AND tr.totalTenderValue < 1000000")
+    List<ApprovedTenderIdDtos> findApprovedTendersUnder10Lakh();
+
+    @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
+            "AND tr.totalTenderValue >= 1000000")
+    List<ApprovedTenderIdDtos> findApprovedTendersAbove10Lakh();
+
+    @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
+            "AND wt.requestId IN (" +
+            "  SELECT tcd.tenderId FROM TenderCommitteeDecision tcd WHERE tcd.committeeUserId = :userId" +
+            ")")
+    List<ApprovedTenderIdDtos> findApprovedTendersForCommitteeMember(@Param("userId") Integer userId);
+
+    @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
+            "AND wt.requestId IN (" +
+            "  SELECT tcd.tenderId FROM TenderCommitteeDecision tcd WHERE tcd.expertUserId = :userId" +
+            ")")
+    List<ApprovedTenderIdDtos> findApprovedTendersForExpert(@Param("userId") Integer userId);
+
+    @Query("SELECT DISTINCT new com.astro.dto.workflow.ProcurementDtos.ApprovedTenderIdDtos(wt.requestId, tr.titleOfTender, tr.bidType) " +
+            "FROM WorkflowTransition wt " +
+            "JOIN TenderRequest tr ON tr.tenderId = wt.requestId " +
+            "WHERE wt.workflowName = 'Tender Approver Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL " +
+            "AND tr.lockedForPO IS NULL " +
+            "AND (wt.requestId IN (" +
+            "  SELECT te.tenderId FROM TenderEvaluation te WHERE te.amountCategory IN :amountCategories" +
+            ") OR wt.requestId IN (" +
+            "  SELECT te.tenderId FROM TenderEvaluation te WHERE te.adHocChairmanUserId = :userId" +
+            "))")
+    List<ApprovedTenderIdDtos> findApprovedTendersForChairman(
+            @Param("amountCategories") List<String> amountCategories,
+            @Param("userId") Integer userId);
 }

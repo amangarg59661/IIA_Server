@@ -21,6 +21,7 @@ import com.astro.entity.WorkflowTransition;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
 import com.astro.exception.InvalidInputException;
+import com.astro.entity.TechnoFinancialCommittee;
 import com.astro.repository.*;
 import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
 import com.astro.repository.ProcurementModule.IndentCreation.MaterialDetailsRepository;
@@ -44,6 +45,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +82,8 @@ private JobDetailsRepository jobDetailsRepository;
     private VendorQuotationAgainstTenderService vqService;
     @Autowired
     private TenderEvaluationRepository tenderEvaluationRepository;
+    @Autowired
+    private TechnoFinancialCommitteeRepository technoFinancialCommitteeRepository;
     // added  by abhinav
     @Autowired
     @Lazy
@@ -627,6 +631,53 @@ private String extractBaseTenderId(String tenderId) {
   public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByUser(Integer userId) {
       return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(userId);
   }
+
+@Override
+public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByRole(String role, Integer userId) {
+    String normalized = (role == null ? "" : role).toLowerCase().trim();
+    switch (normalized) {
+        case "purchase personnel":
+        case "purchase person":
+            return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSO();
+
+        case "indent creator":
+            return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(userId);
+
+        case "store purchase officer":
+            return TRrepo.findApprovedTendersUnder10Lakh();
+
+        case "director":
+            return TRrepo.findApprovedTendersAbove10Lakh();
+
+        case "committee member":
+            return TRrepo.findApprovedTendersForCommitteeMember(userId);
+
+        case "expert":
+            return TRrepo.findApprovedTendersForExpert(userId);
+
+        case "committee chairman": {
+            Optional<TechnoFinancialCommittee> chairOpt =
+                    technoFinancialCommitteeRepository.findByUserIdAndIsActiveTrue(userId);
+            List<String> amountCategories;
+            if (chairOpt.isPresent()) {
+                String type = chairOpt.get().getCommitteeType();
+                if ("STEC_I".equals(type)) {
+                    amountCategories = Arrays.asList("ABOVE_10_LAKH_UPTO_50_LAKH");
+                } else if ("STEC_II".equals(type)) {
+                    amountCategories = Arrays.asList("ABOVE_50_LAKH_UPTO_1_CRORE");
+                } else {
+                    amountCategories = Arrays.asList("ABOVE_10_LAKH_UPTO_50_LAKH", "ABOVE_50_LAKH_UPTO_1_CRORE");
+                }
+            } else {
+                amountCategories = Arrays.asList("ABOVE_10_LAKH_UPTO_50_LAKH", "ABOVE_50_LAKH_UPTO_1_CRORE");
+            }
+            return TRrepo.findApprovedTendersForChairman(amountCategories, userId);
+        }
+
+        default:
+            return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSO();
+    }
+}
 
 @Override
 public List<TenderResponseDto> getTenderVersionHistory(String tenderId) {

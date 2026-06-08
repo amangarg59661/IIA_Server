@@ -20,4 +20,7 @@ public interface TenderClarificationHistoryRepository extends JpaRepository<Tend
             String tenderId, String targetVendorId);
 
     long countByTenderIdAndRespondedAtIsNull(String tenderId);
+
+    List<TenderClarificationHistory> findByTenderIdAndClarificationTargetAndRespondedAtIsNull(
+            String tenderId, String clarificationTarget);
 }

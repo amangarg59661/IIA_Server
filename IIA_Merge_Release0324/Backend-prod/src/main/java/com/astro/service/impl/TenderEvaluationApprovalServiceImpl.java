@@ -3,6 +3,7 @@ package com.astro.service.impl;
 import com.astro.dto.workflow.CommitteeVendorVoteDto;
 import com.astro.dto.workflow.DirectorFormCommitteeDto;
 import com.astro.dto.workflow.RespondClarificationDto;
+import com.astro.dto.workflow.MemberClarificationResolutionDto;
 import com.astro.dto.workflow.SeekClarificationDto;
 import com.astro.dto.workflow.TenderCommitteeDecisionDto;
 import com.astro.dto.workflow.TenderEvaluationStatusDto;
@@ -1150,6 +1151,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 break;
             case "INDENTOR":
             case "CHAIRMAN":
+                if ("COMMITTEE_MEMBER".equalsIgnoreCase(dto.getRequestedByRole())) {
+                    eval.setEvaluationStatus("PENDING_CHAIRMAN_CLARIFICATION_REVIEW");
+                    break;
+                }
                 eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
                 if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())) {
                     if (dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
@@ -2454,6 +2459,98 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
         log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
+    }
+
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto resolveMemberClarification(String tenderId, MemberClarificationResolutionDto dto) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if (!"PENDING_CHAIRMAN_CLARIFICATION_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Tender is not pending chairman clarification review."));
+        }
+
+        Integer expectedChairman = resolveChairmanUserId(eval);
+        if (expectedChairman == null || !expectedChairman.equals(dto.getChairmanUserId())) {
+            throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                    "Only the designated Chairman can resolve member clarification requests."));
+        }
+
+        // Find open member→chairman clarification history row
+        List<TenderClarificationHistory> openRows = clarificationHistoryRepository
+                .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "CHAIRMAN");
+
+        String action = dto.getAction();
+
+        if ("FORWARD_TO_VENDOR".equalsIgnoreCase(action)) {
+            // Close member's history row
+            openRows.forEach(h -> {
+                h.setResponseText("Forwarded to vendor: " + dto.getRemarks());
+                h.setRespondedAt(LocalDateTime.now());
+                h.setRespondedByRole("CHAIRMAN");
+                h.setRespondedById(String.valueOf(dto.getChairmanUserId()));
+            });
+            clarificationHistoryRepository.saveAll(openRows);
+
+            // Forward to vendor using existing seekClarification flow
+            String vendorTarget = eval.getClarificationTargetVendorId() != null ? "VENDOR" : "ALL_VENDORS";
+            SeekClarificationDto seekDto = new SeekClarificationDto();
+            seekDto.setTenderId(tenderId);
+            seekDto.setRequestedByRole("CHAIRMAN");
+            seekDto.setRequestedByUserId(dto.getChairmanUserId());
+            seekDto.setClarificationTarget(vendorTarget);
+            seekDto.setTargetVendorId(eval.getClarificationTargetVendorId());
+            seekDto.setRemarks(dto.getRemarks());
+
+            return seekClarification(tenderId, seekDto);
+
+        } else if ("REJECT".equalsIgnoreCase(action)) {
+            // Close member's history row
+            openRows.forEach(h -> {
+                h.setResponseText("Rejected: " + dto.getRemarks());
+                h.setRespondedAt(LocalDateTime.now());
+                h.setRespondedByRole("CHAIRMAN");
+                h.setRespondedById(String.valueOf(dto.getChairmanUserId()));
+            });
+            clarificationHistoryRepository.saveAll(openRows);
+
+            // Reset the requesting member's vote
+            Integer memberUserId = openRows.stream()
+                    .map(TenderClarificationHistory::getRequestedByUserId)
+                    .filter(id -> id != null)
+                    .findFirst().orElse(null);
+            if (memberUserId != null) {
+                committeeDecisionRepository.findByTenderIdAndCommitteeUserId(tenderId, memberUserId)
+                        .ifPresent(v -> {
+                            v.setVote(null);
+                            v.setVoteRemarks(null);
+                            v.setVotedDate(null);
+                            v.setUpdatedDate(LocalDateTime.now());
+                            committeeDecisionRepository.save(v);
+                        });
+            }
+
+            // Restore previous status and clear clarification fields
+            String prev = eval.getPreviousEvaluationStatus();
+            eval.setEvaluationStatus(prev != null ? prev : "PENDING_APPROVAL");
+            eval.setClarificationPendingFrom(null);
+            eval.setClarificationPendingFromId(null);
+            eval.setClarificationPendingFromName(null);
+            eval.setClarificationRequestedByRole(null);
+            eval.setClarificationRemarks(null);
+            eval.setClarificationTargetVendorId(null);
+            eval.setPreviousEvaluationStatus(null);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+
+            return buildStatusDto(eval, tender, tenderId);
+
+        } else {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Invalid action. Must be FORWARD_TO_VENDOR or REJECT."));
+        }
     }
 
     private Integer resolveChairmanUserId(TenderEvaluation eval) {

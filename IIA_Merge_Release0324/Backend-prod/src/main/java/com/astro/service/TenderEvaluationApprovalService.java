@@ -2,6 +2,7 @@
 package com.astro.service;
 
 import com.astro.dto.workflow.DirectorFormCommitteeDto;
+import com.astro.dto.workflow.MemberClarificationResolutionDto;
 import com.astro.dto.workflow.RespondClarificationDto;
 import com.astro.dto.workflow.SeekClarificationDto;
 import com.astro.dto.workflow.TenderCommitteeDecisionDto;
@@ -97,6 +98,8 @@ public interface TenderEvaluationApprovalService {
     TenderEvaluationStatusDto chairmanVendorResolve(String tenderId, String vendorId,
                                                      String decision, String remarks,
                                                      Integer chairmanUserId);
+
+    TenderEvaluationStatusDto resolveMemberClarification(String tenderId, MemberClarificationResolutionDto dto);
 
     /**
      * Above 10L: Chairman gives final decision (approve/reject or override committee).

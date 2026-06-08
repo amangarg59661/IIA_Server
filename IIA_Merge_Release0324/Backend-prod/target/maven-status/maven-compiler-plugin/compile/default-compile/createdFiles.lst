@@ -511,6 +511,7 @@ com\astro\repository\InventoryModule\ogp\OgpDetailRepository.class
 com\astro\repository\InventoryModule\igp\IgpMasterRepository.class
 com\astro\entity\StateMaster.class
 com\astro\controller\LocationMasterController.class
+com\astro\dto\workflow\MemberClarificationResolutionDto.class
 com\astro\service\GoodsInspectionService.class
 com\astro\repository\AdminPanel\BudgetCategoryMasterRepository.class
 com\astro\dto\workflow\InventoryModule\GoodsInspectionRequestDto.class

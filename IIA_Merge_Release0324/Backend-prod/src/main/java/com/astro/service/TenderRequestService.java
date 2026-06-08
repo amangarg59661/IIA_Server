@@ -28,6 +28,7 @@ public interface TenderRequestService {
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForGemTenderEvaluation();
     public List<TenderResponseDto> getTenderVersionHistory(String tenderId);
     public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByUser(Integer userId);
+    public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByRole(String role, Integer userId);
 
     public TenderResponseDto saveTenderDraft(TenderRequestDto dto);
     public TenderResponseDto updateTenderDraft(String tenderId, TenderRequestDto dto);  

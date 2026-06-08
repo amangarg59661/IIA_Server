@@ -189,10 +189,16 @@ public ResponseEntity<Object> getUserTenderDrafts(@RequestParam Integer userId) 
 
     @GetMapping("/approvedTender/TenderEvaluation")
     public ResponseEntity<Object> getAllApprovedTenderIdsWithTitle(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) Integer userId
     ) {
-        List<ApprovedTenderIdDtos> result = TRService.getApprovedTenderIdsForTenderEvaluation();
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(result), HttpStatus.OK);
-
+        List<ApprovedTenderIdDtos> result;
+        if (role != null && userId != null) {
+            result = TRService.getApprovedTenderIdsForTenderEvaluationByRole(role, userId);
+        } else {
+            result = TRService.getApprovedTenderIdsForTenderEvaluation();
+        }
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(result), HttpStatus.OK);
     }
 
     @GetMapping("/approvedGemTender/TenderEvaluation")
