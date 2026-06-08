@@ -200,7 +200,8 @@ const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
 
 const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
   evalStatus?.evaluationStatus === 'PENDING_FINANCIAL' &&
-  (isIndentCreatorRole || isPurchasePersonnelRole);
+  ((isIndentCreatorRole && !isMultipleIndentEval) ||
+   (isPurchasePersonnelRole && isMultipleIndentEval));
 
 const showSpoTechActions = isDoubleBidEval && !isFinancialPhase &&
   isSpoRole && evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL';
@@ -1209,10 +1210,18 @@ if (isSpoRole) {
       title: 'Indentor/PP Financial Status',
       key: 'financialIndentorStatus',
       dataIndex: 'financialIndentorStatus',
-      render: (val) => {
-        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
-        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+      width: 150,
+      render: (val, record) => {
         if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+        if (val === 'REJECTED' || val === 'Rejected') return (
+          <Popover
+            content={record.financialIndentorRemarks ? <span>{record.financialIndentorRemarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
+            title="Rejection Reason"
+          >
+            <span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span>
+          </Popover>
+        );
+        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
         return val || <Tag>Pending</Tag>;
       }
     },
@@ -1220,7 +1229,9 @@ if (isSpoRole) {
       title: 'SPO Financial Status',
       key: 'financialSpoStatus',
       dataIndex: 'financialSpoStatus',
-      render: (val) => {
+      width: 130,
+      render: (val, record) => {
+        if (record.financialIndentorStatus === 'REJECTED' || record.financialIndentorStatus === 'Rejected') return <Tag color="red">Auto-Rejected</Tag>;
         if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
         if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
         if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
@@ -1438,10 +1449,11 @@ if (isSpoRole) {
       title: 'Indentor/PP Financial Status',
       key: 'financialIndentorStatus',
       dataIndex: 'financialIndentorStatus',
+      width: 150,
       render: (val) => {
+        if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
         if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
         if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
-        if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
         return val || <Tag>Pending</Tag>;
       }
     },
@@ -1449,6 +1461,7 @@ if (isSpoRole) {
       title: 'SPO Financial Status',
       key: 'financialSpoStatus',
       dataIndex: 'financialSpoStatus',
+      width: 130,
       render: (val) => {
         if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
         if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
@@ -1637,6 +1650,7 @@ const vendorInfoColumns = [
     title: 'Vendor ID',
     dataIndex: 'vendorId',
     key: 'vendorId',
+    width: 120,
     render: (vid) => (
       <a
         style={{ color: '#1890ff' }}
@@ -1653,6 +1667,7 @@ const vendorInfoColumns = [
     title: 'Vendor Name',
     dataIndex: 'vendorName',
     key: 'vendorName',
+    width: 150,
   },
 ];
 
@@ -1662,6 +1677,7 @@ const doubleBidTechColumns = [
   {
     title: 'Technical Document',
     key: 'techDoc',
+    width: 130,
     render: (_, record) =>
       record.quotationFileName ? (
         <a
@@ -1699,6 +1715,7 @@ const doubleBidTechColumns = [
     title: indentorStatusLabel,
     key: 'indentorStatus',
     dataIndex: 'indentorStatus',
+    width: 150,
     render: (val) => {
       if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
       if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
@@ -1709,6 +1726,7 @@ const doubleBidTechColumns = [
   {
     title: 'SPO Status',
     key: 'sopStatus',
+    width: 130,
     dataIndex: 'sopStatus',
     render: (val) => {
       if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
@@ -1863,15 +1881,39 @@ const doubleBidFinColumns = [
     title: 'Financial Document',
     dataIndex: 'priceBidFileName',
     key: 'priceBidFileName',
+    width: 130,
     render: (fileName) =>
       fileName ? (
         <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
       ) : 'No File',
   },
+  ...(showVendorResponse
+    ? [{
+        title: 'Vendor Response',
+        dataIndex: 'vendorResponse',
+        key: 'finVendorResponse',
+      }]
+    : []),
+  ...(showClarificationFile
+    ? [{
+        title: 'Clarification File',
+        dataIndex: 'clarificationFileName',
+        key: 'finClarificationFile',
+        render: (file, record) => {
+          const latest = [...clarificationHistory]
+            .filter(h => h.targetVendorId === record.vendorId)
+            .sort((a, b) => b.roundNumber - a.roundNumber)[0];
+          return latest?.responseFileName ? (
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+          ) : null;
+        },
+      }]
+    : []),
   {
-    title: 'Indentor/PP Financial Status',
+    title: indentorStatusLabel,
     key: 'financialIndentorStatus',
     dataIndex: 'financialIndentorStatus',
+    width: 150,
     render: (val) => {
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
       if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
@@ -1880,9 +1922,10 @@ const doubleBidFinColumns = [
     },
   },
   {
-    title: 'SPO Financial Status',
+    title: 'SPO Status',
     key: 'financialSpoStatus',
     dataIndex: 'financialSpoStatus',
+    width: 130,
     render: (val) => {
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
       if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
@@ -2008,6 +2051,7 @@ const spoTechColumns = [
   {
     title: 'Technical Document',
     key: 'techDoc',
+    width: 130,
     render: (_, record) =>
       record.quotationFileName ? (
         <a href={`${baseURL}/file/view/Tender/${record.quotationFileName}`} target="_blank" rel="noopener noreferrer">View</a>
@@ -2017,6 +2061,7 @@ const spoTechColumns = [
     title: 'Indentor Status',
     key: 'indentorStatus',
     dataIndex: 'indentorStatus',
+    width: 150,
     render: (indentorStatus, record) => {
       if (indentorStatus === 'CHANGE_REQUESTED') return 'Pending Clarification';
       if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return (
@@ -2035,6 +2080,7 @@ const spoTechColumns = [
     title: 'SPO Status',
     key: 'sopStatus',
     dataIndex: 'sopStatus',
+    width: 130,
     render: (sopStatus, record) => {
       if (record.indentorStatus === 'REJECTED' || record.indentorStatus === 'Rejected') return 'Auto-Rejected';
       if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return 'Pending Clarification';
@@ -2190,26 +2236,58 @@ const spoFinColumns = [
     title: 'Financial Document',
     dataIndex: 'priceBidFileName',
     key: 'priceBidFileName',
+    width: 130,
     render: (fileName) =>
       fileName ? (
         <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
       ) : 'No File',
   },
+  ...(showVendorResponse
+    ? [{
+        title: 'Vendor Response',
+        dataIndex: 'vendorResponse',
+        key: 'spoFinVendorResponse',
+      }]
+    : []),
+  ...(showClarificationFile
+    ? [{
+        title: 'Clarification File',
+        dataIndex: 'clarificationFileName',
+        key: 'spoFinClarificationFile',
+        render: (file, record) => {
+          const latest = [...clarificationHistory]
+            .filter(h => h.targetVendorId === record.vendorId)
+            .sort((a, b) => b.roundNumber - a.roundNumber)[0];
+          return latest?.responseFileName ? (
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+          ) : null;
+        },
+      }]
+    : []),
   {
-    title: 'Indentor/PP Financial Status',
+    title: 'Indentor Status',
     key: 'financialIndentorStatus',
     dataIndex: 'financialIndentorStatus',
-    render: (val) => {
-      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
-      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+    width: 150,
+    render: (val, record) => {
       if (val === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+      if (val === 'REJECTED' || val === 'Rejected') return (
+        <Popover
+          content={record.financialIndentorRemarks ? <span>{record.financialIndentorRemarks}</span> : <span style={{ color: '#888' }}>No reason provided</span>}
+          title="Rejection Reason"
+        >
+          <span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span>
+        </Popover>
+      );
+      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
       return val || <Tag>Pending</Tag>;
     },
   },
   {
-    title: 'SPO Financial Status',
+    title: 'SPO Status',
     key: 'financialSpoStatus',
     dataIndex: 'financialSpoStatus',
+    width: 130,
     render: (val, record) => {
       if (record.financialIndentorStatus === 'REJECTED' || record.financialIndentorStatus === 'Rejected') return <Tag color="red">Auto-Rejected</Tag>;
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
@@ -2219,7 +2297,7 @@ const spoFinColumns = [
     },
   },
   {
-    title: 'Financial Qualification',
+    title: 'Qualification Status',
     key: 'finQualStatus',
     dataIndex: 'financialSpoStatus',
     render: (val, record) => {
@@ -2621,6 +2699,8 @@ useEffect(() => {
                     size="small"
                     bordered
                     pagination={false}
+                    scroll={{ x: 'max-content' }}
+                    tableLayout="auto"
                   />
                 </Card>
 
@@ -2649,6 +2729,8 @@ useEffect(() => {
                         size="small"
                         bordered
                         pagination={false}
+                        scroll={{ x: 'max-content' }}
+                        tableLayout="auto"
                       />
                     )}
                   </Card>

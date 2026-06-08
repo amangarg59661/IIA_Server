@@ -28,6 +28,8 @@ public class VendorQuotationAgainstTenderDto {
 
     private String financialIndentorStatus;
     private String financialSpoStatus;
+    private String financialIndentorRemarks;
+    private String financialSpoRemarks;
 
     private String registeredVendorId;
     private String registeredVendorName;
