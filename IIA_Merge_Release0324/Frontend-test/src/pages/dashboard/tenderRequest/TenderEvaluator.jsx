@@ -175,7 +175,7 @@ const showActionButtons =
     && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL')) ||
 
   (isFinancialPhase && evalStatus !== null &&
-    (evalStatus.evaluationStatus === 'PENDING_FINANCIAL') &&
+    (['PENDING_FINANCIAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus.evaluationStatus)) &&
     (isIndentCreatorRole || isPurchasePersonnelRole));
 
 const canPerformActions = showActionButtons;

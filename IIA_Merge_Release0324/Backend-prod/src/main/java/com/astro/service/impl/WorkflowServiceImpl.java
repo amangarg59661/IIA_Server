@@ -23,6 +23,7 @@ import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 import com.astro.repository.ProcurementModule.ContigencyPurchaseRepository;
 import com.astro.repository.ProcurementModule.IndentCreation.IndentCreationRepository;
 import com.astro.repository.ProcurementModule.IndentCreation.MaterialDetailsRepository;
+import com.astro.entity.ProcurementModule.JobDetails;
 import com.astro.repository.ProcurementModule.IndentCreation.JobDetailsRepository;
 import com.astro.repository.ProcurementModule.IndentIdRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderRepository;
@@ -156,6 +157,9 @@ private BudgetService budgetService;
 
     @Autowired
     private WorkflowBranchMasterRepository workflowBranchMasterRepository;
+
+    @Autowired
+    private JobDetailsRepository jobDetailsRepo;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -3182,12 +3186,17 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
                 queueResponse.setIndentorName(indentCreation.getIndentorName());
                 queueResponse.setProjectName(indentCreation.getProjectName());
                 queueResponse.setAmount(indentCreation.getTotalIntentValue());
-                //  queueResponse.setBudgetName();
-                //   queueResponse.setIndentTitle("NUll");
                 if (!mdList.isEmpty()) {
                     MaterialDetails m = mdList.get(0);
                     queueResponse.setModeOfProcurement(m.getModeOfProcurement());
                     queueResponse.setBudgetName(m.getBudgetCode());
+                } else {
+                    List<JobDetails> jobList = jobDetailsRepo.findByIndentCreation_IndentId(indentId);
+                    if (!jobList.isEmpty()) {
+                        JobDetails j = jobList.get(0);
+                        queueResponse.setModeOfProcurement(j.getModeOfProcurement());
+                        queueResponse.setBudgetName(j.getBudgetCode());
+                    }
                 }
 
                 queueResponse.setConsignee(indentCreation.getConsignesLocation());
