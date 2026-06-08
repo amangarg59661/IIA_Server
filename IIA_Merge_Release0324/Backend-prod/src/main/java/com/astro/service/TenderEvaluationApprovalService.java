@@ -101,6 +101,16 @@ public interface TenderEvaluationApprovalService {
 
     TenderEvaluationStatusDto resolveMemberClarification(String tenderId, MemberClarificationResolutionDto dto);
 
+    TenderEvaluationStatusDto ppSubmitDocument(String tenderId);
+
+    TenderEvaluationStatusDto confirmCommitteeVotes(String tenderId, Integer committeeUserId);
+
+    TenderEvaluationStatusDto chairmanVendorVote(String tenderId, String vendorId, String decision,
+                                                   String remarks, Integer chairmanUserId);
+
+    TenderEvaluationStatusDto directorVendorVote(String tenderId, String vendorId, String decision,
+                                                   String remarks, Integer directorUserId);
+
     /**
      * Above 10L: Chairman gives final decision (approve/reject or override committee).
      */

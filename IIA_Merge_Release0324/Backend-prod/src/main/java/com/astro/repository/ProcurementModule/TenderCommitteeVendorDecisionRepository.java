@@ -24,4 +24,7 @@ public interface TenderCommitteeVendorDecisionRepository
             String tenderId, String vendorId, Integer committeeUserId, String phase);
 
     void deleteByTenderIdAndPhase(String tenderId, String phase);
+
+    List<TenderCommitteeVendorDecision> findByTenderIdAndPhaseAndVoterRole(
+            String tenderId, String phase, String voterRole);
 }

@@ -238,6 +238,48 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    @PostMapping("/pp/submit-document")
+    public ResponseEntity<Object> ppSubmitDocument(@RequestParam String tenderId) {
+        log.info("PP submit document tenderId={}", tenderId);
+        TenderEvaluationStatusDto status = approvalService.ppSubmitDocument(tenderId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @PostMapping("/committee/confirm-votes")
+    public ResponseEntity<Object> confirmCommitteeVotes(
+            @RequestParam String tenderId,
+            @RequestParam Integer committeeUserId) {
+        log.info("Confirm committee votes tenderId={} userId={}", tenderId, committeeUserId);
+        TenderEvaluationStatusDto status = approvalService.confirmCommitteeVotes(tenderId, committeeUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @PostMapping("/chairman/vendor-vote")
+    public ResponseEntity<Object> chairmanVendorVote(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @RequestParam String decision,
+            @RequestParam(required = false) String remarks,
+            @RequestParam Integer chairmanUserId) {
+        log.info("Chairman vendor vote tenderId={} vendorId={} decision={}", tenderId, vendorId, decision);
+        TenderEvaluationStatusDto status = approvalService.chairmanVendorVote(
+                tenderId, vendorId, decision, remarks, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
+    @PostMapping("/director/vendor-vote")
+    public ResponseEntity<Object> directorVendorVote(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @RequestParam String decision,
+            @RequestParam(required = false) String remarks,
+            @RequestParam Integer directorUserId) {
+        log.info("Director vendor vote tenderId={} vendorId={} decision={}", tenderId, vendorId, decision);
+        TenderEvaluationStatusDto status = approvalService.directorVendorVote(
+                tenderId, vendorId, decision, remarks, directorUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     @GetMapping("/committee/vendor-vote-grid")
     public ResponseEntity<Object> getVendorVoteGrid(
             @RequestParam String tenderId,
