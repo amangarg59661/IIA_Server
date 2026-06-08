@@ -1443,7 +1443,8 @@ if (isSpoRole) {
   <Button
     size="small"
     style={{ color: 'red' }}
-    disabled={!spoCanAct || spStatus === 'REJECTED'}
+    disabled={!spoCanReject || spStatus === 'REJECTED'}
+    // disabled={!spoCanAct || spStatus === 'REJECTED'}
   >
     {spStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
   </Button>
