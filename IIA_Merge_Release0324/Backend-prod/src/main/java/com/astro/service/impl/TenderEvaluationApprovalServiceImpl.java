@@ -1551,30 +1551,72 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                         });
             }
             // Fall through to unified restore gate below
+        // } else {
+        //     // Indentor/PP (global)/member response — PK-based when available, filtered fallback otherwise
+        //     try {
+        //         Optional<TenderClarificationHistory> historyRow;
+        //         if (dto.getClarificationHistoryId() != null) {
+        //             historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
+        //                     .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
+        //         } else {
+        //             Set<String> elseTargets = Set.of("INDENTOR", "CHAIRMAN",
+        //                     "PURCHASE_PERSONNEL", "SPECIFIC_MEMBER", "ALL_MEMBERS");
+        //             historyRow = clarificationHistoryRepository
+        //                     .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
+        //                     .filter(h -> h.getRespondedAt() == null
+        //                             && elseTargets.contains(h.getClarificationTarget()))
+        //                     .findFirst();
+        //         }
+        //         historyRow.ifPresent(h -> {
+        //             h.setResponseText(dto.getResponseText());
+        //             h.setResponseFileName(dto.getResponseFileName());
+        //             h.setRespondedByRole(dto.getRespondedByRole());
+        //             h.setRespondedById(dto.getRespondedById());
+        //             h.setRespondedAt(LocalDateTime.now());
+        //             clarificationHistoryRepository.save(h);
+        //         });
+        //     } catch (Exception e) {
+        //         log.warn("Clarification history update failed: {}", e.getMessage());
+        //     }
+        // }
+
         } else {
             // Indentor/PP (global)/member response — PK-based when available, filtered fallback otherwise
             try {
-                Optional<TenderClarificationHistory> historyRow;
                 if (dto.getClarificationHistoryId() != null) {
-                    historyRow = clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
-                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null);
+                    // PK-based: single known row — close just that one
+                    clarificationHistoryRepository.findById(dto.getClarificationHistoryId())
+                            .filter(h -> tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null)
+                            .ifPresent(h -> {
+                                h.setResponseText(dto.getResponseText());
+                                h.setResponseFileName(dto.getResponseFileName());
+                                h.setRespondedByRole(dto.getRespondedByRole());
+                                h.setRespondedById(dto.getRespondedById());
+                                h.setRespondedAt(LocalDateTime.now());
+                                clarificationHistoryRepository.save(h);
+                            });
                 } else {
-                    Set<String> elseTargets = Set.of("INDENTOR", "CHAIRMAN",
-                            "PURCHASE_PERSONNEL", "SPECIFIC_MEMBER", "ALL_MEMBERS");
-                    historyRow = clarificationHistoryRepository
+                    // Role-targeted: close ALL open rows whose clarificationTarget
+                    // matches the responding role — prevents cross-contamination
+                    // when multiple concurrent clarification types are open
+                    // (e.g. INDENTOR + SPECIFIC_MEMBER rows both open simultaneously).
+                    String expectedTarget = resolveExpectedClarificationTarget(respondedByRole);
+                    List<TenderClarificationHistory> rowsToClose = clarificationHistoryRepository
                             .findByTenderIdOrderByRequestedAtDesc(tenderId).stream()
                             .filter(h -> h.getRespondedAt() == null
-                                    && elseTargets.contains(h.getClarificationTarget()))
-                            .findFirst();
+                                    && expectedTarget.equals(h.getClarificationTarget()))
+                            .collect(Collectors.toList());
+                    rowsToClose.forEach(h -> {
+                        h.setResponseText(dto.getResponseText());
+                        h.setResponseFileName(dto.getResponseFileName());
+                        h.setRespondedByRole(dto.getRespondedByRole());
+                        h.setRespondedById(dto.getRespondedById());
+                        h.setRespondedAt(LocalDateTime.now());
+                    });
+                    if (!rowsToClose.isEmpty()) {
+                        clarificationHistoryRepository.saveAll(rowsToClose);
+                    }
                 }
-                historyRow.ifPresent(h -> {
-                    h.setResponseText(dto.getResponseText());
-                    h.setResponseFileName(dto.getResponseFileName());
-                    h.setRespondedByRole(dto.getRespondedByRole());
-                    h.setRespondedById(dto.getRespondedById());
-                    h.setRespondedAt(LocalDateTime.now());
-                    clarificationHistoryRepository.save(h);
-                });
             } catch (Exception e) {
                 log.warn("Clarification history update failed: {}", e.getMessage());
             }
@@ -2855,5 +2897,27 @@ long openHistoryRows;
         return committeeRepository.findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", stecType)
                 .map(TechnoFinancialCommittee::getUserId)
                 .orElse(null);
+    }
+
+    // ADD after line 2858, before the class-closing }:
+
+    /**
+     * Maps the respondedByRole to the clarificationTarget string stored in
+     * TenderClarificationHistory rows, so the restore gate closes exactly the
+     * right rows without touching unrelated concurrent clarification rounds.
+     *
+     * SPO → INDENTOR (all vendors) creates N rows with target="INDENTOR".
+     * INDENTOR responding must close ALL N rows, not just the first.
+     */
+    private String resolveExpectedClarificationTarget(String respondedByRole) {
+        if (respondedByRole == null) return "INDENTOR";
+        return switch (respondedByRole.toUpperCase()) {
+            case "INDENTOR"           -> "INDENTOR";
+            case "PURCHASE_PERSONNEL" -> "PURCHASE_PERSONNEL";
+            case "CHAIRMAN"           -> "CHAIRMAN";
+            case "COMMITTEE_MEMBER"   -> "CHAIRMAN";   // member responds to CHAIRMAN-targeted row
+            case "DIRECTOR"           -> "INDENTOR";
+            default                   -> "INDENTOR";
+        };
     }
 }
