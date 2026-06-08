@@ -777,6 +777,59 @@ public boolean acceptVendorQuotation(String tenderId, String vendorId,Integer us
         VendorQuotationAgainstTender saved = vendorQuotationAgainstTenderRepository.save(newQuotation);
         log.info("Created new rejected quotation version: tenderId={} vendorId={} version={}",
                 tenderId, vendorId, saved.getVersion());
+try {
+    TenderEvaluation eval = tenderEvaluationRepository.findByTenderId(tenderId);
+    if (eval != null && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
+
+        // Step 1: Close open clarification history rows for this rejected vendor
+        // so that countByTenderIdAndRespondedAtIsNull no longer counts them
+        List<TenderClarificationHistory> rowsToClose =
+                clarificationHistoryRepository
+                        .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId);
+        for (TenderClarificationHistory h : rowsToClose) {
+            h.setRespondedAt(LocalDateTime.now());
+            h.setRespondedByRole("INDENTOR");
+            h.setRespondedById(String.valueOf(userId));
+            h.setResponseText("Vendor rejected by INDENTOR: " + (remarks != null ? remarks : ""));
+        }
+        if (!rowsToClose.isEmpty()) {
+            clarificationHistoryRepository.saveAll(rowsToClose);
+        }
+
+        // Step 2: Dual-gate — only restore status if no other vendor
+        // quotation is CHANGE_REQUESTED AND no open history rows remain
+        boolean quotationsResolved = vendorQuotationAgainstTenderRepository
+                .findByTenderIdAndIsLatestTrue(tenderId)
+                .stream()
+                .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
+        long openHistoryRows = clarificationHistoryRepository
+                .countByTenderIdAndRespondedAtIsNull(tenderId);
+
+        if (quotationsResolved && openHistoryRows == 0) {
+            String restoreStatus = eval.getPreviousEvaluationStatus();
+            if (restoreStatus == null || restoreStatus.isBlank()) {
+                restoreStatus = "PENDING_APPROVAL";
+            }
+            eval.setEvaluationStatus(restoreStatus);
+            eval.setPreviousEvaluationStatus(null);
+            eval.setClarificationPendingFrom(null);
+            eval.setClarificationPendingFromId(null);
+            eval.setClarificationPendingFromName(null);
+            eval.setClarificationRequestedByRole(null);
+            eval.setClarificationRemarks(null);
+            eval.setClarificationTargetVendorId(null);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+            log.info("Eval status rolled back to '{}' for tenderId={} (no other vendors pending clarification)",
+                    restoreStatus, tenderId);
+        } else {
+            log.info("Keeping eval status PENDING_VENDOR_CLARIFICATION for tenderId={} " +
+                    "(other vendors still pending clarification)", tenderId);
+        }
+    }
+} catch (Exception e) {
+    log.warn("Failed to update eval status after vendor rejection for tenderId={}: {}", tenderId, e.getMessage());
+}
 
         return true;
     }

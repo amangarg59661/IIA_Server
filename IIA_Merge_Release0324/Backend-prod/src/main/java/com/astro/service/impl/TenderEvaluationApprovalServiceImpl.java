@@ -1870,6 +1870,19 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         //             "INDENTOR", evaluatorUserId, remarks, eval);
         // }
 
+        // Only close pending clarifications and potentially roll back status
+// when the tender is in PENDING_VENDOR_CLARIFICATION state (i.e. vendor owed
+// a clarification response, and Indentor is rejecting instead of waiting).
+// Do NOT do this when status is PENDING_INDENTOR_CLARIFICATION — in that case
+// Indentor is simply evaluating as part of answering SPO's clarification question,
+// and must still go through the "Submit Response" card after all vendors are decided.
+if (wasChangeRequested
+        && "REJECTED".equals(normalizedDecision)
+        && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
+    closePendingClarificationsForVendor(tenderId, vendorId,
+            "INDENTOR", evaluatorUserId, remarks, eval);
+}
+
         return buildStatusDto(eval, tender, tenderId);
     }
 
@@ -1975,8 +1988,23 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                 .stream()
                 .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
-        long openHistoryRows = clarificationHistoryRepository
-                .countByTenderIdAndRespondedAtIsNull(tenderId);
+        // long openHistoryRows = clarificationHistoryRepository
+        //         .countByTenderIdAndRespondedAtIsNull(tenderId);
+long openHistoryRows;
+        if (quotationsResolved) {
+            // All vendor quotations resolved — only block restore if non-vendor rows are still open
+            // (e.g. a separate INDENTOR/CHAIRMAN clarification round still pending)
+            openHistoryRows = clarificationHistoryRepository
+                    .findByTenderIdOrderByRequestedAtDesc(tenderId)
+                    .stream()
+                    .filter(h -> h.getRespondedAt() == null)
+                    .filter(h -> !Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL")
+                            .contains(h.getClarificationTarget()))
+                    .count();
+        } else {
+            openHistoryRows = clarificationHistoryRepository
+                    .countByTenderIdAndRespondedAtIsNull(tenderId);
+        }
 
         if (!quotationsResolved || openHistoryRows > 0) {
             // Not fully resolved yet — just save timestamp, caller continues

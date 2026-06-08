@@ -128,4 +128,20 @@ public interface VendorQuotationAgainstTenderRepository extends JpaRepository<Ve
     List<VendorQuotationAgainstTender> findByTenderIdAndIsLatestTrue(String tenderId);
 
     Optional<VendorQuotationAgainstTender> findByTenderIdAndVendorIdAndIsLatestTrue(String tenderId, String vendorId);
+
+    // After the existing findTopByTenderIdAndVendorIdAndIsLatestTrueOrderByVersionDesc method
+
+/**
+ * Returns true if any OTHER vendor for this tender still has
+ * status = 'CHANGE_REQUESTED' on their latest active quotation.
+ */
+@Query("SELECT COUNT(v) > 0 FROM VendorQuotationAgainstTender v " +
+       "WHERE v.tenderId = :tenderId " +
+       "AND v.vendorId <> :excludeVendorId " +
+       "AND v.isLatest = true " +
+       "AND v.status = 'CHANGE_REQUESTED'")
+boolean existsOtherPendingClarificationVendors(
+    @Param("tenderId") String tenderId,
+    @Param("excludeVendorId") String excludeVendorId
+);
 }
