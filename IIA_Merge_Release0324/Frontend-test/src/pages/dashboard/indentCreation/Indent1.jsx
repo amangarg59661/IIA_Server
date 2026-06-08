@@ -917,24 +917,41 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             disabled: true
                         },
                         {
-                            name: "totalPrice",
-                            label: "Total Price",
-                            type: "text",
-                            disabled: true,
-                            dependencies: ["quantity", "estimatedPrice"],
-                            value: (formData, index) => {
-                                const quantity = Number(formData.jobDetails[index]?.quantity) || 0;
-                                const estimatedPrice = Number(formData.jobDetails[index]?.estimatedPrice) || 0;
-                                return (quantity * estimatedPrice).toFixed(2);
-                            }
-                        },
-                        {
                             name: "currency",
                             label: "Currency",
                             type: "select",
                             required: true,
                             options: currencyOptions,
                             disabled: true
+                        },
+                        {
+                            name: "conversionRate",
+                            label: "Conversion Rate (to INR)",
+                            type: "text",
+                            required: true,
+                            shouldShow: (data, index) => {
+                                const currency = data.jobDetails?.[index]?.currency;
+                                return currency && currency !== "INR";
+                            },
+                            placeholder: "Enter conversion rate to INR",
+                            disabled: !formData.isEditable
+                        },
+                        {
+                            name: "totalPrice",
+                            label: "Total Price (INR)",
+                            type: "text",
+                            disabled: true,
+                            dependencies: ["quantity", "estimatedPrice", "conversionRate"],
+                            value: (formData, index) => {
+                                const quantity = Number(formData.jobDetails[index]?.quantity) || 0;
+                                const estimatedPrice = Number(formData.jobDetails[index]?.estimatedPrice) || 0;
+                                const currency = formData.jobDetails[index]?.currency;
+                                const conversionRate = Number(formData.jobDetails[index]?.conversionRate) || 1;
+                                if (currency && currency !== "INR" && conversionRate > 0) {
+                                    return (quantity * estimatedPrice * conversionRate).toFixed(2);
+                                }
+                                return (quantity * estimatedPrice).toFixed(2);
+                            }
                         },
                         {
                             name: "briefDescription",
@@ -1656,6 +1673,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             jobDetails[index].quantity = ""
                             jobDetails[index].estimatedPrice = job.estimatedPriceWithCcy
                             jobDetails[index].currency = job.currency
+                            jobDetails[index].conversionRate = job.currency && job.currency !== "INR" ? "" : null
                             jobDetails[index].briefDescription = job.briefDescription
     
                             setFormData({
@@ -1664,10 +1682,18 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             })
                         }
                     }
-                    else if (name === "quantity" || name === "estimatedPrice") {
+                    else if (name === "quantity" || name === "estimatedPrice" || name === "conversionRate") {
                         const { jobDetails } = formData;
                         jobDetails[index][name] = value
-                        jobDetails[index].totalPrice = (Number(jobDetails[index].quantity || 0) * Number(jobDetails[index].estimatedPrice || 0)).toFixed(2)
+                        const qty = Number(jobDetails[index].quantity || 0);
+                        const price = Number(jobDetails[index].estimatedPrice || 0);
+                        const currency = jobDetails[index].currency;
+                        const rate = Number(jobDetails[index].conversionRate || 0);
+                        if (currency && currency !== "INR" && rate > 0) {
+                            jobDetails[index].totalPrice = (qty * price * rate).toFixed(2);
+                        } else {
+                            jobDetails[index].totalPrice = (qty * price).toFixed(2);
+                        }
                         setFormData({
                             ...formData,
                             jobDetails: jobDetails
@@ -2376,6 +2402,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
             { key: 'uom',               label: 'UOM' },
             { key: 'budgetCode',        label: 'Budget Code' },
             { key: 'currency',          label: 'Currency' },
+            { key: 'conversionRate',    label: 'Conversion Rate' },
             { key: 'category',          label: 'Category' },
             { key: 'subCategory',       label: 'Sub-Category' },
             { key: 'origin',            label: 'Origin' },

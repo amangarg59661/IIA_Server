@@ -19,6 +19,7 @@ public class JobDetailsResponseDTO {
     private String currency;
     private String briefDescription;
     private String origin;
+    private BigDecimal conversionRate;
     private String modeOfProcurement;
     private String budgetCode;
     private List<String> vendorNames;

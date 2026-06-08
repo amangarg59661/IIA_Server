@@ -59,6 +59,9 @@ public class JobDetails {
     @Column(name = "quantity", precision = 19, scale = 2)
     private BigDecimal quantity;
 
+    @Column(name = "conversion_rate")
+    private BigDecimal conversionRate;
+
     @Column(name = "mode_of_procurement", length = 100)
     private String modeOfProcurement;
 

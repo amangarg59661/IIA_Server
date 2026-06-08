@@ -337,6 +337,7 @@ private String extractBaseIndentId(String indentId) {
                 job.setQuantity(jobRequest.getQuantity());
                 job.setEstimatedPrice(jobRequest.getEstimatedPrice());
                 job.setCurrency(jobRequest.getCurrency());
+                job.setConversionRate(jobRequest.getConversionRate());
                 job.setBriefDescription(jobRequest.getBriefDescription());
                 job.setOrigin(jobRequest.getOrigin());
                 job.setModeOfProcurement(jobRequest.getModeOfProcurement());
@@ -352,6 +353,9 @@ job.setVendorNames(vendorNamesStr);
                 BigDecimal qty = jobRequest.getQuantity() != null ? jobRequest.getQuantity() : BigDecimal.ZERO;
                 BigDecimal price = jobRequest.getEstimatedPrice() != null ? jobRequest.getEstimatedPrice() : BigDecimal.ZERO;
                 BigDecimal jobTotal = qty.multiply(price);
+                if (jobRequest.getConversionRate() != null && jobRequest.getCurrency() != null && !"INR".equalsIgnoreCase(jobRequest.getCurrency())) {
+                    jobTotal = jobTotal.multiply(jobRequest.getConversionRate());
+                }
                 job.setTotalPrice(jobTotal);
                 job.setIndentCreation(indentCreation);
                 return job;
@@ -723,14 +727,19 @@ public IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreati
             jd.setQuantity(j.getQuantity());
             jd.setEstimatedPrice(j.getEstimatedPrice());
             jd.setCurrency(j.getCurrency());
+            jd.setConversionRate(j.getConversionRate());
             jd.setBriefDescription(j.getBriefDescription());
             jd.setOrigin(j.getOrigin());
             jd.setModeOfProcurement(j.getModeOfProcurement());
             jd.setBudgetCode(j.getBudgetCode());
             List<String> vn = j.getVendorNames();
             jd.setVendorNames((vn != null && !vn.isEmpty()) ? String.join(",", vn) : null);
-            if (j.getQuantity() != null && j.getEstimatedPrice() != null)
-                jd.setTotalPrice(j.getQuantity().multiply(j.getEstimatedPrice()));
+            if (j.getQuantity() != null && j.getEstimatedPrice() != null) {
+                BigDecimal total = j.getQuantity().multiply(j.getEstimatedPrice());
+                if (j.getConversionRate() != null && j.getCurrency() != null && !"INR".equalsIgnoreCase(j.getCurrency()))
+                    total = total.multiply(j.getConversionRate());
+                jd.setTotalPrice(total);
+            }
             jd.setIndentCreation(existing);
             existing.getJobDetails().add(jd);
         });
@@ -1047,6 +1056,7 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
             j.setQuantity(req.getQuantity());
             j.setEstimatedPrice(req.getEstimatedPrice());
             j.setCurrency(req.getCurrency());
+            j.setConversionRate(req.getConversionRate());
             j.setBriefDescription(req.getBriefDescription());
             j.setOrigin(req.getOrigin());
             j.setModeOfProcurement(req.getModeOfProcurement());
@@ -1056,7 +1066,11 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
 j.setVendorNames((vn != null && !vn.isEmpty()) ? String.join(",", vn) : null);
             BigDecimal qty = req.getQuantity() != null ? req.getQuantity() : BigDecimal.ZERO;
             BigDecimal price = req.getEstimatedPrice() != null ? req.getEstimatedPrice() : BigDecimal.ZERO;
-            j.setTotalPrice(qty.multiply(price));
+            BigDecimal jobTotal = qty.multiply(price);
+            if (req.getConversionRate() != null && req.getCurrency() != null && !"INR".equalsIgnoreCase(req.getCurrency())) {
+                jobTotal = jobTotal.multiply(req.getConversionRate());
+            }
+            j.setTotalPrice(jobTotal);
             j.setIndentCreation(newIndent);
             return j;
         }).collect(Collectors.toList());
@@ -1565,6 +1579,7 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
                         jobResponse.setEstimatedPrice(job.getEstimatedPrice());
                         jobResponse.setTotalPrice(job.getTotalPrice());
                         jobResponse.setCurrency(job.getCurrency());
+                        jobResponse.setConversionRate(job.getConversionRate());
                         jobResponse.setBriefDescription(job.getBriefDescription());
                         jobResponse.setModeOfProcurement(job.getModeOfProcurement());
                         jobResponse.setBudgetCode(job.getBudgetCode());
@@ -1873,6 +1888,7 @@ jobResponse.setVendorNames(vendorNamesList);
                 jobResponse.setEstimatedPrice(job.getEstimatedPrice());
                 jobResponse.setTotalPrice(job.getTotalPrice());
                 jobResponse.setCurrency(job.getCurrency());
+                jobResponse.setConversionRate(job.getConversionRate());
                 jobResponse.setBriefDescription(job.getBriefDescription());
                 jobResponse.setOrigin(job.getOrigin());
                 jobResponse.setModeOfProcurement(job.getModeOfProcurement());
@@ -2075,6 +2091,7 @@ jobResponse.setVendorNames(vendorNamesList);
                 jobResponse.setEstimatedPrice(job.getEstimatedPrice());
                 jobResponse.setTotalPrice(job.getTotalPrice());
                 jobResponse.setCurrency(job.getCurrency());
+                jobResponse.setConversionRate(job.getConversionRate());
                 jobResponse.setBriefDescription(job.getBriefDescription());
                 jobResponse.setOrigin(job.getOrigin());
                 jobResponse.setModeOfProcurement(job.getModeOfProcurement());

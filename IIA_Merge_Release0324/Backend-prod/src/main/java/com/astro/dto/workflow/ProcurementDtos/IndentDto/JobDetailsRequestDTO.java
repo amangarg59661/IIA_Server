@@ -23,6 +23,7 @@ public class JobDetailsRequestDTO {
     private String currency;
     private String briefDescription;
     private String origin;
+    private BigDecimal conversionRate;
     private String modeOfProcurement;
     private String budgetCode;
     // private String vendorNames;
