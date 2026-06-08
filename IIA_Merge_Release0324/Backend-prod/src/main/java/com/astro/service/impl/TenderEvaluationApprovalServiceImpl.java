@@ -182,6 +182,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
 
         boolean needsChairmanReview = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat)
                 || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat);
+        boolean needsPpDocument = needsChairmanReview;
 
         // Set bid visibility and initial status
         if ("SINGLE_BID".equalsIgnoreCase(bidType)) {
@@ -1430,7 +1431,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                             .collect(Collectors.toList());
 
             // 3. Only mark quotation as CHANGE_RESPONDED if NO more open questions
-            if (remainingOpen.isEmpty()) {
+           if (remainingOpen.isEmpty()) {
                 quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
                         .ifPresent(q -> {
                             q.setVendorResponse(dto.getResponseText());
@@ -1438,6 +1439,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                                 q.setClarificationFileName(dto.getResponseFileName());
                             }
                             q.setStatus("CHANGE_RESPONDED");
+                            // If SPO was the one who sought this clarification,
+                            // reset spoStatus back so SPO buttons become enabled again
+                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getSpoStatus())) {
+                                q.setSpoStatus("PENDING");
+                            }
+                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
+                                q.setFinancialSpoStatus("PENDING");
+                            }
                             q.setUpdatedDate(LocalDateTime.now());
                             quotationRepository.save(q);
                         });
@@ -1513,6 +1522,14 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                                 q.setClarificationFileName(dto.getResponseFileName());
                             }
                             q.setStatus("CHANGE_RESPONDED");
+                            // If SPO was the one who sought this clarification,
+                            // reset spoStatus back so SPO buttons become enabled again
+                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getSpoStatus())) {
+                                q.setSpoStatus("PENDING");
+                            }
+                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
+                                q.setFinancialSpoStatus("PENDING");
+                            }
                             q.setUpdatedDate(LocalDateTime.now());
                             quotationRepository.save(q);
                         });
@@ -2357,6 +2374,8 @@ long openHistoryRows;
                             vDto.setDecision(v.getDecision());
                             vDto.setRemarks(v.getRemarks());
                             vDto.setDecisionDate(v.getDecisionDate());
+                            vDto.setConfirmed(v.getConfirmed());
+                            vDto.setVoterRole(v.getVoterRole());
                             return Map.entry(v.getVendorId(), vDto);
                         })
                         .collect(Collectors.groupingBy(

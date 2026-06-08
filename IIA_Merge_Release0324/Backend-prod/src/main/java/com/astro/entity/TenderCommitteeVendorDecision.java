@@ -46,6 +46,15 @@ public class TenderCommitteeVendorDecision {
     @Column(name = "decision_date")
     private LocalDateTime decisionDate;
 
+    @Column(name = "confirmed")
+    private Boolean confirmed = false;
+
+    @Column(name = "confirmed_date")
+    private LocalDateTime confirmedDate;
+
+    @Column(name = "voter_role", length = 20)
+    private String voterRole = "MEMBER";  // MEMBER, CHAIRMAN, DIRECTOR
+
     @CreatedDate
     @Column(name = "created_date", nullable = false)
     private LocalDateTime createdDate;

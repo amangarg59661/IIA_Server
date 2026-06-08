@@ -10,4 +10,6 @@ public class CommitteeVendorVoteDto {
     private String decision;
     private String remarks;
     private LocalDateTime decisionDate;
+    private Boolean confirmed;
+    private String voterRole;
 }
