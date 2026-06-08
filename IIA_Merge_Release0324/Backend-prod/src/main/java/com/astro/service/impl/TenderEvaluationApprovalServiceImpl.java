@@ -1559,6 +1559,35 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             }
         }
 
+        // When Indentor responds to SPO's clarification request,
+        // reset the vendor's quotation status from CHANGE_REQUESTED → SUBMITTED
+        // so SPO buttons become enabled again.
+        if ("INDENTOR".equalsIgnoreCase(respondedByRole)
+                && "PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)) {
+            String targetVid = eval.getClarificationTargetVendorId();
+            if (targetVid != null && !targetVid.isBlank()) {
+                // Single vendor targeted
+                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, targetVid)
+                        .ifPresent(q -> {
+                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus())) {
+                                q.setStatus("SUBMITTED");
+                                q.setUpdatedDate(LocalDateTime.now());
+                                quotationRepository.save(q);
+                            }
+                        });
+            } else {
+                // All vendors targeted — reset all CHANGE_REQUESTED ones
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                        .stream()
+                        .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                        .forEach(q -> {
+                            q.setStatus("SUBMITTED");
+                            q.setUpdatedDate(LocalDateTime.now());
+                            quotationRepository.save(q);
+                        });
+            }
+        }
+
         // ── Unified restore gate ────────────────────────────────────────
         boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                 .stream()
