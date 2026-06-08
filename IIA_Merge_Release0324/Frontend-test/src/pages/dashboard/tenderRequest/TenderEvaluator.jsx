@@ -1391,10 +1391,18 @@ if (isSpoRole) {
     if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
     const indStatus = finPhase ? record.financialIndentorStatus : record.indentorStatus;
     const spStatus = finPhase ? record.financialSpoStatus : record.sopStatus;
+    // const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+    //   && indStatus === 'ACCEPTED'
+    //   && (!spStatus || spStatus === 'PENDING')
+    //   && record.status !== 'CHANGE_REQUESTED';
     const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
       && indStatus === 'ACCEPTED'
       && (!spStatus || spStatus === 'PENDING')
       && record.status !== 'CHANGE_REQUESTED';
+    // Reject always allowed even if vendor hasn't responded — prevents flow from getting stuck
+    const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+      && indStatus === 'ACCEPTED'
+      && (!spStatus || spStatus === 'PENDING');
     const pendingToIndentor = record.changeRequestToIndentor;
 
     return (
@@ -1420,7 +1428,8 @@ if (isSpoRole) {
       />
       <Button
         type="primary"
-        disabled={!spoCanAct || spStatus === 'REJECTED'}
+        disabled={!spoCanReject || spStatus === 'REJECTED'}
+        // disabled={!spoCanAct || spStatus === 'REJECTED'}
         onClick={() => handleSpoReview(record, 'REJECT')}
         style={{ marginTop: 8 }}
       >
@@ -2459,10 +2468,17 @@ const spoTechColumns = [
         title: 'SPO Actions',
         key: 'spoTechActions',
         render: (_, record) => {
-          const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+          // const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+          //   && record.indentorStatus === 'ACCEPTED'
+          //   && (!record.sopStatus || record.sopStatus === 'PENDING')
+          //   && record.status !== 'CHANGE_REQUESTED';
+           const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
             && record.indentorStatus === 'ACCEPTED'
             && (!record.sopStatus || record.sopStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
+          const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+            && record.indentorStatus === 'ACCEPTED'
+            && (!record.sopStatus || record.sopStatus === 'PENDING');
           const pendingToIndentor = record.changeRequestToIndentor;
 
           return (
@@ -2484,7 +2500,8 @@ const spoTechColumns = [
                       onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
                     />
                     <Button type="primary"
-                      disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
+                      // disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
+                      disabled={!spoCanReject || record.sopStatus === 'REJECTED'}
                       onClick={() => handleSpoReview(record, 'REJECT')}
                       style={{ marginTop: 8 }}>
                       Submit
@@ -2495,7 +2512,8 @@ const spoTechColumns = [
                 trigger="click"
               >
                 <Button size="small" style={{ color: 'red' }}
-                  disabled={!spoCanAct || record.sopStatus === 'REJECTED'}>
+                  // disabled={!spoCanAct || record.sopStatus === 'REJECTED'}>
+                  disabled={!spoCanReject || record.sopStatus === 'REJECTED'}>
                   {record.sopStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
                 </Button>
               </Popover>
@@ -2666,10 +2684,13 @@ const spoFinColumns = [
         title: 'SPO Actions',
         key: 'spoFinActions',
         render: (_, record) => {
-          const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+           const spoCanAct = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
             && record.financialIndentorStatus === 'ACCEPTED'
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
+          const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+            && record.financialIndentorStatus === 'ACCEPTED'
+            && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING');
           const pendingToIndentor = record.changeRequestToIndentor;
 
           return (
@@ -2691,7 +2712,8 @@ const spoFinColumns = [
                       onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
                     />
                     <Button type="primary"
-                      disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}
+                      // disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}
+                       disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED'}
                       onClick={() => handleSpoReview(record, 'REJECT')}
                       style={{ marginTop: 8 }}>
                       Submit
@@ -2702,7 +2724,8 @@ const spoFinColumns = [
                 trigger="click"
               >
                 <Button size="small" style={{ color: 'red' }}
-                  disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}>
+                  // disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}>
+                   disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED'}>
                   {record.financialSpoStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
                 </Button>
               </Popover>
@@ -3133,12 +3156,16 @@ useEffect(() => {
                         style={{ marginBottom: 8 }}
                         title={`Round ${h.roundNumber} — ${h.clarificationTarget?.replace(/_/g, ' ')}${h.targetVendorId ? ` (Vendor: ${h.targetVendorId})` : ''} — by ${h.requestedByRole?.replace(/_/g, ' ')}`}
                       >
-                        <p><strong>Question:</strong> {h.questionRemarks}</p>
+                        <p style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', margin: '4px 0' }}>
+  <strong>Question:</strong> {h.questionRemarks}
+</p>
                         <p style={{ color: '#888', fontSize: 12 }}>{h.requestedAt ? new Date(h.requestedAt).toLocaleString() : ''}</p>
                         {h.responseText ? (
                           <>
                             <Divider style={{ margin: '8px 0' }} />
-                            <p><strong>Response ({h.respondedByRole?.replace(/_/g, ' ')}):</strong> {h.responseText}</p>
+                            <p style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap', margin: '4px 0' }}>
+  <strong>Response ({h.respondedByRole?.replace(/_/g, ' ')}):</strong> {h.responseText}
+</p>
                             {h.responseFileName && (
                               <p><strong>File:</strong> <a href={`${baseURL}/file/view/Tender/${h.responseFileName}`} target="_blank" rel="noopener noreferrer">{h.responseFileName}</a></p>
                             )}
