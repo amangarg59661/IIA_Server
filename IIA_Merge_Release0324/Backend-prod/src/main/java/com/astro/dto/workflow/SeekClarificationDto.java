@@ -27,8 +27,9 @@ public class SeekClarificationDto {
      *   ALL_VENDORS         - Goes to ALL vendors on this tender (for mass clarification)
      *   INDENTOR            - Goes back to Indentor (SPO or Chairman sending back)
      *   PURCHASE_PERSONNEL  - Goes back to Purchase Personnel (for GEM/non-portal tenders)
-     *   SPECIFIC_MEMBER     - Chairman sending to one specific committee member
-     *   ALL_MEMBERS         - Chairman sending to all committee members (for re-vote)
+     *   CHAIRMAN            - Director sending clarification to Chairman
+     *   SPECIFIC_MEMBER     - Chairman/Director sending to one specific committee member
+     *   ALL_MEMBERS         - Chairman/Director sending to all committee members (for re-vote)
      */
     private String clarificationTarget;
 

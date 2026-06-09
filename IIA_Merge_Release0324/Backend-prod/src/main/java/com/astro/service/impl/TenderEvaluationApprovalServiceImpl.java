@@ -466,7 +466,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 quotations.stream()
                         .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()) && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
                         .forEach(q -> {
                             q.setFinancialBidVisible(true);
                             q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
@@ -1089,10 +1089,16 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         eval.setClarificationRemarks(dto.getRemarks());
         eval.setClarificationTargetVendorId(dto.getTargetVendorId());
 
+        boolean isAbove10L = !"UNDER_10_LAKH".equals(eval.getAmountCategory());
+
         switch (target.toUpperCase()) {
             case "VENDOR":
                 // Mark a specific vendor's quotation as CHANGE_REQUESTED
-                eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                // Above 10L: don't change eval status for single-vendor clarification —
+                // other vendors can still be voted on while this one is pending clarification
+                if (!isAbove10L) {
+                    eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                }
                 String specificVendorId = dto.getTargetVendorId();
                 if (specificVendorId == null || specificVendorId.isBlank()) {
                     specificVendorId = eval.getApprovedVendorId(); // fallback for single-vendor flows
@@ -1153,7 +1159,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                                 && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                             rerouted = rerouted.stream()
                                     .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                              || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                                              || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()) && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
                                     .collect(Collectors.toList());
                         }
                         rerouted.forEach(q -> applyClarificationRoleFields(q, dto, eval));
@@ -1213,6 +1219,11 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             case "INDENTOR":
             case "CHAIRMAN":
                 if ("COMMITTEE_MEMBER".equalsIgnoreCase(dto.getRequestedByRole())) {
+                    eval.setEvaluationStatus("PENDING_CHAIRMAN_CLARIFICATION_REVIEW");
+                    break;
+                }
+                if ("DIRECTOR".equalsIgnoreCase(dto.getRequestedByRole())
+                        && "CHAIRMAN".equalsIgnoreCase(target)) {
                     eval.setEvaluationStatus("PENDING_CHAIRMAN_CLARIFICATION_REVIEW");
                     break;
                 }
@@ -1445,12 +1456,41 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         String currentStatus = eval.getEvaluationStatus();
         if (!"PENDING_VENDOR_CLARIFICATION".equals(currentStatus)
                 && !"PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)
-                && !"PENDING_MEMBER_REVOTE".equals(currentStatus)) {
+                && !"PENDING_MEMBER_REVOTE".equals(currentStatus)
+                && !"PENDING_CHAIRMAN_CLARIFICATION_REVIEW".equals(currentStatus)) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Tender is not pending any clarification response. Current status: " + currentStatus));
         }
 
         String respondedByRole = dto.getRespondedByRole();
+
+        // Chairman responding to Director's clarification request
+        if ("CHAIRMAN".equalsIgnoreCase(respondedByRole)
+                && "PENDING_CHAIRMAN_CLARIFICATION_REVIEW".equals(currentStatus)) {
+            List<TenderClarificationHistory> openRows = clarificationHistoryRepository
+                    .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "CHAIRMAN");
+            openRows.forEach(h -> {
+                h.setResponseText(dto.getResponseText());
+                h.setResponseFileName(dto.getResponseFileName());
+                h.setRespondedByRole("CHAIRMAN");
+                h.setRespondedById(String.valueOf(dto.getRespondedById()));
+                h.setRespondedAt(LocalDateTime.now());
+            });
+            clarificationHistoryRepository.saveAll(openRows);
+
+            String prev = eval.getPreviousEvaluationStatus();
+            eval.setEvaluationStatus(prev != null ? prev : "PENDING_DIRECTOR_APPROVAL");
+            eval.setClarificationPendingFrom(null);
+            eval.setClarificationPendingFromId(null);
+            eval.setClarificationPendingFromName(null);
+            eval.setClarificationRequestedByRole(null);
+            eval.setClarificationRemarks(null);
+            eval.setClarificationTargetVendorId(null);
+            eval.setPreviousEvaluationStatus(null);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+            return buildStatusDto(eval, tender, tenderId);
+        }
 
         if ("VENDOR".equalsIgnoreCase(respondedByRole)) {
             String vendorId = dto.getRespondedById();
@@ -2267,7 +2307,7 @@ long openHistoryRows;
         }
         List<String> pendingDecision = quotations.stream()
                 .filter(q -> {
-                    if (financialPhase && "REJECTED".equalsIgnoreCase(q.getIndentorStatus())) {
+                    if (financialPhase && "REJECTED".equalsIgnoreCase(q.getIndentorStatus())|| "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
                         return false;
                     }
                     String status = financialPhase ? q.getFinancialIndentorStatus() : q.getIndentorStatus();
