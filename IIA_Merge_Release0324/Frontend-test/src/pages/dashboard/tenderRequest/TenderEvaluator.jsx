@@ -193,7 +193,6 @@ const showPpPreInitiateClarif = isPurchasePersonnelRole
 const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement);
 
 const showPpTechLineClarif = isPurchasePersonnelRole
-  // && isDoubleBidEval
   && isLimitedOrProp
   && (evalStatus === null || evalStatus?.evaluationStatus === 'PENDING_INITIATION')
   && quotationData.length > 0;
@@ -2985,6 +2984,8 @@ useEffect(() => {
                     ? 'PENDING EVALUATION'
                     : evalStatus.evaluationStatus === 'PENDING_CHAIRMAN_REVIEW'
                     ? 'PENDING CHAIRMAN REVIEW'
+                    : evalStatus.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION' && evalStatus.indentCategory === 'MULTIPLE_INDENT'
+                    ? 'PENDING PP CLARIFICATION'
                     : evalStatus.evaluationStatus?.replace(/_/g, ' ')}
                 </Tag>
                 <Tag color="cyan">{amountCategoryLabel}</Tag>
@@ -3445,7 +3446,9 @@ useEffect(() => {
                 </Card>
                 )
               ) : isPendingIndentorClarif &&
-              (isIndentCreatorRole || isPurchasePersonnelRole) ? (
+              (evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
+                ? isPurchasePersonnelRole
+                : (isIndentCreatorRole || isPurchasePersonnelRole)) ? (
                 /* Standard indentor/PP response card — with optional vendor context */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}

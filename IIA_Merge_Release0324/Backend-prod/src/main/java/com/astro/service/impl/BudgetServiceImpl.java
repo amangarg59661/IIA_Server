@@ -10,8 +10,10 @@ import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.ProcurementModule.MaterialDetails;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
+import com.astro.entity.ProjectMaster;
 import com.astro.repository.AdminPanel.BudgetLedgerRepository;
 import com.astro.repository.AdminPanel.BudgetMasterRepository;
+import com.astro.repository.ProjectMasterRepository;
 import com.astro.service.BudgetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -65,15 +67,41 @@ private IndentIdRepository indentIdRepository;
     @Autowired
     private BudgetLedgerRepository budgetLedgerRepository;
 
+    @Autowired
+    private ProjectMasterRepository projectMasterRepository;
+
     // ─── 1. HOLD on new indent submit ────────────────────────────────────────
 
     @Override
     @Transactional
     public void holdBudgetForIndent(String indentId,
                                      List<MaterialDetails> materials,
-                                     List<JobDetails> jobs) {
+                                     List<JobDetails> jobs,
+                                     String projectCode) {
 
         Map<String, BigDecimal> budgetTotals = computeBudgetTotals(materials, jobs);
+
+        // ── PROJECT ALLOCATED CHECK (if indent is under a project) ──
+        if (projectCode != null && !projectCode.isEmpty()) {
+            BigDecimal totalIndentAmount = budgetTotals.values().stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            ProjectMaster project = projectMasterRepository.findByProjectCode(projectCode)
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                            400, 4, "Project Not Found",
+                            "Project not found for code: " + projectCode)));
+
+            BigDecimal availableProjectLimit = project.getAvailableProjectLimit() != null
+                    ? project.getAvailableProjectLimit() : BigDecimal.ZERO;
+
+            if (availableProjectLimit.compareTo(totalIndentAmount) < 0) {
+                throw new BusinessException(new ErrorDetails(
+                        400, 4, "Insufficient Project Budget",
+                        "Insufficient project allocated budget for project: " + projectCode
+                        + ". Required: " + totalIndentAmount
+                        + ", Available project limit: " + availableProjectLimit));
+            }
+        }
 
         for (Map.Entry<String, BigDecimal> entry : budgetTotals.entrySet()) {
             String budgetCode = entry.getKey();
@@ -112,9 +140,42 @@ private IndentIdRepository indentIdRepository;
     public void reHoldBudgetForUpdatedIndent(String oldIndentId,
                                               String newIndentId,
                                               List<MaterialDetails> newMaterials,
-                                              List<JobDetails> newJobs) {
+                                              List<JobDetails> newJobs,
+                                              String projectCode) {
 
         Map<String, BigDecimal> newTotals = computeBudgetTotals(newMaterials, newJobs);
+
+        // ── PROJECT ALLOCATED CHECK (if indent is under a project) ──
+        if (projectCode != null && !projectCode.isEmpty()) {
+            BigDecimal totalNewAmount = newTotals.values().stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Get old indent's total hold to compute effective project availability
+            List<BudgetLedger> oldProjectLedgers = budgetLedgerRepository
+                    .findByReferenceIdAndTypeAndStatus(oldIndentId, "INDENT", "ACTIVE_HOLD");
+            BigDecimal oldTotalHold = oldProjectLedgers.stream()
+                    .map(BudgetLedger::getHoldAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            ProjectMaster project = projectMasterRepository.findByProjectCode(projectCode)
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                            400, 4, "Project Not Found",
+                            "Project not found for code: " + projectCode)));
+
+            BigDecimal availableProjectLimit = project.getAvailableProjectLimit() != null
+                    ? project.getAvailableProjectLimit() : BigDecimal.ZERO;
+
+            // Effective available = current available + old hold (since old hold gets released)
+            BigDecimal effectiveProjectAvailable = availableProjectLimit.add(oldTotalHold);
+
+            if (effectiveProjectAvailable.compareTo(totalNewAmount) < 0) {
+                throw new BusinessException(new ErrorDetails(
+                        400, 4, "Insufficient Project Budget",
+                        "Insufficient project allocated budget for updated indent on project: " + projectCode
+                        + ". Required: " + totalNewAmount
+                        + ", Effectively available project limit: " + effectiveProjectAvailable));
+            }
+        }
 
         List<BudgetLedger> oldLedgers = budgetLedgerRepository
                 .findByReferenceIdAndTypeAndStatus(oldIndentId, "INDENT", "ACTIVE_HOLD");

@@ -192,14 +192,21 @@ SELECT new com.astro.dto.workflow.CompletedIndentsQueueResponse(
     wt.transitionOrder, wt.transitionSubOrder, wt.currentRole, wt.nextRole,
     wt.workflowSequence, wt.modificationDate, wt.createdDate,
     ic.indentorName, ic.projectName, ic.totalIntentValue,
-    md.budgetCode, md.modeOfProcurement, ic.consignesLocation
+    COALESCE(md.budgetCode, jd.budgetCode),
+    COALESCE(md.modeOfProcurement, jd.modeOfProcurement),
+    ic.consignesLocation
 )
 FROM WorkflowTransition wt
 LEFT JOIN IndentCreation ic ON wt.requestId = ic.indentId
 LEFT JOIN MaterialDetails md ON md.indentCreation = ic AND md.id = (
-    SELECT MIN(md2.id) 
-    FROM MaterialDetails md2 
+    SELECT MIN(md2.id)
+    FROM MaterialDetails md2
     WHERE md2.indentCreation = ic
+)
+LEFT JOIN JobDetails jd ON jd.indentCreation = ic AND jd.id = (
+    SELECT MIN(jd2.id)
+    FROM JobDetails jd2
+    WHERE jd2.indentCreation = ic
 )
 WHERE wt.workflowId = :workflowId
   AND wt.status = :status

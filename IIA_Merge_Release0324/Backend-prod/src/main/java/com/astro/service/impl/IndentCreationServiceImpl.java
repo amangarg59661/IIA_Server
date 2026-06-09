@@ -375,7 +375,8 @@ job.setVendorNames(vendorNamesStr);
 budgetService.holdBudgetForIndent(
         indentId,
         "material".equalsIgnoreCase(indentType) ? indentCreation.getMaterialDetails() : null,
-        "job".equalsIgnoreCase(indentType) ? indentCreation.getJobDetails() : null
+        "job".equalsIgnoreCase(indentType) ? indentCreation.getJobDetails() : null,
+        Boolean.TRUE.equals(indentCreation.getIsUnderProject()) ? indentCreation.getProjectCode() : null
 );
 
         // Use saveAndFlush to immediately commit to database
@@ -793,7 +794,8 @@ public IndentCreationResponseDTO submitIndentDraft(String indentId, IndentCreati
     budgetService.holdBudgetForIndent(
         indentId,
         "material".equalsIgnoreCase(indentType) ? updated.getMaterialDetails() : null,
-        "job".equalsIgnoreCase(indentType) ? updated.getJobDetails() : null
+        "job".equalsIgnoreCase(indentType) ? updated.getJobDetails() : null,
+        Boolean.TRUE.equals(updated.getIsUnderProject()) ? updated.getProjectCode() : null
     );
 
     // Save vendor names for material indent (same as createIndent)
@@ -1086,7 +1088,8 @@ j.setVendorNames((vn != null && !vn.isEmpty()) ? String.join(",", vn) : null);
             old.getIndentId(),
             newIndentId,
             "material".equalsIgnoreCase(indentType) ? newIndent.getMaterialDetails() : null,
-            "job".equalsIgnoreCase(indentType) ? newIndent.getJobDetails() : null
+            "job".equalsIgnoreCase(indentType) ? newIndent.getJobDetails() : null,
+            Boolean.TRUE.equals(newIndent.getIsUnderProject()) ? newIndent.getProjectCode() : null
     );
 
     // 10. Save new version

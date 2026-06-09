@@ -10,12 +10,14 @@ public interface BudgetService {
 
     void holdBudgetForIndent(String indentId,
                               List<MaterialDetails> materials,
-                              List<JobDetails> jobs);
+                              List<JobDetails> jobs,
+                              String projectCode);
 
     void reHoldBudgetForUpdatedIndent(String oldIndentId,
                                        String newIndentId,
                                        List<MaterialDetails> newMaterials,
-                                       List<JobDetails> newJobs);
+                                       List<JobDetails> newJobs,
+                                       String projectCode);
 
     void releaseBudgetHoldForIndent(String indentId);
     // Check only — no hold changes. Called on PO create/update.

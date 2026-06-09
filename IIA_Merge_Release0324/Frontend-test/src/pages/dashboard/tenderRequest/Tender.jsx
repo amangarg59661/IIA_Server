@@ -1893,6 +1893,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
       currency: job.currency,
       briefDescription: job.briefDescription,
       origin: job.origin,
+      conversionRate: job.conversionRate,
       modeOfProcurement: job.modeOfProcurement,
       budgetCode: job.budgetCode,
       vendorNames: job.vendorNames,
@@ -2187,6 +2188,7 @@ if (tenderResponse.isActive === false) {
       currency: j.currency || "",
       briefDescription: j.briefDescription || "",
       origin: j.origin || "",
+      conversionRate: j.conversionRate || null,
       modeOfProcurement: j.modeOfProcurement || "",
       budgetCode: j.budgetCode || "",
       vendorNames: j.vendorNames || "",
@@ -2660,6 +2662,9 @@ useEffect(() => {
         { name: "quantity",       label: "Quantity",        type: "text", disabled: true, span: 1 },
         { name: "estimatedPrice", label: "Estimated Price", type: "text", disabled: true, span: 1 },
         { name: "currency",       label: "Currency",        type: "text", disabled: true, span: 1 },
+        ...((formData.jobDetails || []).some(j => j.currency && j.currency !== "INR")
+          ? [{ name: "conversionRate", label: "Conversion Rate", type: "text", disabled: true, span: 1 }]
+          : []),
         { name: "totalPrice",     label: "Total Price",     type: "text", disabled: true, span: 2 },
         // { name: "briefDescription", label: "Brief Description", type: "text", disabled: true, span: 2 },
         // { name: "origin",         label: "Origin",          type: "text", disabled: true, span: 1 },

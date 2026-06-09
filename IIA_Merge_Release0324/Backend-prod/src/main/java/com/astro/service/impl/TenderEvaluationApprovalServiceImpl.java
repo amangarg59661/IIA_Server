@@ -1132,26 +1132,51 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                     eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
                 }
 
-                // SPO seeking clarification from indentor for a specific vendor: reset indentor decision
-                // Only when actually targeting indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)
+                // SPO seeking clarification from indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)
                 if (!reroutedVendorToPP
-                        && "SPO".equalsIgnoreCase(dto.getRequestedByRole())
-                        && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
-                    final String clarVid = dto.getTargetVendorId();
-                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
-                            .ifPresent(q -> {
-                                if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
-                                    q.setFinancialIndentorStatus(null);
-                                    q.setFinancialIndentorRemarks(null);
-                                } else {
-                                    q.setIndentorStatus(null);
-                                    q.setIndentorRemarks(null);
-                                }
-                                q.setStatus("CHANGE_REQUESTED");
-                                q.setRemarks(dto.getRemarks());
-                                q.setUpdatedDate(LocalDateTime.now());
-                                quotationRepository.save(q);
-                            });
+                        && "SPO".equalsIgnoreCase(dto.getRequestedByRole())) {
+                    if (dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
+                        // Specific vendor: reset that vendor's indentor decision
+                        final String clarVid = dto.getTargetVendorId();
+                        quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
+                                .ifPresent(q -> {
+                                    if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                                        q.setFinancialIndentorStatus(null);
+                                        q.setFinancialIndentorRemarks(null);
+                                    } else {
+                                        q.setIndentorStatus(null);
+                                        q.setIndentorRemarks(null);
+                                    }
+                                    q.setStatus("CHANGE_REQUESTED");
+                                    q.setRemarks(dto.getRemarks());
+                                    q.setUpdatedDate(LocalDateTime.now());
+                                    quotationRepository.save(q);
+                                });
+                    } else {
+                        // All vendors: reset indentor decisions (multi-indent SPO→PP clarification)
+                        List<VendorQuotationAgainstTender> allQ =
+                                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+                        if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                                && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                            allQ = allQ.stream()
+                                    .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                            && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                                    .collect(Collectors.toList());
+                        }
+                        allQ.forEach(q -> {
+                            if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                                q.setFinancialIndentorStatus(null);
+                                q.setFinancialIndentorRemarks(null);
+                            } else {
+                                q.setIndentorStatus(null);
+                                q.setIndentorRemarks(null);
+                            }
+                            q.setStatus("CHANGE_REQUESTED");
+                            q.setRemarks(dto.getRemarks());
+                            q.setUpdatedDate(LocalDateTime.now());
+                        });
+                        quotationRepository.saveAll(allQ);
+                    }
                 }
                 break;
             case "INDENTOR":
@@ -1622,10 +1647,10 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             }
         }
 
-        // When Indentor responds to SPO's clarification request,
+        // When Indentor or PP (multi-indent) responds to SPO's clarification request,
         // reset the vendor's quotation status from CHANGE_REQUESTED → SUBMITTED
         // so SPO buttons become enabled again.
-        if ("INDENTOR".equalsIgnoreCase(respondedByRole)
+        if (("INDENTOR".equalsIgnoreCase(respondedByRole) || "PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole))
                 && "PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)) {
             String targetVid = eval.getClarificationTargetVendorId();
             if (targetVid != null && !targetVid.isBlank()) {
@@ -2475,8 +2500,11 @@ long openHistoryRows;
             }
         }
 
-        // SPO seeking from indentor: resolve to specific indent creator userId
+        // SPO seeking from indentor: multiple indent → PP handles; single indent → specific indentor
         if ("SPO".equalsIgnoreCase(role) && "INDENTOR".equalsIgnoreCase(target)) {
+            if ("MULTIPLE_INDENT".equals(eval.getIndentCategory())) {
+                return "PURCHASE_PERSONNEL";
+            }
             Integer indentorUserId = resolveIndentCreatorUserId(tender);
             if (indentorUserId != null) {
                 dto.setTargetUserId(indentorUserId);
