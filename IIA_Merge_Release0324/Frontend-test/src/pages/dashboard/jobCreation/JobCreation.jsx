@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import FormInputItem from "../../../components/DKG_FormInputItem";
 import { Button, Form, Select, message } from "antd";
 import { ReloadOutlined, SaveOutlined, SendOutlined } from "@ant-design/icons";
@@ -16,21 +17,15 @@ const JobCreation = () => {
     const fetchInitialData = async () => {
       try {
         // Fetch Job Categories
-        const jobResponse = await fetch(
-          "/api/job-master"
-        );
-        const jobData = await jobResponse.json();
-        
+        const { data: jobData } = await axios.get("/api/job-master");
+
         if (!jobData.responseData) throw new Error("Invalid job data");
         const uniqueCategories = [...new Set(jobData.responseData.map(item => item.category))];
         setJobCategories(uniqueCategories);
 
         // Fetch UOM Options
-        const uomResponse = await fetch(
-          "/api/uom-master"
-        );
-        const uomData = await uomResponse.json();
-        
+        const { data: uomData } = await axios.get("/api/uom-master");
+
         if (!uomData.responseData) throw new Error("Invalid UOM data");
         const processedUom = uomData.responseData.map(uom => ({
           value: uom.uomCode,

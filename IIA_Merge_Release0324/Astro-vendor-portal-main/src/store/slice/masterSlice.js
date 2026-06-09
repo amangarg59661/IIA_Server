@@ -70,22 +70,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-// Axios instance for master-data APIs
-const api = axios.create({
-  baseURL: 'http://localhost:8081/astro-service/api',
-});
-
-/**
- * Thunk: Fetch UOM, locations, vendors, materials in parallel,
- * then build dropdown-friendly arrays.
- */
 export const fetchMasters = createAsyncThunk(
   'masters/fetch',
   async (_, { rejectWithValue }) => {
     try {
-      const endpoints = ['/uom-master', '/location-master', '/vendor-master', '/material-master'];
+      const endpoints = ['/api/uom-master', '/api/location-master', '/api/vendor-master', '/api/material-master'];
       const [uomRes, locRes, vendorRes, matRes] = await Promise.all(
-        endpoints.map((ep) => api.get(ep))
+        endpoints.map((ep) => axios.get(ep))
       );
 
       const materials = matRes.data.responseData || [];

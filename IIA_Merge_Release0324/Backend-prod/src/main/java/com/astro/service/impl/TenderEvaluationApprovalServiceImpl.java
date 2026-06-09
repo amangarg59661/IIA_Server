@@ -2531,6 +2531,15 @@ long openHistoryRows;
             }
         }
 
+        // PURCHASE_PERSONNEL: gem/open/global vendor clarification routes back to self
+        if ("PURCHASE_PERSONNEL".equalsIgnoreCase(role)) {
+            if ("VENDOR".equalsIgnoreCase(target) || "ALL_VENDORS".equalsIgnoreCase(target)) {
+                if (isGemOpenGlobal(mode)) {
+                    return "PURCHASE_PERSONNEL";
+                }
+            }
+        }
+
         // SPO seeking from indentor: multiple indent → PP handles; single indent → specific indentor
         if ("SPO".equalsIgnoreCase(role) && "INDENTOR".equalsIgnoreCase(target)) {
             if ("MULTIPLE_INDENT".equals(eval.getIndentCategory())) {

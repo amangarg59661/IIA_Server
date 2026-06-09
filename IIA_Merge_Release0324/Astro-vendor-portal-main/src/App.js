@@ -5,9 +5,13 @@ import { useDispatch } from 'react-redux';
 import { fetchMasters } from './store/slice/masterSlice';
 import store from './store';
 import { logout } from './store/slice/authSlice';
+import { message } from 'antd';
 
 export const baseURL = "http://localhost:8081/astro-service";
 axios.defaults.baseURL = baseURL;
+
+// Re-entry guard: prevent multiple 401s from triggering multiple logouts
+let isLoggingOut = false;
 
 // Send Authorization header with every request
 axios.interceptors.request.use((config) => {
@@ -23,8 +27,16 @@ axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Skip if already logging out or on login page
+      if (isLoggingOut || window.location.pathname === '/') {
+        return Promise.reject(error);
+      }
+      isLoggingOut = true;
       store.dispatch(logout());
-      window.location.href = '/';
+      message.error('Session expired. Redirecting to login...');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
     }
     return Promise.reject(error);
   }

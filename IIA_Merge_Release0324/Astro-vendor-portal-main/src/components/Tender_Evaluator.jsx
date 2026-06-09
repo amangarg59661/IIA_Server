@@ -214,12 +214,12 @@ const handleFileChange = (docName, fileData) => {
 
   if (actionStatus === 'CHANGE_REQUESTED') {
   if (!clarificationResponse) {
-    message.warning('Please enter clarification response');
+    Modal.warning('Please enter clarification response');
     return;
   }
 }else{
    if (!quotationFile) {
-    message.warning('Please upload a quotation file');
+    Modal.warning('Please upload a quotation file');
     return;
   }
  /* if (bidType === 'Double' && !priceBidFile) {
@@ -228,7 +228,7 @@ const handleFileChange = (docName, fileData) => {
   }*/
 
   if (!priceBidFile) {
-    message.warning('Please upload the price bid file');
+    Modal.warning('Please upload the price bid file');
     return;
   }
 

@@ -3147,7 +3147,7 @@ useEffect(() => {
             {/* {evalStatus?.evaluationStatus && !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
               (isPurchasePersonnelRole || isIndentCreatorRole) &&
               quotationData.length > 0 && ( */}
-              {((isPurchasePersonnelRole && !isOpenGlobalGem && (
+              {((isPurchasePersonnelRole && (
     !evalStatus?.evaluationStatus ||
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
