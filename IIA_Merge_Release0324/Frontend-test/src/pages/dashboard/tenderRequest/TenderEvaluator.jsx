@@ -1094,13 +1094,22 @@ const showCommitteeMemberTechActions = isDoubleBidEval && !isFinancialPhase &&
   isCommitteeMember && isVotingMember && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
    evalStatus?.evaluationStatus === 'PENDING_TECHNICAL');
 
 const showCommitteeMemberFinActions = isDoubleBidEval && isFinancialPhase &&
   isCommitteeMember && isVotingMember && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
-   evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE');
-
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
+  evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
+   
+// Single bid: committee member inline Accept/Reject (above 10L)
+const showCommitteeMemberSingleBidActions = !isDoubleBidEval &&
+  isCommitteeMember && isVotingMember && isAbove10L &&
+  (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
+   
 const isAssignedExpert = evalStatus?.expertUserId != null && String(evalStatus.expertUserId) === String(userId);
 const showChairmanInlineActions = isDoubleBidEval && isChairman && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
@@ -1788,7 +1797,37 @@ if (isSpoRole) {
   }
 ] : []),
 
-
+...(showCommitteeMemberSingleBidActions ? [
+  {
+    title: 'My Decision',
+    key: 'committeeSingleDecision',
+    width: 120,
+    render: (_, record) => {
+      const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
+        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'
+      );
+      if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
+      return <Tag color="orange">Pending</Tag>;
+    },
+  },
+  {
+    title: 'Action',
+    key: 'committeeSingleAction',
+    width: 160,
+    render: (_, record) => {
+      const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
+        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'
+      );
+      if (myVote?.decision) return <span style={{ color: '#999' }}>Decided</span>;
+      return (
+        <Space>
+          <Button size="small" type="primary" onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
+          <Button size="small" danger onClick={() => handleCommitteeVendorDecision(record.vendorId, 'REJECTED')}>Reject</Button>
+        </Space>
+      );
+    },
+  },
+] : []),
   ];
 }
 
