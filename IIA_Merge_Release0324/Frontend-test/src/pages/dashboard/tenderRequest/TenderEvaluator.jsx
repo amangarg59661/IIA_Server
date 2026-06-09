@@ -830,7 +830,7 @@ const openVendorClarificationModal = (vendorId, requestedByRole) => {
   setClarifRemarks('');
   setClarificationModal(true);
 };
-const isDirector = role === 'Director';
+
 // SPO-specific: opens clarification modal where SPO can choose INDENTOR or VENDOR
 const openRevisionModal = () => {
   setClarifRequestedByRole('SPO');
@@ -1079,6 +1079,7 @@ const fetchClarificationHistory = async (tid) => {
 // ── Indentor status column label ──
 const isAbove10L = evalStatus?.amountCategory !== 'UNDER_10_LAKH' && evalStatus?.amountCategory != null;
 const isChairman = role === 'Committee Chairman';
+const isDirector = role === 'Director';
 const isCommitteeMember = role === 'Committee Member';
 const isVotingMember = evalStatus?.committeeVotes?.some(
   v => String(v.committeeUserId) === String(userId)

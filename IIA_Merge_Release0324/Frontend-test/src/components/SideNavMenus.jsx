@@ -604,6 +604,24 @@ export const sidebarMenus = {
   // Director role
   "Director": [
     ...commonMenu,
+    {
+    key: "4",
+    label: "Procurement",
+    items: [
+      {
+        key: "4.1",
+        label: "Tender",
+        items: [
+          {
+            key: "4.1.1",
+            icon: <FileTextOutlined />,
+            label: "Tender Evaluation",
+            path: "/procurement/tender/evaluation",
+          },
+        ],
+      },
+    ],
+  },
   ],
 
   // Reporting Officer role

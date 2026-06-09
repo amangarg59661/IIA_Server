@@ -195,7 +195,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setTechnicalStatus("APPROVED");
             });
             quotationRepository.saveAll(quotations);
-            eval.setEvaluationStatus(needsPpDocument ? "PENDING_PP_DOCUMENT" : "PENDING_FINANCIAL");
+            eval.setEvaluationStatus(needsPpDocument ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_FINANCIAL");
         } else if ("MULTIPLE_INDENT".equals(indentCat)) {
             // Double Bid + Multiple Indent (Case 4): technical phase first, PP acts as evaluator.
             List<VendorQuotationAgainstTender> quotations =
@@ -207,7 +207,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setFinancialBidVisible(false);
             });
             quotationRepository.saveAll(quotations);
-            eval.setEvaluationStatus(needsPpDocument ? "PENDING_PP_DOCUMENT" : "PENDING_TECHNICAL");
+            eval.setEvaluationStatus(needsPpDocument ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_TECHNICAL");
         } else {
             // Double Bid + Single Indent (Case 2): technical phase first
             List<VendorQuotationAgainstTender> doubleQuotations =
@@ -219,7 +219,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 q.setFinancialBidVisible(false);
             });
             quotationRepository.saveAll(doubleQuotations);
-            eval.setEvaluationStatus(needsPpDocument ? "PENDING_PP_DOCUMENT" : "PENDING_TECHNICAL");
+            eval.setEvaluationStatus(needsPpDocument ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_TECHNICAL");
         }
 
         eval.setUpdatedDate(LocalDateTime.now());
@@ -269,6 +269,37 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 }
             }
         }
+
+        // Pre-create per-vendor committee decision rows for above-10L SINGLE_BID
+if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat))
+        && "SINGLE_BID".equalsIgnoreCase(bidType)) {
+    String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
+    List<TechnoFinancialCommittee> members = committeeRepository
+            .findByCommitteeTypeAndIsActiveTrue(stecType)
+            .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole()))
+            .collect(Collectors.toList());
+    List<VendorQuotationAgainstTender> vendors =
+            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+
+    for (TechnoFinancialCommittee member : members) {
+        for (VendorQuotationAgainstTender vendor : vendors) {
+            boolean exists = committeeVendorDecisionRepository
+                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(
+                            tenderId, vendor.getVendorId(), member.getUserId(), "FINANCIAL")
+                    .isPresent();
+            if (!exists) {
+                TenderCommitteeVendorDecision row = new TenderCommitteeVendorDecision();
+                row.setTenderId(tenderId);
+                row.setVendorId(vendor.getVendorId());
+                row.setCommitteeUserId(member.getUserId());
+                row.setMemberName(member.getMemberName());
+                row.setPhase("FINANCIAL"); // single bid goes straight to financial
+                row.setCreatedDate(LocalDateTime.now());
+                committeeVendorDecisionRepository.save(row);
+            }
+        }
+    }
+}
 
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -889,7 +920,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
                 eval.setFinancialBidPhase(true);
                 // Go back to PENDING_FINANCIAL so PP can select the approved vendor
                 // (from technically-approved list) before committee votes on financial bids.
-                eval.setEvaluationStatus("PENDING_FINANCIAL");
+                eval.setEvaluationStatus("PENDING_FINANCIAL_SHEET_UPLOAD");
                 // Reset committee votes for the financial phase
                 List<TenderCommitteeDecision> existingVotes =
                         committeeDecisionRepository.findByTenderId(tenderId);
@@ -2433,7 +2464,7 @@ long openHistoryRows;
                     });
 
             // Per-vendor committee votes (above-10L double bid)
-            if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
+            // if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
                 String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
                 List<TenderCommitteeVendorDecision> vendorVotes =
                         committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, phase);
@@ -2453,7 +2484,7 @@ long openHistoryRows;
                                 Map.Entry::getKey,
                                 Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
                 dto.setCommitteeVendorVotes(voteMap);
-            }
+            // }
         }
         return dto;
     }

@@ -174,10 +174,15 @@ public class TenderEvaluationServiceImpl implements TenderEvaluationService {
             String commFileName = saveBase64Files(tenderEvaluationRequestDto.getUploadCommeriallyQualifiedVendorsFileName(), basePath);
             tenderEvaluation.setUploadCommeriallyQualifiedVendorsFileName(commFileName);
 
+            // if ("PENDING_FINANCIAL_SHEET_UPLOAD".equals(tenderEvaluation.getEvaluationStatus())) {
+            //     tenderEvaluation.setEvaluationStatus("PENDING_FINANCIAL");
+            //     tenderEvaluation.setUpdatedDate(java.time.LocalDateTime.now());
+            // }
             if ("PENDING_FINANCIAL_SHEET_UPLOAD".equals(tenderEvaluation.getEvaluationStatus())) {
-                tenderEvaluation.setEvaluationStatus("PENDING_FINANCIAL");
-                tenderEvaluation.setUpdatedDate(java.time.LocalDateTime.now());
-            }
+    boolean isAbove10L = !"UNDER_10_LAKH".equals(tenderEvaluation.getAmountCategory());
+    tenderEvaluation.setEvaluationStatus(isAbove10L ? "PENDING_MEMBER_VOTING" : "PENDING_FINANCIAL");
+    tenderEvaluation.setUpdatedDate(java.time.LocalDateTime.now());
+}
         }
         if (tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee() != null)
             tenderEvaluation.setFormationOfTechnoCommerialComitee(tenderEvaluationRequestDto.getFormationOfTechnoCommerialComitee());

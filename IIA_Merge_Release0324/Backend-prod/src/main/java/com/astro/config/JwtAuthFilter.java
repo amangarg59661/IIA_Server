@@ -1,6 +1,7 @@
 package com.astro.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,10 +37,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     String userId = jwtUtil.extractUserId(token);
                     List<String> roles = jwtUtil.extractRoles(token);
 
-                    // Set UserContextHolder for JPA Auditing
                     UserContextHolder.set(userId);
 
-                    // Set Spring Security context
                     List<SimpleGrantedAuthority> authorities = roles.stream()
                             .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                             .collect(Collectors.toList());
@@ -48,6 +47,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(userId, null, authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    String msg = jwtUtil.isTokenExpired(token)
+                            ? "Token has expired. Please login again."
+                            : "Invalid token.";
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"" + msg + "\"}");
+                    return;
                 }
             }
 
