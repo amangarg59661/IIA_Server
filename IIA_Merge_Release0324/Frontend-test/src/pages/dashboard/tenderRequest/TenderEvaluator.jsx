@@ -830,7 +830,7 @@ const openVendorClarificationModal = (vendorId, requestedByRole) => {
   setClarifRemarks('');
   setClarificationModal(true);
 };
-
+const isDirector = role === 'Director';
 // SPO-specific: opens clarification modal where SPO can choose INDENTOR or VENDOR
 const openRevisionModal = () => {
   setClarifRequestedByRole('SPO');
@@ -1109,7 +1109,7 @@ const showCommitteeMemberSingleBidActions = !isDoubleBidEval &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
-   
+
 const isAssignedExpert = evalStatus?.expertUserId != null && String(evalStatus.expertUserId) === String(userId);
 const showChairmanInlineActions = isDoubleBidEval && isChairman && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
@@ -2892,7 +2892,7 @@ useEffect(() => {
   };
 
   const isAbove1Crore = evalStatus?.amountCategory === 'ABOVE_1_CRORE';
-  const isDirector = role === 'Director';
+  
 
   // Clarification pending states
   const isPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
