@@ -212,7 +212,8 @@ const showEvaluationSection = true;
 const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval) ||
    (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval)) &&
-  evalStatus !== null;
+  evalStatus !== null &&
+  evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL';
 
 const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
   ['PENDING_FINANCIAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION']
@@ -519,6 +520,25 @@ const handleChange = (key, value) => {
     await fetchIndentorOpenQuestions(tenderId);
   } catch (err) {
     message.error(err?.response?.data?.message || "Failed to perform SPO review action");
+  }
+};
+
+const handleSpoRejectIndentorClarification = async (record) => {
+  if (!rejectComment.trim()) return message.warning('Please enter a rejection reason.');
+  try {
+    await axios.post('/api/tender-evaluation/reject-indentor-clarification',
+      { decision: 'REJECTED', remarks: rejectComment, userId },
+      { params: { tenderId, vendorId: record.vendorId } }
+    );
+    message.success(`Indentor clarification rejected for vendor ${record.vendorId}`);
+    setRejectComment('');
+    setRejectedVendorId(null);
+    await fetchQuotationsAndPending(tenderId);
+    await fetchEvalStatus(tenderId);
+    await fetchIndentorOpenQuestions(tenderId);
+    await fetchClarificationHistory(tenderId);
+  } catch (err) {
+    message.error(err?.response?.data?.message || 'Failed to reject indentor clarification.');
   }
 };
 
@@ -1638,6 +1658,37 @@ if (isSpoRole) {
             {pendingToIndentor ? 'Change Requested' : record.status === 'CHANGE_REQUESTED' ? 'Clarification Sent' : 'Seek Revision'}
           </Button>
         </Popover>
+        {pendingToIndentor && (
+          <Popover
+            content={
+              <div style={{ padding: 12 }}>
+                <Input.TextArea
+                  placeholder="Enter reason for rejecting indentor clarification"
+                  rows={3}
+                  value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                  onChange={(e) => {
+                    setRejectedVendorId(record.vendorId);
+                    setRejectComment(e.target.value);
+                  }}
+                />
+                <Button
+                  type="primary"
+                  danger
+                  onClick={() => handleSpoRejectIndentorClarification(record)}
+                  style={{ marginTop: 8 }}
+                >
+                  Submit
+                </Button>
+              </div>
+            }
+            title="Reject Indentor Clarification"
+            trigger="click"
+          >
+            <Button size="small" style={{ color: 'red' }}>
+              Reject Clarification
+            </Button>
+          </Popover>
+        )}
       </div>
     );
   }
@@ -2226,13 +2277,13 @@ const doubleBidTechColumns = [
             const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return vendorHasIndentorClarif ? (
               <Tag color="orange">Clarification Pending</Tag>
-            ) : vendorClarifPending ? (
+            ) : (vendorClarifPending || record.changeRequestToIndentor) ? (
               <Tag color="orange">Pending</Tag>
             ) : (
               <Button
                 type="link"
                 style={{ color: '#fa8c16', padding: 0 }}
-                disabled={st === 'REJECTED' || vendorClarifPending}
+                disabled={st === 'REJECTED' || vendorClarifPending || record.changeRequestToIndentor}
                 onClick={() => openVendorClarificationModal(record.vendorId)}
               >
                 Seek Clarification
@@ -3676,6 +3727,8 @@ useEffect(() => {
                   )}
                   {indentorOpenQuestions.map((q) => {
                     const targetVendor = quotationData.find(v => v.vendorId === q.targetVendorId);
+                    const vendorStatus = isFinancialPhase ? targetVendor?.financialIndentorStatus : targetVendor?.indentorStatus;
+                    const vendorDecided = vendorStatus === 'ACCEPTED' || vendorStatus === 'REJECTED';
                     return (
                       <div key={q.id} style={{
                         marginBottom: 12, padding: 12,
@@ -3685,7 +3738,9 @@ useEffect(() => {
                       }}>
                         <div style={{ marginBottom: 8 }}>
                           <strong>{targetVendor?.vendorName || q.targetVendorId || 'All Vendors'}</strong>
-                          <Tag color="orange" style={{ marginLeft: 8 }}>Pending Response</Tag>
+                          {vendorDecided
+                            ? <Tag color="orange" style={{ marginLeft: 8 }}>Pending Response</Tag>
+                            : <Tag color="default" style={{ marginLeft: 8 }}>Accept/Reject vendor first</Tag>}
                         </div>
                         <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                           message={`Question (Round ${q.roundNumber}): "${q.questionRemarks}"`}
@@ -3702,39 +3757,46 @@ useEffect(() => {
                             </a>
                           </div>
                         )}
-                        <div style={{ marginBottom: 8 }}>
-                          <Text strong style={{ fontSize: 12 }}>Upload Supporting Document:</Text>
-                          <input
-                            type="file"
-                            style={{ display: 'block', marginTop: 4 }}
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              setIndentorFiles(prev => ({ ...prev, [q.id]: file || null }));
-                            }}
-                          />
-                          {indentorFiles[q.id] && (
-                            <span style={{ fontSize: 12, color: '#52c41a' }}>{indentorFiles[q.id].name}</span>
-                          )}
-                        </div>
-                        <div style={{ marginBottom: 8 }}>
-                          <Text strong style={{ fontSize: 12 }}>Your Response:</Text>
-                          <Input.TextArea
-                            rows={3}
-                            placeholder="Enter your clarification response..."
-                            value={indentorResponses[q.id] || ''}
-                            onChange={(e) => setIndentorResponses(prev => ({ ...prev, [q.id]: e.target.value }))}
-                            style={{ marginTop: 4 }}
-                          />
-                        </div>
-                        <Button
-                          type="primary"
-                          size="small"
-                          loading={indentorSubmitting[q.id]}
-                          disabled={!indentorResponses[q.id]?.trim()}
-                          onClick={() => handleIndentorRespondPerQuestion(q.id)}
-                        >
-                          Submit Response{targetVendor ? ` for ${targetVendor.vendorName || q.targetVendorId}` : ''}
-                        </Button>
+                        {vendorDecided ? (
+                          <>
+                            <div style={{ marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: 12 }}>Upload Supporting Document:</Text>
+                              <input
+                                type="file"
+                                style={{ display: 'block', marginTop: 4 }}
+                                onChange={(e) => {
+                                  const file = e.target.files[0];
+                                  setIndentorFiles(prev => ({ ...prev, [q.id]: file || null }));
+                                }}
+                              />
+                              {indentorFiles[q.id] && (
+                                <span style={{ fontSize: 12, color: '#52c41a' }}>{indentorFiles[q.id].name}</span>
+                              )}
+                            </div>
+                            <div style={{ marginBottom: 8 }}>
+                              <Text strong style={{ fontSize: 12 }}>Your Response:</Text>
+                              <Input.TextArea
+                                rows={3}
+                                placeholder="Enter your clarification response..."
+                                value={indentorResponses[q.id] || ''}
+                                onChange={(e) => setIndentorResponses(prev => ({ ...prev, [q.id]: e.target.value }))}
+                                style={{ marginTop: 4 }}
+                              />
+                            </div>
+                            <Button
+                              type="primary"
+                              size="small"
+                              loading={indentorSubmitting[q.id]}
+                              disabled={!indentorResponses[q.id]?.trim()}
+                              onClick={() => handleIndentorRespondPerQuestion(q.id)}
+                            >
+                              Submit Response{targetVendor ? ` for ${targetVendor.vendorName || q.targetVendorId}` : ''}
+                            </Button>
+                          </>
+                        ) : (
+                          <Alert type="info" showIcon
+                            message="Please accept or reject this vendor in the table above before submitting your clarification response." />
+                        )}
                       </div>
                     );
                   })}

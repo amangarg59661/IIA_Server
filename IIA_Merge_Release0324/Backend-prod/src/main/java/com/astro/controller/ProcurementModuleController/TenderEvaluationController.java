@@ -398,6 +398,17 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    @PostMapping("/reject-indentor-clarification")
+    public ResponseEntity<Object> rejectIndentorClarification(
+            @RequestParam String tenderId,
+            @RequestParam String vendorId,
+            @Valid @RequestBody VendorDecisionRequestDto dto) {
+        log.info("SPO reject indentor clarification tenderId={} vendorId={} userId={}", tenderId, vendorId, dto.getUserId());
+        TenderEvaluationStatusDto status = approvalService.rejectIndentorClarification(
+                tenderId, vendorId, dto.getUserId(), dto.getRemarks());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     // ─── REJECT / REOPEN EVALUATION ──────────────────────────────────
 
     @PostMapping("/reject")

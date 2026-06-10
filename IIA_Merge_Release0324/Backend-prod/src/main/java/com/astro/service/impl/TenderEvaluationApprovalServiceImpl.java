@@ -2273,6 +2273,87 @@ long openHistoryRows;
     }
 
     // ─────────────────────────────────────────────────────────────────
+    // 19b. SPO REJECTS INDENTOR CLARIFICATION (closes history, restores flow)
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto rejectIndentorClarification(String tenderId, String vendorId,
+                                                                  Integer spoUserId, String remarks) {
+        log.info("SPO reject indentor clarification tenderId={} vendorId={} by userId={}",
+                tenderId, vendorId, spoUserId);
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        // 1. Close all open clarification history rows targeted at INDENTOR for this vendor
+        List<TenderClarificationHistory> rowsToClose =
+                clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId)
+                        .stream()
+                        .filter(h -> h.getRespondedAt() == null)
+                        .filter(h -> "INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
+                                || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget()))
+                        .filter(h -> vendorId.equals(h.getTargetVendorId()))
+                        .collect(java.util.stream.Collectors.toList());
+
+        for (TenderClarificationHistory h : rowsToClose) {
+            h.setRespondedAt(LocalDateTime.now());
+            h.setRespondedByRole("SPO");
+            h.setRespondedById(String.valueOf(spoUserId));
+            h.setResponseText("Indentor clarification rejected by SPO: "
+                    + (remarks != null ? remarks : ""));
+        }
+        if (!rowsToClose.isEmpty()) {
+            clarificationHistoryRepository.saveAll(rowsToClose);
+        }
+
+        // 2. Restore the vendor quotation status from CHANGE_REQUESTED
+        quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
+                .ifPresent(q -> {
+                    if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus())) {
+                        q.setStatus("SUBMITTED");
+                    }
+                    q.setUpdatedBy(String.valueOf(spoUserId));
+                    q.setUpdatedDate(LocalDateTime.now());
+                    quotationRepository.save(q);
+                });
+
+        // 3. Unified restore gate — restore evaluation status if all clarifications resolved
+        boolean quotationsResolved = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
+                .stream()
+                .noneMatch(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()));
+
+        long openHistoryRows;
+        if (quotationsResolved) {
+            openHistoryRows = clarificationHistoryRepository
+                    .findByTenderIdOrderByRequestedAtDesc(tenderId)
+                    .stream()
+                    .filter(h -> h.getRespondedAt() == null)
+                    .count();
+        } else {
+            openHistoryRows = clarificationHistoryRepository
+                    .countByTenderIdAndRespondedAtIsNull(tenderId);
+        }
+
+        if (quotationsResolved && openHistoryRows == 0) {
+            String restoreStatus = eval.getPreviousEvaluationStatus();
+            if (restoreStatus == null || restoreStatus.isBlank()) {
+                restoreStatus = "PENDING_SPO_APPROVAL";
+            }
+            eval.setEvaluationStatus(restoreStatus);
+            eval.setPreviousEvaluationStatus(null);
+            eval.setClarificationPendingFrom(null);
+            eval.setClarificationPendingFromId(null);
+            eval.setClarificationPendingFromName(null);
+            eval.setClarificationRequestedByRole(null);
+            eval.setClarificationRemarks(null);
+            eval.setClarificationTargetVendorId(null);
+        }
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     // 20. REJECT EVALUATION (any role, any status except APPROVED)
     // ─────────────────────────────────────────────────────────────────
     @Transactional

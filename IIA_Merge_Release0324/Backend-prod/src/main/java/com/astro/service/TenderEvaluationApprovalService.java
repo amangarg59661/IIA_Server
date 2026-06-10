@@ -214,6 +214,13 @@ public interface TenderEvaluationApprovalService {
     TenderEvaluationStatusDto reopenEvaluation(String tenderId, Integer userId);
 
     /**
+     * SPO rejects/dismisses a pending indentor clarification for a specific vendor.
+     * Closes the open clarification history rows and restores evaluation status.
+     */
+    TenderEvaluationStatusDto rejectIndentorClarification(String tenderId, String vendorId,
+                                                           Integer spoUserId, String remarks);
+
+    /**
      * Maps an approved vendor (from quotation) to a registered vendor from VendorMaster.
      * Used for OPEN_TENDER / GLOBAL_TENDER / GEM procurement modes after evaluation is APPROVED.
      */
