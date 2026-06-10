@@ -465,8 +465,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 List<VendorQuotationAgainstTender> quotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()) && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                        .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                  && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
                         .forEach(q -> {
                             q.setFinancialBidVisible(true);
                             q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
@@ -490,6 +490,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                         .filter(q -> {
                             if (wasFinancialPhase) {
                                 return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                    && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus())
                                     && "ACCEPTED".equalsIgnoreCase(q.getFinancialIndentorStatus());
                             }
                             return "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus());
@@ -786,7 +787,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         boolean allResolved;
         if ("FINANCIAL".equals(phase)) {
             allResolved = allQuotations.stream()
-                    .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
                     .allMatch(q -> q.getFinancialIndentorStatus() != null
                             && !"PENDING".equalsIgnoreCase(q.getFinancialIndentorStatus()));
         } else {
@@ -814,7 +816,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        validateAllVendorsDecided(tenderId);
+        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         // Validate chairman identity for STEC-I / STEC-II
         if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
@@ -879,7 +881,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        validateAllVendorsDecided(tenderId);
+        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         TenderCommitteeDecision dirRow = committeeDecisionRepository
                 .findByTenderIdAndCommitteeUserId(tenderId, directorUserId)
@@ -908,8 +910,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 List<VendorQuotationAgainstTender> quotations =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                 quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                        .filter(q -> !"REJECTED".equalsIgnoreCase(q.getIndentorStatus()))
                         .forEach(q -> {
                             q.setFinancialBidVisible(true);
                             q.setNextRole(VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR);
@@ -1062,8 +1063,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                         && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                     allQuotations = allQuotations.stream()
-                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                      || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                            .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                        || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
                             .collect(Collectors.toList());
                 }
                 allQuotations.forEach(q -> {
@@ -1123,8 +1124,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                         && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                     allQuotations = allQuotations.stream()
-                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                      || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                            .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                        || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
                             .collect(Collectors.toList());
                 }
                 allQuotations.forEach(q -> {
@@ -1158,8 +1159,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                         if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                                 && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                             rerouted = rerouted.stream()
-                                    .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                              || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()) && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
                                     .collect(Collectors.toList());
                         }
                         rerouted.forEach(q -> applyClarificationRoleFields(q, dto, eval));
@@ -2296,7 +2297,14 @@ long openHistoryRows;
                     "No vendor quotations found for this tender."));
         }
         List<String> underClarification = quotations.stream()
-                .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                .filter(q -> {
+                    if (financialPhase
+                            && ("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
+                        return false;
+                    }
+                    return "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus());
+                })
                 .map(VendorQuotationAgainstTender::getVendorId)
                 .collect(Collectors.toList());
         if (!underClarification.isEmpty()) {
@@ -2307,7 +2315,9 @@ long openHistoryRows;
         }
         List<String> pendingDecision = quotations.stream()
                 .filter(q -> {
-                    if (financialPhase && "REJECTED".equalsIgnoreCase(q.getIndentorStatus())|| "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
+                    if (financialPhase
+                            && ("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
                         return false;
                     }
                     String status = financialPhase ? q.getFinancialIndentorStatus() : q.getIndentorStatus();
@@ -2333,7 +2343,14 @@ long openHistoryRows;
         List<VendorQuotationAgainstTender> quotations =
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
         List<String> underClarification = quotations.stream()
-                .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
+                .filter(q -> {
+                    if (financialPhase
+                            && ("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
+                        return false;
+                    }
+                    return "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus());
+                })
                 .map(VendorQuotationAgainstTender::getVendorId)
                 .collect(Collectors.toList());
         if (!underClarification.isEmpty()) {
@@ -2741,7 +2758,15 @@ long openHistoryRows;
 
         // Check all vendors have a decision
         List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-        int expectedVendorCount = quotations.size();
+        long expectedVendorCount;
+        if ("FINANCIAL".equals(phase)) {
+            expectedVendorCount = quotations.stream()
+                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                    .count();
+        } else {
+            expectedVendorCount = quotations.size();
+        }
         long decidedCount = myVotes.stream().filter(v -> v.getDecision() != null).count();
         if (decidedCount < expectedVendorCount) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
@@ -2822,13 +2847,19 @@ long openHistoryRows;
         voteRow.setUpdatedDate(LocalDateTime.now());
         committeeVendorDecisionRepository.save(voteRow);
 
-        // Check if chairman voted ALL vendors → auto-transition to PENDING_DIRECTOR_APPROVAL
+        // Check if chairman voted ALL eligible vendors → auto-transition to PENDING_DIRECTOR_APPROVAL
         List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        long eligibleVendorCount = "FINANCIAL".equals(phase)
+                ? quotations.stream()
+                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                    .count()
+                : quotations.size();
         List<TenderCommitteeVendorDecision> chairmanVotes = committeeVendorDecisionRepository
                 .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "CHAIRMAN");
         long chairmanDecided = chairmanVotes.stream().filter(v -> v.getDecision() != null).count();
 
-        if (chairmanDecided >= quotations.size()) {
+        if (chairmanDecided >= eligibleVendorCount) {
             eval.setEvaluationStatus("PENDING_DIRECTOR_APPROVAL");
             eval.setUpdatedDate(LocalDateTime.now());
             tenderEvaluationRepository.save(eval);
@@ -2875,20 +2906,25 @@ long openHistoryRows;
         voteRow.setUpdatedDate(LocalDateTime.now());
         committeeVendorDecisionRepository.save(voteRow);
 
-        // Check if director voted ALL vendors
+        // Check if director voted ALL eligible vendors
         List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        long eligibleVendorCount = "FINANCIAL".equals(phase)
+                ? quotations.stream()
+                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                    .count()
+                : quotations.size();
         List<TenderCommitteeVendorDecision> directorVotes = committeeVendorDecisionRepository
                 .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "DIRECTOR");
         long directorDecided = directorVotes.stream().filter(v -> v.getDecision() != null).count();
 
-        if (directorDecided >= quotations.size()) {
+        if (directorDecided >= eligibleVendorCount) {
             // All vendors decided by director
             if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                     && !Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
                 // Technical phase done → reveal financial bids → members vote again
                 List<VendorQuotationAgainstTender> approved = quotations.stream()
-                        .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                  || "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                        .filter(q -> !"REJECTED".equalsIgnoreCase(q.getIndentorStatus()))
                         .collect(Collectors.toList());
                 approved.forEach(q -> q.setFinancialBidVisible(true));
                 quotationRepository.saveAll(approved);
