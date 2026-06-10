@@ -1529,11 +1529,11 @@ if (isSpoRole) {
     //   && record.status !== 'CHANGE_REQUESTED';
     const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
       && indStatus === 'ACCEPTED'
-      && (!spStatus || spStatus === 'PENDING')
+      && (!spStatus || spStatus === 'PENDING' || spStatus === 'REJECTED')
       && record.status !== 'CHANGE_REQUESTED';
     // Reject always allowed even if vendor hasn't responded — prevents flow from getting stuck
-   const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
-  && record.indentorStatus === 'ACCEPTED'
+   const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+  && record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null
   && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
     const pendingToIndentor = record.changeRequestToIndentor;
 
@@ -2692,7 +2692,7 @@ const spoTechColumns = [
             && record.indentorStatus === 'ACCEPTED'
             && (!record.sopStatus || record.sopStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
-          const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL'
+          const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL' || evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION'
             && record.indentorStatus === 'ACCEPTED'
             && (!record.sopStatus || record.sopStatus === 'PENDING');
           const pendingToIndentor = record.changeRequestToIndentor;
