@@ -1527,7 +1527,7 @@ if (isSpoRole) {
     //   && indStatus === 'ACCEPTED'
     //   && (!spStatus || spStatus === 'PENDING')
     //   && record.status !== 'CHANGE_REQUESTED';
-    const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+    const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
       && indStatus === 'ACCEPTED'
       && (!spStatus || spStatus === 'PENDING')
       && record.status !== 'CHANGE_REQUESTED';
@@ -1775,8 +1775,7 @@ if (isSpoRole) {
           disabled={
             status === 'ACCEPTED' ||
             status === 'REJECTED' ||
-            vendorClarifPending ||
-            vendorHasIndentorClarif
+            vendorClarifPending 
           }
           title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
@@ -1811,7 +1810,7 @@ if (isSpoRole) {
                 onClick={() => handleReject(record)}
                 style={{ marginTop: 8 }}
                 disabled={
-                  status === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
+                  status === 'REJECTED'
                 }
               >
                 Submit
@@ -1822,7 +1821,7 @@ if (isSpoRole) {
           trigger="click"
         >
           <Button danger type="link" disabled={
-            status === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
+            status === 'REJECTED' 
           }>
             Reject
           </Button>
@@ -2162,8 +2161,7 @@ const doubleBidTechColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED' ||
-                  vendorClarifPending || vendorHasIndentorClarif
+                  st === 'ACCEPTED' || st === 'REJECTED' 
                 }
                 title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
@@ -2195,7 +2193,7 @@ const doubleBidTechColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif}
+                      disabled={st === 'REJECTED' }
                     >
                       Submit
                     </Button>
@@ -2205,7 +2203,7 @@ const doubleBidTechColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
+                  st === 'REJECTED' 
                 }>
                   Reject
                 </Button>
@@ -2437,8 +2435,7 @@ const doubleBidFinColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED' ||
-                  vendorClarifPending || vendorHasIndentorClarif
+                  st === 'ACCEPTED' || st === 'REJECTED' 
                 }
                 title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
@@ -2470,7 +2467,7 @@ const doubleBidFinColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif}
+                      disabled={st === 'REJECTED' }
                     >
                       Submit
                     </Button>
@@ -2480,7 +2477,7 @@ const doubleBidFinColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
+                  st === 'REJECTED'  
                 }>
                   Reject
                 </Button>
@@ -2907,7 +2904,7 @@ const spoFinColumns = [
             && record.financialIndentorStatus === 'ACCEPTED'
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
-         const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+         const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
   && record.financialIndentorStatus === 'ACCEPTED'
   && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING' || record.financialSpoStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
