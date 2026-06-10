@@ -2110,18 +2110,25 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         //             "INDENTOR", evaluatorUserId, remarks, eval);
         // }
 
-        // Only close pending clarifications and potentially roll back status
-// when the tender is in PENDING_VENDOR_CLARIFICATION state (i.e. vendor owed
-// a clarification response, and Indentor is rejecting instead of waiting).
-// Do NOT do this when status is PENDING_INDENTOR_CLARIFICATION — in that case
-// Indentor is simply evaluating as part of answering SPO's clarification question,
-// and must still go through the "Submit Response" card after all vendors are decided.
-if (wasChangeRequested
-        && "REJECTED".equals(normalizedDecision)
-        && "PENDING_VENDOR_CLARIFICATION".equals(eval.getEvaluationStatus())) {
-    closePendingClarificationsForVendor(tenderId, vendorId,
-            "INDENTOR", evaluatorUserId, remarks, eval);
-}
+        // Close pending vendor clarifications when indentor rejects a CHANGE_REQUESTED vendor.
+        // This applies in any status where the vendor was awaiting clarification — not just
+        // PENDING_VENDOR_CLARIFICATION. In double bid, the eval status may be PENDING_INITIATION,
+        // PENDING_FINANCIAL, etc. while individual vendors have CHANGE_REQUESTED status.
+        // Skip only PENDING_INDENTOR_CLARIFICATION when the clarification is targeted at indentor
+        // (SPO→indentor flow) — indentor must still submit their response card in that case.
+        if (wasChangeRequested && "REJECTED".equals(normalizedDecision)) {
+            boolean isIndentorClarifTarget = "PENDING_INDENTOR_CLARIFICATION".equals(eval.getEvaluationStatus())
+                    && clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId)
+                            .stream()
+                            .anyMatch(h -> h.getRespondedAt() == null
+                                    && vendorId.equals(h.getTargetVendorId())
+                                    && ("INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
+                                        || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget())));
+            if (!isIndentorClarifTarget) {
+                closePendingClarificationsForVendor(tenderId, vendorId,
+                        "INDENTOR", evaluatorUserId, remarks, eval);
+            }
+        }
 
         return buildStatusDto(eval, tender, tenderId);
     }
