@@ -359,6 +359,14 @@ public class TenderEvaluationController {
                 HttpStatus.OK);
     }
 
+    @GetMapping("/open-indentor-clarifications")
+    public ResponseEntity<Object> getOpenIndentorClarifications(@RequestParam String tenderId) {
+        log.info("Get open indentor clarifications tenderId={}", tenderId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getOpenIndentorClarifications(tenderId)),
+                HttpStatus.OK);
+    }
+
     @GetMapping("/approved-vendors")
     public ResponseEntity<Object> getApprovedVendorsForPO(@RequestParam String tenderId) {
         return new ResponseEntity<>(

@@ -133,6 +133,12 @@ const TenderEvaluator = () => {
   const [ppVendorFiles, setPpVendorFiles] = useState({});
   const [ppSubmitting, setPpSubmitting] = useState({});
 
+  // Indentor per-vendor clarification response (SPO/Chairman/Director → Indentor)
+  const [indentorOpenQuestions, setIndentorOpenQuestions] = useState([]);
+  const [indentorResponses, setIndentorResponses] = useState({});
+  const [indentorFiles, setIndentorFiles] = useState({});
+  const [indentorSubmitting, setIndentorSubmitting] = useState({});
+
   // Registered vendor mapping (OPEN_TENDER / GLOBAL_TENDER / GEM)
   const [allRegisteredVendors, setAllRegisteredVendors] = useState([]);
   const [selectedRegisteredVendors, setSelectedRegisteredVendors] = useState({});
@@ -479,6 +485,12 @@ const handleChange = (key, value) => {
     return message.warning(actionType === 'REJECT' ? "Please enter a rejection comment." : "Please enter a change request comment.");
   }
 
+  // Block INDENTOR clarification if any VENDOR clarification is pending
+  if (actionType === 'CHANGE_REQUEST_TO_INTENTOR'
+      && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION') {
+    return message.warning('Please wait for vendor response before seeking clarification from Indentor.');
+  }
+
   try {
     if (actionType === 'ACCEPT') {
       await axios.post('/api/tender-evaluation/vendor/spo-decision',
@@ -504,6 +516,7 @@ const handleChange = (key, value) => {
     setRejectedVendorId(null);
     await fetchQuotationsAndPending(tenderId);
     await fetchEvalStatus(tenderId);
+    await fetchIndentorOpenQuestions(tenderId);
   } catch (err) {
     message.error(err?.response?.data?.message || "Failed to perform SPO review action");
   }
@@ -511,6 +524,12 @@ const handleChange = (key, value) => {
 
 const handleSpoVendorClarification = async (record) => {
   if (!rejectComment.trim()) return message.warning('Please enter a clarification question for vendor.');
+
+  // Block VENDOR clarification if any INDENTOR clarification is pending
+  if (evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION') {
+    return message.warning('Please wait for Indentor response before seeking clarification from Vendor.');
+  }
+
   try {
     await axios.post('/api/tender-evaluation/seek-clarification', {
       requestedByRole: 'SPO',
@@ -844,6 +863,19 @@ const openRevisionModal = () => {
 
 const handleSeekClarification = async () => {
   if (!clarifRemarks.trim()) return message.warning('Please enter clarification remarks.');
+
+  // Cross-type validation: can't mix VENDOR and INDENTOR clarification types
+  if (['SPO', 'CHAIRMAN', 'DIRECTOR'].includes(clarifRequestedByRole)) {
+    const targetIsVendor = ['VENDOR', 'ALL_VENDORS'].includes(clarifTarget);
+    const targetIsIndentor = ['INDENTOR', 'PURCHASE_PERSONNEL'].includes(clarifTarget);
+    if (targetIsVendor && evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION') {
+      return message.warning('Please wait for Indentor response before seeking clarification from Vendor.');
+    }
+    if (targetIsIndentor && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION') {
+      return message.warning('Please wait for vendor response before seeking clarification from Indentor.');
+    }
+  }
+
   try {
     await axios.post('/api/tender-evaluation/seek-clarification', {
       requestedByRole: clarifRequestedByRole,
@@ -861,6 +893,7 @@ const handleSeekClarification = async () => {
     await fetchEvalStatus(tenderId);
     await fetchClarificationHistory(tenderId);
     await fetchQuotationsAndPending(tenderId);
+    await fetchIndentorOpenQuestions(tenderId);
   } catch (e) {
     message.error(e?.response?.data?.responseStatus?.message || 'Failed to send clarification request.');
   }
@@ -1101,6 +1134,55 @@ const fetchClarificationHistory = async (tid) => {
     setClarificationHistory([]);
   } finally {
     setClarifHistoryLoading(false);
+  }
+};
+
+// ── Fetch open indentor clarifications (per-vendor cards) ──
+const fetchIndentorOpenQuestions = async (tid) => {
+  if (!tid) return;
+  try {
+    const res = await axios.get('/api/tender-evaluation/open-indentor-clarifications', { params: { tenderId: tid } });
+    setIndentorOpenQuestions(res.data?.responseData || []);
+  } catch (e) {
+    console.error('Failed to fetch indentor clarifications:', e);
+    setIndentorOpenQuestions([]);
+  }
+};
+
+// ── Per-question indentor clarification response submit ──
+const handleIndentorRespondPerQuestion = async (historyId) => {
+  const responseText = indentorResponses[historyId];
+  if (!responseText || !responseText.trim()) return message.warning('Please enter a response.');
+  setIndentorSubmitting(prev => ({ ...prev, [historyId]: true }));
+  try {
+    let responseFileName = null;
+    const fileObj = indentorFiles[historyId];
+    if (fileObj) {
+      const fd = new FormData();
+      fd.append('file', fileObj);
+      const uploadResp = await axios.post('/file/upload?fileType=Tender', fd, {
+        headers: { 'Content-Type': 'multipart/form-data', Accept: 'application/json' },
+      });
+      responseFileName = uploadResp.data.responseData.fileName;
+    }
+    await axios.post('/api/tender-evaluation/respond-clarification', {
+      respondedByRole: isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR',
+      respondedById: String(userId),
+      responseText: responseText.trim(),
+      responseFileName,
+      clarificationHistoryId: historyId,
+    }, { params: { tenderId } });
+    message.success('Response submitted successfully.');
+    setIndentorResponses(prev => { const n = { ...prev }; delete n[historyId]; return n; });
+    setIndentorFiles(prev => { const n = { ...prev }; delete n[historyId]; return n; });
+    await fetchEvalStatus(tenderId);
+    await fetchIndentorOpenQuestions(tenderId);
+    await fetchQuotationsAndPending(tenderId);
+    await fetchClarificationHistory(tenderId);
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to submit response.');
+  } finally {
+    setIndentorSubmitting(prev => ({ ...prev, [historyId]: false }));
   }
 };
 
@@ -1682,7 +1764,8 @@ if (isSpoRole) {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
       if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
-      const clarificationForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+      const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       return status === 'ACCEPTED' ? (
         <Tag color="green">Accepted</Tag>
       ) : (
@@ -1692,9 +1775,10 @@ if (isSpoRole) {
           disabled={
             status === 'ACCEPTED' ||
             status === 'REJECTED' ||
-            (!clarificationForIndentor && record.status === 'CHANGE_REQUESTED')
+            vendorClarifPending ||
+            vendorHasIndentorClarif
           }
-          title={!clarificationForIndentor && record.status === 'CHANGE_REQUESTED' ? 'Cannot accept while clarification is pending for this vendor' : ''}
+          title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
           Accept
         </Button>
@@ -1707,8 +1791,9 @@ if (isSpoRole) {
     render: (_, record) => {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
-      const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
       if (techRejected) return <Tag color="default">N/A</Tag>;
+      const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       return status === 'REJECTED' ? (
         <span style={{ color: 'red' }}>Rejected</span>
       ) : (
@@ -1726,7 +1811,7 @@ if (isSpoRole) {
                 onClick={() => handleReject(record)}
                 style={{ marginTop: 8 }}
                 disabled={
-                  status === 'REJECTED' 
+                  status === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
                 }
               >
                 Submit
@@ -1737,7 +1822,7 @@ if (isSpoRole) {
           trigger="click"
         >
           <Button danger type="link" disabled={
-            status === 'REJECTED' 
+            status === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
           }>
             Reject
           </Button>
@@ -1770,15 +1855,18 @@ if (isSpoRole) {
 
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
-      const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+      const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       if (techRejected) return <Tag color="default">N/A</Tag>;
-      return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
+      return vendorHasIndentorClarif ? (
+        <Tag color="orange">Clarification Pending</Tag>
+      ) : vendorClarifPending ? (
         <Tag color="orange">Pending</Tag>
       ) : (
         <Button
           type="link"
           style={{ color: '#fa8c16', padding: 0 }}
-          disabled={status === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+          disabled={status === 'REJECTED' || vendorClarifPending}
           onClick={() => openVendorClarificationModal(record.vendorId)}
         >
           Seek Clarification
@@ -2065,7 +2153,8 @@ const doubleBidTechColumns = [
           key: 'techAccept',
           render: (_, record) => {
             const st = record.indentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'ACCEPTED' ? (
               <Tag color="green">Accepted</Tag>
             ) : (
@@ -2074,8 +2163,9 @@ const doubleBidTechColumns = [
                 onClick={() => handleAccept(record)}
                 disabled={
                   st === 'ACCEPTED' || st === 'REJECTED' ||
-                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                  vendorClarifPending || vendorHasIndentorClarif
                 }
+                title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>
@@ -2087,7 +2177,8 @@ const doubleBidTechColumns = [
           key: 'techReject',
           render: (_, record) => {
             const st = record.indentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'REJECTED' ? (
               <span style={{ color: 'red' }}>Rejected</span>
             ) : (
@@ -2104,7 +2195,7 @@ const doubleBidTechColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' }
+                      disabled={st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif}
                     >
                       Submit
                     </Button>
@@ -2114,7 +2205,7 @@ const doubleBidTechColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED'
+                  st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
                 }>
                   Reject
                 </Button>
@@ -2133,14 +2224,17 @@ const doubleBidTechColumns = [
       !(isMultipleIndentEval && isBelow10L))
   )) return null;
             const st = record.indentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
-            return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
+            return vendorHasIndentorClarif ? (
+              <Tag color="orange">Clarification Pending</Tag>
+            ) : vendorClarifPending ? (
               <Tag color="orange">Pending</Tag>
             ) : (
               <Button
                 type="link"
                 style={{ color: '#fa8c16', padding: 0 }}
-                disabled={st === 'REJECTED' || (!clarForIndentor && record.status === 'CHANGE_REQUESTED')}
+                disabled={st === 'REJECTED' || vendorClarifPending}
                 onClick={() => openVendorClarificationModal(record.vendorId)}
               >
                 Seek Clarification
@@ -2334,7 +2428,8 @@ const doubleBidFinColumns = [
           key: 'finAccept',
           render: (_, record) => {
             const st = record.financialIndentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'ACCEPTED' ? (
               <Tag color="green">Accepted</Tag>
             ) : (
@@ -2343,8 +2438,9 @@ const doubleBidFinColumns = [
                 onClick={() => handleAccept(record)}
                 disabled={
                   st === 'ACCEPTED' || st === 'REJECTED' ||
-                  (!clarForIndentor && record.status === 'CHANGE_REQUESTED')
+                  vendorClarifPending || vendorHasIndentorClarif
                 }
+                title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>
@@ -2356,7 +2452,8 @@ const doubleBidFinColumns = [
           key: 'finReject',
           render: (_, record) => {
             const st = record.financialIndentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'REJECTED' ? (
               <span style={{ color: 'red' }}>Rejected</span>
             ) : (
@@ -2373,7 +2470,7 @@ const doubleBidFinColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' }
+                      disabled={st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif}
                     >
                       Submit
                     </Button>
@@ -2383,7 +2480,7 @@ const doubleBidFinColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' 
+                  st === 'REJECTED' || vendorClarifPending || vendorHasIndentorClarif
                 }>
                   Reject
                 </Button>
@@ -2402,14 +2499,17 @@ const doubleBidFinColumns = [
       !(isMultipleIndentEval && isBelow10L))
   )) return null;
             const st = record.financialIndentorStatus;
-            const clarForIndentor = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
-            return (!clarForIndentor && record.status === 'CHANGE_REQUESTED') ? (
+            const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
+            return vendorHasIndentorClarif ? (
+              <Tag color="orange">Clarification Pending</Tag>
+            ) : vendorClarifPending ? (
               <Tag color="orange">Pending</Tag>
             ) : (
               <Button
                 type="link"
                 style={{ color: '#fa8c16', padding: 0 }}
-                disabled={st === 'REJECTED' }
+                disabled={st === 'REJECTED' || vendorClarifPending}
                 onClick={() => openVendorClarificationModal(record.vendorId)}
               >
                 Seek Clarification
@@ -2910,6 +3010,7 @@ useEffect(() => {
     handleSearchTender();
     fetchEvalStatus(tenderId);
     fetchClarificationHistory(tenderId);
+    fetchIndentorOpenQuestions(tenderId);
   }
 }, [tenderId]); // eslint-disable-line
 
@@ -3568,33 +3669,78 @@ useEffect(() => {
               (evalStatus?.clarificationPendingFrom === 'PURCHASE_PERSONNEL'
                 ? isPurchasePersonnelRole
                 : (isIndentCreatorRole || isPurchasePersonnelRole)) ? (
-                /* Standard indentor/PP response card — with optional vendor context */
+                /* Per-vendor clarification cards for indentor/PP responding to SPO/Chairman/Director */
                 <Card title="Respond to Clarification Request" size="small" style={{ marginTop: 16 }}>
-                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
-                    message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`}
-                    description={`Question: ${evalStatus.clarificationRemarks}`} />
-                  {evalStatus.clarificationTargetVendorId && (() => {
-                    const targetVendor = quotationData.find(q => q.vendorId === evalStatus.clarificationTargetVendorId);
-                    return (
-                      <Alert type="info" showIcon style={{ marginBottom: 8 }}
-                        message={`Regarding Vendor: ${targetVendor?.vendorName || evalStatus.clarificationTargetVendorId}`}
-                        description={targetVendor?.quotationFileName ? (
-                          <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer">View Quotation</a>
-                        ) : null}
-                      />
-                    );
-                  })()}
-                  {!allVendorsDecided ? (
-                    <Alert type="info" showIcon style={{ marginTop: 8 }}
-                      message="Please Accept or Reject all vendors before submitting response." />
-                  ) : (
-                    <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
-                      Submit Response
-                    </Button>
+                  <Alert type="warning" showIcon style={{ marginBottom: 12 }}
+                    message={`Clarification requested by: ${evalStatus.clarificationRequestedByRole?.replace(/_/g, ' ')}`} />
+                  {indentorOpenQuestions.length === 0 && (
+                    <Alert type="info" showIcon style={{ marginBottom: 8 }}
+                      message="No pending clarification questions." />
                   )}
-                  {/* <Button type="primary" onClick={() => { setRespondRole(isPurchasePersonnelRole ? 'PURCHASE_PERSONNEL' : 'INDENTOR'); setRespondModal(true); }}>
-                    Submit Response
-                  </Button> */}
+                  {indentorOpenQuestions.map((q) => {
+                    const targetVendor = quotationData.find(v => v.vendorId === q.targetVendorId);
+                    return (
+                      <div key={q.id} style={{
+                        marginBottom: 12, padding: 12,
+                        background: '#fff7e6',
+                        border: '1px solid #ffd591',
+                        borderRadius: 4
+                      }}>
+                        <div style={{ marginBottom: 8 }}>
+                          <strong>{targetVendor?.vendorName || q.targetVendorId || 'All Vendors'}</strong>
+                          <Tag color="orange" style={{ marginLeft: 8 }}>Pending Response</Tag>
+                        </div>
+                        <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                          message={`Question (Round ${q.roundNumber}): "${q.questionRemarks}"`}
+                          description={
+                            <span>
+                              Asked by: {q.requestedByRole?.replace(/_/g, ' ')}
+                              {q.requestedAt ? ` | ${new Date(q.requestedAt).toLocaleString('en-IN')}` : ''}
+                            </span>
+                          } />
+                        {targetVendor?.quotationFileName && (
+                          <div style={{ marginBottom: 8 }}>
+                            <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer">
+                              View Vendor Quotation
+                            </a>
+                          </div>
+                        )}
+                        <div style={{ marginBottom: 8 }}>
+                          <Text strong style={{ fontSize: 12 }}>Upload Supporting Document:</Text>
+                          <input
+                            type="file"
+                            style={{ display: 'block', marginTop: 4 }}
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              setIndentorFiles(prev => ({ ...prev, [q.id]: file || null }));
+                            }}
+                          />
+                          {indentorFiles[q.id] && (
+                            <span style={{ fontSize: 12, color: '#52c41a' }}>{indentorFiles[q.id].name}</span>
+                          )}
+                        </div>
+                        <div style={{ marginBottom: 8 }}>
+                          <Text strong style={{ fontSize: 12 }}>Your Response:</Text>
+                          <Input.TextArea
+                            rows={3}
+                            placeholder="Enter your clarification response..."
+                            value={indentorResponses[q.id] || ''}
+                            onChange={(e) => setIndentorResponses(prev => ({ ...prev, [q.id]: e.target.value }))}
+                            style={{ marginTop: 4 }}
+                          />
+                        </div>
+                        <Button
+                          type="primary"
+                          size="small"
+                          loading={indentorSubmitting[q.id]}
+                          disabled={!indentorResponses[q.id]?.trim()}
+                          onClick={() => handleIndentorRespondPerQuestion(q.id)}
+                        >
+                          Submit Response{targetVendor ? ` for ${targetVendor.vendorName || q.targetVendorId}` : ''}
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </Card>
               ) : null}
 

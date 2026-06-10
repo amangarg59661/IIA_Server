@@ -175,6 +175,12 @@ public interface TenderEvaluationApprovalService {
     List<TenderClarificationHistory> getOpenClarifications(String tenderId, String vendorId);
 
     /**
+     * Returns open (unanswered) clarification questions targeted at INDENTOR for a tender.
+     * Used by indentor/PP to see per-vendor clarification cards from SPO/Chairman/Director.
+     */
+    List<TenderClarificationHistory> getOpenIndentorClarifications(String tenderId);
+
+    /**
      * Returns SPO-approved vendors for a tender, for use in PO vendor dropdown.
      * Throws if evaluation is not yet APPROVED (status = Tender Evaluation Completed).
      */

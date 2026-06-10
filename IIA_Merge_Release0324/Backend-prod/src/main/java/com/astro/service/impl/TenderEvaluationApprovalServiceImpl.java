@@ -1035,6 +1035,21 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                     "clarificationTarget must be specified: VENDOR, ALL_VENDORS, INDENTOR, PURCHASE_PERSONNEL, SPECIFIC_MEMBER, or ALL_MEMBERS"));
         }
 
+        // Cross-type validation: cannot mix VENDOR and INDENTOR clarification types
+        if (Set.of("SPO", "CHAIRMAN", "DIRECTOR").contains(dto.getRequestedByRole().toUpperCase())) {
+            String currentStatus = eval.getEvaluationStatus();
+            boolean targetIsVendor = Set.of("VENDOR", "ALL_VENDORS").contains(target.toUpperCase());
+            boolean targetIsIndentor = Set.of("INDENTOR", "PURCHASE_PERSONNEL").contains(target.toUpperCase());
+            if (targetIsVendor && "PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot seek vendor clarification while Indentor clarification is pending. Wait for Indentor response first."));
+            }
+            if (targetIsIndentor && "PENDING_VENDOR_CLARIFICATION".equals(currentStatus)) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot seek Indentor clarification while vendor clarification is pending. Wait for vendor response first."));
+            }
+        }
+
         // GEM/OPEN/GLOBAL: original target was VENDOR/ALL_VENDORS but rerouted to PURCHASE_PERSONNEL.
         // Mark vendor quotations CHANGE_REQUESTED so PP knows which vendors need clarification.
         boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
@@ -1724,26 +1739,55 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         // so SPO buttons become enabled again.
         if (("INDENTOR".equalsIgnoreCase(respondedByRole) || "PURCHASE_PERSONNEL".equalsIgnoreCase(respondedByRole))
                 && "PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)) {
-            String targetVid = eval.getClarificationTargetVendorId();
+
+            // Per-question response: determine vendor from the answered history row
+            String targetVid = null;
+            if (dto.getClarificationHistoryId() != null) {
+                Optional<TenderClarificationHistory> answeredRow =
+                        clarificationHistoryRepository.findById(dto.getClarificationHistoryId());
+                if (answeredRow.isPresent() && answeredRow.get().getTargetVendorId() != null) {
+                    targetVid = answeredRow.get().getTargetVendorId();
+                }
+            }
+            // Fallback to eval-level target vendor
+            if (targetVid == null || targetVid.isBlank()) {
+                targetVid = eval.getClarificationTargetVendorId();
+            }
+
             if (targetVid != null && !targetVid.isBlank()) {
-                // Single vendor targeted
-                quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, targetVid)
-                        .ifPresent(q -> {
-                            if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus())) {
-                                q.setStatus("SUBMITTED");
-                                q.setUpdatedDate(LocalDateTime.now());
-                                quotationRepository.save(q);
-                            }
-                        });
+                // Check if all INDENTOR-targeted questions for this vendor are answered
+                final String vid = targetVid;
+                long openForVendor = clarificationHistoryRepository
+                        .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vid)
+                        .stream()
+                        .filter(h -> "INDENTOR".equals(h.getClarificationTarget()))
+                        .count();
+                if (openForVendor == 0) {
+                    quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vid)
+                            .ifPresent(q -> {
+                                if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus())) {
+                                    q.setStatus("SUBMITTED");
+                                    q.setUpdatedDate(LocalDateTime.now());
+                                    quotationRepository.save(q);
+                                }
+                            });
+                }
             } else {
-                // All vendors targeted — reset all CHANGE_REQUESTED ones
+                // No specific vendor — check each CHANGE_REQUESTED vendor
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId)
                         .stream()
                         .filter(q -> "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus()))
                         .forEach(q -> {
-                            q.setStatus("SUBMITTED");
-                            q.setUpdatedDate(LocalDateTime.now());
-                            quotationRepository.save(q);
+                            long openForVendor = clarificationHistoryRepository
+                                    .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, q.getVendorId())
+                                    .stream()
+                                    .filter(h -> "INDENTOR".equals(h.getClarificationTarget()))
+                                    .count();
+                            if (openForVendor == 0) {
+                                q.setStatus("SUBMITTED");
+                                q.setUpdatedDate(LocalDateTime.now());
+                                quotationRepository.save(q);
+                            }
                         });
             }
         }
@@ -1947,6 +1991,13 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 .stream()
                 .filter(h -> Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL").contains(h.getClarificationTarget()))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<TenderClarificationHistory> getOpenIndentorClarifications(String tenderId) {
+        return clarificationHistoryRepository
+                .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "INDENTOR");
     }
 
     // ─────────────────────────────────────────────────────────────────
