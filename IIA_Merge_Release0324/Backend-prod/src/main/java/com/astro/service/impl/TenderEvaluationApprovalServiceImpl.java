@@ -1183,6 +1183,30 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                     }
                 } else {
                     eval.setEvaluationStatus("PENDING_INDENTOR_CLARIFICATION");
+                    // ADD THIS — mirror the INDENTOR reset logic for SPO→PP (multiple indent)
+    if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())) {
+        if (dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
+            final String clarVid = dto.getTargetVendorId();
+            quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
+                .ifPresent(q -> {
+                    q.setIndentorStatus(null);
+                    q.setIndentorRemarks(null);
+                    q.setStatus("CHANGE_REQUESTED");
+                    q.setRemarks(dto.getRemarks());
+                    q.setUpdatedDate(LocalDateTime.now());
+                    quotationRepository.save(q);
+                });
+        } else {
+            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).forEach(q -> {
+                q.setIndentorStatus(null);
+                q.setIndentorRemarks(null);
+                q.setStatus("CHANGE_REQUESTED");
+                q.setRemarks(dto.getRemarks());
+                q.setUpdatedDate(LocalDateTime.now());
+            });
+            quotationRepository.saveAll(quotationRepository.findByTenderIdAndIsLatestTrue(tenderId));
+        }
+    }
                 }
 
                 // SPO seeking clarification from indentor/PP — NOT for vendor clarifications rerouted to PP (GEM/OPEN/GLOBAL)

@@ -507,7 +507,8 @@ const handleChange = (key, value) => {
       await axios.post('/api/tender-evaluation/seek-clarification', {
         requestedByRole: 'SPO',
         requestedByUserId: userId,
-        clarificationTarget: 'INDENTOR',
+            clarificationTarget: isMultipleIndentEval ? 'PURCHASE_PERSONNEL' : 'INDENTOR',
+        // clarificationTarget: 'INDENTOR',
         targetVendorId: record.vendorId,
         remarks: rejectComment,
       }, { params: { tenderId } });
@@ -857,7 +858,8 @@ const openVendorClarificationModal = (vendorId, requestedByRole) => {
 // SPO-specific: opens clarification modal where SPO can choose INDENTOR or VENDOR
 const openRevisionModal = () => {
   setClarifRequestedByRole('SPO');
-  setClarifTarget('INDENTOR');
+  setClarifTarget(isMultipleIndentEval ? 'PURCHASE_PERSONNEL' : 'INDENTOR');
+  // setClarifTarget('INDENTOR');
   setClarifTargetVendorId('');
   setClarifTargetUserId('');
   setClarifTargetUserName('');
@@ -4009,7 +4011,8 @@ useEffect(() => {
                     <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
                       onClick={() => {
                         setClarifRequestedByRole('SPO');
-                        setClarifTarget('INDENTOR');
+                        // setClarifTarget('INDENTOR');
+                        setClarifTarget(isMultipleIndentEval ? 'PURCHASE_PERSONNEL' : 'INDENTOR');
                         setClarifTargetVendorId('');
                         setClarifTargetUserId('');
                         setClarifTargetUserName('');
@@ -4659,7 +4662,12 @@ useEffect(() => {
           <Select value={clarifTarget} onChange={setClarifTarget} style={{ width: '100%', marginTop: 4 }}>
             <Option value="VENDOR">Specific Vendor</Option>
             <Option value="ALL_VENDORS">All Vendors (Simultaneously)</Option>
-            {clarifRequestedByRole === 'SPO' && <Option value="INDENTOR">Indentor / Purchase Personnel</Option>}
+            {clarifRequestedByRole === 'SPO' && (
+  <>
+    <Option value="INDENTOR">Indentor</Option>
+    <Option value="PURCHASE_PERSONNEL">Purchase Personnel (Multiple Indent)</Option>
+  </>
+)}
             {clarifRequestedByRole === 'DIRECTOR' && <Option value="CHAIRMAN">Chairman</Option>}
             {(clarifRequestedByRole === 'CHAIRMAN' || clarifRequestedByRole === 'DIRECTOR') && (
               <>
