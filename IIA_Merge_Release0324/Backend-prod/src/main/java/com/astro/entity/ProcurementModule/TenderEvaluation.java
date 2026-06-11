@@ -64,7 +64,7 @@ public class TenderEvaluation {
      * PENDING_TECHNICAL, PENDING_FINANCIAL, PENDING_APPROVAL,
      * APPROVED, REJECTED
      */
-    @Column(name = "evaluation_status", length = 50)
+    @Column(name = "evaluation_status", length = 100)
     private String evaluationStatus;
 
     /**
@@ -136,7 +136,7 @@ public class TenderEvaluation {
     private String clarificationRemarks;
 
     /** The evaluation status BEFORE clarification was sought — restored after response is received */
-    @Column(name = "previous_evaluation_status", length = 50)
+    @Column(name = "previous_evaluation_status", length = 100)
     private String previousEvaluationStatus;
 
     /** When clarification to INDENTOR/PP is about a specific vendor (null = general/tender-level) */

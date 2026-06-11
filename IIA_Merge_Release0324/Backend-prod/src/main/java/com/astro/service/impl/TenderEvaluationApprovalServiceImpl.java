@@ -1293,6 +1293,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             case "SPECIFIC_MEMBER":
             case "ALL_MEMBERS":
                 eval.setEvaluationStatus("PENDING_MEMBER_REVOTE");
+                String revotePhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
                 if ("ALL_MEMBERS".equalsIgnoreCase(target)) {
                     List<TenderCommitteeDecision> votes =
                             committeeDecisionRepository.findByTenderId(tenderId);
@@ -1305,6 +1306,20 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                                 v.setUpdatedDate(LocalDateTime.now());
                             });
                     committeeDecisionRepository.saveAll(votes);
+                    // Reset per-vendor member decisions (above 10L)
+                    List<TenderCommitteeVendorDecision> vendorVotes =
+                            committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, revotePhase);
+                    vendorVotes.stream()
+                            .filter(v -> "MEMBER".equals(v.getVoterRole()))
+                            .forEach(v -> {
+                                v.setDecision(null);
+                                v.setRemarks(null);
+                                v.setDecisionDate(null);
+                                v.setConfirmed(false);
+                                v.setConfirmedDate(null);
+                                v.setUpdatedDate(LocalDateTime.now());
+                            });
+                    committeeVendorDecisionRepository.saveAll(vendorVotes);
                 }
                 if ("SPECIFIC_MEMBER".equalsIgnoreCase(target) && dto.getTargetUserId() != null) {
                     committeeDecisionRepository
@@ -1316,6 +1331,19 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                                 v.setUpdatedDate(LocalDateTime.now());
                                 committeeDecisionRepository.save(v);
                             });
+                    // Reset per-vendor decisions for specific member
+                    List<TenderCommitteeVendorDecision> memberVendorVotes =
+                            committeeVendorDecisionRepository.findByTenderIdAndCommitteeUserIdAndPhase(
+                                    tenderId, dto.getTargetUserId(), revotePhase);
+                    memberVendorVotes.forEach(v -> {
+                        v.setDecision(null);
+                        v.setRemarks(null);
+                        v.setDecisionDate(null);
+                        v.setConfirmed(false);
+                        v.setConfirmedDate(null);
+                        v.setUpdatedDate(LocalDateTime.now());
+                    });
+                    committeeVendorDecisionRepository.saveAll(memberVendorVotes);
                 }
                 break;
             default:
