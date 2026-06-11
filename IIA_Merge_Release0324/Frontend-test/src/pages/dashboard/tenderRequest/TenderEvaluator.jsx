@@ -1156,17 +1156,36 @@ const fetchClarificationHistory = async (tid) => {
   }
 };
 
-// ── Fetch open indentor clarifications (per-vendor cards) ──
+
+// AFTER
 const fetchIndentorOpenQuestions = async (tid) => {
   if (!tid) return;
   try {
     const res = await axios.get('/api/tender-evaluation/open-indentor-clarifications', { params: { tenderId: tid } });
-    setIndentorOpenQuestions(res.data?.responseData || []);
+    const all = res.data?.responseData || [];
+    // Indentor sees INDENTOR-targeted rows; PP sees PURCHASE_PERSONNEL-targeted rows (internal SPO→PP only)
+    const filtered = all.filter(h =>
+      isPurchasePersonnelRole
+        ? h.clarificationTarget === 'PURCHASE_PERSONNEL'
+        : h.clarificationTarget === 'INDENTOR'
+    );
+    setIndentorOpenQuestions(filtered);
   } catch (e) {
     console.error('Failed to fetch indentor clarifications:', e);
     setIndentorOpenQuestions([]);
   }
 };
+// // ── Fetch open indentor clarifications (per-vendor cards) ──
+// const fetchIndentorOpenQuestions = async (tid) => {
+//   if (!tid) return;
+//   try {
+//     const res = await axios.get('/api/tender-evaluation/open-indentor-clarifications', { params: { tenderId: tid } });
+//     setIndentorOpenQuestions(res.data?.responseData || []);
+//   } catch (e) {
+//     console.error('Failed to fetch indentor clarifications:', e);
+//     setIndentorOpenQuestions([]);
+//   }
+// };
 
 // ── Per-question indentor clarification response submit ──
 const handleIndentorRespondPerQuestion = async (historyId) => {

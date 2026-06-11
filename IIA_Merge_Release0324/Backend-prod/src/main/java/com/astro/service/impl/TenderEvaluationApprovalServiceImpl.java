@@ -2023,10 +2023,20 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
 
     @Transactional(readOnly = true)
     @Override
-    public List<TenderClarificationHistory> getOpenIndentorClarifications(String tenderId) {
-        return clarificationHistoryRepository
-                .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "INDENTOR");
-    }
+    // public List<TenderClarificationHistory> getOpenIndentorClarifications(String tenderId) {
+    //     return clarificationHistoryRepository
+    //             .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "INDENTOR");
+    // }
+    // AFTER
+public List<TenderClarificationHistory> getOpenIndentorClarifications(String tenderId) {
+    return clarificationHistoryRepository
+            .findByTenderIdOrderByRequestedAtDesc(tenderId)
+            .stream()
+            .filter(h -> h.getRespondedAt() == null)
+            .filter(h -> "INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
+                    || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget()))
+            .collect(java.util.stream.Collectors.toList());
+}
 
     // ─────────────────────────────────────────────────────────────────
     // 17. GET APPROVED VENDORS FOR PO (SPO-accepted vendors only)
