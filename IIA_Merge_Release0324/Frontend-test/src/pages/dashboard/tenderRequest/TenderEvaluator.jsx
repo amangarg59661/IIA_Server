@@ -1574,14 +1574,15 @@ if (isSpoRole) {
   && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
     const pendingToIndentor = record.changeRequestToIndentor;
     const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
+    const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
 
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button
           size="small"
-          disabled={!spoCanAct || spStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif}
+          disabled={!spoCanAct || spStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending}
           onClick={() => handleSpoReview(record, 'ACCEPT')}
-          title={vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : ''}
+          title={vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first': ''}
         >
           {spStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
         </Button>
