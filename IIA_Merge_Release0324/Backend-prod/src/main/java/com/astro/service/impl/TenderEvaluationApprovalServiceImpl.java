@@ -1403,7 +1403,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                     clarificationHistoryRepository.save(history);
                 }
             } else if ("SPO".equalsIgnoreCase(dto.getRequestedByRole())
-                    && "INDENTOR".equalsIgnoreCase(target)
+                    && ("INDENTOR".equalsIgnoreCase(target) || "INDENTOR".equalsIgnoreCase(originalTarget))
                     && (dto.getTargetVendorId() == null || dto.getTargetVendorId().isBlank())) {
                 // SPO all-vendor INDENTOR revision: create per-vendor history rows
                 boolean isDoubleBidFinancial = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
@@ -1788,7 +1788,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 long openForVendor = clarificationHistoryRepository
                         .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vid)
                         .stream()
-                        .filter(h -> "INDENTOR".equals(h.getClarificationTarget()))
+                        .filter(h -> "INDENTOR".equals(h.getClarificationTarget())
+                                || "PURCHASE_PERSONNEL".equals(h.getClarificationTarget()))
                         .count();
                 if (openForVendor == 0) {
                     quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vid)
@@ -1809,7 +1810,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                             long openForVendor = clarificationHistoryRepository
                                     .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, q.getVendorId())
                                     .stream()
-                                    .filter(h -> "INDENTOR".equals(h.getClarificationTarget()))
+                                    .filter(h -> "INDENTOR".equals(h.getClarificationTarget())
+                                            || "PURCHASE_PERSONNEL".equals(h.getClarificationTarget()))
                                     .count();
                             if (openForVendor == 0) {
                                 q.setStatus("SUBMITTED");
