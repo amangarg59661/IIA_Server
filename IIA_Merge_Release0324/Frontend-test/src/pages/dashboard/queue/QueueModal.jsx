@@ -1890,33 +1890,38 @@ const QueueModal = ({
           { key: 'expiryDate',            label: 'Expiry Date' },
         ];
 
-        const TENDER_HEADER_FIELDS = [
-          { key: 'titleOfTender',         label: 'Title' },
-          { key: 'modeOfProcurement',     label: 'Mode of Procurement' },
-          { key: 'bidType',               label: 'Bid Type' },
-          { key: 'openingDate',           label: 'Opening Date' },
-          { key: 'closingDate',           label: 'Closing Date' },
-          { key: 'lastDateOfSubmission',  label: 'Last Date of Submission' },
-          { key: 'applicableTaxes',       label: 'Applicable Taxes' },
-          { key: 'incoTerms',             label: 'Inco Terms' },
-          { key: 'paymentTerms',          label: 'Payment Terms' },
-          { key: 'ldClause',              label: 'LD Clause' },
-          { key: 'projectName',           label: 'Project Name' },
+       const TENDER_HEADER_FIELDS = [
+          { key: 'titleOfTender',        label: 'Title' },
+          { key: 'modeOfProcurement',    label: 'Mode of Procurement' },
+          { key: 'bidType',              label: 'Bid Type' },
+          { key: 'openingDate',          label: 'Opening Date' },
+          { key: 'closingDate',          label: 'Closing Date' },
+          { key: 'lastDateOfSubmission', label: 'Last Date of Submission' },
+          { key: 'applicableTaxes',      label: 'Applicable Taxes' },
+          { key: 'incoTerms',            label: 'Inco Terms' },
+          { key: 'paymentTerms',         label: 'Payment Terms' },
+          { key: 'ldClause',             label: 'LD Clause' },
+          { key: 'projectName',          label: 'Project Name' },
           { key: 'singleAndMultipleVendors', label: 'Vendor Type' },
-          { key: 'consignes',             label: 'Consignee Address' },
-          { key: 'billinngAddress',       label: 'Billing Address' },
+          { key: 'consignes',            label: 'Consignee Address' },
+          { key: 'billinngAddress',      label: 'Billing Address' },
           { key: 'performanceAndWarrantySecurity', label: 'Performance & Warranty Security' },
           { key: 'bidSecurityDeclaration',         label: 'Bid Security Declaration' },
           { key: 'mllStatusDeclaration',           label: 'MLL Status Declaration' },
-          { key: 'buyBack',               label: 'Buy Back' },
-          { key: 'buyBackAmount',         label: 'Buy Back Amount' },
-          { key: 'modelNumber',           label: 'Model Number' },
-          { key: 'serialNumber',          label: 'Serial Number' },
-          { key: 'dateOfPurchase',        label: 'Date of Purchase' },
-          { key: 'uploadTenderDocuments',              label: 'Tender Documents File' },
-          { key: 'uploadGeneralTermsAndConditions',    label: 'General T&C File' },
-          { key: 'uploadSpecificTermsAndConditions',   label: 'Specific T&C File' },
-          { key: 'uploadBuyBackFileNames',             label: 'Buy Back File' },
+          { key: 'buyBack',              label: 'Buy Back' },
+          { key: 'buyBackAmount',        label: 'Buy Back Amount' },
+          { key: 'modelNumber',          label: 'Model Number' },
+          { key: 'serialNumber',         label: 'Serial Number' },
+          { key: 'dateOfPurchase',       label: 'Date of Purchase' },
+          { key: 'uploadTenderDocuments',           label: 'Tender Documents File' },
+          { key: 'uploadGeneralTermsAndConditions', label: 'General T&C File' },
+          { key: 'uploadSpecificTermsAndConditions',label: 'Specific T&C File' },
+          { key: 'uploadBuyBackFileNames',          label: 'Buy Back File' },
+          { key: 'preBidMeetingStatus',  label: 'Pre-bid Meeting Status' },
+          { key: 'preBidMeetingDate',    label: 'Pre-bid Meeting Date' },
+          { key: 'preBidMeetingDiscussion', label: 'Pre-bid Discussion' },
+          { key: 'bidSecurityDeclarationFileName', label: 'Bid Security File' },
+          { key: 'mllStatusDeclarationFileName',   label: 'MII Declaration File' },
         ];
 
         const SO_HEADER_FIELDS = [
@@ -1987,13 +1992,34 @@ const QueueModal = ({
           { key: 'uom',            label: 'UOM' },
           { key: 'currency',       label: 'Currency' },
         ];
-        const TENDER_FIELDS = [
-          { key: 'materialCode',   label: 'Material Code' },
-          { key: 'description',    label: 'Description' },
-          { key: 'quantity',       label: 'Qty' },
-          { key: 'unitPrice',      label: 'Unit Price' },
-          { key: 'totalPrice',     label: 'Total Price' },
-          { key: 'uom',            label: 'UOM' },
+       const TENDER_MAT_FIELDS = [
+          { key: 'materialCode',        label: 'Material Code' },
+          { key: 'materialDescription', label: 'Description' },
+          { key: 'uom',                 label: 'UOM' },
+          { key: 'quantity',            label: 'Quantity' },
+          { key: 'unitPrice',           label: 'Unit Price' },
+          { key: 'currency',            label: 'Currency' },
+          { key: 'conversionRate',      label: 'Conversion Rate' },
+          { key: 'budgetCode',          label: 'Budget Code' },
+          { key: 'totalPrice',          label: 'Total Price' },
+          { key: 'materialCategory',    label: 'Category' },
+          { key: 'materialSubCategory', label: 'Sub-Category' },
+          { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
+        ];
+        const TENDER_JOB_FIELDS = [
+          { key: 'jobCode',           label: 'Job Code' },
+          { key: 'jobDescription',    label: 'Description' },
+          { key: 'category',          label: 'Category' },
+          { key: 'subCategory',       label: 'Sub-Category' },
+          { key: 'uom',               label: 'UOM' },
+          { key: 'quantity',          label: 'Quantity' },
+          { key: 'estimatedPrice',    label: 'Estimated Price' },
+          { key: 'currency',          label: 'Currency' },
+          { key: 'conversionRate',    label: 'Conversion Rate' },
+          { key: 'totalPrice',        label: 'Total Price' },
+          { key: 'modeOfProcurement', label: 'Mode of Procurement' },
+          { key: 'budgetCode',        label: 'Budget Code' },
+          { key: 'vendorNames',       label: 'Vendor Codes' },
         ];
         const SO_FIELDS = [
           { key: 'jobCode',        label: 'Job Code' },
@@ -2022,12 +2048,13 @@ const QueueModal = ({
           descKey = 'description';
           currLines = curr.purchaseOrderDetails || curr.poItems || [];
           prevLines = prev ? (prev.purchaseOrderDetails || prev.poItems || []) : [];
-        } else if ([4, 7].includes(wId)) {
-          lineLabel = 'Tender Item';
-          lineFields = TENDER_FIELDS;
-          descKey = 'description';
-          currLines = curr.tenderItems || curr.items || [];
-          prevLines = prev ? (prev.tenderItems || prev.items || []) : [];
+        }  else if ([4, 7].includes(wId)) {
+          const isTenderJob = (curr.indentType || '').toLowerCase() === 'job';
+          lineLabel = isTenderJob ? 'Job' : 'Material';
+          lineFields = isTenderJob ? TENDER_JOB_FIELDS : TENDER_MAT_FIELDS;
+          descKey = isTenderJob ? 'jobDescription' : 'materialDescription';
+          currLines = isTenderJob ? (curr.jobDetails || []) : (curr.materialDetails || []);
+          prevLines = prev ? (isTenderJob ? (prev.jobDetails || []) : (prev.materialDetails || [])) : [];
         } else if (wId === 5) {
           lineLabel = 'SO Item';
           lineFields = SO_FIELDS;
@@ -2047,7 +2074,14 @@ const QueueModal = ({
               .filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
               .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
           : [];
-
+ // Tender-only: indent IDs diff
+        const isTenderWorkflow = [4, 7].includes(wId);
+        const prevIndents = (isTenderWorkflow && prev) ? (prev.indentIds || []) : [];
+        const currIndents = isTenderWorkflow ? (curr.indentIds || []) : [];
+        const addedIndents   = currIndents.filter(id => !prevIndents.includes(id));
+        const removedIndents = prevIndents.filter(id => !currIndents.includes(id));
+        const indentsChanged = isTenderWorkflow && (addedIndents.length > 0 || removedIndents.length > 0);
+        
         const lineDiffs = [];
         const maxLen = Math.max(prevLines.length, currLines.length);
         for (let i = 0; i < maxLen; i++) {
@@ -2069,7 +2103,8 @@ const QueueModal = ({
         const prevTotal = prev != null ? Number(prev.totalAmount || prev.totalPriceOfAllMaterials || 0) : null;
         const currTotal = Number(curr.totalAmount || curr.totalPriceOfAllMaterials || 0);
         const totalChanged = prev && prevTotal !== currTotal;
-        const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
+        const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0) + (indentsChanged ? 1 : 0);
+        {/* const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0); */}
 
         const fmtCurrency = val => val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
         const fmtVal = val => (val == null || val === '') ? '—' : String(val);
