@@ -222,10 +222,10 @@ const showFinActionButtons = isDoubleBidEval && isFinancialPhase &&
    (isPurchasePersonnelRole && isMultipleIndentEval));
 
 const showSpoTechActions = isDoubleBidEval && !isFinancialPhase &&
-  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
+  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION','PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
 
 const showSpoFinActions = isDoubleBidEval && isFinancialPhase &&
-  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
+  isSpoRole && ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus);
 
   useEffect(() => {
     if (showRegisteredVendorColumn && allRegisteredVendors.length === 0) {
@@ -2212,7 +2212,7 @@ const doubleBidTechColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED' 
+                  st === 'ACCEPTED' || st === 'REJECTED'  || vendorClarifPending
                 }
                 title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
@@ -2486,7 +2486,7 @@ const doubleBidFinColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED' 
+                  st === 'ACCEPTED' || st === 'REJECTED' || vendorClarifPending
                 }
                 title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
@@ -2739,12 +2739,12 @@ const spoTechColumns = [
           //   && record.indentorStatus === 'ACCEPTED'
           //   && (!record.sopStatus || record.sopStatus === 'PENDING')
           //   && record.status !== 'CHANGE_REQUESTED';
-           const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+           const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && record.indentorStatus === 'ACCEPTED'
             && (!record.sopStatus || record.sopStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
           const spoCanReject = evalStatus?.evaluationStatus === 'PENDING_SPO_APPROVAL' || evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION'
-            && record.indentorStatus === 'ACCEPTED'
+            && record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null 
             && (!record.sopStatus || record.sopStatus === 'PENDING');
           const pendingToIndentor = record.changeRequestToIndentor;
 
@@ -2951,7 +2951,7 @@ const spoFinColumns = [
         title: 'SPO Actions',
         key: 'spoFinActions',
         render: (_, record) => {
-           const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
+           const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION','PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && record.financialIndentorStatus === 'ACCEPTED'
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
             && record.status !== 'CHANGE_REQUESTED';
