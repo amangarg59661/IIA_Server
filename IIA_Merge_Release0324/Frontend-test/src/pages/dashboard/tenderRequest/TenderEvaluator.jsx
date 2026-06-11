@@ -1261,7 +1261,7 @@ const showCommitteeMemberSingleBidActions = !isDoubleBidEval &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
-const showChairmanInlineActions = isDoubleBidEval && isChairman && isAbove10L &&
+const showChairmanInlineActions =  isChairman && isAbove10L &&
   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING';
 
 const showDirectorInlineActions = isAbove10L && isDirector &&
@@ -1775,16 +1775,46 @@ if (isSpoRole) {
         status === 'CHANGE_REQUESTED' ? 'Pending Clarification' : (status || 'N/A'),
     },
     {
-      title: indentorStatusLabel,
-      key: 'indentorStatus',
-      dataIndex: 'indentorStatus',
-      render: (indentorStatus) => {
-        if (indentorStatus === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
-        if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return <Tag color="red">Rejected</Tag>;
-        if (indentorStatus === 'ACCEPTED' || indentorStatus === 'Completed') return <Tag color="green">Accepted</Tag>;
-        return indentorStatus || 'N/A';
-      }
-    },
+  title: indentorStatusLabel,
+  key: 'indentorStatus',
+  dataIndex: 'indentorStatus',
+  width: isAbove10L ? 200 : undefined,
+  render: (indentorStatus, record) => {
+    if (isAbove10L && (isChairman || isDirector)) {
+      return (
+        <Button size="small" type="primary" ghost
+          onClick={() => {
+            setMemberResponsesVendorId(record.vendorId);
+            setViewedVendorIds(prev => new Set(prev).add(record.vendorId));
+            setMemberResponsesModal(true);
+          }}>
+          View Votes
+        </Button>
+      );
+    }
+    if (isAbove10L && (isCommitteeMember || isAssignedExpert)) {
+      const myVote = evalStatus?.committeeVendorVotes?.[record.vendorId]
+        ?.find(v => String(v.committeeUserId) === String(userId));
+      if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
+      return <Tag color="orange">Pending</Tag>;
+    }
+    if (indentorStatus === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+    if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return <Tag color="red">Rejected</Tag>;
+    if (indentorStatus === 'ACCEPTED' || indentorStatus === 'Completed') return <Tag color="green">Accepted</Tag>;
+    return indentorStatus || 'N/A';
+  }
+},
+    // {
+    //   title: indentorStatusLabel,
+    //   key: 'indentorStatus',
+    //   dataIndex: 'indentorStatus',
+    //   render: (indentorStatus) => {
+    //     if (indentorStatus === 'CHANGE_REQUESTED') return <Tag color="orange">Pending Clarification</Tag>;
+    //     if (indentorStatus === 'REJECTED' || indentorStatus === 'Rejected') return <Tag color="red">Rejected</Tag>;
+    //     if (indentorStatus === 'ACCEPTED' || indentorStatus === 'Completed') return <Tag color="green">Accepted</Tag>;
+    //     return indentorStatus || 'N/A';
+    //   }
+    // },
     {
       title: 'Store Purchase Officer Status',
       key: 'sopStatus',
@@ -1917,7 +1947,7 @@ if (isSpoRole) {
   if (isPurchasePersonnelRole && (
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
-      !(isMultipleIndentEval && isBelow10L))
+      !(isMultipleIndentEval))
   )) return null;
 
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
@@ -2031,6 +2061,57 @@ if (isSpoRole) {
     },
   },
 ] : []),
+...(showChairmanInlineActions ? [{
+  title: 'Chairman Action',
+  key: 'chairmanSingleAction',
+  width: 300,
+  render: (_, record) => {
+    const isChairmanVotingPhase = evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING';
+    const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
+    const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+    const viewed = viewedVendorIds.has(record.vendorId);
+    const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
+    if (cv) {
+      return (
+        <Space size={4}>
+          <Tag color={cv.decision === 'ACCEPTED' ? 'green' : 'red'}>{cv.decision}</Tag>
+          {cv.decision === 'ACCEPTED'
+            ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
+            : <Button size="small" type="primary" onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+          <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>Clarify</Button>
+        </Space>
+      );
+    }
+    return (
+      <Space size={4}>
+        <Button size="small" type="primary" disabled={!viewed} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
+        <Button size="small" danger disabled={!viewed} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+        <Button size="small" disabled={!viewed} style={{ color: viewed ? '#fa8c16' : undefined, borderColor: viewed ? '#fa8c16' : undefined }}
+          onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>Clarify</Button>
+      </Space>
+    );
+  },
+}] : []),
+
+...(showDirectorInlineActions ? [{
+  title: 'Director Action',
+  key: 'directorSingleAction',
+  width: 280,
+  render: (_, record) => {
+    const dirVotes = evalStatus?.committeeVendorVotes?.[record.vendorId]?.filter(v => v.voterRole === 'DIRECTOR') || [];
+    const decided = dirVotes.some(v => v.decision);
+    if (decided) return <Tag color={dirVotes[0].decision === 'ACCEPTED' ? 'green' : 'red'}>{dirVotes[0].decision}</Tag>;
+    return (
+      <Space size={4}>
+        <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
+        <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
+        <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+          onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>Clarify</Button>
+      </Space>
+    );
+  },
+}] : []),
   ];
 }
 
@@ -2287,7 +2368,7 @@ const doubleBidTechColumns = [
   if (isPurchasePersonnelRole && (
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
-      !(isMultipleIndentEval && isBelow10L))
+      !(isMultipleIndentEval))
   )) return null;
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
@@ -2561,7 +2642,7 @@ const doubleBidFinColumns = [
   if (isPurchasePersonnelRole && (
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
-      !(isMultipleIndentEval && isBelow10L))
+      !(isMultipleIndentEval))
   )) return null;
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
@@ -3400,8 +3481,7 @@ useEffect(() => {
     !evalStatus?.evaluationStatus ||
     (evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
-      isMultipleIndentEval &&
-      isBelow10L)
+      isMultipleIndentEval)
   )) ||
   (isIndentCreatorRole &&
     evalStatus?.evaluationStatus &&
@@ -4245,6 +4325,7 @@ useEffect(() => {
 
             {/* ── Final Approved State ── */}
             {evalStatus?.evaluationStatus === 'APPROVED' && (
+              <>
               <Alert
                 type="success"
                 showIcon
@@ -4252,6 +4333,92 @@ useEffect(() => {
                 description={`Vendor Portal Registration: ${evalStatus.vendorPortalRegistered ? 'Done' : 'Pending'}`}
                 style={{ marginTop: 16 }}
               />
+              {isDoubleBidEval && quotationData.length > 0 && (
+                <Table
+                  dataSource={quotationData}
+                  rowKey="vendorId"
+                  size="small"
+                  pagination={false}
+                  style={{ marginTop: 16 }}
+                  columns={[
+                    {
+                      title: 'Vendor ID',
+                      dataIndex: 'vendorId',
+                      key: 'vendorId',
+                      width: 120,
+                    },
+                    {
+                      title: 'Vendor Name',
+                      dataIndex: 'vendorName',
+                      key: 'vendorName',
+                      width: 200,
+                    },
+                    {
+                      title: 'Technical Status',
+                      dataIndex: 'technicalStatus',
+                      key: 'technicalStatus',
+                      width: 140,
+                      render: val => {
+                        if (val === 'APPROVED' || val === 'Completed') return <Tag color="green">Approved</Tag>;
+                        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+                        return <Tag>{val || 'Pending'}</Tag>;
+                      },
+                    },
+                    {
+                      title: 'Financial Status',
+                      dataIndex: 'financialSpoStatus',
+                      key: 'financialStatus',
+                      width: 140,
+                      render: (val, record) => {
+                        if (record.technicalStatus === 'REJECTED' || record.technicalStatus === 'Rejected')
+                          return <Tag color="red">N/A (Tech Rejected)</Tag>;
+                        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
+                        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
+                        return <Tag>{val || 'Pending'}</Tag>;
+                      },
+                    },
+                    ...(isOpenGlobalGem ? [{
+                      title: 'Vendor Selection',
+                      key: 'vendorSelection',
+                      width: 250,
+                      render: (_, record) => {
+                        if (record.technicalStatus === 'REJECTED' || record.technicalStatus === 'Rejected')
+                          return <Tag color="default">-</Tag>;
+                        if (record.financialSpoStatus === 'REJECTED' || record.financialSpoStatus === 'Rejected')
+                          return <Tag color="default">-</Tag>;
+                        if (record.registeredVendorId) {
+                          return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+                        }
+                        if (!isPurchasePersonnelRole) return <Tag>Not Mapped</Tag>;
+                        return (
+                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                            <Select
+                              showSearch
+                              placeholder="Select vendor"
+                              style={{ width: 160 }}
+                              value={selectedRegisteredVendors[record.vendorId] || undefined}
+                              onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+                              filterOption={(input, option) => {
+                                const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+                                return text.toLowerCase().includes(input.toLowerCase());
+                              }}
+                            >
+                              {allRegisteredVendors.map(v => (
+                                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+                              ))}
+                            </Select>
+                            <Button size="small" type="primary"
+                              onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>
+                              Submit
+                            </Button>
+                          </div>
+                        );
+                      },
+                    }] : []),
+                  ]}
+                />
+              )}
+              </>
             )}
             {evalStatus?.evaluationStatus === 'REJECTED' && (
               <Alert type="error" showIcon message="Tender Evaluation REJECTED" style={{ marginTop: 16 }} />
