@@ -17,6 +17,7 @@ import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.repository.RoleMasterRepository;
 import com.astro.repository.TechnoFinancialCommitteeRepository;
 import com.astro.repository.TenderCommitteeDecisionRepository;
+import com.astro.repository.EmployeeDepartmentMasterRepository;
 import com.astro.repository.UserMasterRepository;
 import com.astro.repository.UserRoleMasterRepository;
 import com.astro.service.TechnoFinancialCommitteeService;
@@ -47,6 +48,9 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
 
     @Autowired
     private RoleMasterRepository roleMasterRepository;
+
+    @Autowired
+    private EmployeeDepartmentMasterRepository employeeDepartmentMasterRepository;
 
     @Autowired
     private TenderCommitteeDecisionRepository committeeDecisionRepository;
@@ -348,6 +352,14 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
+        // Batch-load employee department data keyed by employeeId
+        Map<String, com.astro.entity.EmployeeDepartmentMaster> empMap =
+                employeeDepartmentMasterRepository.findAll().stream()
+                        .collect(Collectors.toMap(
+                                com.astro.entity.EmployeeDepartmentMaster::getEmployeeId,
+                                e -> e,
+                                (a, b) -> a));
+
         return userMasterRepository.findAll().stream()
                 .filter(u -> u.getUserId() != null && !committeeUserIds.contains(u.getUserId()))
                 .map(u -> {
@@ -355,6 +367,10 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                     m.put("userId", u.getUserId());
                     m.put("userName", u.getUserName());
                     m.put("roleName", u.getRoleName());
+                    m.put("employeeId", u.getEmployeeId());
+                    com.astro.entity.EmployeeDepartmentMaster emp =
+                            u.getEmployeeId() != null ? empMap.get(u.getEmployeeId()) : null;
+                    m.put("department", emp != null ? emp.getDepartmentName() : null);
                     return m;
                 })
                 .collect(Collectors.toList());

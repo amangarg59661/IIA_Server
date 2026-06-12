@@ -339,6 +339,47 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    @GetMapping("/director/committee-members")
+    public ResponseEntity<Object> getAdHocCommitteeMembers(@RequestParam String tenderId) {
+        log.info("Get ad-hoc committee members tenderId={}", tenderId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.getAdHocCommitteeMembers(tenderId)),
+                HttpStatus.OK);
+    }
+
+    @PostMapping("/director/add-member")
+    public ResponseEntity<Object> directorAddCommitteeMember(
+            @RequestParam String tenderId,
+            @RequestParam Integer userId,
+            @RequestParam Integer directorUserId,
+            @RequestParam(defaultValue = "MEMBER") String role) {
+        log.info("Director add member tenderId={} userId={} directorUserId={} role={}", tenderId, userId, directorUserId, role);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.directorAddCommitteeMember(tenderId, userId, directorUserId, role)),
+                HttpStatus.OK);
+    }
+
+    @PostMapping("/director/confirm-committee")
+    public ResponseEntity<Object> directorConfirmCommittee(
+            @RequestParam String tenderId,
+            @RequestParam Integer directorUserId) {
+        log.info("Director confirm committee tenderId={} directorUserId={}", tenderId, directorUserId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.directorConfirmCommittee(tenderId, directorUserId)),
+                HttpStatus.OK);
+    }
+
+    @DeleteMapping("/director/remove-member")
+    public ResponseEntity<Object> directorRemoveCommitteeMember(
+            @RequestParam String tenderId,
+            @RequestParam Integer userId,
+            @RequestParam Integer directorUserId) {
+        log.info("Director remove member tenderId={} userId={} directorUserId={}", tenderId, userId, directorUserId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(approvalService.directorRemoveCommitteeMember(tenderId, userId, directorUserId)),
+                HttpStatus.OK);
+    }
+
     // ─── QUERY ENDPOINTS ─────────────────────────────────────────────
 
     @GetMapping("/clarification-history")

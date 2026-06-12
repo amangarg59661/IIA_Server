@@ -21,8 +21,12 @@ import com.astro.entity.ProcurementModule.TenderRequest;
 import com.astro.entity.VendorQuotationAgainstTender;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
+import com.astro.entity.RoleMaster;
 import com.astro.entity.UserMaster;
+import com.astro.entity.UserRoleMaster;
+import com.astro.repository.RoleMasterRepository;
 import com.astro.repository.TechnoFinancialCommitteeRepository;
+import com.astro.repository.UserRoleMasterRepository;
 import com.astro.repository.TenderClarificationHistoryRepository;
 import com.astro.repository.TenderCommitteeDecisionRepository;
 import com.astro.repository.UserMasterRepository;
@@ -56,6 +60,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     private static final BigDecimal TEN_LAKH   = new BigDecimal("1000000");
     private static final BigDecimal FIFTY_LAKH = new BigDecimal("5000000");
     private static final BigDecimal ONE_CRORE  = new BigDecimal("10000000");
+    private static final String COMMITTEE_MEMBER_ROLE = "Committee Member";
 
     private final TenderEvaluationRepository tenderEvaluationRepository;
     private final TenderRequestRepository tenderRequestRepository;
@@ -68,6 +73,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     private final VendorLoginDetailsRepository vendorLoginDetailsRepository;
     private final TenderClarificationHistoryRepository clarificationHistoryRepository;
     private final IndentCreationRepository indentCreationRepository;
+    private final RoleMasterRepository roleMasterRepository;
+    private final UserRoleMasterRepository userRoleMasterRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final com.astro.repository.WorkflowTransitionRepository workflowTransitionRepository;
@@ -84,6 +91,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             VendorLoginDetailsRepository vendorLoginDetailsRepository,
             TenderClarificationHistoryRepository clarificationHistoryRepository,
             IndentCreationRepository indentCreationRepository,
+            RoleMasterRepository roleMasterRepository,
+            UserRoleMasterRepository userRoleMasterRepository,
             EmailService emailService,
             PasswordEncoder passwordEncoder,
             com.astro.repository.WorkflowTransitionRepository workflowTransitionRepository) {
@@ -98,6 +107,8 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
         this.vendorLoginDetailsRepository = vendorLoginDetailsRepository;
         this.clarificationHistoryRepository = clarificationHistoryRepository;
         this.indentCreationRepository = indentCreationRepository;
+        this.roleMasterRepository = roleMasterRepository;
+        this.userRoleMasterRepository = userRoleMasterRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.workflowTransitionRepository = workflowTransitionRepository;
@@ -1986,7 +1997,13 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
-        // Create vote rows for each ad-hoc member
+        // Auto-assign Committee Member role to chairman and co-chairman
+        ensureCommitteeMemberRole(dto.getChairmanUserId());
+        if (dto.getCoChairmanUserId() != null) {
+            ensureCommitteeMemberRole(dto.getCoChairmanUserId());
+        }
+
+        // Create vote rows for each ad-hoc member + auto-assign role
         if (dto.getMembers() != null) {
             for (DirectorFormCommitteeDto.AdHocMemberDto member : dto.getMembers()) {
                 boolean alreadyExists = committeeDecisionRepository
@@ -2000,6 +2017,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                     row.setUpdatedDate(LocalDateTime.now());
                     committeeDecisionRepository.save(row);
                 }
+                ensureCommitteeMemberRole(member.getUserId());
             }
         }
 
@@ -2037,18 +2055,19 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         eval.setExpertUserId(expertUserId);
         eval.setExpertName(expertName);
 
-        // Add expert as committee member if not already present
+        // Add expert as committee member if not already present + auto-assign role
         boolean expertExists = committeeDecisionRepository
                 .findByTenderIdAndCommitteeUserId(tenderId, expertUserId).isPresent();
         if (!expertExists) {
             TenderCommitteeDecision row = new TenderCommitteeDecision();
             row.setTenderId(tenderId);
             row.setCommitteeUserId(expertUserId);
-            row.setCommitteeMemberName(expertName);
+            row.setCommitteeMemberName(expertName + " (Expert)");
             row.setCreatedDate(LocalDateTime.now());
             row.setUpdatedDate(LocalDateTime.now());
             committeeDecisionRepository.save(row);
         }
+        ensureCommitteeMemberRole(expertUserId);
 
         // Advance: Double Bid → technical evaluation, Single Bid → financial evaluation
         if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
@@ -3428,5 +3447,280 @@ long openHistoryRows;
             case "DIRECTOR"           -> "INDENTOR";
             default                   -> "INDENTOR";
         };
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // ROLE MANAGEMENT HELPERS (auto-assign / auto-remove Committee Member role)
+    // ─────────────────────────────────────────────────────────────────
+
+    private boolean ensureCommitteeMemberRole(Integer userId) {
+        RoleMaster role = roleMasterRepository.findByRoleName(COMMITTEE_MEMBER_ROLE)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(500, 1,
+                        "CONFIGURATION_ERROR",
+                        "Role '" + COMMITTEE_MEMBER_ROLE + "' not found in ROLE_MASTER.")));
+
+        UserRoleMaster existing = userRoleMasterRepository.findByRoleIdAndUserId(role.getRoleId(), userId);
+        if (existing != null) {
+            if (Boolean.TRUE.equals(existing.getIsActive())) {
+                return false;
+            }
+            existing.setIsActive(true);
+            userRoleMasterRepository.save(existing);
+            log.info("Reactivated Committee Member role for userId {}", userId);
+            return true;
+        }
+
+        UserRoleMaster newRole = new UserRoleMaster();
+        newRole.setUserId(userId);
+        newRole.setRoleId(role.getRoleId());
+        newRole.setReadPermission(true);
+        newRole.setWritePermission(true);
+        newRole.setIsActive(true);
+        newRole.setCreatedDate(new java.util.Date());
+        userRoleMasterRepository.save(newRole);
+        log.info("Assigned Committee Member role to userId {}", userId);
+        return true;
+    }
+
+    private void removeCommitteeMemberRoleIfSafe(Integer userId, String excludeTenderId) {
+        // Skip permanent STEC members
+        if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
+            log.debug("User {} is permanent STEC member. Keeping role.", userId);
+            return;
+        }
+
+        // Skip if user has other active tender committee assignments
+        int activeCount = committeeDecisionRepository
+                .countActiveAssignmentsExcludingTender(userId, excludeTenderId);
+        if (activeCount > 0) {
+            log.debug("User {} has {} other committee assignments. Keeping role.", userId, activeCount);
+            return;
+        }
+
+        RoleMaster role = roleMasterRepository.findByRoleName(COMMITTEE_MEMBER_ROLE).orElse(null);
+        if (role == null) return;
+
+        UserRoleMaster urm = userRoleMasterRepository.findByRoleIdAndUserId(role.getRoleId(), userId);
+        if (urm != null && Boolean.TRUE.equals(urm.getIsActive())) {
+            urm.setIsActive(false);
+            userRoleMasterRepository.save(urm);
+            log.info("Deactivated Committee Member role for userId {} (removed from tender {})", userId, excludeTenderId);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // DIRECTOR AD-HOC COMMITTEE MANAGEMENT (Above 1 Crore)
+    // ─────────────────────────────────────────────────────────────────
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<Map<String, Object>> getAdHocCommitteeMembers(String tenderId) {
+        TenderEvaluation eval = requireEval(tenderId);
+        if (!"ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Ad-hoc committee is only for ABOVE_1_CRORE tenders."));
+        }
+
+        List<TenderCommitteeDecision> decisions = committeeDecisionRepository.findByTenderId(tenderId);
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        // Add chairman
+        if (eval.getAdHocChairmanUserId() != null) {
+            Map<String, Object> chairMap = new LinkedHashMap<>();
+            chairMap.put("userId", eval.getAdHocChairmanUserId());
+            chairMap.put("memberName", eval.getAdHocChairmanName());
+            chairMap.put("role", "CHAIRMAN");
+            chairMap.put("isExpert", false);
+            result.add(chairMap);
+        }
+
+        // Add co-chairman
+        if (eval.getAdHocCoChairmanUserId() != null) {
+            Map<String, Object> coChairMap = new LinkedHashMap<>();
+            coChairMap.put("userId", eval.getAdHocCoChairmanUserId());
+            coChairMap.put("memberName", eval.getAdHocCoChairmanName());
+            coChairMap.put("role", "CO_CHAIRMAN");
+            coChairMap.put("isExpert", false);
+            result.add(coChairMap);
+        }
+
+        // Add members
+        Set<Integer> leaderIds = new HashSet<>();
+        if (eval.getAdHocChairmanUserId() != null) leaderIds.add(eval.getAdHocChairmanUserId());
+        if (eval.getAdHocCoChairmanUserId() != null) leaderIds.add(eval.getAdHocCoChairmanUserId());
+
+        for (TenderCommitteeDecision d : decisions) {
+            if (d.getCommitteeUserId() == null || leaderIds.contains(d.getCommitteeUserId())) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("userId", d.getCommitteeUserId());
+            m.put("memberName", d.getCommitteeMemberName());
+            m.put("role", "MEMBER");
+            m.put("isExpert", eval.getExpertUserId() != null
+                    && eval.getExpertUserId().equals(d.getCommitteeUserId()));
+            m.put("vote", d.getVote());
+            result.add(m);
+        }
+
+        return result;
+    }
+
+    @Transactional
+    @Override
+    public Map<String, Object> directorAddCommitteeMember(String tenderId, Integer userId,
+                                                            Integer directorUserId, String role) {
+        TenderEvaluation eval = requireEval(tenderId);
+
+        if (!"ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Ad-hoc committee management is only for ABOVE_1_CRORE tenders."));
+        }
+        if (!"PENDING_DIRECTOR_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Members can only be added in PENDING_DIRECTOR_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
+        }
+
+        // Block duplicate
+        if (committeeDecisionRepository.findByTenderIdAndCommitteeUserId(tenderId, userId).isPresent()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "User is already a committee member for this tender."));
+        }
+
+        UserMaster user = userMasterRepository.findByUserId(userId);
+        if (user == null) {
+            throw new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                    "User not found: " + userId));
+        }
+
+        String assignedRole = "MEMBER";
+        if ("CHAIRMAN".equalsIgnoreCase(role)) {
+            if (eval.getAdHocChairmanUserId() != null) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "A Chairman is already assigned. Remove the existing Chairman first."));
+            }
+            eval.setAdHocChairmanUserId(userId);
+            eval.setAdHocChairmanName(user.getUserName());
+            tenderEvaluationRepository.save(eval);
+            assignedRole = "CHAIRMAN";
+        }
+
+        // Create committee decision row
+        TenderCommitteeDecision row = new TenderCommitteeDecision();
+        row.setTenderId(tenderId);
+        row.setCommitteeUserId(userId);
+        row.setCommitteeMemberName(user.getUserName());
+        row.setCreatedDate(LocalDateTime.now());
+        row.setUpdatedDate(LocalDateTime.now());
+        committeeDecisionRepository.save(row);
+
+        // Auto-assign role
+        boolean roleAssigned = ensureCommitteeMemberRole(userId);
+
+        log.info("Director {} added user {} as {} to ad-hoc committee for tender {}. Role assigned: {}",
+                directorUserId, userId, assignedRole, tenderId, roleAssigned);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("userId", userId);
+        result.put("userName", user.getUserName());
+        result.put("tenderId", tenderId);
+        result.put("role", assignedRole);
+        result.put("roleAssigned", roleAssigned);
+        return result;
+    }
+
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto directorConfirmCommittee(String tenderId, Integer directorUserId) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if (!"ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Ad-hoc committee confirmation is only for ABOVE_1_CRORE tenders."));
+        }
+        if (!"PENDING_DIRECTOR_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Committee can only be confirmed in PENDING_DIRECTOR_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
+        }
+        if (eval.getAdHocChairmanUserId() == null) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "A Chairman must be assigned before confirming the committee."));
+        }
+
+        List<TenderCommitteeDecision> decisions = committeeDecisionRepository.findByTenderId(tenderId);
+        if (decisions.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "At least one committee member must be added before confirming."));
+        }
+
+        eval.setEvaluationStatus("PENDING_CHAIRMAN_REVIEW");
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        log.info("Director {} confirmed ad-hoc committee for tender {}. Transitioning to PENDING_CHAIRMAN_REVIEW.",
+                directorUserId, tenderId);
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    @Transactional
+    @Override
+    public Map<String, Object> directorRemoveCommitteeMember(String tenderId, Integer userId,
+                                                               Integer directorUserId) {
+        TenderEvaluation eval = requireEval(tenderId);
+
+        if (!"ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Ad-hoc committee management is only for ABOVE_1_CRORE tenders."));
+        }
+        if (!"PENDING_DIRECTOR_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Members can only be removed in PENDING_DIRECTOR_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
+        }
+
+        // Cannot remove co-chairman via this endpoint
+        if (userId.equals(eval.getAdHocCoChairmanUserId())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot remove Co-Chairman. Use form-committee to change leadership."));
+        }
+
+        TenderCommitteeDecision decision = committeeDecisionRepository
+                .findByTenderIdAndCommitteeUserId(tenderId, userId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "User " + userId + " is not a committee member for this tender.")));
+
+        committeeDecisionRepository.delete(decision);
+
+        // Auto-remove role if no other assignments
+        removeCommitteeMemberRoleIfSafe(userId, tenderId);
+
+        boolean wasChairman = userId.equals(eval.getAdHocChairmanUserId());
+
+        // Clear chairman if removing the chairman
+        if (wasChairman) {
+            eval.setAdHocChairmanUserId(null);
+            eval.setAdHocChairmanName(null);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+        }
+
+        // Clear expert if removing the expert
+        if (userId.equals(eval.getExpertUserId())) {
+            eval.setExpertUserId(null);
+            eval.setExpertName(null);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+        }
+
+        log.info("Director {} removed user {} from ad-hoc committee for tender {}",
+                directorUserId, userId, tenderId);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("userId", userId);
+        result.put("tenderId", tenderId);
+        result.put("removed", true);
+        return result;
     }
 }

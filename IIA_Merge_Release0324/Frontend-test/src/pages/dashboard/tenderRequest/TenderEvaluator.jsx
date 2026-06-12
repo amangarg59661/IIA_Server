@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import axios from 'axios';
-import { message, Spin, Tag, Table, Checkbox, Popover, Input, Button, Modal, Select, Alert, Divider, Card, Badge, Typography, Steps, List, Space } from 'antd';
+import { message, Spin, Tag, Table, Checkbox, Popover, Popconfirm, Input, Button, Modal, Select, Alert, Divider, Card, Badge, Typography, Steps, List, Space } from 'antd';
 import { PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -92,6 +92,7 @@ const TenderEvaluator = () => {
   const [eligibleExpertsLoading, setEligibleExpertsLoading] = useState(false);
   const [expertSearchText, setExpertSearchText] = useState('');
   const expertSearchTimer = useRef(null);
+  const dirUserSearchTimer = useRef(null);
 
   // ── Per-vendor reject reason modal (above 10L) ──
   const [vendorRejectModal, setVendorRejectModal] = useState(false);
@@ -118,6 +119,14 @@ const TenderEvaluator = () => {
   const [adHocCoChairmanId, setAdHocCoChairmanId] = useState('');
   const [adHocCoChairmanName, setAdHocCoChairmanName] = useState('');
   const [adHocMembers, setAdHocMembers] = useState([{ userId: '', memberName: '', designation: '' }]);
+  // Director committee members table (above 1CR)
+  const [dirCommitteeMembers, setDirCommitteeMembers] = useState([]);
+  const [dirCommitteeLoading, setDirCommitteeLoading] = useState(false);
+  const [addMemberUserId, setAddMemberUserId] = useState(null);
+  const [addMemberRole, setAddMemberRole] = useState('MEMBER');
+  const [dirEligibleUsers, setDirEligibleUsers] = useState([]);
+  const [dirEligibleUsersLoading, setDirEligibleUsersLoading] = useState(false);
+  const [dirUserSearchText, setDirUserSearchText] = useState('');
 
   // ── Clarification history ──
   const [clarificationHistory, setClarificationHistory] = useState([]);
@@ -756,7 +765,11 @@ const filteredExperts = useMemo(() => {
     const name = (e.userName || '').toLowerCase();
     const id = String(e.userId || '').toLowerCase();
     const role = (e.roleName || '').toLowerCase();
-    return name.includes(expertSearchText) || id.includes(expertSearchText) || role.includes(expertSearchText);
+    const empId = (e.employeeId || '').toLowerCase();
+    const dept = (e.department || '').toLowerCase();
+    return name.includes(expertSearchText) || id.includes(expertSearchText)
+      || role.includes(expertSearchText) || empId.includes(expertSearchText)
+      || dept.includes(expertSearchText);
   });
 }, [eligibleExperts, expertSearchText]);
 
@@ -1174,7 +1187,99 @@ const handlePpRespondForVendor = async (vendorId) => {
   }
 };
 
-// ── Director Forms Ad-Hoc Committee ──────────────────────────────
+// ── Director Ad-Hoc Committee Management (Above 1CR) ────────────
+const fetchDirCommitteeMembers = async () => {
+  if (!tenderId) return;
+  setDirCommitteeLoading(true);
+  try {
+    const res = await axios.get('/api/tender-evaluation/director/committee-members', { params: { tenderId } });
+    setDirCommitteeMembers(res.data?.responseData || []);
+  } catch (e) {
+    setDirCommitteeMembers([]);
+  } finally {
+    setDirCommitteeLoading(false);
+  }
+};
+
+const fetchDirEligibleUsers = async () => {
+  if (!tenderId) return;
+  setDirEligibleUsersLoading(true);
+  try {
+    const res = await axios.get('/api/admin/techno-financial-committee/eligible-experts', { params: { tenderId } });
+    setDirEligibleUsers(res.data?.responseData || []);
+  } catch (e) {
+    message.error('Failed to load eligible users.');
+  } finally {
+    setDirEligibleUsersLoading(false);
+  }
+};
+
+const handleDirUserSearch = useCallback((searchValue) => {
+  if (dirUserSearchTimer.current) clearTimeout(dirUserSearchTimer.current);
+  dirUserSearchTimer.current = setTimeout(() => {
+    setDirUserSearchText(searchValue.toLowerCase());
+  }, 300);
+}, []);
+
+const filteredDirUsers = useMemo(() => {
+  if (!dirUserSearchText) return dirEligibleUsers;
+  return dirEligibleUsers.filter(e => {
+    const name = (e.userName || '').toLowerCase();
+    const id = String(e.userId || '').toLowerCase();
+    const role = (e.roleName || '').toLowerCase();
+    const empId = (e.employeeId || '').toLowerCase();
+    const dept = (e.department || '').toLowerCase();
+    return name.includes(dirUserSearchText) || id.includes(dirUserSearchText)
+      || role.includes(dirUserSearchText) || empId.includes(dirUserSearchText)
+      || dept.includes(dirUserSearchText);
+  });
+}, [dirEligibleUsers, dirUserSearchText]);
+
+const handleDirAddMember = async () => {
+  if (!addMemberUserId) return message.warning('Select a user to add.');
+  try {
+    await axios.post('/api/tender-evaluation/director/add-member', null, {
+      params: { tenderId, userId: addMemberUserId, directorUserId: userId, role: addMemberRole },
+    });
+    message.success(`${addMemberRole === 'CHAIRMAN' ? 'Chairman' : 'Member'} added to committee.`);
+    setAddMemberUserId(null);
+    setAddMemberRole('MEMBER');
+    await fetchDirCommitteeMembers();
+    await fetchDirEligibleUsers();
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to add member.');
+  }
+};
+
+const handleDirRemoveMember = async (memberUserId) => {
+  try {
+    await axios.delete('/api/tender-evaluation/director/remove-member', {
+      params: { tenderId, userId: memberUserId, directorUserId: userId },
+    });
+    message.success('Member removed from committee.');
+    await fetchDirCommitteeMembers();
+    await fetchDirEligibleUsers();
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to remove member.');
+  }
+};
+
+const handleDirectorConfirmCommittee = async () => {
+  const hasChairman = dirCommitteeMembers.some(m => m.role === 'CHAIRMAN');
+  if (!hasChairman) return message.warning('A Chairman must be assigned before confirming.');
+  if (dirCommitteeMembers.length < 2) return message.warning('Add at least one member besides the Chairman.');
+  try {
+    await axios.post('/api/tender-evaluation/director/confirm-committee', null, {
+      params: { tenderId, directorUserId: userId },
+    });
+    message.success('Committee confirmed. Moved to Chairman Review.');
+    await fetchEvalStatus(tenderId);
+    await fetchDirCommitteeMembers();
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to confirm committee.');
+  }
+};
+
 const handleDirectorFormCommittee = async () => {
   if (!adHocChairmanId || !adHocChairmanName) return message.warning('Chairman details are required.');
   const validMembers = adHocMembers.filter(m => m.userId && m.memberName);
@@ -1191,9 +1296,10 @@ const handleDirectorFormCommittee = async () => {
         designation: m.designation || '',
       })),
     }, { params: { tenderId } });
-    message.success('Ad-hoc committee formed. Committee members can now cast their votes.');
+    message.success('Ad-hoc committee formed successfully.');
     setCommitteeFormModal(false);
     await fetchEvalStatus(tenderId);
+    await fetchDirCommitteeMembers();
   } catch (e) {
     message.error(e?.response?.data?.responseStatus?.message || 'Failed to form committee.');
   }
@@ -3339,6 +3445,8 @@ useEffect(() => {
     fetchEvalStatus(tenderId);
     fetchClarificationHistory(tenderId);
     fetchIndentorOpenQuestions(tenderId);
+    fetchDirCommitteeMembers();
+    fetchDirEligibleUsers();
   }
 }, [tenderId]); // eslint-disable-line
 
@@ -3392,6 +3500,7 @@ useEffect(() => {
     PENDING_SPO_APPROVAL: 'geekblue',
     PENDING_DIRECTOR_APPROVAL: 'volcano',
     PENDING_COMMITTEE_FORMATION: 'magenta',
+    PENDING_DIRECTOR_REVIEW: 'magenta',
     PENDING_CHAIRMAN_REVIEW: 'magenta',
     PENDING_VENDOR_CLARIFICATION: 'gold',
     PENDING_INDENTOR_CLARIFICATION: 'lime',
@@ -3408,6 +3517,7 @@ useEffect(() => {
   const isPendingIndentorClarif = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
   const isPendingMemberRevote = evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE';
   const isPendingCommitteeFormation = evalStatus?.evaluationStatus === 'PENDING_COMMITTEE_FORMATION';
+  const isPendingDirectorReview = evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_REVIEW';
   const isAnyClarificationPending = isPendingVendorClarif || isPendingIndentorClarif || isPendingMemberRevote;
   const ppRespondingOnBehalfOfVendor = isPurchasePersonnelRole
   && isPendingVendorClarif
@@ -3530,6 +3640,8 @@ useEffect(() => {
                 <Tag color={evalStatusColor[evalStatus.evaluationStatus] || 'default'} style={{ fontSize: 13 }}>
                   Status: {evalStatus.evaluationStatus === 'PENDING_FINANCIAL' && evalStatus.bidType === 'SINGLE_BID'
                     ? 'PENDING EVALUATION'
+                    : evalStatus.evaluationStatus === 'PENDING_DIRECTOR_REVIEW'
+                    ? 'PENDING DIRECTOR REVIEW'
                     : evalStatus.evaluationStatus === 'PENDING_CHAIRMAN_REVIEW'
                     ? 'PENDING CHAIRMAN REVIEW'
                     : evalStatus.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION' && evalStatus.indentCategory === 'MULTIPLE_INDENT'
@@ -4664,15 +4776,82 @@ useEffect(() => {
               </Card>
             )}
 
-            {/* ── Above 1 CR: Director Forms Ad-Hoc Committee ── */}
-            {isPendingCommitteeFormation && isDirector && (
-              <Card title="Form Ad-Hoc Committee (Above ₹1 Crore)" size="small" style={{ marginTop: 16 }}>
+            {/* ── Above 1 CR: Director Reviews & Forms Ad-Hoc Committee ── */}
+            {isPendingDirectorReview && isDirector && (
+              <Card title="Director Review — Form Ad-Hoc Committee (Above ₹1 Crore)" size="small" style={{ marginTop: 16 }}>
                 <Alert type="warning" showIcon style={{ marginBottom: 8 }}
-                  message="This tender exceeds ₹1 Crore. You need to constitute an ad-hoc committee by selecting a Chairman, Co-Chairman, and members." />
-                <Button type="primary" onClick={() => setCommitteeFormModal(true)}>
-                  Form Ad-Hoc Committee
-                </Button>
+                  message="This tender exceeds ₹1 Crore. Constitute an ad-hoc committee by selecting a Chairman, Co-Chairman, and members." />
+
+                {/* Committee Members Table */}
+                {dirCommitteeMembers.length > 0 && (
+                  <Table size="small" dataSource={dirCommitteeMembers} rowKey="userId"
+                    loading={dirCommitteeLoading} pagination={false} style={{ marginBottom: 12 }}
+                    columns={[
+                      { title: 'User ID', dataIndex: 'userId', width: 80 },
+                      { title: 'Name', dataIndex: 'memberName' },
+                      { title: 'Role', dataIndex: 'role', render: (r) => (
+                        <Tag color={r === 'CHAIRMAN' ? 'blue' : r === 'CO_CHAIRMAN' ? 'cyan' : 'default'}>{r}</Tag>
+                      )},
+                      { title: 'Expert', dataIndex: 'isExpert', render: (v) => v ? <Tag color="purple">Expert</Tag> : '-' },
+                      { title: 'Action', key: 'action', render: (_, record) =>
+                        record.role !== 'CO_CHAIRMAN' ? (
+                          <Button danger size="small" icon={<MinusCircleOutlined />}
+                            onClick={() => handleDirRemoveMember(record.userId)}>
+                            Remove
+                          </Button>
+                        ) : null
+                      },
+                    ]}
+                  />
+                )}
+
+                {/* Add Member */}
+                <Space style={{ marginBottom: 12 }} wrap>
+                  <Select
+                    showSearch
+                    filterOption={false}
+                    value={addMemberUserId}
+                    onChange={val => setAddMemberUserId(val)}
+                    onSearch={handleDirUserSearch}
+                    onDropdownVisibleChange={open => { if (open) fetchDirEligibleUsers(); }}
+                    placeholder="Search by name, employee ID, or role"
+                    loading={dirEligibleUsersLoading}
+                    style={{ width: 320 }}
+                    allowClear
+                    onClear={() => { setAddMemberUserId(null); setDirUserSearchText(''); }}
+                  >
+                    {filteredDirUsers.map(u => (
+                      <Option key={u.userId} value={u.userId}>
+                        {u.userName} ({u.department || u.roleName || 'N/A'}) — EmpID: {u.employeeId || u.userId}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Select value={addMemberRole} onChange={val => setAddMemberRole(val)} style={{ width: 130 }}>
+                    <Option value="MEMBER">Member</Option>
+                    <Option value="CHAIRMAN">Chairman</Option>
+                  </Select>
+                  <Button icon={<PlusOutlined />} onClick={handleDirAddMember}>Add</Button>
+                </Space>
+
+                <div>
+                  <Popconfirm
+                    title="Confirm Committee"
+                    description="Are you sure you want to confirm this committee? Status will move to Chairman Review."
+                    onConfirm={handleDirectorConfirmCommittee}
+                    okText="Yes, Confirm"
+                    cancelText="Cancel"
+                  >
+                    <Button type="primary" disabled={dirCommitteeMembers.length === 0}>
+                      Confirm Committee
+                    </Button>
+                  </Popconfirm>
+                </div>
               </Card>
+            )}
+            {isPendingDirectorReview && !isDirector && (
+              <Alert type="info" showIcon style={{ marginTop: 16 }}
+                message="Waiting for Director Review"
+                description="The Director is constituting an ad-hoc committee for this tender. Please wait." />
             )}
 
             {/* ── Above 10L: Director Approval ── */}

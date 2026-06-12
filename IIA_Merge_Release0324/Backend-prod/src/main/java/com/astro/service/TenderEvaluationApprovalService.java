@@ -165,6 +165,25 @@ public interface TenderEvaluationApprovalService {
                                                      Integer expertUserId, String expertName);
 
     /**
+     * Above 1 Crore: Get ad-hoc committee members table for director.
+     */
+    List<Map<String, Object>> getAdHocCommitteeMembers(String tenderId);
+
+    /**
+     * Above 1 Crore: Director adds a member to the ad-hoc committee.
+     * Auto-assigns Committee Member role.
+     */
+    Map<String, Object> directorAddCommitteeMember(String tenderId, Integer userId, Integer directorUserId, String role);
+
+    TenderEvaluationStatusDto directorConfirmCommittee(String tenderId, Integer directorUserId);
+
+    /**
+     * Above 1 Crore: Director removes a member from the ad-hoc committee.
+     * Auto-removes Committee Member role if no other active assignments.
+     */
+    Map<String, Object> directorRemoveCommitteeMember(String tenderId, Integer userId, Integer directorUserId);
+
+    /**
      * Indent Creator confirms evaluation after reviewing quotations.
      * Only for UNDER_10_LAKH tenders (single intent flow with Proprietary/Limited Tender).
      * Status transitions: PENDING_FINANCIAL → PENDING_SPO_APPROVAL
