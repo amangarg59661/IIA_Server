@@ -12,4 +12,5 @@ public class CommitteeVendorVoteDto {
     private LocalDateTime decisionDate;
     private Boolean confirmed;
     private String voterRole;
+    private String phase;
 }

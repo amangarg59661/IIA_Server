@@ -157,17 +157,16 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
-    // Deprecated: expert assignment now handled by /api/admin/techno-financial-committee/nominate
-    // with expert=true flag in CommitteeNominationDto
-    // @PostMapping("/committee/expert")
-    // public ResponseEntity<Object> assignExpert(
-    //         @RequestParam String tenderId,
-    //         @Valid @RequestBody ExpertAssignmentRequestDto dto) {
-    //     log.info("Assign expert tenderId={} expertId={}", tenderId, dto.getExpertUserId());
-    //     TenderEvaluationStatusDto status = approvalService.assignExpert(
-    //             tenderId, dto.getExpertUserId(), dto.getExpertName(), dto.getChairmanUserId());
-    //     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
-    // }
+    @PostMapping("/chairman/select-expert")
+    public ResponseEntity<Object> chairmanSelectExpert(
+            @RequestParam String tenderId,
+            @Valid @RequestBody ExpertAssignmentRequestDto dto) {
+        log.info("Chairman select expert tenderId={} expertId={} chairmanUserId={}",
+                tenderId, dto.getExpertUserId(), dto.getChairmanUserId());
+        TenderEvaluationStatusDto status = approvalService.chairmanSelectExpert(
+                tenderId, dto.getChairmanUserId(), dto.getExpertUserId(), dto.getExpertName());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
 
     @PostMapping("/chairman/confirm-committee")
     public ResponseEntity<Object> chairmanConfirmCommittee(

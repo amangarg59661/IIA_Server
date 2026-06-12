@@ -133,6 +133,11 @@ const TenderEvaluator = () => {
   const [ppVendorFiles, setPpVendorFiles] = useState({});
   const [ppSubmitting, setPpSubmitting] = useState({});
 
+  // Chairman: per-member clarification resolve
+  const [selectedClarifIds, setSelectedClarifIds] = useState([]);
+  const [chairmanClarifForwardRemarks, setChairmanClarifForwardRemarks] = useState('');
+  const [chairmanClarifForwardModal, setChairmanClarifForwardModal] = useState(false);
+
   // Indentor per-vendor clarification response (SPO/Chairman/Director → Indentor)
   const [indentorOpenQuestions, setIndentorOpenQuestions] = useState([]);
   const [indentorResponses, setIndentorResponses] = useState({});
@@ -700,6 +705,10 @@ const handleApprovalSubmit = async () => {
     } else if (approvalType === 'spo') {
       body.spoUserId = userId;
       await axios.post('/api/tender-evaluation/approve/spo', body, { params: { tenderId } });
+    } else if (approvalType === 'chairman') {
+      body.chairmanUserId = userId;
+      body.isOverride = false;
+      await axios.post('/api/tender-evaluation/committee/chairman-decision', body, { params: { tenderId } });
     } else if (approvalType === 'director') {
       body.directorUserId = userId;
       await axios.post('/api/tender-evaluation/director/approve', body, { params: { tenderId } });
@@ -990,6 +999,52 @@ const handleResetAllVotes = () => {
   });
 };
 
+// ── Chairman: resolve selected member clarifications (per-history-record) ──
+const handleForwardSelectedClarifs = async () => {
+  if (!chairmanClarifForwardRemarks.trim()) return message.warning('Please enter your question for the vendor.');
+  if (selectedClarifIds.length === 0) return message.warning('Please select at least one clarification.');
+  try {
+    await axios.post('/api/tender-evaluation/chairman/resolve-member-clarification', {
+      action: 'FORWARD_TO_VENDOR',
+      remarks: chairmanClarifForwardRemarks,
+      chairmanUserId: userId,
+      historyIds: selectedClarifIds,
+    }, { params: { tenderId } });
+    message.success('Clarification forwarded to vendor.');
+    setChairmanClarifForwardModal(false);
+    setChairmanClarifForwardRemarks('');
+    setSelectedClarifIds([]);
+    await fetchEvalStatus(tenderId);
+    await fetchClarificationHistory(tenderId);
+    await fetchQuotationsAndPending(tenderId);
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to forward clarification.');
+  }
+};
+
+const handleDismissSelectedClarifs = (ids) => {
+  Modal.confirm({
+    title: 'Dismiss Selected Clarification(s)?',
+    content: 'The member(s) will be able to re-vote on the vendor after dismissal.',
+    onOk: async () => {
+      try {
+        await axios.post('/api/tender-evaluation/chairman/resolve-member-clarification', {
+          action: 'DISMISS',
+          remarks: 'Dismissed by Chairman.',
+          chairmanUserId: userId,
+          historyIds: ids,
+        }, { params: { tenderId } });
+        message.success('Clarification dismissed.');
+        setSelectedClarifIds(prev => prev.filter(id => !ids.includes(id)));
+        await fetchEvalStatus(tenderId);
+        await fetchClarificationHistory(tenderId);
+      } catch (e) {
+        message.error(e?.response?.data?.responseStatus?.message || 'Failed to dismiss clarification.');
+      }
+    },
+  });
+};
+
 // ── Above 10L Gated Flow handlers ─────────────────────────────────
 const handlePpSubmitDocument = async () => {
   try {
@@ -1249,20 +1304,23 @@ const showCommitteeMemberTechActions = isDoubleBidEval && !isFinancialPhase &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
-   evalStatus?.evaluationStatus === 'PENDING_TECHNICAL');
+   evalStatus?.evaluationStatus === 'PENDING_TECHNICAL' ||
+   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW');
 
 const showCommitteeMemberFinActions = isDoubleBidEval && isFinancialPhase &&
   (isCommitteeMember || isAssignedExpert) && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
-  evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
+   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW');
 
 // Single bid: committee member inline Accept/Reject (above 10L)
 const showCommitteeMemberSingleBidActions = !isDoubleBidEval &&
   (isCommitteeMember || isAssignedExpert) && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_APPROVAL' ||
    evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
-   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING');
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
+   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW');
 const showChairmanInlineActions =  isChairman && isAbove10L &&
   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING';
 
@@ -1274,6 +1332,26 @@ const myVendorVotes = Object.values(evalStatus?.committeeVendorVotes || {})
   .map(votes => votes.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'));
 const allMyVendorsDecided = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.decision);
 const myVotesConfirmed = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.confirmed);
+
+// Per-member per-vendor pending clarifications (above 10L)
+const pendingMemberClarifs = evalStatus?.pendingMemberClarifications || [];
+const myPendingClarifVendorIds = new Set(
+  pendingMemberClarifs
+    .filter(c => String(c.memberId) === String(userId))
+    .map(c => c.vendorId)
+    .filter(Boolean)
+);
+const anyMemberClarifPending = pendingMemberClarifs.length > 0;
+const isChairmanClarifReview = evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW';
+
+const allChairmanVendorsDecided = (() => {
+  const votesMap = evalStatus?.committeeVendorVotes || {};
+  const vendorIds = Object.keys(votesMap);
+  if (vendorIds.length === 0) return false;
+  return vendorIds.every(vid =>
+    votesMap[vid]?.some(v => v.voterRole === 'CHAIRMAN' && v.decision)
+  );
+})();
 
 const allDirectorVendorsDecided = (() => {
   const votesMap = evalStatus?.committeeVendorVotes || {};
@@ -1718,7 +1796,12 @@ if (isSpoRole) {
   key: 'registeredVendor',
   width: 250,
   render: (_, record) => {
-    if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+    if (isAbove10L) {
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
+    } else {
+      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+    }
     if (record.registeredVendorId) {
       return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
     }
@@ -1819,16 +1902,33 @@ if (isSpoRole) {
     //   }
     // },
     {
-      title: 'Store Purchase Officer Status',
+      title: isAbove10L ? 'Chairman Status' : 'Store Purchase Officer Status',
       key: 'sopStatus',
       dataIndex: 'sopStatus',
-      render: (sopStatus) => {
+      render: (sopStatus, record) => {
+        if (isAbove10L) {
+          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+          if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+          if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+          return <Tag color="orange">Pending</Tag>;
+        }
         if (sopStatus === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
         if (sopStatus === 'REJECTED' || sopStatus === 'Rejected') return <Tag color="red">Disqualified</Tag>;
         if (sopStatus === 'ACCEPTED' || sopStatus === 'Completed') return <Tag color="green">Qualified</Tag>;
         return sopStatus || 'N/A';
       }
     },
+    ...(isAbove10L ? [{
+      title: 'Director Status',
+      key: 'singleDirectorStatus',
+      width: 140,
+      render: (_, record) => {
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+        if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+        return <Tag color="orange">Pending</Tag>;
+      },
+    }] : []),
 
     ...(isFinancialPhase ? [
     {
@@ -1844,17 +1944,34 @@ if (isSpoRole) {
       }
     },
     {
-      title: 'SPO Financial Status',
+      title: isAbove10L ? 'Chairman Financial Status' : 'SPO Financial Status',
       key: 'financialSpoStatus',
       dataIndex: 'financialSpoStatus',
       width: 130,
-      render: (val) => {
+      render: (val, record) => {
+        if (isAbove10L) {
+          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+          if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+          if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+          return <Tag color="orange">Pending</Tag>;
+        }
         if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
         if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
         if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
         return val || <Tag>Pending</Tag>;
       }
     },
+    ...(isAbove10L ? [{
+      title: 'Director Financial Status',
+      key: 'singleFinDirectorStatus',
+      width: 140,
+      render: (_, record) => {
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+        if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+        return <Tag color="orange">Pending</Tag>;
+      },
+    }] : []),
     ] : []),
 
   ...(showActionButtons ? [
@@ -1980,7 +2097,12 @@ if (isSpoRole) {
   key: 'registeredVendor',
   width: 250,
   render: (_, record) => {
-    if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+    if (isAbove10L) {
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
+    } else {
+      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+    }
     if (record.registeredVendorId) {
       return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
     }
@@ -2048,16 +2170,21 @@ if (isSpoRole) {
       const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
         v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'
       );
+      const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
+      const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
+      const myConfirmed = myVote?.confirmed === true;
+      const btnDisabled = myClarifPending || vendorClarifReview || myConfirmed;
       return (
         <Space size={4}>
           {myVote?.decision
             ? <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>
             : <>
-                <Button size="small" type="primary" onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
-                <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
+                <Button size="small" type="primary" disabled={btnDisabled} onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
+                <Button size="small" danger disabled={btnDisabled} onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
               </>
           }
-          <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+          <Button size="small" style={{ color: btnDisabled ? undefined : '#fa8c16', borderColor: btnDisabled ? undefined : '#fa8c16' }}
+            disabled={btnDisabled}
             onClick={() => openVendorClarificationModal(record.vendorId, 'COMMITTEE_MEMBER')}>Clarify</Button>
         </Space>
       );
@@ -2102,9 +2229,19 @@ if (isSpoRole) {
   key: 'directorSingleAction',
   width: 280,
   render: (_, record) => {
-    const dirVotes = evalStatus?.committeeVendorVotes?.[record.vendorId]?.filter(v => v.voterRole === 'DIRECTOR') || [];
-    const decided = dirVotes.some(v => v.decision);
-    if (decided) return <Tag color={dirVotes[0].decision === 'ACCEPTED' ? 'green' : 'red'}>{dirVotes[0].decision}</Tag>;
+    const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+    if (dv) {
+      return (
+        <Space size={4}>
+          <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
+          {dv.decision === 'ACCEPTED'
+            ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+            : <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+          <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>Clarify</Button>
+        </Space>
+      );
+    }
     return (
       <Space size={4}>
         <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
@@ -2222,12 +2359,11 @@ const doubleBidTechColumns = [
     key: 'sopStatus',
     width: 150,
     dataIndex: 'sopStatus',
-    render: (val) => {
+    render: (val, record) => {
       if (isAbove10L) {
-        const cd = evalStatus?.chairmanDecision;
-        if (cd === 'APPROVED') return <Tag color="green">Approved</Tag>;
-        if (cd === 'REJECTED') return <Tag color="red">Rejected</Tag>;
-        if (evalStatus?.chairmanOverrideUsed) return <Tag color="blue">Overridden</Tag>;
+        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+        if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+        if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
       }
       if (val === 'CHANGE_REQUESTED_TO_INTENTOR') return <Tag color="orange">Pending Clarification</Tag>;
@@ -2240,10 +2376,10 @@ const doubleBidTechColumns = [
     title: 'Director Status',
     key: 'directorStatus',
     width: 140,
-    render: () => {
-      const dd = evalStatus?.directorDecision;
-      if (dd === 'APPROVED') return <Tag color="green">Approved</Tag>;
-      if (dd === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+    render: (_, record) => {
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+      if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
       return <Tag color="orange">Pending</Tag>;
     },
   }] : []),
@@ -2284,9 +2420,19 @@ const doubleBidTechColumns = [
     key: 'directorAction',
     width: 280,
     render: (_, record) => {
-      const dirVotes = evalStatus?.committeeVendorVotes?.[record.vendorId]?.filter(v => v.voterRole === 'DIRECTOR') || [];
-      const decided = dirVotes.some(v => v.decision);
-      if (decided) return <Tag color={dirVotes[0].decision === 'ACCEPTED' ? 'green' : 'red'}>{dirVotes[0].decision}</Tag>;
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (dv) {
+        return (
+          <Space size={4}>
+            <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
+            {dv.decision === 'ACCEPTED'
+              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+              : <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+              onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>Clarify</Button>
+          </Space>
+        );
+      }
       return (
         <Space size={4}>
           <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
@@ -2399,7 +2545,12 @@ const doubleBidTechColumns = [
     key: 'registeredVendor',
     width: 250,
     render: (_, record) => {
-      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      if (isAbove10L) {
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
+      } else {
+        if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      }
       if (record.registeredVendorId) {
         return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
       }
@@ -2460,16 +2611,21 @@ const doubleBidTechColumns = [
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
           v => String(v.committeeUserId) === String(userId)
         );
+        const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
+        const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
+        const myConfirmed = myVote?.confirmed === true;
+        const btnDisabled = myClarifPending || vendorClarifReview || myConfirmed;
         return (
           <Space size={4}>
             {myVote?.decision
               ? <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>
               : <>
-                  <Button size="small" type="primary" onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
-                  <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
+                  <Button size="small" type="primary" disabled={btnDisabled} onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
+                  <Button size="small" danger disabled={btnDisabled} onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
                 </>
             }
-            <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            <Button size="small" style={{ color: btnDisabled ? undefined : '#fa8c16', borderColor: btnDisabled ? undefined : '#fa8c16' }}
+              disabled={btnDisabled}
               onClick={() => openVendorClarificationModal(record.vendorId, 'COMMITTEE_MEMBER')}>Clarify</Button>
           </Space>
         );
@@ -2546,12 +2702,11 @@ const doubleBidFinColumns = [
     key: 'financialSpoStatus',
     dataIndex: 'financialSpoStatus',
     width: 150,
-    render: (val) => {
+    render: (val, record) => {
       if (isAbove10L) {
-        const cd = evalStatus?.chairmanDecision;
-        if (cd === 'APPROVED') return <Tag color="green">Approved</Tag>;
-        if (cd === 'REJECTED') return <Tag color="red">Rejected</Tag>;
-        if (evalStatus?.chairmanOverrideUsed) return <Tag color="blue">Overridden</Tag>;
+        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+        if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+        if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
       }
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
@@ -2564,10 +2719,10 @@ const doubleBidFinColumns = [
     title: 'Director Status',
     key: 'finDirectorStatus',
     width: 140,
-    render: () => {
-      const dd = evalStatus?.directorDecision;
-      if (dd === 'APPROVED') return <Tag color="green">Approved</Tag>;
-      if (dd === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+    render: (_, record) => {
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+      if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
       return <Tag color="orange">Pending</Tag>;
     },
   }] : []),
@@ -2723,9 +2878,19 @@ const doubleBidFinColumns = [
     key: 'directorFinAction',
     width: 280,
     render: (_, record) => {
-      const dirVotes = evalStatus?.committeeVendorVotes?.[record.vendorId]?.filter(v => v.voterRole === 'DIRECTOR') || [];
-      const decided = dirVotes.some(v => v.decision);
-      if (decided) return <Tag color={dirVotes[0].decision === 'ACCEPTED' ? 'green' : 'red'}>{dirVotes[0].decision}</Tag>;
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      if (dv) {
+        return (
+          <Space size={4}>
+            <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
+            {dv.decision === 'ACCEPTED'
+              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+              : <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+              onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>Clarify</Button>
+          </Space>
+        );
+      }
       return (
         <Space size={4}>
           <Button size="small" type="primary" onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
@@ -2757,16 +2922,21 @@ const doubleBidFinColumns = [
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
           v => String(v.committeeUserId) === String(userId)
         );
+        const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
+        const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
+        const myConfirmed = myVote?.confirmed === true;
+        const btnDisabled = myClarifPending || vendorClarifReview || myConfirmed;
         return (
           <Space size={4}>
             {myVote?.decision
               ? <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>
               : <>
-                  <Button size="small" type="primary" onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
-                  <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
+                  <Button size="small" type="primary" disabled={btnDisabled} onClick={() => handleCommitteeVendorDecision(record.vendorId, 'ACCEPTED')}>Accept</Button>
+                  <Button size="small" danger disabled={btnDisabled} onClick={() => openVendorRejectModal(record.vendorId, handleCommitteeVendorDecision)}>Reject</Button>
                 </>
             }
-            <Button size="small" style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+            <Button size="small" style={{ color: btnDisabled ? undefined : '#fa8c16', borderColor: btnDisabled ? undefined : '#fa8c16' }}
+              disabled={btnDisabled}
               onClick={() => openVendorClarificationModal(record.vendorId, 'COMMITTEE_MEMBER')}>Clarify</Button>
           </Space>
         );
@@ -2946,7 +3116,12 @@ const spoTechColumns = [
     key: 'registeredVendor',
     width: 250,
     render: (_, record) => {
-      if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      if (isAbove10L) {
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
+      } else {
+        if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
+      }
       if (record.registeredVendorId) {
         return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
       }
@@ -3384,6 +3559,129 @@ useEffect(() => {
           </div>
         )}
 
+        {/* ── Final Approved State — after Tags, before evaluation tables ── */}
+        {evalStatus?.evaluationStatus === 'APPROVED' && (
+          <>
+            <Alert
+              type="success"
+              showIcon
+              message={`Tender Evaluation APPROVED — Vendor: ${evalStatus.approvedVendorName || evalStatus.approvedVendorId}`}
+              description={`Vendor Portal Registration: ${evalStatus.vendorPortalRegistered ? 'Done' : 'Pending'}`}
+              style={{ marginTop: 16 }}
+            />
+            {isDoubleBidEval && quotationData.length > 0 && (
+              <Table
+                dataSource={quotationData}
+                rowKey="vendorId"
+                size="small"
+                pagination={false}
+                style={{ marginTop: 16 }}
+                columns={[
+                  {
+                    title: 'Vendor ID',
+                    dataIndex: 'vendorId',
+                    key: 'vendorId',
+                    width: 120,
+                  },
+                  {
+                    title: 'Vendor Name',
+                    dataIndex: 'vendorName',
+                    key: 'vendorName',
+                    width: 200,
+                  },
+                  {
+                    title: 'Technical Status',
+                    key: 'technicalStatus',
+                    width: 140,
+                    render: (_, record) => {
+                      if (isAbove10L) {
+                        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+                          ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'TECHNICAL' && v.decision);
+                        if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+                        if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+                        return <Tag color="orange">Pending</Tag>;
+                      }
+                      const spo = record.sopStatus;
+                      if (spo === 'ACCEPTED' || spo === 'Completed') return <Tag color="green">Accepted</Tag>;
+                      if (spo === 'REJECTED' || spo === 'Rejected') return <Tag color="red">Rejected</Tag>;
+                      const ind = record.indentorStatus;
+                      if (ind === 'REJECTED' || ind === 'Rejected') return <Tag color="red">Rejected</Tag>;
+                      if (ind === 'ACCEPTED' || ind === 'Completed') return <Tag color="green">Accepted</Tag>;
+                      return <Tag>Pending</Tag>;
+                    },
+                  },
+                  {
+                    title: 'Financial Status',
+                    key: 'financialStatus',
+                    width: 140,
+                    render: (_, record) => {
+                      if (isAbove10L) {
+                        const techDv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+                          ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'TECHNICAL' && v.decision);
+                        if (techDv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+                        const finDv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+                          ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'FINANCIAL' && v.decision);
+                        if (finDv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
+                        if (finDv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
+                        return <Tag color="orange">Pending</Tag>;
+                      }
+                      const techRejected = record.sopStatus === 'REJECTED' || record.sopStatus === 'Rejected'
+                        || record.indentorStatus === 'REJECTED' || record.indentorStatus === 'Rejected';
+                      if (techRejected) return <Tag color="red">Rejected</Tag>;
+                      const val = record.financialSpoStatus;
+                      if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
+                      if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
+                      return <Tag>Pending</Tag>;
+                    },
+                  },
+                  ...(isOpenGlobalGem ? [{
+                    title: 'Vendor Selection',
+                    key: 'vendorSelection',
+                    width: 250,
+                    render: (_, record) => {
+                      if (isAbove10L) {
+                        const finDv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+                          ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'FINANCIAL' && v.decision);
+                        if (!finDv || finDv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
+                      } else {
+                        const finAccepted = record.financialSpoStatus === 'ACCEPTED' || record.financialSpoStatus === 'Completed';
+                        if (!finAccepted) return <Tag color="default">-</Tag>;
+                      }
+                      if (record.registeredVendorId) {
+                        return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
+                      }
+                      if (!isPurchasePersonnelRole) return <Tag>Not Mapped</Tag>;
+                      return (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <Select
+                            showSearch
+                            placeholder="Select vendor"
+                            style={{ width: 160 }}
+                            value={selectedRegisteredVendors[record.vendorId] || undefined}
+                            onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
+                            filterOption={(input, option) => {
+                              const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
+                              return text.toLowerCase().includes(input.toLowerCase());
+                            }}
+                          >
+                            {allRegisteredVendors.map(v => (
+                              <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
+                            ))}
+                          </Select>
+                          <Button size="small" type="primary"
+                            onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>
+                            Submit
+                          </Button>
+                        </div>
+                      );
+                    },
+                  }] : []),
+                ]}
+              />
+            )}
+          </>
+        )}
+
         {showEvaluationSection && (
           <FormBody layout="vertical" style={{ marginTop: 16 }}>
             {notSubmittedVendors.length > 0 && (
@@ -3417,8 +3715,8 @@ useEffect(() => {
               />
             )}
 
-            {/* ── Double Bid: Dual Tables ── */}
-            {isDoubleBidEval && (
+            {/* ── Double Bid: Dual Tables (hidden at APPROVED — consolidated table shown below) ── */}
+            {isDoubleBidEval && evalStatus?.evaluationStatus !== 'APPROVED' && (
               <>
                 <Card
                   title={
@@ -4038,35 +4336,88 @@ useEffect(() => {
                 </Card>
               )}
 
-            {/* ── Member/Director Clarification: Chairman Review ── */}
-            {isAbove10L && isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW' && (
-              <Card title={evalStatus.clarificationRequestedByRole === 'DIRECTOR' ? 'Director Clarification Request' : 'Committee Member Clarification Request'} size="small" style={{ marginTop: 16 }}>
+            {/* ── Director Clarification: Chairman Review (legacy global status) ── */}
+            {isAbove10L && isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW'
+              && evalStatus?.clarificationRequestedByRole === 'DIRECTOR' && (
+              <Card title="Director Clarification Request" size="small" style={{ marginTop: 16 }}>
                 <Alert type="warning" showIcon style={{ marginBottom: 12 }}
-                  message={evalStatus.clarificationRequestedByRole === 'DIRECTOR'
-                    ? `Director requests clarification${evalStatus.clarificationTargetVendorId ? ` regarding Vendor: ${evalStatus.clarificationTargetVendorId}` : ''}`
-                    : `Member requests clarification${evalStatus.clarificationTargetVendorId ? ` for Vendor: ${evalStatus.clarificationTargetVendorId}` : ' for All Vendors'}`}
+                  message={`Director requests clarification${evalStatus.clarificationTargetVendorId ? ` regarding Vendor: ${evalStatus.clarificationTargetVendorId}` : ''}`}
                   description={evalStatus.clarificationRemarks} />
                 <Space wrap>
-                  {evalStatus.clarificationRequestedByRole === 'DIRECTOR' && (
-                    <Button type="primary" onClick={() => { setRespondText(''); setRespondRole('CHAIRMAN'); setRespondModal(true); }}>
-                      Respond to Director
-                    </Button>
-                  )}
-                  <Button type={evalStatus.clarificationRequestedByRole === 'DIRECTOR' ? 'default' : 'primary'} onClick={() => { setChairmanForwardRemarks(''); setChairmanForwardModal(true); }}>
+                  <Button type="primary" onClick={() => { setRespondText(''); setRespondRole('CHAIRMAN'); setRespondModal(true); }}>
+                    Respond to Director
+                  </Button>
+                  <Button onClick={() => { setChairmanForwardRemarks(''); setChairmanForwardModal(true); }}>
                     Forward to Vendor
                   </Button>
                   <Button danger onClick={handleRejectMemberClarification}>
-                    {evalStatus.clarificationRequestedByRole === 'DIRECTOR' ? 'Dismiss Request' : 'Cancel Request (Member Re-evaluates)'}
+                    Dismiss Request
                   </Button>
                 </Space>
               </Card>
             )}
-            {isAbove10L && !isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW' && (
+            {isAbove10L && !isChairman && evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW'
+              && evalStatus?.clarificationRequestedByRole === 'DIRECTOR' && (
+              <Alert type="info" showIcon style={{ marginTop: 16 }}
+                message="Director Clarification Pending"
+                description="Director has requested clarification from Chairman. Waiting for Chairman to respond." />
+            )}
+
+            {/* ── Member Clarifications: Chairman Review (per-member per-vendor) ── */}
+            {isAbove10L && isChairman && anyMemberClarifPending && (() => {
+              const grouped = {};
+              pendingMemberClarifs.forEach(c => {
+                const key = c.vendorId || 'GENERAL';
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(c);
+              });
+              return (
+                <Card title={`Member Clarification Requests (${pendingMemberClarifs.length})`} size="small" style={{ marginTop: 16 }}>
+                  <Alert type="info" showIcon style={{ marginBottom: 12 }}
+                    message="Committee members have questions. Review, then forward selected ones to the vendor or dismiss." />
+                  {Object.entries(grouped).map(([vendorKey, clarifs]) => (
+                    <div key={vendorKey} style={{ border: '1px solid #d9d9d9', borderRadius: 8, padding: 12, marginBottom: 12, background: '#fafafa' }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
+                        Vendor: {vendorKey === 'GENERAL' ? 'General' : (quotationData.find(q => q.vendorId === vendorKey)?.vendorName || vendorKey)}
+                      </div>
+                      {clarifs.map(c => (
+                        <div key={c.historyId} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
+                          <input type="checkbox"
+                            checked={selectedClarifIds.includes(c.historyId)}
+                            onChange={e => {
+                              setSelectedClarifIds(prev =>
+                                e.target.checked ? [...prev, c.historyId] : prev.filter(id => id !== c.historyId)
+                              );
+                            }} />
+                          <div style={{ flex: 1 }}>
+                            <div><strong>{c.memberName}</strong>: {c.remarks}</div>
+                            <small style={{ color: '#888' }}>{c.requestedAt ? new Date(c.requestedAt).toLocaleString('en-IN') : ''}</small>
+                          </div>
+                          <Button size="small" danger onClick={() => handleDismissSelectedClarifs([c.historyId])}>Dismiss</Button>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  <Space wrap style={{ marginTop: 8 }}>
+                    <Button type="primary"
+                      disabled={selectedClarifIds.length === 0}
+                      onClick={() => { setChairmanClarifForwardRemarks(''); setChairmanClarifForwardModal(true); }}>
+                      Forward Selected to Vendor ({selectedClarifIds.length})
+                    </Button>
+                    <Button
+                      disabled={selectedClarifIds.length === 0}
+                      danger
+                      onClick={() => handleDismissSelectedClarifs(selectedClarifIds)}>
+                      Dismiss Selected ({selectedClarifIds.length})
+                    </Button>
+                  </Space>
+                </Card>
+              );
+            })()}
+            {isAbove10L && !isChairman && (isCommitteeMember || isAssignedExpert) && myPendingClarifVendorIds.size > 0 && (
               <Alert type="info" showIcon style={{ marginTop: 16 }}
                 message="Clarification Pending"
-                description={evalStatus.clarificationRequestedByRole === 'DIRECTOR'
-                  ? 'Director has requested clarification from Chairman. Waiting for Chairman to respond.'
-                  : 'A committee member has requested clarification. Waiting for Chairman to review.'} />
+                description={`Your clarification request for ${myPendingClarifVendorIds.size} vendor(s) is waiting for Chairman review.`} />
             )}
 
             {/* ── Above 10L: PP Document Submission ── */}
@@ -4095,9 +4446,13 @@ useEffect(() => {
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message="Cannot confirm while a vendor clarification is pending." />
                 )}
+                {myPendingClarifVendorIds.size > 0 && (
+                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                    message={`You have ${myPendingClarifVendorIds.size} pending clarification(s) with Chairman. Cannot confirm until resolved.`} />
+                )}
                 <Space wrap>
                   <Button type="primary"
-                    disabled={!allMyVendorsDecided || myVotesConfirmed || anyVendorPendingClarif}
+                    disabled={!allMyVendorsDecided || myVotesConfirmed || anyVendorPendingClarif || myPendingClarifVendorIds.size > 0}
                     onClick={handleConfirmCommitteeVotes}>
                     {myVotesConfirmed ? 'Votes Confirmed ✓' : 'Confirm My Votes'}
                   </Button>
@@ -4123,7 +4478,21 @@ useEffect(() => {
               <Card title={`Chairman Voting${isFinancialPhase ? ' — Financial Phase' : ''}`} size="small" style={{ marginTop: 16 }}>
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
                   message="All committee members have confirmed their votes. Review votes using View button, then Accept/Reject each vendor." />
+                {!allChairmanVendorsDecided && (
+                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                    message="Please Accept or Reject all vendors before confirming evaluation." />
+                )}
                 <Space wrap>
+                  <Button type="primary"
+                    disabled={!allChairmanVendorsDecided}
+                    onClick={() => { setApprovalType('chairman'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
+                    {isDoubleBidEval && !isFinancialPhase ? 'Approve Technical Phase' : 'Confirm Evaluation'}
+                  </Button>
+                  <Button danger
+                    disabled={!allChairmanVendorsDecided}
+                    onClick={() => { setApprovalType('chairman'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
+                    Reject
+                  </Button>
                   <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
                     onClick={() => openClarificationModal('CHAIRMAN')}>
                     Seek Clarification
@@ -4146,10 +4515,26 @@ useEffect(() => {
               <Card title={`Director Final Approval${isFinancialPhase ? ' — Financial Phase' : ''}`} size="small" style={{ marginTop: 16 }}>
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
                   message="Chairman has voted. Review all decisions, then Accept/Reject each vendor as final approver." />
-                <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
-                  onClick={() => openClarificationModal('DIRECTOR')}>
-                  Seek Clarification
-                </Button>
+                {!allDirectorVendorsDecided && (
+                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                    message="Please Accept or Reject all vendors before confirming evaluation." />
+                )}
+                <Space wrap>
+                  <Button type="primary"
+                    disabled={!allDirectorVendorsDecided}
+                    onClick={() => { setApprovalType('director'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
+                    {isDoubleBidEval && !isFinancialPhase ? 'Approve Technical Phase' : 'Confirm Evaluation'}
+                  </Button>
+                  <Button danger
+                    disabled={!allDirectorVendorsDecided}
+                    onClick={() => { setApprovalType('director'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
+                    Reject
+                  </Button>
+                  <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                    onClick={() => openClarificationModal('DIRECTOR')}>
+                    Seek Clarification
+                  </Button>
+                </Space>
               </Card>
             )}
             {isAbove10L && evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' && !isDirector && (
@@ -4204,9 +4589,13 @@ useEffect(() => {
                   <Alert type="warning" showIcon style={{ marginBottom: 8 }}
                     message="Cannot confirm while a vendor clarification is pending." />
                 )}
+                {myPendingClarifVendorIds.size > 0 && (
+                  <Alert type="warning" showIcon style={{ marginBottom: 8 }}
+                    message={`You have ${myPendingClarifVendorIds.size} pending clarification(s) with Chairman. Cannot confirm until resolved.`} />
+                )}
                 <Space wrap>
                   <Button type="primary"
-                    disabled={!allMyVendorsDecided || myVotesConfirmed || anyVendorPendingClarif}
+                    disabled={!allMyVendorsDecided || myVotesConfirmed || anyVendorPendingClarif || myPendingClarifVendorIds.size > 0}
                     onClick={handleConfirmCommitteeVotes}>
                     {myVotesConfirmed ? 'Votes Confirmed ✓' : 'Confirm My Votes'}
                   </Button>
@@ -4327,103 +4716,6 @@ useEffect(() => {
               </Card>
             )}
 
-            {/* ── Final Approved State ── */}
-            {evalStatus?.evaluationStatus === 'APPROVED' && (
-              <>
-              <Alert
-                type="success"
-                showIcon
-                message={`Tender Evaluation APPROVED — Vendor: ${evalStatus.approvedVendorName || evalStatus.approvedVendorId}`}
-                description={`Vendor Portal Registration: ${evalStatus.vendorPortalRegistered ? 'Done' : 'Pending'}`}
-                style={{ marginTop: 16 }}
-              />
-              {isDoubleBidEval && quotationData.length > 0 && (
-                <Table
-                  dataSource={quotationData}
-                  rowKey="vendorId"
-                  size="small"
-                  pagination={false}
-                  style={{ marginTop: 16 }}
-                  columns={[
-                    {
-                      title: 'Vendor ID',
-                      dataIndex: 'vendorId',
-                      key: 'vendorId',
-                      width: 120,
-                    },
-                    {
-                      title: 'Vendor Name',
-                      dataIndex: 'vendorName',
-                      key: 'vendorName',
-                      width: 200,
-                    },
-                    {
-                      title: 'Technical Status',
-                      dataIndex: 'technicalStatus',
-                      key: 'technicalStatus',
-                      width: 140,
-                      render: val => {
-                        if (val === 'APPROVED' || val === 'Completed') return <Tag color="green">Approved</Tag>;
-                        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
-                        return <Tag>{val || 'Pending'}</Tag>;
-                      },
-                    },
-                    {
-                      title: 'Financial Status',
-                      dataIndex: 'financialSpoStatus',
-                      key: 'financialStatus',
-                      width: 140,
-                      render: (val, record) => {
-                        if (record.technicalStatus === 'REJECTED' || record.technicalStatus === 'Rejected')
-                          return <Tag color="red">N/A (Tech Rejected)</Tag>;
-                        if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Qualified</Tag>;
-                        if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Disqualified</Tag>;
-                        return <Tag>{val || 'Pending'}</Tag>;
-                      },
-                    },
-                    ...(isOpenGlobalGem ? [{
-                      title: 'Vendor Selection',
-                      key: 'vendorSelection',
-                      width: 250,
-                      render: (_, record) => {
-                        if (record.technicalStatus === 'REJECTED' || record.technicalStatus === 'Rejected')
-                          return <Tag color="default">-</Tag>;
-                        if (record.financialSpoStatus === 'REJECTED' || record.financialSpoStatus === 'Rejected')
-                          return <Tag color="default">-</Tag>;
-                        if (record.registeredVendorId) {
-                          return <Tag color="green">{record.registeredVendorName} ({record.registeredVendorId})</Tag>;
-                        }
-                        if (!isPurchasePersonnelRole) return <Tag>Not Mapped</Tag>;
-                        return (
-                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                            <Select
-                              showSearch
-                              placeholder="Select vendor"
-                              style={{ width: 160 }}
-                              value={selectedRegisteredVendors[record.vendorId] || undefined}
-                              onChange={val => setSelectedRegisteredVendors(prev => ({ ...prev, [record.vendorId]: val }))}
-                              filterOption={(input, option) => {
-                                const text = Array.isArray(option?.children) ? option.children.join('') : String(option?.children || '');
-                                return text.toLowerCase().includes(input.toLowerCase());
-                              }}
-                            >
-                              {allRegisteredVendors.map(v => (
-                                <Option key={v.vendorId} value={v.vendorId}>{v.vendorName} ({v.vendorId})</Option>
-                              ))}
-                            </Select>
-                            <Button size="small" type="primary"
-                              onClick={() => handleMapRegisteredVendor(tenderId, record.vendorId)}>
-                              Submit
-                            </Button>
-                          </div>
-                        );
-                      },
-                    }] : []),
-                  ]}
-                />
-              )}
-              </>
-            )}
             {evalStatus?.evaluationStatus === 'REJECTED' && (
               <Alert type="error" showIcon message="Tender Evaluation REJECTED" style={{ marginTop: 16 }} />
             )}
@@ -4496,7 +4788,7 @@ useEffect(() => {
 
       {/* ── Approval Modal (Indentor / Purchase / SPO / Director) ── */}
       <Modal
-        title={`${approvalType === 'spo' ? 'SPO Final' : approvalType === 'director' ? 'Director' : 'Indentor / Purchase Dept'} — ${approvalDecision}`}
+        title={`${approvalType === 'spo' ? 'SPO Final' : approvalType === 'chairman' ? 'Chairman' : approvalType === 'director' ? 'Director' : 'Indentor / Purchase Dept'} — ${approvalDecision}`}
         open={approvalModal}
         onOk={handleApprovalSubmit}
         onCancel={() => setApprovalModal(false)}
@@ -4581,6 +4873,33 @@ useEffect(() => {
           <Input.TextArea rows={4} value={chairmanForwardRemarks}
             onChange={e => setChairmanForwardRemarks(e.target.value)}
             style={{ marginTop: 4 }} placeholder="Write your question to the vendor..." />
+        </div>
+      </Modal>
+
+      {/* ── Chairman Forward Selected Member Clarifications Modal ── */}
+      <Modal
+        title="Forward Selected Clarifications to Vendor"
+        open={chairmanClarifForwardModal}
+        onOk={handleForwardSelectedClarifs}
+        onCancel={() => setChairmanClarifForwardModal(false)}
+        okText="Forward to Vendor"
+        width={560}
+      >
+        <Alert type="info" showIcon style={{ marginBottom: 12 }}
+          message={`${selectedClarifIds.length} clarification(s) selected to forward`} />
+        {selectedClarifIds.map(id => {
+          const c = pendingMemberClarifs.find(x => x.historyId === id);
+          return c ? (
+            <div key={id} style={{ background: '#fafafa', padding: 8, borderRadius: 4, marginBottom: 6 }}>
+              <strong>{c.memberName}</strong> (Vendor: {quotationData.find(q => q.vendorId === c.vendorId)?.vendorName || c.vendorId}): {c.remarks}
+            </div>
+          ) : null;
+        })}
+        <div style={{ marginTop: 12 }}>
+          <Text strong>Your Question to Vendor:</Text>
+          <Input.TextArea rows={4} value={chairmanClarifForwardRemarks}
+            onChange={e => setChairmanClarifForwardRemarks(e.target.value)}
+            style={{ marginTop: 4 }} placeholder="Write your combined question to the vendor..." />
         </div>
       </Modal>
 

@@ -222,6 +222,11 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
             eval.setEvaluationStatus(needsPpDocument ? "PENDING_CHAIRMAN_REVIEW" : "PENDING_TECHNICAL");
         }
 
+        // ABOVE_1_CRORE: override status — Director must form committee first
+        if ("ABOVE_1_CRORE".equals(amtCat)) {
+            eval.setEvaluationStatus("PENDING_DIRECTOR_REVIEW");
+        }
+
         eval.setUpdatedDate(LocalDateTime.now());
         eval.setInitiated(1);   // lock vendor uploads for non-bidders from this point
         tenderEvaluationRepository.save(eval);
@@ -391,8 +396,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         String bidType = eval.getBidType();
 
         if ("ABOVE_1_CRORE".equals(amtCat)) {
-            // Director must form ad-hoc committee first
-            eval.setEvaluationStatus("PENDING_COMMITTEE_FORMATION");
+            // Committee already formed during PENDING_DIRECTOR_REVIEW phase
+            eval.setEvaluationStatus("PENDING_APPROVAL");
         } else if ("UNDER_10_LAKH".equals(amtCat) && "MULTIPLE_INDENT".equals(indentCat)) {
             // Case 3 & 4: Multiple indent, skip indentor, go directly to SPO
             eval.setEvaluationStatus("PENDING_SPO_APPROVAL");
@@ -602,6 +607,10 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         }
 
         String amtCat = eval.getAmountCategory();
+        if ("ABOVE_1_CRORE".equals(amtCat)) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "For ABOVE_1_CRORE tenders, use /chairman/select-expert endpoint instead."));
+        }
         String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
 
         TechnoFinancialCommittee chairman = committeeRepository
@@ -639,7 +648,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
 
         Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
                 "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION",
-                "PENDING_CHAIRMAN_REVIEW");
+                "PENDING_CHAIRMAN_REVIEW", "PENDING_DIRECTOR_REVIEW");
         if (lockedStatuses.contains(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
                     "Committee vendor decisions are locked. Current status: "
@@ -1090,22 +1099,26 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             }
         }
 
-        // Save where to return after clarification is received
-        // Only preserve the real pre-clarification status; do not overwrite it on subsequent seeks
-        String currentStatus = eval.getEvaluationStatus();
-        if (currentStatus == null
-                || (!currentStatus.contains("CLARIFICATION") && !currentStatus.contains("MEMBER_REVOTE"))) {
-            eval.setPreviousEvaluationStatus(currentStatus);
-        }
-        // Always update metadata to reflect the CURRENT/latest clarification
-        eval.setClarificationPendingFrom(target.toUpperCase());
-        eval.setClarificationPendingFromId(dto.getTargetUserId());
-        eval.setClarificationPendingFromName(dto.getTargetUserName());
-        eval.setClarificationRequestedByRole(dto.getRequestedByRole());
-        eval.setClarificationRemarks(dto.getRemarks());
-        eval.setClarificationTargetVendorId(dto.getTargetVendorId());
-
         boolean isAbove10L = !"UNDER_10_LAKH".equals(eval.getAmountCategory());
+        boolean isCommitteeMemberAbove10L = "COMMITTEE_MEMBER".equalsIgnoreCase(dto.getRequestedByRole()) && isAbove10L;
+
+        // Committee member above 10L: per-member per-vendor tracking via history only — skip global metadata
+        if (!isCommitteeMemberAbove10L) {
+            // Save where to return after clarification is received
+            // Only preserve the real pre-clarification status; do not overwrite it on subsequent seeks
+            String currentStatus = eval.getEvaluationStatus();
+            if (currentStatus == null
+                    || (!currentStatus.contains("CLARIFICATION") && !currentStatus.contains("MEMBER_REVOTE"))) {
+                eval.setPreviousEvaluationStatus(currentStatus);
+            }
+            // Always update metadata to reflect the CURRENT/latest clarification
+            eval.setClarificationPendingFrom(target.toUpperCase());
+            eval.setClarificationPendingFromId(dto.getTargetUserId());
+            eval.setClarificationPendingFromName(dto.getTargetUserName());
+            eval.setClarificationRequestedByRole(dto.getRequestedByRole());
+            eval.setClarificationRemarks(dto.getRemarks());
+            eval.setClarificationTargetVendorId(dto.getTargetVendorId());
+        }
 
         switch (target.toUpperCase()) {
             case "VENDOR":
@@ -1259,7 +1272,22 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             case "INDENTOR":
             case "CHAIRMAN":
                 if ("COMMITTEE_MEMBER".equalsIgnoreCase(dto.getRequestedByRole())) {
-                    eval.setEvaluationStatus("PENDING_CHAIRMAN_CLARIFICATION_REVIEW");
+                    // Above 10L: no global status change — per-member per-vendor via history records.
+                    // Reset this member's per-vendor vote if they had already decided.
+                    if (isAbove10L && dto.getTargetVendorId() != null && !dto.getTargetVendorId().isBlank()) {
+                        String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
+                        committeeVendorDecisionRepository
+                                .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(
+                                        tenderId, dto.getTargetVendorId(), dto.getRequestedByUserId(), phase)
+                                .ifPresent(v -> {
+                                    v.setDecision(null);
+                                    v.setRemarks(null);
+                                    v.setDecisionDate(null);
+                                    v.setConfirmed(false);
+                                    v.setUpdatedDate(LocalDateTime.now());
+                                    committeeVendorDecisionRepository.save(v);
+                                });
+                    }
                     break;
                 }
                 if ("DIRECTOR".equalsIgnoreCase(dto.getRequestedByRole())
@@ -1943,9 +1971,10 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Ad-hoc committee formation is only for ABOVE_1_CRORE tenders."));
         }
-        if (!"PENDING_COMMITTEE_FORMATION".equals(eval.getEvaluationStatus())) {
+        if (!"PENDING_DIRECTOR_REVIEW".equals(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Committee formation can only be done in PENDING_COMMITTEE_FORMATION status."));
+                    "Committee formation can only be done in PENDING_DIRECTOR_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
         }
 
         // Save ad-hoc chairman and co-chairman on the eval record
@@ -1953,7 +1982,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         eval.setAdHocChairmanName(dto.getChairmanName());
         eval.setAdHocCoChairmanUserId(dto.getCoChairmanUserId());
         eval.setAdHocCoChairmanName(dto.getCoChairmanName());
-        eval.setEvaluationStatus("PENDING_APPROVAL"); // Committee votes now
+        eval.setEvaluationStatus("PENDING_CHAIRMAN_REVIEW"); // Chairman selects expert next
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
@@ -1973,6 +2002,66 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                 }
             }
         }
+
+        return buildStatusDto(eval, tender, tenderId);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // 14b. CHAIRMAN SELECTS EXPERT (Above 1 Crore)
+    //      Chairman picks domain expert → added to committee → evaluation starts
+    // ─────────────────────────────────────────────────────────────────
+    @Transactional
+    @Override
+    public TenderEvaluationStatusDto chairmanSelectExpert(String tenderId,
+                                                           Integer chairmanUserId,
+                                                           Integer expertUserId,
+                                                           String expertName) {
+        TenderEvaluation eval = requireEval(tenderId);
+        TenderRequest tender = requireTender(tenderId);
+
+        if (!"ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Expert selection is only for ABOVE_1_CRORE tenders."));
+        }
+        if (!"PENDING_CHAIRMAN_REVIEW".equals(eval.getEvaluationStatus())) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Expert selection can only be done in PENDING_CHAIRMAN_REVIEW status. Current: "
+                    + eval.getEvaluationStatus()));
+        }
+        if (!chairmanUserId.equals(eval.getAdHocChairmanUserId())) {
+            throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                    "Only the ad-hoc Chairman (" + eval.getAdHocChairmanName()
+                    + ") can select the expert."));
+        }
+
+        eval.setExpertUserId(expertUserId);
+        eval.setExpertName(expertName);
+
+        // Add expert as committee member if not already present
+        boolean expertExists = committeeDecisionRepository
+                .findByTenderIdAndCommitteeUserId(tenderId, expertUserId).isPresent();
+        if (!expertExists) {
+            TenderCommitteeDecision row = new TenderCommitteeDecision();
+            row.setTenderId(tenderId);
+            row.setCommitteeUserId(expertUserId);
+            row.setCommitteeMemberName(expertName);
+            row.setCreatedDate(LocalDateTime.now());
+            row.setUpdatedDate(LocalDateTime.now());
+            committeeDecisionRepository.save(row);
+        }
+
+        // Advance: Double Bid → technical evaluation, Single Bid → financial evaluation
+        if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
+            eval.setEvaluationStatus("PENDING_TECHNICAL");
+        } else {
+            eval.setEvaluationStatus("PENDING_FINANCIAL");
+        }
+
+        eval.setUpdatedDate(LocalDateTime.now());
+        tenderEvaluationRepository.save(eval);
+
+        log.info("Chairman {} selected expert {} for tender {}. Status → {}",
+                chairmanUserId, expertUserId, tenderId, eval.getEvaluationStatus());
 
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -2123,7 +2212,7 @@ public List<TenderClarificationHistory> getOpenIndentorClarifications(String ten
 
         Set<String> lockedStatuses = Set.of("PENDING_SPO_APPROVAL", "APPROVED", "REJECTED",
                 "PENDING_DIRECTOR_APPROVAL", "PENDING_COMMITTEE_FORMATION",
-                "PENDING_CHAIRMAN_REVIEW");
+                "PENDING_CHAIRMAN_REVIEW", "PENDING_DIRECTOR_REVIEW");
         if (lockedStatuses.contains(eval.getEvaluationStatus())) {
             throw new BusinessException(new ErrorDetails(400, 1, "LOCKED",
                     "Evaluator decisions are locked after Confirm Evaluation. Current status: "
@@ -2653,6 +2742,8 @@ long openHistoryRows;
         dto.setAdHocChairmanName(eval.getAdHocChairmanName());
         dto.setAdHocCoChairmanUserId(eval.getAdHocCoChairmanUserId());
         dto.setAdHocCoChairmanName(eval.getAdHocCoChairmanName());
+        dto.setExpertUserId(eval.getExpertUserId());
+        dto.setExpertName(eval.getExpertName());
 
         // Vendor quotation list
         List<VendorQuotationAgainstTender> quotations =
@@ -2723,28 +2814,64 @@ long openHistoryRows;
                         dto.setExpertName(d.getExpertName());
                     });
 
-            // Per-vendor committee votes (above-10L double bid)
-            // if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
-                String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
-                List<TenderCommitteeVendorDecision> vendorVotes =
-                        committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, phase);
-                Map<String, List<CommitteeVendorVoteDto>> voteMap = vendorVotes.stream()
-                        .map(v -> {
-                            CommitteeVendorVoteDto vDto = new CommitteeVendorVoteDto();
-                            vDto.setCommitteeUserId(v.getCommitteeUserId());
-                            vDto.setMemberName(v.getMemberName());
-                            vDto.setDecision(v.getDecision());
-                            vDto.setRemarks(v.getRemarks());
-                            vDto.setDecisionDate(v.getDecisionDate());
-                            vDto.setConfirmed(v.getConfirmed());
-                            vDto.setVoterRole(v.getVoterRole());
-                            return Map.entry(v.getVendorId(), vDto);
-                        })
-                        .collect(Collectors.groupingBy(
-                                Map.Entry::getKey,
-                                Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-                dto.setCommitteeVendorVotes(voteMap);
-            // }
+            // Pending member→chairman clarifications (per-member per-vendor)
+            List<TenderClarificationHistory> pendingMemberClarifs =
+                    clarificationHistoryRepository.findByTenderIdAndRequestedByRoleAndClarificationTargetAndRespondedAtIsNull(
+                            tenderId, "COMMITTEE_MEMBER", "CHAIRMAN");
+            if (!pendingMemberClarifs.isEmpty()) {
+                List<TenderEvaluationStatusDto.PendingMemberClarificationDto> pmcList = pendingMemberClarifs.stream()
+                        .map(h -> {
+                            TenderEvaluationStatusDto.PendingMemberClarificationDto pmc =
+                                    new TenderEvaluationStatusDto.PendingMemberClarificationDto();
+                            pmc.setHistoryId(h.getId());
+                            pmc.setMemberId(h.getRequestedByUserId());
+                            UserMaster mu = h.getRequestedByUserId() != null
+                                    ? userMasterRepository.findByUserId(h.getRequestedByUserId()) : null;
+                            pmc.setMemberName(mu != null ? mu.getUserName() : String.valueOf(h.getRequestedByUserId()));
+                            pmc.setVendorId(h.getTargetVendorId());
+                            pmc.setRemarks(h.getQuestionRemarks());
+                            pmc.setRequestedAt(h.getRequestedAt());
+                            return pmc;
+                        }).collect(Collectors.toList());
+                dto.setPendingMemberClarifications(pmcList);
+            }
+
+            // Per-vendor committee votes (above-10L)
+            String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
+            boolean isApprovedDoubleBid = "APPROVED".equals(eval.getEvaluationStatus())
+                    && "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                    && Boolean.TRUE.equals(eval.getFinancialBidPhase());
+
+            List<TenderCommitteeVendorDecision> vendorVotes;
+            if (isApprovedDoubleBid) {
+                // At APPROVED for double bid, return votes from BOTH phases
+                List<TenderCommitteeVendorDecision> techVotes =
+                        committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, "TECHNICAL");
+                List<TenderCommitteeVendorDecision> finVotes =
+                        committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, "FINANCIAL");
+                vendorVotes = new java.util.ArrayList<>(techVotes);
+                vendorVotes.addAll(finVotes);
+            } else {
+                vendorVotes = committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, phase);
+            }
+
+            Map<String, List<CommitteeVendorVoteDto>> voteMap = vendorVotes.stream()
+                    .map(v -> {
+                        CommitteeVendorVoteDto vDto = new CommitteeVendorVoteDto();
+                        vDto.setCommitteeUserId(v.getCommitteeUserId());
+                        vDto.setMemberName(v.getMemberName());
+                        vDto.setDecision(v.getDecision());
+                        vDto.setRemarks(v.getRemarks());
+                        vDto.setDecisionDate(v.getDecisionDate());
+                        vDto.setConfirmed(v.getConfirmed());
+                        vDto.setVoterRole(v.getVoterRole());
+                        vDto.setPhase(v.getPhase());
+                        return Map.entry(v.getVendorId(), vDto);
+                    })
+                    .collect(Collectors.groupingBy(
+                            Map.Entry::getKey,
+                            Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
+            dto.setCommitteeVendorVotes(voteMap);
         }
         return dto;
     }
@@ -2908,6 +3035,19 @@ long openHistoryRows;
         quotation.setVendorId(registeredVendor.getVendorId());
         quotation.setUpdatedDate(LocalDateTime.now());
         quotationRepository.save(quotation);
+
+        // Update committee vote records to use the new vendorId
+        for (String phase : List.of("TECHNICAL", "FINANCIAL")) {
+            List<TenderCommitteeVendorDecision> votes =
+                    committeeVendorDecisionRepository.findByTenderIdAndVendorIdAndPhase(tenderId, vendorId, phase);
+            for (TenderCommitteeVendorDecision vote : votes) {
+                vote.setVendorId(registeredVendor.getVendorId());
+            }
+            if (!votes.isEmpty()) {
+                committeeVendorDecisionRepository.saveAll(votes);
+            }
+        }
+
         log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
     }
 
@@ -2945,9 +3085,10 @@ long openHistoryRows;
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        if (!"PENDING_MEMBER_VOTING".equals(eval.getEvaluationStatus())) {
+        String status = eval.getEvaluationStatus();
+        if (!"PENDING_MEMBER_VOTING".equals(status) && !"PENDING_MEMBER_REVOTE".equals(status)) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Tender is not in PENDING_MEMBER_VOTING status."));
+                    "Tender is not in PENDING_MEMBER_VOTING or PENDING_MEMBER_REVOTE status."));
         }
 
         String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
@@ -3149,10 +3290,8 @@ long openHistoryRows;
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        if (!"PENDING_CHAIRMAN_CLARIFICATION_REVIEW".equals(eval.getEvaluationStatus())) {
-            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Tender is not pending chairman clarification review."));
-        }
+        // Legacy support: if global status is PENDING_CHAIRMAN_CLARIFICATION_REVIEW (Director flow), allow it.
+        // New flow: member clarifications don't change global status — just need open history rows.
 
         Integer expectedChairman = resolveChairmanUserId(eval);
         if (expectedChairman == null || !expectedChairman.equals(dto.getChairmanUserId())) {
@@ -3160,78 +3299,101 @@ long openHistoryRows;
                     "Only the designated Chairman can resolve member clarification requests."));
         }
 
-        // Find open member→chairman clarification history row
-        List<TenderClarificationHistory> openRows = clarificationHistoryRepository
-                .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "CHAIRMAN");
+        // Resolve specific history records if IDs provided, otherwise all open member→chairman rows
+        List<TenderClarificationHistory> targetRows;
+        if (dto.getHistoryIds() != null && !dto.getHistoryIds().isEmpty()) {
+            targetRows = dto.getHistoryIds().stream()
+                    .map(id -> clarificationHistoryRepository.findById(id).orElse(null))
+                    .filter(h -> h != null && tenderId.equals(h.getTenderId()) && h.getRespondedAt() == null
+                            && "CHAIRMAN".equals(h.getClarificationTarget()))
+                    .collect(Collectors.toList());
+            if (targetRows.isEmpty()) {
+                throw new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                        "No open clarification history found for the provided IDs."));
+            }
+        } else {
+            targetRows = clarificationHistoryRepository
+                    .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "CHAIRMAN");
+        }
 
         String action = dto.getAction();
 
         if ("FORWARD_TO_VENDOR".equalsIgnoreCase(action)) {
-            // Close member's history row
-            openRows.forEach(h -> {
+            // Close selected history rows
+            targetRows.forEach(h -> {
                 h.setResponseText("Forwarded to vendor: " + dto.getRemarks());
                 h.setRespondedAt(LocalDateTime.now());
                 h.setRespondedByRole("CHAIRMAN");
                 h.setRespondedById(String.valueOf(dto.getChairmanUserId()));
             });
-            clarificationHistoryRepository.saveAll(openRows);
+            clarificationHistoryRepository.saveAll(targetRows);
 
-            // Forward to vendor using existing seekClarification flow
-            String vendorTarget = eval.getClarificationTargetVendorId() != null ? "VENDOR" : "ALL_VENDORS";
-            SeekClarificationDto seekDto = new SeekClarificationDto();
-            seekDto.setTenderId(tenderId);
-            seekDto.setRequestedByRole("CHAIRMAN");
-            seekDto.setRequestedByUserId(dto.getChairmanUserId());
-            seekDto.setClarificationTarget(vendorTarget);
-            seekDto.setTargetVendorId(eval.getClarificationTargetVendorId());
-            seekDto.setRemarks(dto.getRemarks());
+            // Collect distinct vendor IDs from the selected rows
+            Set<String> vendorIds = targetRows.stream()
+                    .map(TenderClarificationHistory::getTargetVendorId)
+                    .filter(v -> v != null && !v.isBlank())
+                    .collect(Collectors.toSet());
 
-            return seekClarification(tenderId, seekDto);
+            // Forward to each vendor using seekClarification
+            TenderEvaluationStatusDto result = null;
+            if (vendorIds.isEmpty()) {
+                SeekClarificationDto seekDto = new SeekClarificationDto();
+                seekDto.setTenderId(tenderId);
+                seekDto.setRequestedByRole("CHAIRMAN");
+                seekDto.setRequestedByUserId(dto.getChairmanUserId());
+                seekDto.setClarificationTarget("ALL_VENDORS");
+                seekDto.setRemarks(dto.getRemarks());
+                result = seekClarification(tenderId, seekDto);
+            } else {
+                for (String vid : vendorIds) {
+                    SeekClarificationDto seekDto = new SeekClarificationDto();
+                    seekDto.setTenderId(tenderId);
+                    seekDto.setRequestedByRole("CHAIRMAN");
+                    seekDto.setRequestedByUserId(dto.getChairmanUserId());
+                    seekDto.setClarificationTarget("VENDOR");
+                    seekDto.setTargetVendorId(vid);
+                    seekDto.setRemarks(dto.getRemarks());
+                    result = seekClarification(tenderId, seekDto);
+                }
+            }
+            return result;
 
-        } else if ("REJECT".equalsIgnoreCase(action)) {
-            // Close member's history row
-            openRows.forEach(h -> {
-                h.setResponseText("Rejected: " + dto.getRemarks());
+        } else if ("DISMISS".equalsIgnoreCase(action) || "REJECT".equalsIgnoreCase(action)) {
+            // Close selected history rows
+            targetRows.forEach(h -> {
+                h.setResponseText("Dismissed: " + (dto.getRemarks() != null ? dto.getRemarks() : ""));
                 h.setRespondedAt(LocalDateTime.now());
                 h.setRespondedByRole("CHAIRMAN");
                 h.setRespondedById(String.valueOf(dto.getChairmanUserId()));
             });
-            clarificationHistoryRepository.saveAll(openRows);
+            clarificationHistoryRepository.saveAll(targetRows);
 
-            // Reset the requesting member's vote
-            Integer memberUserId = openRows.stream()
-                    .map(TenderClarificationHistory::getRequestedByUserId)
-                    .filter(id -> id != null)
-                    .findFirst().orElse(null);
-            if (memberUserId != null) {
-                committeeDecisionRepository.findByTenderIdAndCommitteeUserId(tenderId, memberUserId)
-                        .ifPresent(v -> {
-                            v.setVote(null);
-                            v.setVoteRemarks(null);
-                            v.setVotedDate(null);
-                            v.setUpdatedDate(LocalDateTime.now());
-                            committeeDecisionRepository.save(v);
-                        });
+            // If global status is PENDING_CHAIRMAN_CLARIFICATION_REVIEW (legacy/Director flow),
+            // check if there are still open rows. If none, restore previous status.
+            if ("PENDING_CHAIRMAN_CLARIFICATION_REVIEW".equals(eval.getEvaluationStatus())) {
+                long remaining = clarificationHistoryRepository
+                        .findByTenderIdAndClarificationTargetAndRespondedAtIsNull(tenderId, "CHAIRMAN")
+                        .size();
+                if (remaining == 0) {
+                    String prev = eval.getPreviousEvaluationStatus();
+                    eval.setEvaluationStatus(prev != null ? prev : "PENDING_APPROVAL");
+                    eval.setClarificationPendingFrom(null);
+                    eval.setClarificationPendingFromId(null);
+                    eval.setClarificationPendingFromName(null);
+                    eval.setClarificationRequestedByRole(null);
+                    eval.setClarificationRemarks(null);
+                    eval.setClarificationTargetVendorId(null);
+                    eval.setPreviousEvaluationStatus(null);
+                    eval.setUpdatedDate(LocalDateTime.now());
+                    tenderEvaluationRepository.save(eval);
+                }
             }
-
-            // Restore previous status and clear clarification fields
-            String prev = eval.getPreviousEvaluationStatus();
-            eval.setEvaluationStatus(prev != null ? prev : "PENDING_APPROVAL");
-            eval.setClarificationPendingFrom(null);
-            eval.setClarificationPendingFromId(null);
-            eval.setClarificationPendingFromName(null);
-            eval.setClarificationRequestedByRole(null);
-            eval.setClarificationRemarks(null);
-            eval.setClarificationTargetVendorId(null);
-            eval.setPreviousEvaluationStatus(null);
-            eval.setUpdatedDate(LocalDateTime.now());
-            tenderEvaluationRepository.save(eval);
 
             return buildStatusDto(eval, tender, tenderId);
 
         } else {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "Invalid action. Must be FORWARD_TO_VENDOR or REJECT."));
+                    "Invalid action. Must be FORWARD_TO_VENDOR or DISMISS."));
         }
     }
 

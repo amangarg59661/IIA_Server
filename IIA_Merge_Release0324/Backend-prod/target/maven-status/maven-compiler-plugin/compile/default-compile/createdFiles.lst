@@ -339,6 +339,7 @@ com\astro\dto\workflow\ProcurementDtos\CpMaterialResponseDto.class
 com\astro\dto\workflow\RoleRequestDto.class
 com\astro\entity\InventoryModule\OgpMasterPoEntity.class
 com\astro\dto\workflow\ProcurementDtos\IndentDto\CancelIndentRequestDto.class
+com\astro\dto\workflow\TenderEvaluationStatusDto$PendingMemberClarificationDto.class
 com\astro\entity\InventoryModule\IgpMasterEntity.class
 com\astro\entity\VendorQuotationAgainstTender$WorkflowActorRole.class
 com\astro\dto\workflow\InventoryModule\MaterialDto.class

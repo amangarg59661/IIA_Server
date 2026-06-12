@@ -3,6 +3,7 @@ package com.astro.dto.workflow;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -61,6 +62,9 @@ public class TenderEvaluationStatusDto {
     private Integer adHocCoChairmanUserId;
     private String adHocCoChairmanName;
 
+    // ── Pending member clarifications (above 10L, per-member per-vendor) ──
+    private List<PendingMemberClarificationDto> pendingMemberClarifications;
+
     @Data
     public static class VendorQuotationEvalDto {
         private String vendorId;
@@ -82,5 +86,15 @@ public class TenderEvaluationStatusDto {
         private String committeeMemberName;
         private String vote;                  // APPROVED, REJECTED, null if not voted yet
         private String voteRemarks;
+    }
+
+    @Data
+    public static class PendingMemberClarificationDto {
+        private Long historyId;
+        private Integer memberId;
+        private String memberName;
+        private String vendorId;
+        private String remarks;
+        private LocalDateTime requestedAt;
     }
 }

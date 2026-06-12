@@ -50,7 +50,7 @@ import QuarterlyVigilanceSoReport from '../reports/QuarterlyVigilanceSoReport';
 import ShortClosedCancelledOrderReport from "../reports/ShortClosedCancelledOrderReport";
 import MonthlyProcurementReport from "../reports/MonthlyProcurementReport";
 import IndentStatus from '../reports/IndentStatus'
-import TenderEvaluator from "../dashboard/tenderRequest/TenderEvaluator";
+import TenderEvaluator from "../dashboard/tenderRequest/tenderEvaluator";
 import TenderEvaluatorGem from "../dashboard/tenderRequest/TenderEvaluatorGem";
 import TenderEvaluationPage from "../dashboard/tenderEvaluation/TenderEvaluationPage";
 import GemTenderEvaluationPage from "../dashboard/tenderEvaluation/GemTenderEvaluationPage";

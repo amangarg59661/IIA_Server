@@ -167,6 +167,12 @@ public class TenderEvaluation {
     @Column(name = "ad_hoc_co_chairman_name", length = 200)
     private String adHocCoChairmanName;
 
+    @Column(name = "expert_user_id")
+    private Integer expertUserId;
+
+    @Column(name = "expert_name", length = 200)
+    private String expertName;
+
     @Column(name = "rejected_by_role", length = 50)
     private String rejectedByRole;
 

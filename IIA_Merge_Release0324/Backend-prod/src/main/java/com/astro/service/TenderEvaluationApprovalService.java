@@ -152,9 +152,17 @@ public interface TenderEvaluationApprovalService {
 
     /**
      * Director chooses members, chairman, and co-chairman for the ad-hoc committee.
-     * Status transitions: PENDING_COMMITTEE_FORMATION → PENDING_APPROVAL (voting starts).
+     * Status transitions: PENDING_DIRECTOR_REVIEW → PENDING_CHAIRMAN_REVIEW.
      */
     TenderEvaluationStatusDto directorFormCommittee(String tenderId, DirectorFormCommitteeDto dto);
+
+    /**
+     * Above 1 Crore: Chairman selects domain expert for the ad-hoc committee.
+     * Expert is added as a committee member.
+     * Status transitions: PENDING_CHAIRMAN_REVIEW → PENDING_TECHNICAL (double) / PENDING_FINANCIAL (single).
+     */
+    TenderEvaluationStatusDto chairmanSelectExpert(String tenderId, Integer chairmanUserId,
+                                                     Integer expertUserId, String expertName);
 
     /**
      * Indent Creator confirms evaluation after reviewing quotations.
