@@ -3174,7 +3174,12 @@ long openHistoryRows;
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        if (!"PENDING_CHAIRMAN_VOTING".equals(eval.getEvaluationStatus())) {
+        String evalSt = eval.getEvaluationStatus();
+        boolean isChairmanClarif = ("PENDING_VENDOR_CLARIFICATION".equals(evalSt)
+                || "PENDING_INDENTOR_CLARIFICATION".equals(evalSt))
+                && "CHAIRMAN".equals(eval.getClarificationRequestedByRole());
+        if (!"PENDING_CHAIRMAN_VOTING".equals(evalSt)
+                && !(isChairmanClarif && "REJECTED".equalsIgnoreCase(decision))) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Tender is not in PENDING_CHAIRMAN_VOTING status."));
         }
@@ -3210,6 +3215,16 @@ long openHistoryRows;
         voteRow.setUpdatedDate(LocalDateTime.now());
         committeeVendorDecisionRepository.save(voteRow);
 
+        VendorQuotationAgainstTender cqt = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId).orElse(null);
+        if (cqt != null && "CHANGE_REQUESTED".equalsIgnoreCase(cqt.getStatus())
+                && "REJECTED".equalsIgnoreCase(normalizedDecision)) {
+            cqt.setStatus("SUBMITTED");
+            quotationRepository.save(cqt);
+            closePendingClarificationsForVendor(tenderId, vendorId,
+                    "CHAIRMAN", chairmanUserId, remarks, eval);
+        }
+
         // Check if chairman voted ALL eligible vendors → auto-transition to PENDING_DIRECTOR_APPROVAL
         List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
         long eligibleVendorCount = "FINANCIAL".equals(phase)
@@ -3222,7 +3237,7 @@ long openHistoryRows;
                 .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "CHAIRMAN");
         long chairmanDecided = chairmanVotes.stream().filter(v -> v.getDecision() != null).count();
 
-        if (chairmanDecided >= eligibleVendorCount) {
+        if (!isChairmanClarif && "PENDING_CHAIRMAN_VOTING".equals(eval.getEvaluationStatus()) && chairmanDecided >= eligibleVendorCount) {
             eval.setEvaluationStatus("PENDING_DIRECTOR_APPROVAL");
             eval.setUpdatedDate(LocalDateTime.now());
             tenderEvaluationRepository.save(eval);
@@ -3239,7 +3254,12 @@ long openHistoryRows;
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        if (!"PENDING_DIRECTOR_APPROVAL".equals(eval.getEvaluationStatus())) {
+        String evalSt = eval.getEvaluationStatus();
+        boolean isDirectorClarif = ("PENDING_VENDOR_CLARIFICATION".equals(evalSt)
+                || "PENDING_INDENTOR_CLARIFICATION".equals(evalSt))
+                && "DIRECTOR".equals(eval.getClarificationRequestedByRole());
+        if (!"PENDING_DIRECTOR_APPROVAL".equals(evalSt)
+                && !(isDirectorClarif && "REJECTED".equalsIgnoreCase(decision))) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                     "Tender is not in PENDING_DIRECTOR_APPROVAL status."));
         }
@@ -3269,6 +3289,16 @@ long openHistoryRows;
         voteRow.setUpdatedDate(LocalDateTime.now());
         committeeVendorDecisionRepository.save(voteRow);
 
+        VendorQuotationAgainstTender dqt = quotationRepository
+                .findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId).orElse(null);
+        if (dqt != null && "CHANGE_REQUESTED".equalsIgnoreCase(dqt.getStatus())
+                && "REJECTED".equalsIgnoreCase(normalizedDecision)) {
+            dqt.setStatus("SUBMITTED");
+            quotationRepository.save(dqt);
+            closePendingClarificationsForVendor(tenderId, vendorId,
+                    "DIRECTOR", directorUserId, remarks, eval);
+        }
+
         // Check if director voted ALL eligible vendors
         List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
         long eligibleVendorCount = "FINANCIAL".equals(phase)
@@ -3281,7 +3311,7 @@ long openHistoryRows;
                 .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "DIRECTOR");
         long directorDecided = directorVotes.stream().filter(v -> v.getDecision() != null).count();
 
-        if (directorDecided >= eligibleVendorCount) {
+        if (!isDirectorClarif && "PENDING_DIRECTOR_APPROVAL".equals(eval.getEvaluationStatus()) && directorDecided >= eligibleVendorCount) {
             // All vendors decided by director
             if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
                     && !Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
