@@ -84,6 +84,7 @@ public class TenderEvaluationStatusDto {
     public static class CommitteeVoteDto {
         private Integer committeeUserId;
         private String committeeMemberName;
+        private String role;                  // CHAIRMAN, CO_CHAIRMAN, MEMBER
         private String vote;                  // APPROVED, REJECTED, null if not voted yet
         private String voteRemarks;
     }

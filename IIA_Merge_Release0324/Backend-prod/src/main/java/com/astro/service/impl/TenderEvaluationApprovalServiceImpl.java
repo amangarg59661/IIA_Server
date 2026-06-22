@@ -61,6 +61,7 @@ public class TenderEvaluationApprovalServiceImpl implements TenderEvaluationAppr
     private static final BigDecimal FIFTY_LAKH = new BigDecimal("5000000");
     private static final BigDecimal ONE_CRORE  = new BigDecimal("10000000");
     private static final String COMMITTEE_MEMBER_ROLE = "Committee Member";
+    private static final String COMMITTEE_CHAIRMAN_ROLE = "Committee Chairman";
 
     private final TenderEvaluationRepository tenderEvaluationRepository;
     private final TenderRequestRepository tenderRequestRepository;
@@ -619,20 +620,29 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
 
         String amtCat = eval.getAmountCategory();
         if ("ABOVE_1_CRORE".equals(amtCat)) {
-            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                    "For ABOVE_1_CRORE tenders, use /chairman/select-expert endpoint instead."));
-        }
-        String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
+            // Ad-hoc committee: validate against ad-hoc chairman
+            if (eval.getAdHocChairmanUserId() == null) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "No ad-hoc Chairman assigned yet for this ABOVE_1_CRORE tender."));
+            }
+            if (!eval.getAdHocChairmanUserId().equals(chairmanUserId)) {
+                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                        "Only the ad-hoc Chairman (" + eval.getAdHocChairmanName()
+                        + ") can confirm committee composition."));
+            }
+        } else {
+            String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
 
-        TechnoFinancialCommittee chairman = committeeRepository
-                .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
-                .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
-                        "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
+            TechnoFinancialCommittee chairman = committeeRepository
+                    .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
+                            "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
 
-        if (!chairman.getUserId().equals(chairmanUserId)) {
-            throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                    "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
-                    + ") can confirm committee composition."));
+            if (!chairman.getUserId().equals(chairmanUserId)) {
+                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                        "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
+                        + ") can confirm committee composition."));
+            }
         }
 
         // Advance to member voting
@@ -838,6 +848,10 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
 
         validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
+        // Validate chairman has voted on ALL eligible vendors via per-vendor flow
+        String chairPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
+        validateAllPerVendorVotes(tenderId, chairPhase, "CHAIRMAN", dto.getChairmanUserId(), eval);
+
         // Validate chairman identity for STEC-I / STEC-II
         if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
                 || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(eval.getAmountCategory())) {
@@ -902,6 +916,10 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         TenderRequest tender = requireTender(tenderId);
 
         validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
+
+        // Validate director has voted on ALL eligible vendors via per-vendor flow
+        String dirPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
+        validateAllPerVendorVotes(tenderId, dirPhase, "DIRECTOR", directorUserId, eval);
 
         TenderCommitteeDecision dirRow = committeeDecisionRepository
                 .findByTenderIdAndCommitteeUserId(tenderId, directorUserId)
@@ -1213,22 +1231,41 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             final String clarVid = dto.getTargetVendorId();
             quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, clarVid)
                 .ifPresent(q -> {
-                    q.setIndentorStatus(null);
-                    q.setIndentorRemarks(null);
+                    if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                        q.setFinancialIndentorStatus(null);
+                        q.setFinancialIndentorRemarks(null);
+                    } else {
+                        q.setIndentorStatus(null);
+                        q.setIndentorRemarks(null);
+                    }
                     q.setStatus("CHANGE_REQUESTED");
                     q.setRemarks(dto.getRemarks());
                     q.setUpdatedDate(LocalDateTime.now());
                     quotationRepository.save(q);
                 });
         } else {
-            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).forEach(q -> {
-                q.setIndentorStatus(null);
-                q.setIndentorRemarks(null);
+            List<VendorQuotationAgainstTender> allQ =
+                    quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+            if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+                    && Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                allQ = allQ.stream()
+                        .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                        .collect(Collectors.toList());
+            }
+            allQ.forEach(q -> {
+                if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
+                    q.setFinancialIndentorStatus(null);
+                    q.setFinancialIndentorRemarks(null);
+                } else {
+                    q.setIndentorStatus(null);
+                    q.setIndentorRemarks(null);
+                }
                 q.setStatus("CHANGE_REQUESTED");
                 q.setRemarks(dto.getRemarks());
                 q.setUpdatedDate(LocalDateTime.now());
             });
-            quotationRepository.saveAll(quotationRepository.findByTenderIdAndIsLatestTrue(tenderId));
+            quotationRepository.saveAll(allQ);
         }
     }
                 }
@@ -1738,7 +1775,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                                 q.setFinancialSpoStatus("PENDING");
                             }
                             q.setUpdatedDate(LocalDateTime.now());
-                            quotationRepository.save(q);
+                            quotationRepository.saveAndFlush(q);
                         });
             } else {
                 log.info("PP respond: keeping CHANGE_REQUESTED, still {} open PP questions", remainingOpen.size());
@@ -1895,7 +1932,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                     .findByTenderIdOrderByRequestedAtDesc(tenderId)
                     .stream()
                     .filter(h -> h.getRespondedAt() == null)
-                    .filter(h -> !Set.of("VENDOR", "ALL_VENDORS").contains(h.getClarificationTarget()))
+                    .filter(h -> !Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL")
+                            .contains(h.getClarificationTarget()))
                     .count();
         } else {
             openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
@@ -1997,8 +2035,8 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         eval.setUpdatedDate(LocalDateTime.now());
         tenderEvaluationRepository.save(eval);
 
-        // Auto-assign Committee Member role to chairman and co-chairman
-        ensureCommitteeMemberRole(dto.getChairmanUserId());
+        // Auto-assign Committee Chairman role to chairman, Member role to co-chairman
+        ensureCommitteeChairmanRole(dto.getChairmanUserId());
         if (dto.getCoChairmanUserId() != null) {
             ensureCommitteeMemberRole(dto.getCoChairmanUserId());
         }
@@ -2695,6 +2733,27 @@ long openHistoryRows;
         }
     }
 
+    private void validateAllPerVendorVotes(String tenderId, String phase,
+                                             String voterRole, Integer voterId,
+                                             TenderEvaluation eval) {
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        long eligibleCount = "FINANCIAL".equals(phase)
+                ? quotations.stream()
+                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                    .count()
+                : quotations.size();
+        List<TenderCommitteeVendorDecision> votes = committeeVendorDecisionRepository
+                .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, voterRole);
+        long decidedCount = votes.stream().filter(v -> v.getDecision() != null).count();
+        if (decidedCount < eligibleCount) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Please Accept or Reject all vendors before confirming. "
+                    + voterRole + " voted: " + decidedCount + "/" + eligibleCount));
+        }
+    }
+
     private void markApprovedVendorCompleted(String tenderId, String vendorId) {
         quotationRepository.findByTenderIdAndVendorIdAndIsLatestTrue(tenderId, vendorId)
                 .ifPresent(q -> {
@@ -2797,6 +2856,11 @@ long openHistoryRows;
             List<TenderCommitteeDecision> decisions =
                     committeeDecisionRepository.findByTenderId(tenderId);
 
+            Integer chairmanId = eval.getAdHocChairmanUserId() != null
+                    ? eval.getAdHocChairmanUserId()
+                    : resolveChairmanUserId(eval);
+            Integer coChairmanId = eval.getAdHocCoChairmanUserId();
+
             List<TenderEvaluationStatusDto.CommitteeVoteDto> votes = decisions.stream()
                     .filter(d -> d.getCommitteeMemberName() != null)
                     .map(d -> {
@@ -2804,6 +2868,14 @@ long openHistoryRows;
                                 new TenderEvaluationStatusDto.CommitteeVoteDto();
                         v.setCommitteeUserId(d.getCommitteeUserId());
                         v.setCommitteeMemberName(d.getCommitteeMemberName());
+                        if (d.getCommitteeUserId() != null && d.getCommitteeUserId().equals(chairmanId)) {
+                            v.setRole("CHAIRMAN");
+                        } else if (coChairmanId != null && d.getCommitteeUserId() != null
+                                && d.getCommitteeUserId().equals(coChairmanId)) {
+                            v.setRole("CO_CHAIRMAN");
+                        } else {
+                            v.setRole("MEMBER");
+                        }
                         v.setVote(d.getVote());
                         v.setVoteRemarks(d.getVoteRemarks());
                         return v;
@@ -3225,23 +3297,7 @@ long openHistoryRows;
                     "CHAIRMAN", chairmanUserId, remarks, eval);
         }
 
-        // Check if chairman voted ALL eligible vendors → auto-transition to PENDING_DIRECTOR_APPROVAL
-        List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-        long eligibleVendorCount = "FINANCIAL".equals(phase)
-                ? quotations.stream()
-                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
-                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
-                    .count()
-                : quotations.size();
-        List<TenderCommitteeVendorDecision> chairmanVotes = committeeVendorDecisionRepository
-                .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "CHAIRMAN");
-        long chairmanDecided = chairmanVotes.stream().filter(v -> v.getDecision() != null).count();
-
-        if (!isChairmanClarif && "PENDING_CHAIRMAN_VOTING".equals(eval.getEvaluationStatus()) && chairmanDecided >= eligibleVendorCount) {
-            eval.setEvaluationStatus("PENDING_DIRECTOR_APPROVAL");
-            eval.setUpdatedDate(LocalDateTime.now());
-            tenderEvaluationRepository.save(eval);
-        }
+        // No auto-transition — chairman must click "Confirm Evaluation" explicitly
 
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -3299,36 +3355,7 @@ long openHistoryRows;
                     "DIRECTOR", directorUserId, remarks, eval);
         }
 
-        // Check if director voted ALL eligible vendors
-        List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-        long eligibleVendorCount = "FINANCIAL".equals(phase)
-                ? quotations.stream()
-                    .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
-                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
-                    .count()
-                : quotations.size();
-        List<TenderCommitteeVendorDecision> directorVotes = committeeVendorDecisionRepository
-                .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "DIRECTOR");
-        long directorDecided = directorVotes.stream().filter(v -> v.getDecision() != null).count();
-
-        if (!isDirectorClarif && "PENDING_DIRECTOR_APPROVAL".equals(eval.getEvaluationStatus()) && directorDecided >= eligibleVendorCount) {
-            // All vendors decided by director
-            if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
-                    && !Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
-                // Technical phase done → reveal financial bids → members vote again
-                List<VendorQuotationAgainstTender> approved = quotations.stream()
-                        .filter(q -> !"REJECTED".equalsIgnoreCase(q.getIndentorStatus()))
-                        .collect(Collectors.toList());
-                approved.forEach(q -> q.setFinancialBidVisible(true));
-                quotationRepository.saveAll(approved);
-                eval.setFinancialBidPhase(true);
-                eval.setEvaluationStatus("PENDING_MEMBER_VOTING");
-            } else {
-                eval.setEvaluationStatus("APPROVED");
-            }
-            eval.setUpdatedDate(LocalDateTime.now());
-            tenderEvaluationRepository.save(eval);
-        }
+        // No auto-transition — director must click "Confirm Evaluation" explicitly
 
         return buildStatusDto(eval, tender, tenderId);
     }
@@ -3484,10 +3511,18 @@ long openHistoryRows;
     // ─────────────────────────────────────────────────────────────────
 
     private boolean ensureCommitteeMemberRole(Integer userId) {
-        RoleMaster role = roleMasterRepository.findByRoleName(COMMITTEE_MEMBER_ROLE)
+        return ensureRole(userId, COMMITTEE_MEMBER_ROLE);
+    }
+
+    private boolean ensureCommitteeChairmanRole(Integer userId) {
+        return ensureRole(userId, COMMITTEE_CHAIRMAN_ROLE);
+    }
+
+    private boolean ensureRole(Integer userId, String roleName) {
+        RoleMaster role = roleMasterRepository.findByRoleName(roleName)
                 .orElseThrow(() -> new BusinessException(new ErrorDetails(500, 1,
                         "CONFIGURATION_ERROR",
-                        "Role '" + COMMITTEE_MEMBER_ROLE + "' not found in ROLE_MASTER.")));
+                        "Role '" + roleName + "' not found in ROLE_MASTER.")));
 
         UserRoleMaster existing = userRoleMasterRepository.findByRoleIdAndUserId(role.getRoleId(), userId);
         if (existing != null) {
@@ -3496,7 +3531,7 @@ long openHistoryRows;
             }
             existing.setIsActive(true);
             userRoleMasterRepository.save(existing);
-            log.info("Reactivated Committee Member role for userId {}", userId);
+            log.info("Reactivated {} role for userId {}", roleName, userId);
             return true;
         }
 
@@ -3508,7 +3543,7 @@ long openHistoryRows;
         newRole.setIsActive(true);
         newRole.setCreatedDate(new java.util.Date());
         userRoleMasterRepository.save(newRole);
-        log.info("Assigned Committee Member role to userId {}", userId);
+        log.info("Assigned {} role to userId {}", roleName, userId);
         return true;
     }
 
@@ -3527,14 +3562,41 @@ long openHistoryRows;
             return;
         }
 
-        RoleMaster role = roleMasterRepository.findByRoleName(COMMITTEE_MEMBER_ROLE).orElse(null);
+        deactivateRole(userId, COMMITTEE_MEMBER_ROLE, excludeTenderId);
+    }
+
+    private void removeCommitteeChairmanRoleIfSafe(Integer userId, String excludeTenderId) {
+        // Skip permanent STEC chairman
+        if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
+            log.debug("User {} is permanent STEC member. Keeping chairman role.", userId);
+            return;
+        }
+
+        // Check if user is ad-hoc chairman on any other active tender
+        List<TenderEvaluation> otherChairmanships = tenderEvaluationRepository.findAll().stream()
+                .filter(e -> userId.equals(e.getAdHocChairmanUserId())
+                        && !e.getTenderId().equals(excludeTenderId)
+                        && !"APPROVED".equals(e.getEvaluationStatus())
+                        && !"REJECTED".equals(e.getEvaluationStatus()))
+                .toList();
+        if (!otherChairmanships.isEmpty()) {
+            log.debug("User {} is ad-hoc chairman on {} other tenders. Keeping chairman role.",
+                    userId, otherChairmanships.size());
+            return;
+        }
+
+        deactivateRole(userId, COMMITTEE_CHAIRMAN_ROLE, excludeTenderId);
+    }
+
+    private void deactivateRole(Integer userId, String roleName, String excludeTenderId) {
+        RoleMaster role = roleMasterRepository.findByRoleName(roleName).orElse(null);
         if (role == null) return;
 
         UserRoleMaster urm = userRoleMasterRepository.findByRoleIdAndUserId(role.getRoleId(), userId);
         if (urm != null && Boolean.TRUE.equals(urm.getIsActive())) {
             urm.setIsActive(false);
             userRoleMasterRepository.save(urm);
-            log.info("Deactivated Committee Member role for userId {} (removed from tender {})", userId, excludeTenderId);
+            log.info("Deactivated {} role for userId {} (removed from tender {})", roleName, userId, excludeTenderId);
         }
     }
 
@@ -3643,8 +3705,13 @@ long openHistoryRows;
         row.setUpdatedDate(LocalDateTime.now());
         committeeDecisionRepository.save(row);
 
-        // Auto-assign role
-        boolean roleAssigned = ensureCommitteeMemberRole(userId);
+        // Auto-assign role based on committee position
+        boolean roleAssigned;
+        if ("CHAIRMAN".equals(assignedRole)) {
+            roleAssigned = ensureCommitteeChairmanRole(userId);
+        } else {
+            roleAssigned = ensureCommitteeMemberRole(userId);
+        }
 
         log.info("Director {} added user {} as {} to ad-hoc committee for tender {}. Role assigned: {}",
                 directorUserId, userId, assignedRole, tenderId, roleAssigned);
@@ -3723,10 +3790,14 @@ long openHistoryRows;
 
         committeeDecisionRepository.delete(decision);
 
-        // Auto-remove role if no other assignments
-        removeCommitteeMemberRoleIfSafe(userId, tenderId);
-
         boolean wasChairman = userId.equals(eval.getAdHocChairmanUserId());
+
+        // Auto-remove role if no other assignments
+        if (wasChairman) {
+            removeCommitteeChairmanRoleIfSafe(userId, tenderId);
+        } else {
+            removeCommitteeMemberRoleIfSafe(userId, tenderId);
+        }
 
         // Clear chairman if removing the chairman
         if (wasChairman) {
