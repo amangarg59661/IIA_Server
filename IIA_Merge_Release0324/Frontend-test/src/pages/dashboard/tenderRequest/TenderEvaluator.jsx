@@ -1769,8 +1769,7 @@ if (isSpoRole) {
   && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED' || record.indentorStatus === 'REJECTED');
     const pendingToIndentor = record.changeRequestToIndentor;
     const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-    const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-    const vendorPpClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif) || evalPendingVendorClarif;
+    const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
 
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2101,8 +2100,7 @@ if (isSpoRole) {
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
       if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
       const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-      const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       return status === 'ACCEPTED' ? (
         <Tag color="green">Accepted</Tag>
       ) : (
@@ -2112,7 +2110,7 @@ if (isSpoRole) {
           disabled={
             status === 'ACCEPTED' ||
             status === 'REJECTED' ||
-            vendorClarifPending 
+            vendorClarifPending
           }
           title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
@@ -2129,8 +2127,7 @@ if (isSpoRole) {
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
       if (techRejected) return <Tag color="default">N/A</Tag>;
       const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-      const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       return status === 'REJECTED' ? (
         <span style={{ color: 'red' }}>Rejected</span>
       ) : (
@@ -2193,8 +2190,7 @@ if (isSpoRole) {
       const status = isFinancialPhase ? record.financialIndentorStatus : record.indentorStatus;
       const techRejected = isFinancialPhase && (record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED');
       const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-      const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+      const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
       if (techRejected) return <Tag color="default">N/A</Tag>;
       return vendorHasIndentorClarif ? (
         <Tag color="orange">Clarification Pending</Tag>
@@ -2580,8 +2576,7 @@ const doubleBidTechColumns = [
           render: (_, record) => {
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'ACCEPTED' ? (
               <Tag color="green">Accepted</Tag>
             ) : (
@@ -2604,8 +2599,7 @@ const doubleBidTechColumns = [
           render: (_, record) => {
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'REJECTED' ? (
               <span style={{ color: 'red' }}>Rejected</span>
             ) : (
@@ -2652,8 +2646,7 @@ const doubleBidTechColumns = [
   )) return null;
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return vendorHasIndentorClarif ? (
               <Tag color="orange">Clarification Pending</Tag>
             ) : (vendorClarifPending || record.changeRequestToIndentor) ? (
@@ -2866,8 +2859,7 @@ const doubleBidFinColumns = [
           render: (_, record) => {
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'ACCEPTED' ? (
               <Tag color="green">Accepted</Tag>
             ) : (
@@ -2890,8 +2882,7 @@ const doubleBidFinColumns = [
           render: (_, record) => {
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return st === 'REJECTED' ? (
               <span style={{ color: 'red' }}>Rejected</span>
             ) : (
@@ -2938,8 +2929,7 @@ const doubleBidFinColumns = [
   )) return null;
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-            const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-            const vendorClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif) || evalPendingVendorClarif;
+            const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
             return vendorHasIndentorClarif ? (
               <Tag color="orange">Clarification Pending</Tag>
             ) : vendorClarifPending ? (
@@ -3158,8 +3148,7 @@ const spoTechColumns = [
             && (!record.sopStatus || record.sopStatus === 'PENDING');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-          const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-    const vendorPpClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif) || evalPendingVendorClarif;
+    const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
 
           return (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -3410,8 +3399,7 @@ const spoFinColumns = [
   && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING' || record.financialSpoStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
-          const evalPendingVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
-    const vendorPpClarifPending = (record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif) || evalPendingVendorClarif;
+    const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
 
           return (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
