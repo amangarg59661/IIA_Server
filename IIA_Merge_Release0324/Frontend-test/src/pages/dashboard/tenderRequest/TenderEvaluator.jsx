@@ -222,8 +222,17 @@ const showPpTechLineClarif = isPurchasePersonnelRole
 const showPpFinLineClarif = isPurchasePersonnelRole
   && isDoubleBidEval
   && isLimitedOrProp
-  && evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD';
+  && (evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD'
+      || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && evalStatus?.financialBidPhase));
 const showEvaluationSection = true;
+// GEM/OPEN/GLOBAL multi-indent under-10L vendor clarification: disable Accept, restrict Reject to clarification seeker
+const isGemMultiVendorClarif = evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION'
+  && isOpenGlobalGem && isMultipleIndentEval && isBelow10L;
+const ppIsClarifSeeker = evalStatus?.clarificationRequestedByRole === 'PURCHASE_PERSONNEL';
+const spoIsClarifSeeker = evalStatus?.clarificationRequestedByRole === 'SPO';
+// GEM/OPEN/GLOBAL multi-indent under-10L indentor clarification: PP Accept must stay enabled
+const isGemMultiIndentorClarif = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION'
+  && isOpenGlobalGem && isMultipleIndentEval && isBelow10L;
 // ── Double bid: separate control flags per phase ──
 const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval) ||
@@ -1765,8 +1774,8 @@ if (isSpoRole) {
       && record.status !== 'CHANGE_REQUESTED';
     // Reject always allowed even if vendor hasn't responded — prevents flow from getting stuck
    const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
-  && record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null
-  && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED' || record.indentorStatus === 'REJECTED');
+  && (record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null || record.indentorStatus === 'REJECTED')
+  && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
     const pendingToIndentor = record.changeRequestToIndentor;
     const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
     const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
@@ -1775,9 +1784,9 @@ if (isSpoRole) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button
           size="small"
-          disabled={!spoCanAct || spStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending}
+          disabled={!spoCanAct || spStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
           onClick={() => handleSpoReview(record, 'ACCEPT')}
-          title={vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first': ''}
+          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first': ''}
         >
           {spStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
         </Button>
@@ -1795,7 +1804,7 @@ if (isSpoRole) {
       />
       <Button
         type="primary"
-        disabled={!spoCanReject || spStatus === 'REJECTED'}
+        disabled={!spoCanReject || spStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}
         // disabled={!spoCanAct || spStatus === 'REJECTED'}
         onClick={() => handleSpoReview(record, 'REJECT')}
         style={{ marginTop: 8 }}
@@ -1810,7 +1819,7 @@ if (isSpoRole) {
   <Button
     size="small"
     style={{ color: 'red' }}
-    disabled={!spoCanReject || spStatus === 'REJECTED'}
+    disabled={!spoCanReject || spStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}
     // disabled={!spoCanAct || spStatus === 'REJECTED'}
   >
     {spStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
@@ -2101,18 +2110,20 @@ if (isSpoRole) {
       if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
       const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
       const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
-      return status === 'ACCEPTED' ? (
+      const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
+      return (status === 'ACCEPTED' && !spoRequestedReview) ? (
         <Tag color="green">Accepted</Tag>
       ) : (
         <Button
           onClick={() => handleAccept(record)}
           size="small"
           disabled={
-            status === 'ACCEPTED' ||
+            (status === 'ACCEPTED' && !spoRequestedReview) ||
             status === 'REJECTED' ||
-            vendorClarifPending
+            (vendorClarifPending && !isGemMultiIndentorClarif) ||
+            isGemMultiVendorClarif
           }
-          title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
+          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
           Accept
         </Button>
@@ -2145,7 +2156,8 @@ if (isSpoRole) {
                 onClick={() => handleReject(record)}
                 style={{ marginTop: 8 }}
                 disabled={
-                  status === 'REJECTED'
+                  status === 'REJECTED' ||
+                  (isGemMultiVendorClarif && !ppIsClarifSeeker)
                 }
               >
                 Submit
@@ -2156,7 +2168,8 @@ if (isSpoRole) {
           trigger="click"
         >
           <Button danger type="link" disabled={
-            status === 'REJECTED' 
+            status === 'REJECTED' ||
+            (isGemMultiVendorClarif && !ppIsClarifSeeker)
           }>
             Reject
           </Button>
@@ -2319,7 +2332,7 @@ if (isSpoRole) {
     const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
     const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
     const viewed = viewedVendorIds.has(record.vendorId);
-    const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+    const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
     const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
     if (cv) {
       return (
@@ -2350,7 +2363,7 @@ if (isSpoRole) {
   width: 280,
   render: (_, record) => {
     const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
-    const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+    const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
     if (dv) {
       return (
         <Space size={4}>
@@ -2515,7 +2528,7 @@ const doubleBidTechColumns = [
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
       const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
       const viewed = viewedVendorIds.has(record.vendorId);
-      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
       if (cv) {
         return (
@@ -2545,7 +2558,7 @@ const doubleBidTechColumns = [
     width: 280,
     render: (_, record) => {
       const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
-      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       if (dv) {
         return (
           <Space size={4}>
@@ -2577,16 +2590,18 @@ const doubleBidTechColumns = [
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
             const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
-            return st === 'ACCEPTED' ? (
+            const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
+            return (st === 'ACCEPTED' && !spoRequestedReview) ? (
               <Tag color="green">Accepted</Tag>
             ) : (
               <Button
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED'  || vendorClarifPending
+                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' || (vendorClarifPending && !isGemMultiIndentorClarif) ||
+                  isGemMultiVendorClarif
                 }
-                title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>
@@ -2616,7 +2631,7 @@ const doubleBidTechColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' }
+                      disabled={st === 'REJECTED' || (isGemMultiVendorClarif && !ppIsClarifSeeker)}
                     >
                       Submit
                     </Button>
@@ -2626,7 +2641,8 @@ const doubleBidTechColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED' 
+                  st === 'REJECTED' ||
+                  (isGemMultiVendorClarif && !ppIsClarifSeeker)
                 }>
                   Reject
                 </Button>
@@ -2860,16 +2876,18 @@ const doubleBidFinColumns = [
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
             const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
-            return st === 'ACCEPTED' ? (
+            const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
+            return (st === 'ACCEPTED' && !spoRequestedReview) ? (
               <Tag color="green">Accepted</Tag>
             ) : (
               <Button
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  st === 'ACCEPTED' || st === 'REJECTED' || vendorClarifPending
+                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' || (vendorClarifPending && !isGemMultiIndentorClarif) ||
+                  isGemMultiVendorClarif
                 }
-                title={vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>
@@ -2899,7 +2917,7 @@ const doubleBidFinColumns = [
                       type="primary"
                       onClick={() => handleReject(record)}
                       style={{ marginTop: 8 }}
-                      disabled={st === 'REJECTED' }
+                      disabled={st === 'REJECTED' || (isGemMultiVendorClarif && !ppIsClarifSeeker)}
                     >
                       Submit
                     </Button>
@@ -2909,7 +2927,8 @@ const doubleBidFinColumns = [
                 trigger="click"
               >
                 <Button danger type="link" disabled={
-                  st === 'REJECTED'  
+                  st === 'REJECTED' ||
+                  (isGemMultiVendorClarif && !ppIsClarifSeeker)
                 }>
                   Reject
                 </Button>
@@ -2953,16 +2972,19 @@ const doubleBidFinColumns = [
       {
         title: 'Seek Clarification',
         key: 'ppFinLineClarif',
-        render: (_, record) => (
+        render: (_, record) => {
+          const vendorClarifSent = record.financialStatus === 'CHANGE_REQUESTED' || record.status === 'CHANGE_REQUESTED';
+          return (
           <Button
             type="link"
             style={{ color: '#fa8c16', padding: 0 }}
-            disabled={record.financialStatus === 'CHANGE_REQUESTED'}
+            disabled={vendorClarifSent}
             onClick={() => openVendorClarificationModal(record.vendorId, 'PURCHASE_PERSONNEL')}
           >
-            {record.financialStatus === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
+            {vendorClarifSent ? 'Pending' : 'Seek Clarification'}
           </Button>
-        ),
+          );
+        },
       },
     ]
   : []),
@@ -2977,7 +2999,7 @@ const doubleBidFinColumns = [
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
       const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
       const viewed = viewedVendorIds.has(record.vendorId);
-      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
       if (cv) {
         return (
@@ -3007,7 +3029,7 @@ const doubleBidFinColumns = [
     width: 280,
     render: (_, record) => {
       const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
-      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+      const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       if (dv) {
         return (
           <Space size={4}>
@@ -3145,7 +3167,7 @@ const spoTechColumns = [
             && record.status !== 'CHANGE_REQUESTED';
           const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && (record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null || record.indentorStatus === 'REJECTED')
-            && (!record.sopStatus || record.sopStatus === 'PENDING');
+            && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
     const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
@@ -3154,9 +3176,9 @@ const spoTechColumns = [
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
-                disabled={!spoCanAct || record.sopStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending}
+                disabled={!spoCanAct || record.sopStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
                 onClick={() => handleSpoReview(record, 'ACCEPT')}
-                title={vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
               >
                 {record.sopStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
               </Button>
@@ -3171,7 +3193,7 @@ const spoTechColumns = [
                     />
                     <Button type="primary"
                       // disabled={!spoCanAct || record.sopStatus === 'REJECTED'}
-                      disabled={!spoCanReject || record.sopStatus === 'REJECTED'}
+                      disabled={!spoCanReject || record.sopStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}
                       onClick={() => handleSpoReview(record, 'REJECT')}
                       style={{ marginTop: 8 }}>
                       Submit
@@ -3183,7 +3205,7 @@ const spoTechColumns = [
               >
                 <Button size="small" style={{ color: 'red' }}
                   // disabled={!spoCanAct || record.sopStatus === 'REJECTED'}>
-                  disabled={!spoCanReject || record.sopStatus === 'REJECTED'}>
+                  disabled={!spoCanReject || record.sopStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}>
                   {record.sopStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
                 </Button>
               </Popover>
@@ -3405,9 +3427,9 @@ const spoFinColumns = [
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
-                disabled={!spoCanAct || record.financialSpoStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending}
+                disabled={!spoCanAct || record.financialSpoStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
                 onClick={() => handleSpoReview(record, 'ACCEPT')}
-                title={vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
               >
                 {record.financialSpoStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
               </Button>
@@ -3422,7 +3444,7 @@ const spoFinColumns = [
                     />
                     <Button type="primary"
                       // disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}
-                       disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED'}
+                       disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}
                       onClick={() => handleSpoReview(record, 'REJECT')}
                       style={{ marginTop: 8 }}>
                       Submit
@@ -3434,7 +3456,7 @@ const spoFinColumns = [
               >
                 <Button size="small" style={{ color: 'red' }}
                   // disabled={!spoCanAct || record.financialSpoStatus === 'REJECTED'}>
-                   disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED'}>
+                   disabled={!spoCanReject || record.financialSpoStatus === 'REJECTED' || (isGemMultiVendorClarif && !spoIsClarifSeeker)}>
                   {record.financialSpoStatus === 'REJECTED' ? 'Rejected' : 'SPO Reject'}
                 </Button>
               </Popover>
