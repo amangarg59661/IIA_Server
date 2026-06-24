@@ -195,11 +195,15 @@ const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formDat
 const ppOnlyRespondingForVendor = isPurchasePersonnelRole && isOpenGlobalGem && !isMultipleIndentEval
   && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
 
+const isDocUploadPhase = evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
+  || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD';
+
 const showActionButtons =
+  (isPurchasePersonnelRole && isDocUploadPhase && quotationData.length > 0) ||
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval && evalStatus !== null
-    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
+    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL' && !isDocUploadPhase) ||
    (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null
-    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
+    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL' && !isDocUploadPhase) ||
    (isPurchasePersonnelRole && isBelow10L && evalStatus !== null
     && !ppOnlyRespondingForVendor
     && ['PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus))) ||
@@ -214,13 +218,15 @@ const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStat
 const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement);
 
 const showPpPreInitiateClarif = isPurchasePersonnelRole
-  && evalStatus === null
+  && (evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
+      || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD')
   && isBelow10L
   && quotationData.length > 0;
 
-  // ── PP: line-level Seek Clarification & Reject — pre-initiate and financial upload ──
+  // ── PP: line-level Seek Clarification & Reject — during document upload phases ──
 const showPpTechLineClarif = isPurchasePersonnelRole
-  && (evalStatus === null || evalStatus?.evaluationStatus === 'PENDING_INITIATION')
+  && (evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
+      || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD')
   && quotationData.length > 0;
 
 const showPpFinLineClarif = isPurchasePersonnelRole
@@ -624,34 +630,47 @@ const fetchEvalStatus = async (tid) => {
 
 const handleInitiateEvaluation = async () => {
   if (!tenderId) return message.warning('Select a tender first.');
+  try {
+    setInitiating(true);
+    const res = await axios.post('/api/tender-evaluation/begin', null, {
+      params: { tenderId, userId }
+    });
+    setEvalStatus(res.data?.responseData);
+    message.success('Evaluation initiated. Please upload the Comparison Statement.');
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to initiate evaluation.');
+  } finally {
+    setInitiating(false);
+  }
+};
+
+const handleSubmitDocumentAndProceed = async () => {
+  if (!tenderId) return;
   if (!formData.comparationStatementFileName?.[0]) {
-    return message.warning('Please upload the Comparison Statement before initiating evaluation.');
+    return message.warning('Please upload the Comparison Statement before proceeding.');
   }
   try {
     setInitiating(true);
-    // Save comparison sheet: try PUT (update) first, fall back to POST (create)
-    if (formData.comparationStatementFileName?.[0]) {
-      try {
-        await axios.put('/api/tender-evaluation', {
-          uploadQualifiedVendorsFileName: formData.comparationStatementFileName[0],
-          updatedBy: String(userId),
-        }, { params: { tenderId } });
-      } catch {
-        await axios.post('/api/tender-evaluation', {
-          tenderId,
-          uploadQualifiedVendorsFileName: formData.comparationStatementFileName[0],
-          createdBy: userId,
-          fileType: 'Tender',
-        });
-      }
+    try {
+      await axios.put('/api/tender-evaluation', {
+        uploadQualifiedVendorsFileName: formData.comparationStatementFileName[0],
+        updatedBy: String(userId),
+      }, { params: { tenderId } });
+    } catch {
+      await axios.post('/api/tender-evaluation', {
+        tenderId,
+        uploadQualifiedVendorsFileName: formData.comparationStatementFileName[0],
+        createdBy: userId,
+        fileType: 'Tender',
+      });
     }
     const res = await axios.post('/api/tender-evaluation/initiate', null, {
       params: { tenderId, userId }
     });
     setEvalStatus(res.data?.responseData);
-    message.success('Evaluation initiated successfully.');
+    message.success('Document submitted. Evaluation proceeding.');
   } catch (e) {
-    message.error(e?.response?.data?.responseStatus?.message || 'Failed to initiate evaluation.');
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to proceed.');
   } finally {
     setInitiating(false);
   }
@@ -1155,7 +1174,7 @@ const handleApproveCommitteeResponse = async () => {
     onOk: async () => {
       try {
         for (const vid of vendorIds) {
-          const chairmanVote = vendorVotesMap[vid]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+          const chairmanVote = vendorVotesMap[vid]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase);
           if (chairmanVote) {
             await axios.post('/api/tender-evaluation/director/vendor-vote', null, {
               params: { tenderId, vendorId: vid, decision: chairmanVote.decision, directorUserId: userId }
@@ -1459,8 +1478,9 @@ const showDirectorInlineActions = isAbove10L && isDirector &&
     evalStatus?.clarificationRequestedByRole === 'DIRECTOR'));
 
 // Above 10L gated flow computed values
+const currentVotePhase = isFinancialPhase ? 'FINANCIAL' : 'TECHNICAL';
 const myVendorVotes = Object.values(evalStatus?.committeeVendorVotes || {})
-  .map(votes => votes.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'));
+  .map(votes => votes.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase));
 const allMyVendorsDecided = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.decision);
 const myVotesConfirmed = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.confirmed);
 
@@ -1480,7 +1500,7 @@ const allChairmanVendorsDecided = (() => {
   const vendorIds = Object.keys(votesMap);
   if (vendorIds.length === 0) return false;
   return vendorIds.every(vid =>
-    votesMap[vid]?.some(v => v.voterRole === 'CHAIRMAN' && v.decision)
+    votesMap[vid]?.some(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase)
   );
 })();
 
@@ -1489,7 +1509,7 @@ const allDirectorVendorsDecided = (() => {
   const vendorIds = Object.keys(votesMap);
   if (vendorIds.length === 0) return false;
   return vendorIds.every(vid =>
-    votesMap[vid]?.some(v => v.voterRole === 'DIRECTOR' && v.decision)
+    votesMap[vid]?.some(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase)
   );
 })();
 
@@ -1931,7 +1951,7 @@ if (isSpoRole) {
   width: 250,
   render: (_, record) => {
     if (isAbove10L) {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
       if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
     } else {
       if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
@@ -2014,7 +2034,7 @@ if (isSpoRole) {
     }
     if (isAbove10L && (isCommitteeMember || isAssignedExpert)) {
       const myVote = evalStatus?.committeeVendorVotes?.[record.vendorId]
-        ?.find(v => String(v.committeeUserId) === String(userId));
+        ?.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase);
       if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
       return <Tag color="orange">Pending</Tag>;
     }
@@ -2041,7 +2061,7 @@ if (isSpoRole) {
       dataIndex: 'sopStatus',
       render: (sopStatus, record) => {
         if (isAbove10L) {
-          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase);
           if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
           if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
           return <Tag color="orange">Pending</Tag>;
@@ -2057,7 +2077,7 @@ if (isSpoRole) {
       key: 'singleDirectorStatus',
       width: 140,
       render: (_, record) => {
-        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
         if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
         if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -2084,7 +2104,7 @@ if (isSpoRole) {
       width: 130,
       render: (val, record) => {
         if (isAbove10L) {
-          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+          const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase);
           if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
           if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
           return <Tag color="orange">Pending</Tag>;
@@ -2100,7 +2120,7 @@ if (isSpoRole) {
       key: 'singleFinDirectorStatus',
       width: 140,
       render: (_, record) => {
-        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
         if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
         if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -2236,7 +2256,7 @@ if (isSpoRole) {
   width: 250,
   render: (_, record) => {
     if (isAbove10L) {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
       if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
     } else {
       if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
@@ -2331,7 +2351,7 @@ if (isSpoRole) {
     width: 120,
     render: (_, record) => {
       const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'
+        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase
       );
       if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
       return <Tag color="orange">Pending</Tag>;
@@ -2343,7 +2363,7 @@ if (isSpoRole) {
     width: 220,
     render: (_, record) => {
       const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER'
+        v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase
       );
       const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
       const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
@@ -2375,7 +2395,7 @@ if (isSpoRole) {
       (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
        evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
     const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
-    const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+    const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase);
     const viewed = viewedVendorIds.has(record.vendorId);
     const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
     const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
@@ -2407,7 +2427,7 @@ if (isSpoRole) {
   key: 'directorSingleAction',
   width: 280,
   render: (_, record) => {
-    const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+    const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
     const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
     if (dv) {
       return (
@@ -2513,7 +2533,7 @@ const doubleBidTechColumns = [
     render: (val, record) => {
       if (isAbove10L) {
         const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
-        const myVote = vendorVotes?.find(v => String(v.committeeUserId) === String(userId));
+        const myVote = vendorVotes?.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'TECHNICAL');
         if (isChairman || isAssignedExpert || isCommitteeMember || isDirector) {
           return (
             <Button size="small" type="primary" ghost
@@ -2540,7 +2560,7 @@ const doubleBidTechColumns = [
     dataIndex: 'sopStatus',
     render: (val, record) => {
       if (isAbove10L) {
-        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'TECHNICAL');
         if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
         if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -2556,7 +2576,7 @@ const doubleBidTechColumns = [
     key: 'directorStatus',
     width: 140,
     render: (_, record) => {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'TECHNICAL');
       if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
       if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
       return <Tag color="orange">Pending</Tag>;
@@ -2571,7 +2591,7 @@ const doubleBidTechColumns = [
         (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
          evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
-      const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+      const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'TECHNICAL');
       const viewed = viewedVendorIds.has(record.vendorId);
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
@@ -2602,7 +2622,7 @@ const doubleBidTechColumns = [
     key: 'directorAction',
     width: 280,
     render: (_, record) => {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'TECHNICAL');
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       if (dv) {
         return (
@@ -2733,7 +2753,7 @@ const doubleBidTechColumns = [
     width: 250,
     render: (_, record) => {
       if (isAbove10L) {
-        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
         if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
       } else {
         if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
@@ -2821,7 +2841,7 @@ const doubleBidTechColumns = [
       width: 120,
       render: (_, record) => {
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-          v => String(v.committeeUserId) === String(userId)
+          v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'TECHNICAL'
         );
         if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -2833,7 +2853,7 @@ const doubleBidTechColumns = [
       width: 220,
       render: (_, record) => {
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-          v => String(v.committeeUserId) === String(userId)
+          v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'TECHNICAL'
         );
         const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
         const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
@@ -2901,7 +2921,7 @@ const doubleBidFinColumns = [
     render: (val, record) => {
       if (isAbove10L) {
         const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
-        const myVote = vendorVotes?.find(v => String(v.committeeUserId) === String(userId));
+        const myVote = vendorVotes?.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'FINANCIAL');
         if (isChairman || isAssignedExpert || isCommitteeMember || isDirector) {
           return (
             <Button size="small" type="primary" ghost
@@ -2928,7 +2948,7 @@ const doubleBidFinColumns = [
     width: 150,
     render: (val, record) => {
       if (isAbove10L) {
-        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+        const cv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'FINANCIAL');
         if (cv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
         if (cv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -2944,7 +2964,7 @@ const doubleBidFinColumns = [
     key: 'finDirectorStatus',
     width: 140,
     render: (_, record) => {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'FINANCIAL');
       if (dv?.decision === 'ACCEPTED') return <Tag color="green">Accepted</Tag>;
       if (dv?.decision === 'REJECTED') return <Tag color="red">Rejected</Tag>;
       return <Tag color="orange">Pending</Tag>;
@@ -3120,7 +3140,7 @@ const doubleBidFinColumns = [
         (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
          evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
-      const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision);
+      const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'FINANCIAL');
       const viewed = viewedVendorIds.has(record.vendorId);
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
@@ -3151,7 +3171,7 @@ const doubleBidFinColumns = [
     key: 'directorFinAction',
     width: 280,
     render: (_, record) => {
-      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+      const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'FINANCIAL');
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
       if (dv) {
         return (
@@ -3182,7 +3202,7 @@ const doubleBidFinColumns = [
       width: 120,
       render: (_, record) => {
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-          v => String(v.committeeUserId) === String(userId)
+          v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'FINANCIAL'
         );
         if (myVote?.decision) return <Tag color={myVote.decision === 'ACCEPTED' ? 'green' : 'red'}>{myVote.decision}</Tag>;
         return <Tag color="orange">Pending</Tag>;
@@ -3194,7 +3214,7 @@ const doubleBidFinColumns = [
       width: 220,
       render: (_, record) => {
         const myVote = evalStatus.committeeVendorVotes?.[record.vendorId]?.find(
-          v => String(v.committeeUserId) === String(userId)
+          v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === 'FINANCIAL'
         );
         const myClarifPending = myPendingClarifVendorIds.has(record.vendorId);
         const vendorClarifReview = isChairmanClarifReview && evalStatus?.clarificationTargetVendorId === record.vendorId;
@@ -3424,7 +3444,7 @@ const spoTechColumns = [
     width: 250,
     render: (_, record) => {
       if (isAbove10L) {
-        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision);
+        const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
         if (!dv || dv.decision !== 'ACCEPTED') return <Tag color="default">-</Tag>;
       } else {
         if (record.status !== 'Completed') return <Tag color="default">-</Tag>;
@@ -3739,6 +3759,7 @@ useEffect(() => {
     PENDING_VENDOR_CLARIFICATION: 'gold',
     PENDING_INDENTOR_CLARIFICATION: 'lime',
     PENDING_MEMBER_REVOTE: 'cyan',
+    PENDING_DOCUMENT_UPLOAD: 'warning',
     APPROVED: 'green',
     REJECTED: 'red',
   };
@@ -3784,7 +3805,12 @@ useEffect(() => {
       });
   // ── Double bid: phase-specific computed state ──
   const financialVendors = isDoubleBidEval
-    ? quotationData.filter(q => q.indentorStatus === 'ACCEPTED' && q.sopStatus === 'ACCEPTED')
+    ? quotationData.filter(q => {
+        if (!isAbove10L) return q.indentorStatus === 'ACCEPTED' && q.sopStatus === 'ACCEPTED';
+        const dirTechVote = evalStatus?.committeeVendorVotes?.[q.vendorId]
+          ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'TECHNICAL');
+        return q.indentorStatus === 'ACCEPTED' && dirTechVote?.decision === 'ACCEPTED';
+      })
     : [];
 
   const allVendorsTechDecided = isDoubleBidEval && quotationData.length > 0 &&
@@ -3892,8 +3918,8 @@ useEffect(() => {
                     {committeeLabel}
                   </Tag>
                 )}
-                <Tag color="purple">Bid: {evalStatus.bidType?.replace(/_/g, ' ')}</Tag>
-                <Tag>{evalStatus.indentCategory?.replace(/_/g, ' ')}</Tag>
+                {evalStatus.bidType && <Tag color="purple">Bid: {evalStatus.bidType?.replace(/_/g, ' ')}</Tag>}
+                {evalStatus.indentCategory && <Tag>{evalStatus.indentCategory?.replace(/_/g, ' ')}</Tag>}
                 {evalStatus.approvedVendorName && (
                   <Tag color="green">Approved: {evalStatus.approvedVendorName}</Tag>
                 )}
@@ -4051,6 +4077,15 @@ useEffect(() => {
                 showIcon
                 message="Evaluation Not Yet Initiated"
                 description="The Purchase Personnel has not yet uploaded the Comparison Sheet and initiated the evaluation. You will be able to Accept, Reject, or Seek Clarification from vendors only after the Purchase Personnel initiates the evaluation."
+                style={{ marginBottom: 12 }}
+              />
+            )}
+            {isIndentCreatorRole && !evalLoading && evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD' && tenderId && (
+              <Alert
+                type="info"
+                showIcon
+                message="Pending Document Upload"
+                description="The Purchase Personnel has initiated the evaluation and is uploading the Comparison Statement. The evaluation will proceed after document submission."
                 style={{ marginBottom: 12 }}
               />
             )}
@@ -4223,11 +4258,22 @@ useEffect(() => {
                   </a>
                 </div>
               )}
-            {isPurchasePersonnelRole && (!evalStatus?.evaluationStatus || evalStatus?.evaluationStatus === 'PENDING_INITIATION') && (
+            {isPurchasePersonnelRole && (!evalStatus?.evaluationStatus || evalStatus?.evaluationStatus === 'PENDING_INITIATION' || evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD') && (
                 <div style={{ marginTop: 16 }}>
                   {renderFormFields(
                     [{ heading: '', colCnt: 1, fieldList: [{ name: 'comparationStatementFileName', label: 'Technical Comparison Sheet (PDF / Excel / Word)', type: 'multiImage', accept: '.pdf,.xlsx,.xls,.doc,.docx', span: 1 }] }],
                     handleChange, formData, '', null, setFormData, null
+                  )}
+                  {evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD' && (
+                    <Button
+                      type="primary"
+                      loading={initiating}
+                      style={{ marginTop: 8 }}
+                      onClick={handleSubmitDocumentAndProceed}
+                      disabled={!formData.comparationStatementFileName?.[0] && !evalStatus?.comparisonSheetFileName}
+                    >
+                      Submit & Proceed
+                    </Button>
                   )}
                 </div>
               )}
@@ -5359,47 +5405,61 @@ useEffect(() => {
         width={700}
       >
         {(() => {
-          const votes = evalStatus?.committeeVendorVotes?.[memberResponsesVendorId] || [];
+          const allVotes = evalStatus?.committeeVendorVotes?.[memberResponsesVendorId] || [];
           const expertId = evalStatus?.expertUserId;
-          const acceptCount = votes.filter(v => v.decision === 'ACCEPTED').length;
-          const rejectCount = votes.filter(v => v.decision === 'REJECTED').length;
-          const pendingCount = votes.filter(v => !v.decision).length;
+          const techVotes = allVotes.filter(v => v.phase === 'TECHNICAL');
+          const finVotes = allVotes.filter(v => v.phase === 'FINANCIAL');
+          const voteSections = [];
+          if (techVotes.length > 0) voteSections.push({ label: 'Technical Phase', votes: techVotes });
+          if (finVotes.length > 0) voteSections.push({ label: 'Financial Phase', votes: finVotes });
+          if (voteSections.length === 0) voteSections.push({ label: null, votes: allVotes });
+          const voteColumns = [
+            { title: 'Member', dataIndex: 'memberName', render: (name, record) => (
+              <span>
+                {name}
+                {String(record.committeeUserId) === String(expertId) && <Tag color="purple" style={{ marginLeft: 6 }}>Expert</Tag>}
+                {record.voterRole === 'CHAIRMAN' && <Tag color="blue" style={{ marginLeft: 6 }}>Chairman</Tag>}
+                {record.voterRole === 'DIRECTOR' && <Tag color="gold" style={{ marginLeft: 6 }}>Director</Tag>}
+              </span>
+            )},
+            { title: 'Decision', dataIndex: 'decision', render: (d) => d ? <Tag color={d === 'ACCEPTED' ? 'green' : 'red'}>{d}</Tag> : <Tag color="orange">Pending</Tag> },
+            { title: 'Remarks', dataIndex: 'remarks', render: (r) => r || '-' },
+            { title: 'Status', key: 'confirmed', render: (_, record) =>
+              record.voterRole === 'CHAIRMAN' || record.voterRole === 'DIRECTOR'
+                ? null
+                : record.confirmed ? <Tag color="green">Confirmed</Tag> : <Tag color="orange">Draft</Tag>
+            },
+          ];
           return (
             <>
               {evalStatus?.expertName && (
                 <Alert type="info" showIcon style={{ marginBottom: 12 }}
                   message={`Expert: ${evalStatus.expertName} (ID: ${evalStatus.expertUserId})`} />
               )}
-              <div style={{ marginBottom: 12 }}>
-                <Tag color="green">{acceptCount} Accept</Tag>
-                <Tag color="red">{rejectCount} Reject</Tag>
-                {pendingCount > 0 && <Tag color="orange">{pendingCount} Pending</Tag>}
-              </div>
-              <Table
-                size="small"
-                dataSource={votes}
-                rowKey="committeeUserId"
-                pagination={false}
-                style={{ marginBottom: 16 }}
-                rowClassName={(record) => String(record.committeeUserId) === String(expertId) ? 'expert-row' : ''}
-                columns={[
-                  { title: 'Member', dataIndex: 'memberName', render: (name, record) => (
-                    <span>
-                      {name}
-                      {String(record.committeeUserId) === String(expertId) && <Tag color="purple" style={{ marginLeft: 6 }}>Expert</Tag>}
-                      {record.voterRole === 'CHAIRMAN' && <Tag color="blue" style={{ marginLeft: 6 }}>Chairman</Tag>}
-                      {record.voterRole === 'DIRECTOR' && <Tag color="gold" style={{ marginLeft: 6 }}>Director</Tag>}
-                    </span>
-                  )},
-                  { title: 'Decision', dataIndex: 'decision', render: (d) => d ? <Tag color={d === 'ACCEPTED' ? 'green' : 'red'}>{d}</Tag> : <Tag color="orange">Pending</Tag> },
-                  { title: 'Remarks', dataIndex: 'remarks', render: (r) => r || '-' },
-                  { title: 'Status', key: 'confirmed', render: (_, record) =>
-                    record.voterRole === 'CHAIRMAN' || record.voterRole === 'DIRECTOR'
-                      ? null
-                      : record.confirmed ? <Tag color="green">Confirmed</Tag> : <Tag color="orange">Draft</Tag>
-                  },
-                ]}
-              />
+              {voteSections.map((section, idx) => {
+                const acceptCount = section.votes.filter(v => v.decision === 'ACCEPTED').length;
+                const rejectCount = section.votes.filter(v => v.decision === 'REJECTED').length;
+                const pendingCount = section.votes.filter(v => !v.decision).length;
+                return (
+                  <div key={idx} style={{ marginBottom: idx < voteSections.length - 1 ? 20 : 0 }}>
+                    {section.label && <h4 style={{ marginBottom: 8 }}>{section.label}</h4>}
+                    <div style={{ marginBottom: 12 }}>
+                      <Tag color="green">{acceptCount} Accept</Tag>
+                      <Tag color="red">{rejectCount} Reject</Tag>
+                      {pendingCount > 0 && <Tag color="orange">{pendingCount} Pending</Tag>}
+                    </div>
+                    <Table
+                      size="small"
+                      dataSource={section.votes}
+                      rowKey={(r) => `${r.committeeUserId}-${r.phase || ''}`}
+                      pagination={false}
+                      style={{ marginBottom: 16 }}
+                      rowClassName={(record) => String(record.committeeUserId) === String(expertId) ? 'expert-row' : ''}
+                      columns={voteColumns}
+                    />
+                  </div>
+                );
+              })}
             </>
           );
         })()}

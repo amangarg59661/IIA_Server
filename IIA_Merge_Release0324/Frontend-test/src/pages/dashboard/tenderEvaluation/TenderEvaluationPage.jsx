@@ -27,7 +27,6 @@ const STATUS_COLOR = {
   PENDING_INDENTOR_CLARIFICATION:        "error",
   PENDING_MEMBER_REVOTE:                 "error",
   PENDING_COMMITTEE_FORMATION:           "warning",
-  PENDING_DIRECTOR_REVIEW:               "warning",
   PENDING_DIRECTOR_APPROVAL:             "warning",
   APPROVED:                              "success",
   REJECTED:                              "error",
@@ -44,20 +43,15 @@ const evalStatusLabel = (s, indentCategory, bidType) => {
   if (s === "PENDING_FINANCIAL" && bidType && bidType.toUpperCase().includes("SINGLE")) {
     return "Pending Evaluation";
   }
-  if (s === "PENDING_INDENTOR_CLARIFICATION") {
-    return indentCategory === "MULTIPLE_INDENT"
-      ? "Clarification from Purchase Personnel"
-      : "Clarification from Evaluator";
-  }
   const map = {
     PENDING_TECHNICAL:               "Pending Technical Evaluation",
     PENDING_FINANCIAL:               "Pending Financial Evaluation",
     PENDING_FINANCIAL_SHEET_UPLOAD:  "Pending Financial Comparison Sheet Upload",
     PENDING_SPO_APPROVAL:            "Pending SPO Approval",
     PENDING_VENDOR_CLARIFICATION:    "Clarification from Vendor",
+    PENDING_INDENTOR_CLARIFICATION:  "Clarification from Evaluator",
     PENDING_MEMBER_REVOTE:           "Pending Committee Re-vote",
     PENDING_COMMITTEE_FORMATION:     "Pending Committee Formation",
-    PENDING_DIRECTOR_REVIEW:         "Pending Director Review",
     PENDING_DIRECTOR_APPROVAL:       "Pending Director Approval",
     APPROVED:                        "Tender Evaluation Completed",
     REJECTED:                        "Rejected",

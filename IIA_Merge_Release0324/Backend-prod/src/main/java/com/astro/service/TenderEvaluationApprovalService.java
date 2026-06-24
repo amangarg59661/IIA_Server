@@ -27,6 +27,13 @@ public interface TenderEvaluationApprovalService {
     TenderEvaluationStatusDto initiateTenderEvaluation(String tenderId, Integer initiatedByUserId);
 
     /**
+     * Phase 1: Creates TenderEvaluation record with PENDING_DOCUMENT_UPLOAD status.
+     * Locks vendor uploads (initiated=1). PP must upload comparison sheet and then
+     * call initiateTenderEvaluation() to proceed.
+     */
+    TenderEvaluationStatusDto beginEvaluation(String tenderId, Integer initiatedByUserId);
+
+    /**
      * Returns full evaluation status for a tender.
      * Respects bid type: hides financial data for DOUBLE_BID if not technically approved.
      */

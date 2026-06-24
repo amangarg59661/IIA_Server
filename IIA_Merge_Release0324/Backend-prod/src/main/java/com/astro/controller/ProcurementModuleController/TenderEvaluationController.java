@@ -88,6 +88,15 @@ public class TenderEvaluationController {
 
     // ─── EVALUATION WORKFLOW ─────────────────────────────────────────
 
+    @PostMapping("/begin")
+    public ResponseEntity<Object> beginEvaluation(
+            @RequestParam String tenderId,
+            @RequestParam Integer userId) {
+        log.info("Begin evaluation (Phase 1) tenderId={} userId={}", tenderId, userId);
+        TenderEvaluationStatusDto status = approvalService.beginEvaluation(tenderId, userId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     @PostMapping("/initiate")
     public ResponseEntity<Object> initiateEvaluation(
             @RequestParam String tenderId,

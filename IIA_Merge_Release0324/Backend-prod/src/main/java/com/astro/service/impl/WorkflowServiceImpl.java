@@ -2371,13 +2371,8 @@ private BudgetService budgetService;
                         tenderRequestRepository.save(tender);
                     });
 
-                    if (!tenderEvaluationRepository.existsById(requestId)) {
-                        TenderEvaluation tenderEvaluation = new TenderEvaluation();
-                        tenderEvaluation.setTenderId(requestId);
-                        tenderEvaluation.setCreatedBy(currentWorkflowTransition.getCreatedBy());
-                        tenderEvaluationRepository.save(tenderEvaluation);
-                        System.out.println("✅ [APPROVAL] TenderEvaluation row created for " + requestId);
-                    }
+                    // TenderEvaluation record is now created when PP clicks "Initiate Evaluation"
+                    // via beginEvaluation() endpoint — no auto-creation on workflow approval.
                 }
             }
         }
