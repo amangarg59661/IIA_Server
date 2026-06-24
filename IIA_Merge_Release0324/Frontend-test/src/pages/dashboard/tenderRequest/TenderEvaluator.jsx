@@ -188,40 +188,43 @@ const isFinancialPhase = Boolean(evalStatus?.financialBidPhase) &&
 // Accept/Reject/Seek-Clarification in quotation table:
 //   Technical phase: Indentor (single-indent) or PP (multiple-indent), under 10L only
 //   Financial phase: same roles can act again for financial evaluation
+const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formData.modeOfProcurement);
+
+// PP on GEM/OPEN/GLOBAL single-indent under-10L during vendor clarification only responds on behalf
+// of vendors — no Accept/Reject/Seek Clarification buttons needed
+const ppOnlyRespondingForVendor = isPurchasePersonnelRole && isOpenGlobalGem && !isMultipleIndentEval
+  && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
+
 const showActionButtons =
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval && evalStatus !== null
     && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
    (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null
     && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
    (isPurchasePersonnelRole && isBelow10L && evalStatus !== null
+    && !ppOnlyRespondingForVendor
     && ['PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus))) ||
 
   (isFinancialPhase && evalStatus !== null &&
     (['PENDING_FINANCIAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus.evaluationStatus)) &&
-    (isIndentCreatorRole || isPurchasePersonnelRole));
+    (isIndentCreatorRole || (isPurchasePersonnelRole && !ppOnlyRespondingForVendor)));
 
 const canPerformActions = showActionButtons;
-
-const isOpenGlobalGem = ['OPEN_TENDER', 'GLOBAL_TENDER', 'GEM'].includes(formData.modeOfProcurement);
 const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStatus === 'APPROVED' && isPurchasePersonnelRole;
 // ── PP: Seek Clarification before evaluation is initiated (Limited/Prop, under 10L) ──
+const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement);
+
 const showPpPreInitiateClarif = isPurchasePersonnelRole
   && evalStatus === null
   && isBelow10L
-  && ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement)
   && quotationData.length > 0;
 
-  // ── PP: line-level Seek Clarification — Double Bid, Limited/Prop only ──
-const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.modeOfProcurement);
-
+  // ── PP: line-level Seek Clarification & Reject — pre-initiate and financial upload ──
 const showPpTechLineClarif = isPurchasePersonnelRole
-  && isLimitedOrProp
   && (evalStatus === null || evalStatus?.evaluationStatus === 'PENDING_INITIATION')
   && quotationData.length > 0;
 
 const showPpFinLineClarif = isPurchasePersonnelRole
   && isDoubleBidEval
-  && isLimitedOrProp
   && (evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD'
       || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && evalStatus?.financialBidPhase));
 const showEvaluationSection = true;
@@ -233,11 +236,15 @@ const spoIsClarifSeeker = evalStatus?.clarificationRequestedByRole === 'SPO';
 // GEM/OPEN/GLOBAL multi-indent under-10L indentor clarification: PP Accept must stay enabled
 const isGemMultiIndentorClarif = evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION'
   && isOpenGlobalGem && isMultipleIndentEval && isBelow10L;
+// PP must Accept/Reject vendors before responding to indentor clarification (multi-indent under 10L)
+const ppIndentorClarifPending = isPurchasePersonnelRole && isMultipleIndentEval && isBelow10L
+  && evalStatus?.evaluationStatus === 'PENDING_INDENTOR_CLARIFICATION';
 // ── Double bid: separate control flags per phase ──
 const showTechActionButtons = isDoubleBidEval && !isFinancialPhase &&
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval) ||
    (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval) ||
-   (isPurchasePersonnelRole && isBelow10L && ['PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus))) &&
+   (isPurchasePersonnelRole && isBelow10L && !ppOnlyRespondingForVendor
+    && ['PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus))) &&
   evalStatus !== null &&
   evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL';
 
@@ -1771,7 +1778,7 @@ if (isSpoRole) {
       && (!spStatus || spStatus === 'PENDING'
         //  || spStatus === 'REJECTED'
         )
-      && record.status !== 'CHANGE_REQUESTED';
+      && (record.status !== 'CHANGE_REQUESTED' || record.status === 'CHANGE_RESPONDED');
     // Reject always allowed even if vendor hasn't responded — prevents flow from getting stuck
    const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
   && (record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null || record.indentorStatus === 'REJECTED')
@@ -1779,14 +1786,15 @@ if (isSpoRole) {
     const pendingToIndentor = record.changeRequestToIndentor;
     const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
     const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
+    const ppHasRespondedForVendor = record.status === 'CHANGE_RESPONDED';
 
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button
           size="small"
-          disabled={!spoCanAct || spStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
+          disabled={!spoCanAct || spStatus === 'ACCEPTED' || (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) || (vendorPpClarifPending && !ppHasRespondedForVendor) || isGemMultiVendorClarif }
           onClick={() => handleSpoReview(record, 'ACCEPT')}
-          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first': ''}
+          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) ? 'Indentor must respond to clarification first' : (vendorPpClarifPending && !ppHasRespondedForVendor) ? 'Cannot accept — PP must respond to clarification for this vendor first': ''}
         >
           {spStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
         </Button>
@@ -2120,7 +2128,7 @@ if (isSpoRole) {
           disabled={
             (status === 'ACCEPTED' && !spoRequestedReview) ||
             status === 'REJECTED' ||
-            (vendorClarifPending && !isGemMultiIndentorClarif) ||
+            (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
             isGemMultiVendorClarif
           }
           title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
@@ -2276,7 +2284,44 @@ if (isSpoRole) {
         {record.status === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
       </Button>
     ),
-  }
+  },
+  {
+    title: 'Reject',
+    key: 'ppLineReject',
+    render: (_, record) => {
+      const st = record.indentorStatus;
+      return st === 'REJECTED' ? (
+        <span style={{ color: 'red' }}>Rejected</span>
+      ) : (
+        <Popover
+          content={
+            <div style={{ padding: 12 }}>
+              <Input.TextArea
+                placeholder="Enter reject comment"
+                rows={3}
+                value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+              />
+              <Button
+                type="primary"
+                onClick={() => handleReject(record)}
+                style={{ marginTop: 8 }}
+                disabled={st === 'REJECTED'}
+              >
+                Submit
+              </Button>
+            </div>
+          }
+          title="Reject Vendor"
+          trigger="click"
+        >
+          <Button danger type="link" disabled={st === 'REJECTED'}>
+            Reject
+          </Button>
+        </Popover>
+      );
+    },
+  },
 ] : []),
 
 ...(showCommitteeMemberSingleBidActions ? [
@@ -2598,7 +2643,8 @@ const doubleBidTechColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' || (vendorClarifPending && !isGemMultiIndentorClarif) ||
+                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' ||
+                  (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
                   isGemMultiVendorClarif
                 }
                 title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
@@ -2728,6 +2774,43 @@ const doubleBidTechColumns = [
             {record.status === 'CHANGE_REQUESTED' ? 'Pending' : 'Seek Clarification'}
           </Button>
         ),
+      },
+      {
+        title: 'Reject',
+        key: 'ppTechLineReject',
+        render: (_, record) => {
+          const st = record.indentorStatus;
+          return st === 'REJECTED' ? (
+            <span style={{ color: 'red' }}>Rejected</span>
+          ) : (
+            <Popover
+              content={
+                <div style={{ padding: 12 }}>
+                  <Input.TextArea
+                    placeholder="Enter reject comment"
+                    rows={3}
+                    value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                    onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={() => handleReject(record)}
+                    style={{ marginTop: 8 }}
+                    disabled={st === 'REJECTED'}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              }
+              title="Reject Vendor"
+              trigger="click"
+            >
+              <Button danger type="link" disabled={st === 'REJECTED'}>
+                Reject
+              </Button>
+            </Popover>
+          );
+        },
       },
     ]
   : []),
@@ -2884,7 +2967,8 @@ const doubleBidFinColumns = [
                 size="small"
                 onClick={() => handleAccept(record)}
                 disabled={
-                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' || (vendorClarifPending && !isGemMultiIndentorClarif) ||
+                  (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' ||
+                  (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
                   isGemMultiVendorClarif
                 }
                 title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
@@ -2983,6 +3067,45 @@ const doubleBidFinColumns = [
           >
             {vendorClarifSent ? 'Pending' : 'Seek Clarification'}
           </Button>
+          );
+        },
+      },
+      {
+        title: 'Reject',
+        key: 'ppFinLineReject',
+        render: (_, record) => {
+          const techRejected = record.indentorStatus === 'REJECTED' || record.sopStatus === 'REJECTED';
+          if (techRejected) return <Tag color="default">N/A</Tag>;
+          const st = record.financialIndentorStatus;
+          return st === 'REJECTED' ? (
+            <span style={{ color: 'red' }}>Rejected</span>
+          ) : (
+            <Popover
+              content={
+                <div style={{ padding: 12 }}>
+                  <Input.TextArea
+                    placeholder="Enter reject comment"
+                    rows={3}
+                    value={rejectedVendorId === record.vendorId ? rejectComment : ''}
+                    onChange={(e) => { setRejectedVendorId(record.vendorId); setRejectComment(e.target.value); }}
+                  />
+                  <Button
+                    type="primary"
+                    onClick={() => handleReject(record)}
+                    style={{ marginTop: 8 }}
+                    disabled={st === 'REJECTED'}
+                  >
+                    Submit
+                  </Button>
+                </div>
+              }
+              title="Reject Vendor"
+              trigger="click"
+            >
+              <Button danger type="link" disabled={st === 'REJECTED'}>
+                Reject
+              </Button>
+            </Popover>
           );
         },
       },
@@ -3164,21 +3287,22 @@ const spoTechColumns = [
            const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && record.indentorStatus === 'ACCEPTED'
             && (!record.sopStatus || record.sopStatus === 'PENDING')
-            && record.status !== 'CHANGE_REQUESTED';
+            && (record.status !== 'CHANGE_REQUESTED' || record.status === 'CHANGE_RESPONDED');
           const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && (record.indentorStatus === 'ACCEPTED' || record.indentorStatus === null || record.indentorStatus === 'REJECTED')
             && (!record.sopStatus || record.sopStatus === 'PENDING' || record.sopStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
     const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
+    const ppHasRespondedForVendor = record.status === 'CHANGE_RESPONDED';
 
           return (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
-                disabled={!spoCanAct || record.sopStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
+                disabled={!spoCanAct || record.sopStatus === 'ACCEPTED' || (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) || (vendorPpClarifPending && !ppHasRespondedForVendor) || isGemMultiVendorClarif}
                 onClick={() => handleSpoReview(record, 'ACCEPT')}
-                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) ? 'Indentor must respond to clarification first' : (vendorPpClarifPending && !ppHasRespondedForVendor) ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
               >
                 {record.sopStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
               </Button>
@@ -3415,21 +3539,22 @@ const spoFinColumns = [
            const spoCanAct = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION','PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
             && record.financialIndentorStatus === 'ACCEPTED'
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
-            && record.status !== 'CHANGE_REQUESTED';
+            && (record.status !== 'CHANGE_REQUESTED' || record.status === 'CHANGE_RESPONDED');
          const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
-  && (record.financialIndentorStatus === 'ACCEPTED' || record.financialIndentorStatus === 'PENDING' || record.indentorStatus === 'REJECTED') 
+  && (record.financialIndentorStatus === 'ACCEPTED' || record.financialIndentorStatus === 'PENDING' || record.indentorStatus === 'REJECTED')
   && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING' || record.financialSpoStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
     const vendorPpClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasOpenIndentorClarif;
+    const ppHasRespondedForVendor = record.status === 'CHANGE_RESPONDED';
 
           return (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Button
                 size="small"
-                disabled={!spoCanAct || record.financialSpoStatus === 'ACCEPTED' || vendorHasOpenIndentorClarif || vendorPpClarifPending || isGemMultiVendorClarif}
+                disabled={!spoCanAct || record.financialSpoStatus === 'ACCEPTED' || (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) || (vendorPpClarifPending && !ppHasRespondedForVendor) || isGemMultiVendorClarif}
                 onClick={() => handleSpoReview(record, 'ACCEPT')}
-                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasOpenIndentorClarif ? 'Indentor must respond to clarification first' : vendorPpClarifPending ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : (vendorHasOpenIndentorClarif && !ppHasRespondedForVendor) ? 'Indentor must respond to clarification first' : (vendorPpClarifPending && !ppHasRespondedForVendor) ? 'Cannot accept — PP must respond to clarification for this vendor first' : ''}
               >
                 {record.financialSpoStatus === 'ACCEPTED' ? 'Accepted' : 'SPO Accept'}
               </Button>
@@ -3790,8 +3915,8 @@ useEffect(() => {
             <Alert
               type="success"
               showIcon
-              message={`Tender Evaluation APPROVED — Vendor: ${evalStatus.approvedVendorName || evalStatus.approvedVendorId}`}
-              description={`Vendor Portal Registration: ${evalStatus.vendorPortalRegistered ? 'Done' : 'Pending'}`}
+              message={`Tender Evaluation APPROVED`}
+              description={`Vendor Portal Registration By Purchase Personnel: ${evalStatus.vendorPortalRegistered ? 'Done' : 'Pending'}`}
               style={{ marginTop: 16 }}
             />
             {isDoubleBidEval && quotationData.length > 0 && (
@@ -3853,7 +3978,7 @@ useEffect(() => {
                       const techRejected = record.sopStatus === 'REJECTED' || record.sopStatus === 'Rejected'
                         || record.indentorStatus === 'REJECTED' || record.indentorStatus === 'Rejected';
                       if (techRejected) return <Tag color="red">Rejected</Tag>;
-                      const val = record.financialSpoStatus;
+                      const val = record.financialSpoStatus || record.financialIndentorStatus;
                       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
                       if (val === 'REJECTED' || val === 'Rejected') return <Tag color="red">Rejected</Tag>;
                       return <Tag>Pending</Tag>;

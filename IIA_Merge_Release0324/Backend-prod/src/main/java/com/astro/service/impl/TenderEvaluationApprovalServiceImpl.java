@@ -552,7 +552,15 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
                                         .ifPresent(vm -> eval.setApprovedVendorName(vm.getVendorName()));
                             });
                 }
-                if (eval.getApprovedVendorId() != null) {
+                // Check ALL approved vendors for portal registration (not just the first one)
+                List<VendorQuotationAgainstTender> completedVendors = allQuotations.stream()
+                        .filter(q -> "Completed".equals(q.getStatus()))
+                        .collect(Collectors.toList());
+                if (!completedVendors.isEmpty()) {
+                    boolean allRegistered = completedVendors.stream()
+                            .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
+                    eval.setVendorPortalRegistered(allRegistered);
+                } else if (eval.getApprovedVendorId() != null) {
                     boolean registered = checkAndRegisterVendorOnPortal(eval.getApprovedVendorId());
                     eval.setVendorPortalRegistered(registered);
                 }
@@ -846,7 +854,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
+        validateNoClarificationPending(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         // Validate chairman has voted on ALL eligible vendors via per-vendor flow
         String chairPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
@@ -915,7 +923,7 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
         TenderEvaluation eval = requireEval(tenderId);
         TenderRequest tender = requireTender(tenderId);
 
-        validateAllVendorsDecided(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
+        validateNoClarificationPending(tenderId, Boolean.TRUE.equals(eval.getFinancialBidPhase()));
 
         // Validate director has voted on ALL eligible vendors via per-vendor flow
         String dirPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
@@ -1003,7 +1011,16 @@ if (("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) || "ABOVE_50_LAKH_UPTO_1_CRORE"
             } else {
                 eval.setEvaluationStatus("APPROVED");
                 eval.setFinancialBidPhase(false);
-                if (eval.getApprovedVendorId() != null) {
+                // Check all approved vendors for portal registration
+                List<VendorQuotationAgainstTender> dirCompletedVendors =
+                        quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                                .filter(q -> "Completed".equals(q.getStatus()))
+                                .collect(Collectors.toList());
+                if (!dirCompletedVendors.isEmpty()) {
+                    boolean allRegistered = dirCompletedVendors.stream()
+                            .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
+                    eval.setVendorPortalRegistered(allRegistered);
+                } else if (eval.getApprovedVendorId() != null) {
                     boolean registered = checkAndRegisterVendorOnPortal(eval.getApprovedVendorId());
                     eval.setVendorPortalRegistered(registered);
                     markApprovedVendorCompleted(tenderId, eval.getApprovedVendorId());
@@ -2207,7 +2224,7 @@ public List<TenderClarificationHistory> getOpenIndentorClarifications(String ten
             .filter(h -> h.getRespondedAt() == null)
             .filter(h -> "INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
                     || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget()))
-            .collect(java.util.stream.Collectors.toList());
+            .collect(Collectors.toList());
 }
 
     // ─────────────────────────────────────────────────────────────────
@@ -2509,7 +2526,7 @@ long openHistoryRows;
                         .filter(h -> "INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
                                 || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget()))
                         .filter(h -> vendorId.equals(h.getTargetVendorId()))
-                        .collect(java.util.stream.Collectors.toList());
+                        .collect(Collectors.toList());
 
         for (TenderClarificationHistory h : rowsToClose) {
             h.setRespondedAt(LocalDateTime.now());
@@ -2633,6 +2650,32 @@ long openHistoryRows;
     // ─────────────────────────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────────────────────────
+
+    private void validateNoClarificationPending(String tenderId, boolean financialPhase) {
+        List<VendorQuotationAgainstTender> quotations =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+        if (quotations.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "No vendor quotations found for this tender."));
+        }
+        List<String> underClarification = quotations.stream()
+                .filter(q -> {
+                    if (financialPhase
+                            && ("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
+                                || "REJECTED".equalsIgnoreCase(q.getSpoStatus()))) {
+                        return false;
+                    }
+                    return "CHANGE_REQUESTED".equalsIgnoreCase(q.getStatus());
+                })
+                .map(VendorQuotationAgainstTender::getVendorId)
+                .collect(Collectors.toList());
+        if (!underClarification.isEmpty()) {
+            throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                    "Cannot confirm evaluation — vendor(s) under seek clarification: "
+                    + String.join(", ", underClarification)
+                    + ". Please resolve clarification or reject the vendor(s) first."));
+        }
+    }
 
     private void validateAllVendorsDecided(String tenderId) {
         validateAllVendorsDecided(tenderId, false);
@@ -3140,6 +3183,20 @@ long openHistoryRows;
         }
 
         log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
+
+        // Recalculate vendorPortalRegistered — check all approved vendors
+        TenderEvaluation eval = requireEval(tenderId);
+        List<VendorQuotationAgainstTender> completedVendors =
+                quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                        .filter(q -> "Completed".equals(q.getStatus()))
+                        .collect(Collectors.toList());
+        if (!completedVendors.isEmpty()) {
+            boolean allRegistered = completedVendors.stream()
+                    .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
+            eval.setVendorPortalRegistered(allRegistered);
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────

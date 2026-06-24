@@ -28,6 +28,7 @@ import com.astro.repository.ProcurementModule.IndentCreation.JobDetailsRepositor
 import com.astro.repository.ProcurementModule.IndentIdRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderRepository;
 import com.astro.repository.ProcurementModule.ServiceOrderRepository.ServiceOrderRepository;
+import com.astro.repository.ProcurementModule.TenderEvaluationRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.service.*;
 import com.astro.util.CommonUtils;
@@ -154,6 +155,9 @@ private BudgetService budgetService;
 
     @Autowired
     private EmployeeDepartmentMasterRepository employeeDepartmentMasterRepository;
+
+    @Autowired
+    private TenderEvaluationRepository tenderEvaluationRepository;
 
     @Autowired
     private WorkflowBranchMasterRepository workflowBranchMasterRepository;
@@ -2352,6 +2356,29 @@ private BudgetService budgetService;
                     }
                     indentCreationRepository.save(indent);
                 });
+            }
+        }
+
+        // Auto-create TenderEvaluation row when Tender Approver Workflow completes
+        if ("Tender Approver Workflow".equalsIgnoreCase(currentWorkflowTransition.getWorkflowName())) {
+            String requestId = currentWorkflowTransition.getRequestId();
+            if (requestId != null && requestId.startsWith("T")) {
+                final WorkflowTransition finalNext = nextWorkflowTransition;
+
+                if (AppConstant.COMPLETED_TYPE.equalsIgnoreCase(finalNext.getStatus())) {
+                    tenderRequestRepository.findById(requestId).ifPresent(tender -> {
+                        tender.setCurrentStatus("APPROVED");
+                        tenderRequestRepository.save(tender);
+                    });
+
+                    if (!tenderEvaluationRepository.existsById(requestId)) {
+                        TenderEvaluation tenderEvaluation = new TenderEvaluation();
+                        tenderEvaluation.setTenderId(requestId);
+                        tenderEvaluation.setCreatedBy(currentWorkflowTransition.getCreatedBy());
+                        tenderEvaluationRepository.save(tenderEvaluation);
+                        System.out.println("✅ [APPROVAL] TenderEvaluation row created for " + requestId);
+                    }
+                }
             }
         }
 

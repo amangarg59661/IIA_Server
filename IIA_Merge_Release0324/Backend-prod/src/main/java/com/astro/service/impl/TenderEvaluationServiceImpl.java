@@ -41,12 +41,11 @@ public class TenderEvaluationServiceImpl implements TenderEvaluationService {
     @Override
     public TenderEvaluationResponseDto createTenderEvaluation(TenderEvaluationRequestDto tenderEvaluationRequestDto) {
 
-        if (tenderEvaluationRepository.existsById(tenderEvaluationRequestDto.getTenderId())) {
-            ErrorDetails errorDetails = new ErrorDetails(400, 1, "Duplicate Tender Evaluation ID", "Tender ID " + tenderEvaluationRequestDto.getTenderId() + " already exists.");
-            throw new InvalidInputException(errorDetails);
-        }
-        TenderEvaluation tenderEvaluation = new TenderEvaluation();
-        tenderEvaluation.setTenderId(tenderEvaluationRequestDto.getTenderId());
+        TenderEvaluation tenderEvaluation = tenderEvaluationRepository.findById(tenderEvaluationRequestDto.getTenderId())
+                .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
+                        404, 1, "Tender Evaluation Not Found",
+                        "No evaluation entry found for Tender ID " + tenderEvaluationRequestDto.getTenderId()
+                                + ". Tender must be approved first.")));
         if (tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName() == null || tenderEvaluationRequestDto.getUploadQualifiedVendorsFileName().isEmpty()) {
             tenderEvaluation.setUploadQualifiedVendorsFileName(null);
 
