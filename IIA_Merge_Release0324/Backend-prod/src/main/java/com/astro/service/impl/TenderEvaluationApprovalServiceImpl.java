@@ -1190,8 +1190,11 @@
             boolean isAbove10L = !"UNDER_10_LAKH".equals(eval.getAmountCategory());
             boolean isCommitteeMemberAbove10L = "COMMITTEE_MEMBER".equalsIgnoreCase(dto.getRequestedByRole()) && isAbove10L;
 
+            boolean isDocUploadPhase = "PENDING_DOCUMENT_UPLOAD".equals(eval.getEvaluationStatus())
+                    || "PENDING_FINANCIAL_SHEET_UPLOAD".equals(eval.getEvaluationStatus());
+
             // Committee member above 10L: per-member per-vendor tracking via history only — skip global metadata
-            if (!isCommitteeMemberAbove10L) {
+            if (!isCommitteeMemberAbove10L && !isDocUploadPhase) {
                 // Save where to return after clarification is received
                 // Only preserve the real pre-clarification status; do not overwrite it on subsequent seeks
                 String currentStatus = eval.getEvaluationStatus();
@@ -1213,7 +1216,8 @@
                     // Mark a specific vendor's quotation as CHANGE_REQUESTED
                     // Above 10L: don't change eval status for single-vendor clarification —
                     // other vendors can still be voted on while this one is pending clarification
-                    if (!isAbove10L) {
+                    // Doc upload phases: keep eval status, only mark vendor
+                    if (!isAbove10L && !isDocUploadPhase) {
                         eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
                     }
                     String specificVendorId = dto.getTargetVendorId();
@@ -1233,7 +1237,9 @@
                     break;
                 case "ALL_VENDORS":
                     // Mark ALL vendor quotations as CHANGE_REQUESTED (bulk clarification)
-                    eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                    if (!isDocUploadPhase) {
+                        eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                    }
                     List<VendorQuotationAgainstTender> allQuotations =
                             quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
                     // Double-bid financial phase: skip technically disqualified vendors
@@ -1256,7 +1262,9 @@
                     
                 case "PURCHASE_PERSONNEL":
                     if (reroutedVendorToPP) {
-                        eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                        if (!isDocUploadPhase) {
+                            eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
+                        }
                         // Apply role-specific status fields on the rerouted vendor quotations
                         if ("VENDOR".equalsIgnoreCase(originalTarget)) {
                             String vid = dto.getTargetVendorId();

@@ -198,19 +198,18 @@ const ppOnlyRespondingForVendor = isPurchasePersonnelRole && isOpenGlobalGem && 
 const isDocUploadPhase = evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
   || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD';
 
-const showActionButtons =
-  (isPurchasePersonnelRole && isDocUploadPhase && quotationData.length > 0) ||
+const showActionButtons = !isDocUploadPhase && (
   ((isIndentCreatorRole && isBelow10L && !isMultipleIndentEval && evalStatus !== null
-    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL' && !isDocUploadPhase) ||
+    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
    (isPurchasePersonnelRole && isBelow10L && isMultipleIndentEval && evalStatus !== null
-    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL' && !isDocUploadPhase) ||
+    && evalStatus?.evaluationStatus !== 'PENDING_SPO_APPROVAL') ||
    (isPurchasePersonnelRole && isBelow10L && evalStatus !== null
     && !ppOnlyRespondingForVendor
     && ['PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus))) ||
 
   (isFinancialPhase && evalStatus !== null &&
     (['PENDING_FINANCIAL', 'PENDING_INDENTOR_CLARIFICATION', 'PENDING_VENDOR_CLARIFICATION'].includes(evalStatus.evaluationStatus)) &&
-    (isIndentCreatorRole || (isPurchasePersonnelRole && !ppOnlyRespondingForVendor)));
+    (isIndentCreatorRole || (isPurchasePersonnelRole && !ppOnlyRespondingForVendor))));
 
 const canPerformActions = showActionButtons;
 const showRegisteredVendorColumn = isOpenGlobalGem && evalStatus?.evaluationStatus === 'APPROVED' && isPurchasePersonnelRole;
@@ -226,7 +225,8 @@ const showPpPreInitiateClarif = isPurchasePersonnelRole
   // ── PP: line-level Seek Clarification & Reject — during document upload phases ──
 const showPpTechLineClarif = isPurchasePersonnelRole
   && (evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
-      || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD')
+      || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD'
+      || evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION')
   && quotationData.length > 0;
 
 const showPpFinLineClarif = isPurchasePersonnelRole
@@ -2290,7 +2290,7 @@ if (isSpoRole) {
   }
 }] : []),
 
-...(showPpPreInitiateClarif || showPpTechLineClarif ? [
+...((showPpPreInitiateClarif || showPpTechLineClarif) && !showActionButtons ? [
   {
     title: 'Seek Clarification',
     key: 'ppLineClarif',
@@ -2779,7 +2779,7 @@ const doubleBidTechColumns = [
       );
     },
   }] : []),
-  ...(showPpTechLineClarif
+  ...(showPpTechLineClarif && !showActionButtons
   ? [
       {
         title: 'Seek Clarification',
@@ -4164,10 +4164,9 @@ useEffect(() => {
               (isPurchasePersonnelRole || isIndentCreatorRole) &&
               quotationData.length > 0 && ( */}
               {((isPurchasePersonnelRole && (
-    !evalStatus?.evaluationStatus ||
-    (evalStatus?.evaluationStatus &&
+    evalStatus?.evaluationStatus &&
       !['APPROVED', 'REJECTED'].includes(evalStatus.evaluationStatus) &&
-      isMultipleIndentEval)
+      isMultipleIndentEval
   )) ||
   (isIndentCreatorRole &&
     evalStatus?.evaluationStatus &&
@@ -4258,7 +4257,7 @@ useEffect(() => {
                   </a>
                 </div>
               )}
-            {isPurchasePersonnelRole && (!evalStatus?.evaluationStatus || evalStatus?.evaluationStatus === 'PENDING_INITIATION' || evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD') && (
+            {isPurchasePersonnelRole && evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD' && (
                 <div style={{ marginTop: 16 }}>
                   {renderFormFields(
                     [{ heading: '', colCnt: 1, fieldList: [{ name: 'comparationStatementFileName', label: 'Technical Comparison Sheet (PDF / Excel / Word)', type: 'multiImage', accept: '.pdf,.xlsx,.xls,.doc,.docx', span: 1 }] }],
