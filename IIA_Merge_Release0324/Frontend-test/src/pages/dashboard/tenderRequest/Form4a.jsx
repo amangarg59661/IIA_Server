@@ -9,7 +9,7 @@ import FormDropdownItem from "../../../components/DKG_FormDropdownItem";
 import Btn from "../../../components/DKG_Btn";
 import { useLocation } from "react-router-dom";
 import FileUpload from "../../../components/DKG_FileUpload";
-import TenderEvaluator from "./tenderEvaluator";
+import TenderEvaluator from "./TenderEvaluator";
 import IndentorUpload from "./IndentorUpload";
 
 const Form4a = () => {

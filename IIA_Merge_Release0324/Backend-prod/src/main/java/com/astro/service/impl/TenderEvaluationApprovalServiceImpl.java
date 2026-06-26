@@ -1152,6 +1152,11 @@
             boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                     && (originalTarget != null)
                     && ("VENDOR".equalsIgnoreCase(originalTarget) || "ALL_VENDORS".equalsIgnoreCase(originalTarget));
+boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
+        && !reroutedVendorToPP
+        && "SPO".equalsIgnoreCase(dto.getRequestedByRole())
+        && (dto.getTargetVendorId() == null || dto.getTargetVendorId().isBlank())
+        && "MULTIPLE_INDENT".equals(eval.getIndentCategory());
 
             if (reroutedVendorToPP) {
                 if ("VENDOR".equalsIgnoreCase(originalTarget)) {
@@ -1213,7 +1218,7 @@
                     // Mark a specific vendor's quotation as CHANGE_REQUESTED
                     // Above 10L: don't change eval status for single-vendor clarification —
                     // other vendors can still be voted on while this one is pending clarification
-                    if (!isAbove10L) {
+                    if (!isAbove10L || eval.getEvaluationStatus().equalsIgnoreCase("PENDING_DOCUMENT_UPLOAD")) {
                         eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
                     }
                     String specificVendorId = dto.getTargetVendorId();
@@ -1588,7 +1593,34 @@
                         history.setRequestedAt(LocalDateTime.now());
                         clarificationHistoryRepository.save(history);
                     }
-                } else {
+                } else if (reroutedIndentorToPP) {
+    // MULTIPLE_INDENT: SPO→INDENTOR rerouted to PP → per-vendor rows
+    boolean isDoubleBidFinancial = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
+            && Boolean.TRUE.equals(eval.getFinancialBidPhase());
+    List<String> affectedVendorIds = quotationRepository
+            .findByTenderIdAndIsLatestTrue(tenderId)
+            .stream()
+            .filter(q -> !isDoubleBidFinancial
+                    || ("ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                        && "ACCEPTED".equalsIgnoreCase(q.getSpoStatus())))
+            .map(VendorQuotationAgainstTender::getVendorId)
+            .collect(Collectors.toList());
+    for (String vid : affectedVendorIds) {
+        TenderClarificationHistory h = new TenderClarificationHistory();
+        h.setTenderId(tenderId);
+        h.setRoundNumber(nextRound);
+        h.setRequestedByRole(dto.getRequestedByRole());
+        h.setRequestedByUserId(dto.getRequestedByUserId());
+        h.setClarificationTarget("PURCHASE_PERSONNEL");
+        h.setTargetVendorId(vid);
+        h.setTargetUserId(dto.getTargetUserId());
+        h.setTargetUserName(dto.getTargetUserName());
+        h.setQuestionRemarks(dto.getRemarks());
+        h.setRequestedAt(LocalDateTime.now());
+        clarificationHistoryRepository.save(h);
+    }
+} 
+                else {
                     // Non-vendor targets (INDENTOR per-vendor, CHAIRMAN, PURCHASE_PERSONNEL direct,
                     // SPECIFIC_MEMBER, ALL_MEMBERS): single row
                     TenderClarificationHistory history = new TenderClarificationHistory();

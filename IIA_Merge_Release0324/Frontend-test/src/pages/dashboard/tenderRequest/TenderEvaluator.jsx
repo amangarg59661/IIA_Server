@@ -3847,7 +3847,7 @@ useEffect(() => {
   }[evalStatus?.committeeType] || '';
 
   const amountCategoryLabel = {
-    UNDER_10_LAKH:              'Below ₹10 Lakhs (Indentor)',
+    UNDER_10_LAKH:              'Below ₹10 Lakhs',
     ABOVE_10_LAKH_UPTO_50_LAKH: '₹10 Lakh – ₹50 Lakh (STEC-I)',
     ABOVE_50_LAKH_UPTO_1_CRORE: '₹50 Lakh – ₹1 Crore (STEC-II)',
     ABOVE_1_CRORE:              'Above ₹1 Crore (Director Ad Hoc)',
@@ -3918,7 +3918,7 @@ useEffect(() => {
                     {committeeLabel}
                   </Tag>
                 )}
-                {evalStatus.bidType && <Tag color="purple">Bid: {evalStatus.bidType?.replace(/_/g, ' ')}</Tag>}
+                {evalStatus.bidType && <Tag color="purple"> {evalStatus.bidType?.replace(/_/g, ' ')}</Tag>}
                 {evalStatus.indentCategory && <Tag>{evalStatus.indentCategory?.replace(/_/g, ' ')}</Tag>}
                 {evalStatus.approvedVendorName && (
                   <Tag color="green">Approved: {evalStatus.approvedVendorName}</Tag>
@@ -4525,7 +4525,9 @@ useEffect(() => {
                   {indentorOpenQuestions.map((q) => {
                     const targetVendor = quotationData.find(v => v.vendorId === q.targetVendorId);
                     const vendorStatus = isFinancialPhase ? targetVendor?.financialIndentorStatus : targetVendor?.indentorStatus;
+                    console.log( isFinancialPhase, targetVendor, vendorStatus, q.targetVendorId);
                     const vendorDecided = vendorStatus === 'ACCEPTED' || vendorStatus === 'REJECTED';
+                    console.log('vendorDecided', vendorDecided, targetVendor?.vendorName, vendorStatus);
                     return (
                       <div key={q.id} style={{
                         marginBottom: 12, padding: 12,
