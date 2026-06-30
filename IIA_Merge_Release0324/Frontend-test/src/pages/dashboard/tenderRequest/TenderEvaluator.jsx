@@ -1368,7 +1368,7 @@ const fetchIndentorOpenQuestions = async (tid) => {
     const filtered = all.filter(h =>
       isPurchasePersonnelRole
         ? h.clarificationTarget === 'PURCHASE_PERSONNEL'
-        : h.clarificationTarget === 'INDENTOR'
+        : (h.clarificationTarget === 'INDENTOR' || h.clarificationTarget === 'PURCHASE_PERSONNEL')
     );
     setIndentorOpenQuestions(filtered);
   } catch (e) {
@@ -1480,7 +1480,8 @@ const showDirectorInlineActions = isAbove10L && isDirector &&
 // Above 10L gated flow computed values
 const currentVotePhase = isFinancialPhase ? 'FINANCIAL' : 'TECHNICAL';
 const myVendorVotes = Object.values(evalStatus?.committeeVendorVotes || {})
-  .map(votes => votes.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase));
+  .map(votes => votes.find(v => String(v.committeeUserId) === String(userId) && v.voterRole === 'MEMBER' && v.phase === currentVotePhase))
+  .filter(Boolean);
 const allMyVendorsDecided = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.decision);
 const myVotesConfirmed = myVendorVotes.length > 0 && myVendorVotes.every(v => v?.confirmed);
 
@@ -1497,7 +1498,9 @@ const isChairmanClarifReview = evalStatus?.evaluationStatus === 'PENDING_CHAIRMA
 
 const allChairmanVendorsDecided = (() => {
   const votesMap = evalStatus?.committeeVendorVotes || {};
-  const vendorIds = Object.keys(votesMap);
+  const vendorIds = Object.keys(votesMap).filter(vid =>
+    votesMap[vid]?.some(v => v.phase === currentVotePhase)
+  );
   if (vendorIds.length === 0) return false;
   return vendorIds.every(vid =>
     votesMap[vid]?.some(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase)
@@ -1506,7 +1509,9 @@ const allChairmanVendorsDecided = (() => {
 
 const allDirectorVendorsDecided = (() => {
   const votesMap = evalStatus?.committeeVendorVotes || {};
-  const vendorIds = Object.keys(votesMap);
+  const vendorIds = Object.keys(votesMap).filter(vid =>
+    votesMap[vid]?.some(v => v.phase === currentVotePhase)
+  );
   if (vendorIds.length === 0) return false;
   return vendorIds.every(vid =>
     votesMap[vid]?.some(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase)
@@ -1655,7 +1660,7 @@ if (isSpoRole) {
           render: (status) => status || 'N/A',
         },*/
          {
-          title: 'Indentor Status',
+          title: indentorStatusLabel,
           key: 'indentorStatus',
           dataIndex: 'indentorStatus',
           render: (indentorStatus, record) => {
@@ -2013,6 +2018,11 @@ if (isSpoRole) {
       dataIndex: 'status',
       render: (status) =>
         status === 'CHANGE_REQUESTED' ? 'Pending Clarification' : (status || 'N/A'),
+    },
+    {
+      title: 'Document Upload Status',
+      key: 'documentUploadStatuss',
+      dataIndex: 'documentUploadStatuss',
     },
     {
   title: indentorStatusLabel,
@@ -3252,7 +3262,7 @@ const spoTechColumns = [
       ) : 'No File',
   },
   {
-    title: 'Indentor Status',
+    title: indentorStatusLabel,
     key: 'indentorStatus',
     dataIndex: 'indentorStatus',
     width: 150,
@@ -3508,7 +3518,7 @@ const spoFinColumns = [
       }]
     : []),
   {
-    title: 'Indentor Status',
+    title: indentorStatusLabel,
     key: 'financialIndentorStatus',
     dataIndex: 'financialIndentorStatus',
     width: 150,
@@ -3561,7 +3571,7 @@ const spoFinColumns = [
             && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING')
             && (record.status !== 'CHANGE_REQUESTED' || record.status === 'CHANGE_RESPONDED');
          const spoCanReject = ['PENDING_SPO_APPROVAL', 'PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus)
-  && (record.financialIndentorStatus === 'ACCEPTED' || record.financialIndentorStatus === 'PENDING' || record.indentorStatus === 'REJECTED')
+  && (record.financialIndentorStatus === 'ACCEPTED' || record.financialIndentorStatus === 'PENDING' || record.financialIndentorStatus === 'Pending' || record.financialIndentorStatus === null || record.indentorStatus === 'REJECTED')
   && (!record.financialSpoStatus || record.financialSpoStatus === 'PENDING' || record.financialSpoStatus === 'CHANGE_REQUESTED');
           const pendingToIndentor = record.changeRequestToIndentor;
           const vendorHasOpenIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
@@ -3809,7 +3819,7 @@ useEffect(() => {
         if (!isAbove10L) return q.indentorStatus === 'ACCEPTED' && q.sopStatus === 'ACCEPTED';
         const dirTechVote = evalStatus?.committeeVendorVotes?.[q.vendorId]
           ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === 'TECHNICAL');
-        return q.indentorStatus === 'ACCEPTED' && dirTechVote?.decision === 'ACCEPTED';
+        return dirTechVote?.decision === 'ACCEPTED';
       })
     : [];
 
@@ -3920,9 +3930,9 @@ useEffect(() => {
                 )}
                 {evalStatus.bidType && <Tag color="purple"> {evalStatus.bidType?.replace(/_/g, ' ')}</Tag>}
                 {evalStatus.indentCategory && <Tag>{evalStatus.indentCategory?.replace(/_/g, ' ')}</Tag>}
-                {evalStatus.approvedVendorName && (
+                {/* {evalStatus.approvedVendorName && (
                   <Tag color="green">Approved: {evalStatus.approvedVendorName}</Tag>
-                )}
+                )} */}
                 {evalStatus.vendorPortalRegistered && (
                   <Tag color="green">Vendor Portal: Registered</Tag>
                 )}
@@ -5056,9 +5066,6 @@ useEffect(() => {
                   />
                 )}
                 <Space wrap>
-                  <Button onClick={openExpertModal}>
-                    {evalStatus.expertName ? 'Change Expert' : 'Assign Expert'}
-                  </Button>
                   <Button type="primary"
                     onClick={() => { setChairmanDecision('APPROVED'); setChairmanIsOverride(false); setChairmanModal(true); }}>
                     Approve (Follow Committee)
@@ -5067,10 +5074,10 @@ useEffect(() => {
                     onClick={() => { setChairmanDecision('REJECTED'); setChairmanIsOverride(false); setChairmanModal(true); }}>
                     Reject
                   </Button>
-                  <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+                  {/* <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
                     onClick={() => { setChairmanDecision('APPROVED'); setChairmanIsOverride(true); setChairmanModal(true); }}>
                     Override Committee
-                  </Button>
+                  </Button> */}
                   <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
                     onClick={() => openClarificationModal('CHAIRMAN')}>
                     Seek Clarification
@@ -5193,15 +5200,15 @@ useEffect(() => {
                     onClick={() => { setApprovalType('director'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
                     Confirm Evaluation
                   </Button>
-                  <Button danger
+                  {/* <Button danger
                     disabled={isAnyClarificationPending}
                     onClick={() => { setApprovalType('director'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
                     Reject
-                  </Button>
-                  <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
+                  </Button> */}
+                  {/* <Button style={{ color: '#fa8c16', borderColor: '#fa8c16' }}
                     onClick={() => { setApprovalType('director'); setApprovalDecision('OVERRIDE'); setApprovalModal(true); }}>
                     Override &amp; Approve
-                  </Button>
+                  </Button> */}
                   <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
                     onClick={() => openClarificationModal('DIRECTOR')}>
                     Seek Clarification

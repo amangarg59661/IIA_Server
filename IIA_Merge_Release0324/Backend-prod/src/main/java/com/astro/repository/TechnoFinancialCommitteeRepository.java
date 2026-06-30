@@ -15,6 +15,8 @@ public interface TechnoFinancialCommitteeRepository extends JpaRepository<Techno
 
     Optional<TechnoFinancialCommittee> findByUserIdAndIsActiveTrue(Integer userId);
 
+    Optional<TechnoFinancialCommittee> findByUserIdAndRoleAndIsActiveTrue(Integer userId, String role);
+
     /** Returns all active members with the given role (may return multiple for CHAIRMAN across STEC types). */
     List<TechnoFinancialCommittee> findByRoleAndIsActiveTrue(String role);
 

@@ -11,5 +11,5 @@ import java.util.Optional;
 public interface VendorLoginDetailsRepository extends JpaRepository<VendorLoginDetails,Long> {
 
 
-    Optional<VendorLoginDetails> findByVendorId(String vendorId);
+    Optional<VendorLoginDetails> findFirstByVendorId(String vendorId);
 }

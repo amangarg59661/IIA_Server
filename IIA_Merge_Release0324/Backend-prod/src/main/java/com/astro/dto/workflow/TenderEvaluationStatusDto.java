@@ -77,6 +77,8 @@ public class TenderEvaluationStatusDto {
         private String status;                // overall quotation status
         private String indentorStatus;
         private String spoStatus;
+        private String financialIndentorStatus;
+        private String financialSpoStatus;
         private Integer rank;
     }
 
