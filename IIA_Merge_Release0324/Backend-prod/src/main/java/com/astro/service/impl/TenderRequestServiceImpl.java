@@ -657,7 +657,7 @@ public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByRole(
 
         case "committee chairman": {
             Optional<TechnoFinancialCommittee> chairOpt =
-                    technoFinancialCommitteeRepository.findByUserIdAndIsActiveTrue(userId);
+                    technoFinancialCommitteeRepository.findByUserIdAndRoleAndIsActiveTrue(userId, "CHAIRMAN");
             List<String> amountCategories;
             if (chairOpt.isPresent()) {
                 String type = chairOpt.get().getCommitteeType();

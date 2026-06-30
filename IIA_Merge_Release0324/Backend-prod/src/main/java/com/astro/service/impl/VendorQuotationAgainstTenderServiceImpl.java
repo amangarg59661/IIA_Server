@@ -413,7 +413,7 @@ public VendorStatusDto getVendorStatus(String vendorId) {
 
     // approved vendors
     Optional<VendorMaster> approved = vendorMasterRepository.findByVendorId(vendorId);
-    Optional<VendorLoginDetails> vendorLogin = vendorLoginDetailsRepository.findByVendorId(vendorId);
+    Optional<VendorLoginDetails> vendorLogin = vendorLoginDetailsRepository.findFirstByVendorId(vendorId);
     
     if (vendorLogin.isPresent()) {
         VendorLoginDetails vl = vendorLogin.get();
@@ -544,7 +544,7 @@ public ChangePasswordResponseDto changePassword(ChangePasswordRequestDto request
     }
 
     // Find vendor login details
-    Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findByVendorId(request.getVendorId());
+    Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findFirstByVendorId(request.getVendorId());
     
     if (vendorLoginOpt.isEmpty()) {
         return new ChangePasswordResponseDto(false, "Vendor not found", request.getVendorId());
@@ -961,7 +961,7 @@ try {
         VendorStatusDto dto = new VendorStatusDto();
         dto.setVendorId(request.getVendorId());
 
-        Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findByVendorId(request.getVendorId());
+        Optional<VendorLoginDetails> vendorLoginOpt = vendorLoginDetailsRepository.findFirstByVendorId(request.getVendorId());
         if (vendorLoginOpt.isEmpty()) {
             dto.setStatus("NOT_FOUND");
             dto.setComments("Vendor ID not found.");

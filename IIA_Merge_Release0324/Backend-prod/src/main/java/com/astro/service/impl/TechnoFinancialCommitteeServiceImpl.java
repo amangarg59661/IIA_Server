@@ -218,7 +218,29 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                     "Chairman cannot nominate themselves as a committee member."));
         }
 
-        // 4. Check user not already assigned to this tender
+        // 4. If replacing expert, remove old expert's decision row first
+        if (dto.isExpert()) {
+            List<TenderCommitteeDecision> decisions = committeeDecisionRepository.findByTenderId(dto.getTenderId());
+            decisions.stream()
+                    .filter(d -> d.getExpertUserId() != null)
+                    .findFirst()
+                    .ifPresent(chairRow -> {
+                        Integer oldExpertId = chairRow.getExpertUserId();
+                        if (!oldExpertId.equals(dto.getUserId())) {
+                            committeeDecisionRepository.findByTenderIdAndCommitteeUserId(
+                                    dto.getTenderId(), oldExpertId).ifPresent(oldRow -> {
+                                committeeDecisionRepository.delete(oldRow);
+                                log.info("Removed old expert {} from tender {}", oldExpertId, dto.getTenderId());
+                            });
+                            chairRow.setExpertUserId(null);
+                            chairRow.setExpertName(null);
+                            chairRow.setUpdatedDate(LocalDateTime.now());
+                            committeeDecisionRepository.save(chairRow);
+                        }
+                    });
+        }
+
+        // 5. Check user not already assigned to this tender
         if (committeeDecisionRepository.findByTenderIdAndCommitteeUserId(
                 dto.getTenderId(), dto.getUserId()).isPresent()) {
             throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",

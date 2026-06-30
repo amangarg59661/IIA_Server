@@ -544,7 +544,6 @@
                     // Final SPO approval (either single bid or double bid financial phase)
                     boolean wasFinancialPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase());
                     eval.setEvaluationStatus("APPROVED");
-                    eval.setFinancialBidPhase(false);
 
                     // Guard: all Indentor-accepted vendors must have an SPO decision before final approval
                     List<VendorQuotationAgainstTender> allQuotations =
@@ -1033,9 +1032,7 @@
                             .collect(Collectors.toSet());
 
                     List<VendorQuotationAgainstTender> approvedVendors = quotations.stream()
-                            .filter(q -> "APPROVED".equalsIgnoreCase(q.getTechnicalStatus())
-                                    && "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
-                                    && directorApprovedVendorIds.contains(q.getVendorId()))
+                            .filter(q -> directorApprovedVendorIds.contains(q.getVendorId()))
                             .collect(Collectors.toList());
 
                     for (TenderCommitteeDecision member : committeeMembers) {
@@ -1052,7 +1049,6 @@
                     }
                 } else {
                     eval.setEvaluationStatus("APPROVED");
-                    eval.setFinancialBidPhase(false);
                     // Check all approved vendors for portal registration
                     List<VendorQuotationAgainstTender> dirCompletedVendors =
                             quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
@@ -1085,7 +1081,7 @@
         @Override
         public boolean checkAndRegisterVendorOnPortal(String vendorId) {
             Optional<VendorLoginDetails> existing =
-                    vendorLoginDetailsRepository.findByVendorId(vendorId);
+                    vendorLoginDetailsRepository.findFirstByVendorId(vendorId);
             if (existing.isPresent()) return true;
 
             Optional<VendorMaster> vendorOpt = vendorMasterRepository.findById(vendorId);
@@ -1782,6 +1778,12 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                                 if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
                                     q.setFinancialSpoStatus("PENDING");
                                 }
+                                if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getIndentorStatus())) {
+                                    q.setIndentorStatus(null);
+                                }
+                                if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialIndentorStatus())) {
+                                    q.setFinancialIndentorStatus(null);
+                                }
                                 q.setUpdatedDate(LocalDateTime.now());
                                 quotationRepository.save(q);
                             });
@@ -2181,6 +2183,15 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                         + ") can select the expert."));
             }
 
+            // Remove old expert if replacing
+            if (eval.getExpertUserId() != null && !eval.getExpertUserId().equals(expertUserId)) {
+                committeeDecisionRepository.findByTenderIdAndCommitteeUserId(tenderId, eval.getExpertUserId())
+                        .ifPresent(oldRow -> {
+                            committeeDecisionRepository.delete(oldRow);
+                            log.info("Removed old expert {} from tender {}", eval.getExpertUserId(), tenderId);
+                        });
+            }
+
             eval.setExpertUserId(expertUserId);
             eval.setExpertName(expertName);
 
@@ -2379,14 +2390,19 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             }
             boolean wasChangeRequested = "CHANGE_REQUESTED".equalsIgnoreCase(quotation.getStatus());
             if (wasChangeRequested) {
-                boolean canIndentorAct = VendorQuotationAgainstTender.WorkflowActorRole.INDENTOR
-                                    .equals(quotation.getNextRole());
-                // if ("ACCEPTED".equals(normalizedDecision) && !canIndentorAct ) {
-                //     throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                //             "Cannot accept a vendor that is under seek clarification. "
-                //             + "Resolve the clarification first, or reject the vendor."));
-                // }
-                quotation.setStatus("SUBMITTED");
+                if ("ACCEPTED".equals(normalizedDecision)) {
+                    long openClarifRows = clarificationHistoryRepository
+                            .findByTenderIdAndTargetVendorIdAndRespondedAtIsNull(tenderId, vendorId)
+                            .stream()
+                            .filter(h -> "INDENTOR".equalsIgnoreCase(h.getClarificationTarget())
+                                    || "PURCHASE_PERSONNEL".equalsIgnoreCase(h.getClarificationTarget()))
+                            .count();
+                    if (openClarifRows == 0) {
+                        quotation.setStatus("SUBMITTED");
+                    }
+                } else {
+                    quotation.setStatus("SUBMITTED");
+                }
             }
 
             if (Boolean.TRUE.equals(eval.getFinancialBidPhase())) {
@@ -2855,12 +2871,20 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                                                 TenderEvaluation eval) {
             List<VendorQuotationAgainstTender> quotations =
                     quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
-            long eligibleCount = "FINANCIAL".equals(phase)
-                    ? quotations.stream()
-                        .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
-                                    || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
-                        .count()
-                    : quotations.size();
+            long eligibleCount;
+            if ("FINANCIAL".equals(phase)) {
+                Set<String> dirApprovedVendors = committeeVendorDecisionRepository
+                        .findByTenderIdAndPhaseAndVoterRole(tenderId, "TECHNICAL", "DIRECTOR")
+                        .stream()
+                        .filter(v -> "ACCEPTED".equalsIgnoreCase(v.getDecision()))
+                        .map(TenderCommitteeVendorDecision::getVendorId)
+                        .collect(Collectors.toSet());
+                eligibleCount = quotations.stream()
+                        .filter(q -> dirApprovedVendors.contains(q.getVendorId()))
+                        .count();
+            } else {
+                eligibleCount = quotations.size();
+            }
             List<TenderCommitteeVendorDecision> votes = committeeVendorDecisionRepository
                     .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, voterRole);
             long decidedCount = votes.stream().filter(v -> v.getDecision() != null).count();
@@ -2955,6 +2979,8 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                         v.setStatus(q.getStatus());
                         v.setIndentorStatus(q.getIndentorStatus());
                         v.setSpoStatus(q.getSpoStatus());
+                        v.setFinancialIndentorStatus(q.getFinancialIndentorStatus());
+                        v.setFinancialSpoStatus(q.getFinancialSpoStatus());
                         v.setRank(q.getRank());
                         if (Boolean.TRUE.equals(q.getFinancialBidVisible())) {
                             v.setPriceBidFileName(q.getPriceBidFileName());
@@ -3045,12 +3071,10 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                 }
 
                 // Per-vendor committee votes (above-10L)
-                boolean isDoubleBidFinancial = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType())
-                        && Boolean.TRUE.equals(eval.getFinancialBidPhase());
-
+                // For DOUBLE_BID, always return BOTH phases so frontend can
+                // derive Technical Status and Financial Status from director votes.
                 List<TenderCommitteeVendorDecision> vendorVotes;
-                if (isDoubleBidFinancial) {
-                    // Return BOTH phases so frontend can show technical history + financial voting
+                if ("DOUBLE_BID".equalsIgnoreCase(eval.getBidType())) {
                     List<TenderCommitteeVendorDecision> techVotes =
                             committeeVendorDecisionRepository.findByTenderIdAndPhase(tenderId, "TECHNICAL");
                     List<TenderCommitteeVendorDecision> finVotes =
@@ -3256,20 +3280,6 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             }
 
             log.info("Updated vendorId from {} to {} for tender {}", vendorId, registeredVendorId, tenderId);
-
-            // Recalculate vendorPortalRegistered — check all approved vendors
-            TenderEvaluation eval = requireEval(tenderId);
-            List<VendorQuotationAgainstTender> completedVendors =
-                    quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
-                            .filter(q -> "Completed".equals(q.getStatus()))
-                            .collect(Collectors.toList());
-            if (!completedVendors.isEmpty()) {
-                boolean allRegistered = completedVendors.stream()
-                        .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
-                eval.setVendorPortalRegistered(allRegistered);
-                eval.setUpdatedDate(LocalDateTime.now());
-                tenderEvaluationRepository.save(eval);
-            }
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -3325,9 +3335,14 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             List<VendorQuotationAgainstTender> quotations = quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
             long expectedVendorCount;
             if ("FINANCIAL".equals(phase)) {
+                Set<String> dirApprovedVendors = committeeVendorDecisionRepository
+                        .findByTenderIdAndPhaseAndVoterRole(tenderId, "TECHNICAL", "DIRECTOR")
+                        .stream()
+                        .filter(v -> "ACCEPTED".equalsIgnoreCase(v.getDecision()))
+                        .map(TenderCommitteeVendorDecision::getVendorId)
+                        .collect(Collectors.toSet());
                 expectedVendorCount = quotations.stream()
-                        .filter(q -> !("REJECTED".equalsIgnoreCase(q.getIndentorStatus())
-                                    || "REJECTED".equalsIgnoreCase(q.getSpoStatus())))
+                        .filter(q -> dirApprovedVendors.contains(q.getVendorId()))
                         .count();
             } else {
                 expectedVendorCount = quotations.size();

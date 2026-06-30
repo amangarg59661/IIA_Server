@@ -115,7 +115,7 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
                 } catch (MessagingException e) {
                     // Email failed - mark as not sent in a new transaction
                     System.err.println("Failed to send registration email for vendor " + finalVm.getVendorId() + ": " + e.getMessage());
-                    vendorLoginDetailsRepository.findByVendorId(finalVm.getVendorId()).ifPresent(vl -> {
+                    vendorLoginDetailsRepository.findFirstByVendorId(finalVm.getVendorId()).ifPresent(vl -> {
                         vl.setEmailSent(false);
                         vendorLoginDetailsRepository.save(vl);
                     });
@@ -228,7 +228,7 @@ public class VendorMasterUtilServiceImpl implements VendorMasterUtilService {
         vendorResponse.setState(vendor.getState());
         vendorResponse.setPlace(vendor.getPlace());
         
-        Optional<VendorLoginDetails> vendorLogin = vendorLoginDetailsRepository.findByVendorId(vendor.getVendorId());
+        Optional<VendorLoginDetails> vendorLogin = vendorLoginDetailsRepository.findFirstByVendorId(vendor.getVendorId());
         if (vendorLogin.isPresent()) {
             VendorLoginDetails vl = vendorLogin.get();
             vendorResponse.setEmailStatus(vl.getEmailSent());
