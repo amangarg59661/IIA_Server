@@ -1469,11 +1469,16 @@ const showCommitteeMemberSingleBidActions = !isDoubleBidEval &&
    evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW');
 const showChairmanInlineActions = isChairman && isAbove10L &&
   (evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
    (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
     evalStatus?.clarificationRequestedByRole === 'CHAIRMAN'));
 
 const showDirectorInlineActions = isAbove10L && isDirector &&
   (evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_VOTING' ||
+   evalStatus?.evaluationStatus === 'PENDING_MEMBER_REVOTE' ||
+   evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_CLARIFICATION_REVIEW' ||
    (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
     evalStatus?.clarificationRequestedByRole === 'DIRECTOR'));
 
@@ -2424,7 +2429,7 @@ if (isSpoRole) {
     return (
       <Space size={4}>
         <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-        <Button size="small" danger disabled={!viewed} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+        <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
         <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
           onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
       </Space>
@@ -2620,7 +2625,7 @@ const doubleBidTechColumns = [
       return (
         <Space size={4}>
           <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger disabled={!viewed} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+          <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
           <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
@@ -3169,7 +3174,7 @@ const doubleBidFinColumns = [
       return (
         <Space size={4}>
           <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger disabled={!viewed} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+          <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
           <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>

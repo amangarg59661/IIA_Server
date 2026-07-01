@@ -1128,11 +1128,19 @@
                         "clarificationTarget must be specified: VENDOR, ALL_VENDORS, INDENTOR, PURCHASE_PERSONNEL, SPECIFIC_MEMBER, or ALL_MEMBERS"));
             }
 
+            // GEM/OPEN/GLOBAL: original target was VENDOR/ALL_VENDORS but rerouted to PURCHASE_PERSONNEL.
+            // Compute BEFORE cross-type validation so rerouted vendor→PP is treated as vendor-type.
+            boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
+                    && (originalTarget != null)
+                    && ("VENDOR".equalsIgnoreCase(originalTarget) || "ALL_VENDORS".equalsIgnoreCase(originalTarget));
+
             // Cross-type validation: cannot mix VENDOR and INDENTOR clarification types
             if (Set.of("SPO", "CHAIRMAN", "DIRECTOR").contains(dto.getRequestedByRole().toUpperCase())) {
                 String currentStatus = eval.getEvaluationStatus();
-                boolean targetIsVendor = Set.of("VENDOR", "ALL_VENDORS").contains(target.toUpperCase());
-                boolean targetIsIndentor = Set.of("INDENTOR", "PURCHASE_PERSONNEL").contains(target.toUpperCase());
+                boolean targetIsVendor = Set.of("VENDOR", "ALL_VENDORS").contains(target.toUpperCase())
+                        || reroutedVendorToPP;
+                boolean targetIsIndentor = Set.of("INDENTOR", "PURCHASE_PERSONNEL").contains(target.toUpperCase())
+                        && !reroutedVendorToPP;
                 if (targetIsVendor && "PENDING_INDENTOR_CLARIFICATION".equals(currentStatus)) {
                     throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
                             "Cannot seek vendor clarification while Indentor clarification is pending. Wait for Indentor response first."));
@@ -1143,11 +1151,7 @@
                 }
             }
 
-            // GEM/OPEN/GLOBAL: original target was VENDOR/ALL_VENDORS but rerouted to PURCHASE_PERSONNEL.
             // Mark vendor quotations CHANGE_REQUESTED so PP knows which vendors need clarification.
-            boolean reroutedVendorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
-                    && (originalTarget != null)
-                    && ("VENDOR".equalsIgnoreCase(originalTarget) || "ALL_VENDORS".equalsIgnoreCase(originalTarget));
 boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
         && !reroutedVendorToPP
         && "SPO".equalsIgnoreCase(dto.getRequestedByRole())
@@ -2027,6 +2031,9 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                         .filter(h -> h.getRespondedAt() == null)
                         .filter(h -> !Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL")
                                 .contains(h.getClarificationTarget()))
+                        // Exclude per-member per-vendor tracking rows (above 10L committee member→chairman)
+                        .filter(h -> !("CHAIRMAN".equals(h.getClarificationTarget())
+                                && "COMMITTEE_MEMBER".equals(h.getRequestedByRole())))
                         .count();
             } else {
                 openHistoryRows = clarificationHistoryRepository.countByTenderIdAndRespondedAtIsNull(tenderId);
@@ -2042,6 +2049,9 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                             clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId)
                                     .stream()
                                     .filter(h -> h.getRespondedAt() == null)
+                                    // Exclude per-member per-vendor tracking rows (above 10L committee member→chairman)
+                                    .filter(h -> !("CHAIRMAN".equals(h.getClarificationTarget())
+                                            && "COMMITTEE_MEMBER".equals(h.getRequestedByRole())))
                                     .collect(Collectors.toList());
 
                     boolean hasVendorPending = openRows.stream()
@@ -2564,6 +2574,9 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                         .filter(h -> h.getRespondedAt() == null)
                         .filter(h -> !Set.of("VENDOR", "ALL_VENDORS", "PURCHASE_PERSONNEL")
                                 .contains(h.getClarificationTarget()))
+                        // Exclude per-member per-vendor tracking rows (above 10L committee member→chairman)
+                        .filter(h -> !("CHAIRMAN".equals(h.getClarificationTarget())
+                                && "COMMITTEE_MEMBER".equals(h.getRequestedByRole())))
                         .count();
             } else {
                 openHistoryRows = clarificationHistoryRepository
