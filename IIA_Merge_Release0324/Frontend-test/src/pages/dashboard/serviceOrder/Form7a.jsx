@@ -39,7 +39,7 @@ const Form7a = () => {
       try {
         // Fetch approved tender IDs
         const { data: approvedData } = await axios.get(
-          "/getApprovedTenderIdForPOAndSO"
+          "/getApprovedTenderIdForSO"
         );
         const approvedIds = approvedData.responseData || [];
 

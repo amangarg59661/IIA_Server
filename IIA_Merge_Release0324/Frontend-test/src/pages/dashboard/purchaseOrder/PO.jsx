@@ -59,7 +59,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
     try {
       const [vendorResponse, approvedTendersResponse] = await Promise.all([
         axios.get("/api/vendor-master"),
-        axios.get("/getApprovedTenderIdForPOAndSO"),
+        axios.get("/getApprovedTenderIdForPO"),
       ]);
 
       // Format options

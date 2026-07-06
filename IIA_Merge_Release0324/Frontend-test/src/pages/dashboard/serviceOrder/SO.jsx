@@ -26,9 +26,11 @@ const [searchDone, setSearchDone] = useState(false);
   // Data states
   const [vendors, setVendors] = useState([]);
   const [tenders, setTenders] = useState([]);
-  const [materials, setMaterials] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [completedVendorIds, setCompletedVendorIds] = useState([]);
+  const [completedVendorNames, setCompletedVendorNames] = useState([]);
   const [formData, setFormData] = useState({
-    materialDtlList: [],
+    jobDtlList: [],
     consignesAddress: "Bangalore",
     billingAddress: "Koramangala, Bangalore - 560034",
   });
@@ -38,7 +40,7 @@ const [searchDone, setSearchDone] = useState(false);
     try {
       const [vendorResponse, approvedTendersResponse] = await Promise.all([
         axios.get("/api/vendor-master"),
-        axios.get("/getApprovedTenderIdForPOAndSO"),
+        axios.get("/getApprovedTenderIdForSO"),
       ]);
 
       // Format options
@@ -71,38 +73,63 @@ const [searchDone, setSearchDone] = useState(false);
 
   const handleTenderSelect = async (tenderId) => {
     try {
-      ;
-
-      // 1. Fetch the full tender DTO by tenderId using axios and relative path
       const tenderRes = await axios.get(`/api/tender-requests/byId`, { params: { tenderId } });
-      // const tenderRes = await axios.get(`/api/tender-requests/${tenderId}`);
       const tenderDto = tenderRes.data.responseData;
-      ;
 
-      // 2. Extract all material details from indentResponseDTO
-      const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
+      // Extract job details from indentResponseDTO (SO = job indents only)
+      const allJobs = (tenderDto.indentResponseDTO || []).flatMap(
         (indent) =>
-          (indent.materialDetails || []).map((material) => ({
-            materialCode: material.materialCode,
-            materialDescription: material.materialDescription,
-            budgetCode: material.budgetCode,
-            quantity: material.quantity,
-            rate: material.unitPrice,
-            uom: material.uom,
-            currency: material.currency || "INR",
-            gst: material.gst || "",
-            duties: material.duties || "",
-            // Add other fields as needed
+          (indent.jobDetails || []).map((job) => ({
+            ...job,
+            rate: job.estimatedPrice,
+            currency: job.currency || "INR",
+            gst: job.gst || "",
+            duties: job.duties || "",
           }))
       );
 
-      // 3. Update state and form
-      setMaterials(allMaterials);
+      setJobs(allJobs);
+
+      // Fetch approved vendors from evaluation (same pattern as PO)
+      let vendorIdOptions = [];
+      let vendorNameOptions = [];
+      try {
+        let completedVendorsData = [];
+        try {
+          const evalApprovedResp = await axios.get(
+            `/api/tender-evaluation/approved-vendors`, { params: { tenderId } }
+          );
+          completedVendorsData = evalApprovedResp.data?.responseData || [];
+        } catch (evalErr) {
+          if (evalErr?.response?.status === 404 || evalErr?.response?.status === 400) {
+            const completedResp = await axios.get(
+              `/api/vendor-quotation/completed-vendorNames`, { params: { tenderId } }
+            );
+            completedVendorsData = completedResp.data?.responseData || [];
+          } else {
+            throw evalErr;
+          }
+        }
+        vendorIdOptions = completedVendorsData.map((vendor) => ({
+          label: vendor.vendorId,
+          value: vendor.vendorId,
+        }));
+        vendorNameOptions = completedVendorsData.map((vendor) => ({
+          label: vendor.vendorName || vendor.vendorId,
+          value: vendor.vendorName || vendor.vendorId,
+        }));
+        setCompletedVendorIds(vendorIdOptions);
+        setCompletedVendorNames(vendorNameOptions);
+      } catch (e) {
+        console.warn("Failed to fetch approved vendors:", e);
+        setCompletedVendorIds([]);
+        setCompletedVendorNames([]);
+      }
 
       setFormData((prev) => ({
         ...prev,
         tenderId,
-        materialDtlList: allMaterials,
+        jobDtlList: allJobs,
         incoTerms: tenderDto.incoTerms,
         paymentTerms: tenderDto.paymentTerms,
       }));
@@ -118,8 +145,16 @@ const [searchDone, setSearchDone] = useState(false);
       return {
         ...section,
         fieldList: section.fieldList.map((field) => {
-          if (field.name === "vendorName")
-            return { ...field, options: vendors };
+          if (field.name === "vendorName") {
+            return {
+              ...field,
+              type: "text",
+              options: completedVendorNames.length
+                ? completedVendorNames
+                : vendors.map((v) => ({ label: v.value, value: v.value })),
+              props: { readOnly: false },
+            };
+          }
           if (field.name === "tenderId")
             return {
               ...field,
@@ -131,24 +166,22 @@ const [searchDone, setSearchDone] = useState(false);
                 showSearch: true,
               },
             };
-          if (field.name === "vendorId")
-            return {
-              ...field,
-              options: vendors.map((v) => ({
-                label: v.id,
-                value: v.id,
-              })),
-            };
+          if (field.name === "vendorId") {
+            const vendorOptions = completedVendorIds.length
+              ? completedVendorIds
+              : vendors.map((v) => ({ label: v.id, value: v.id }));
+            return { ...field, options: vendorOptions };
+          }
           return field;
         }),
       };
     }
-    if (section.name === "materialDtlList") {
+    if (section.name === "jobDtlList") {
       return {
         ...section,
         children: section.children.map((child) => ({
           ...child,
-          options: child.name === "materialCode" ? materials : child.options,
+          options: child.name === "jobCode" ? jobs : child.options,
         })),
       };
     }
@@ -185,11 +218,11 @@ const [searchDone, setSearchDone] = useState(false);
       }
     if (Array.isArray(name)) {
       const [section, index, field] = name;
-      if (section === "materialDtlList") {
+      if (section === "jobDtlList") {
         setFormData((prev) => {
-          const updated = [...(prev.materialDtlList || [])];
+          const updated = [...(prev.jobDtlList || [])];
           updated[index] = { ...updated[index], [field]: value };
-          return { ...prev, materialDtlList: updated };
+          return { ...prev, jobDtlList: updated };
         });
       }
     } else {
@@ -208,17 +241,16 @@ const [searchDone, setSearchDone] = useState(false);
       const payload = {
         ...formData,
         createdBy: actionPerformer,
-        materials: (formData.materialDtlList || []).map((m) => ({
-          budgetCode: m.budgetCode || "",
-          currency: m.currency || "",
-          duties: Number(m.duties) || 0,
-          exchangeRate: Number(m.exchangeRate) || 0,
-          gst: Number(m.gst) || 0,
-          materialCode: m.materialCode || "",
-          materialDescription: m.materialDescription || "",
-          budgetCode: m.budgetCode || "",
-          quantity: Number(m.quantity) || 0,
-          rate: Number(m.rate) || 0,
+        materials: (formData.jobDtlList || []).map((j) => ({
+          budgetCode: j.budgetCode || "",
+          currency: j.currency || "",
+          duties: Number(j.duties) || 0,
+          exchangeRate: Number(j.exchangeRate) || 0,
+          gst: Number(j.gst) || 0,
+          jobCode: j.jobCode || "",
+          jobDescription: j.jobDescription || "",
+          quantity: Number(j.quantity) || 0,
+          rate: Number(j.rate) || 0,
         })),
         applicablePBGToBeSubmitted: formData.applicablePBGToBeSubmitted || "",
       };
@@ -267,7 +299,7 @@ setModalOpen(true);
 
       setFormData({
         ...responseData,
-        materialDtlList: responseData?.materials || [],
+        jobDtlList: responseData?.materials || [],
       });
 
       setSearchDone(true);
@@ -398,8 +430,8 @@ const fetchSoVersionHistory = async (sid) => {
         ];
 
         const LINE_FIELDS = [
-            { key: 'materialCode',        label: 'Material Code' },
-            { key: 'materialDescription', label: 'Description' },
+            { key: 'jobCode',            label: 'Job Code' },
+            { key: 'jobDescription',     label: 'Description' },
             { key: 'quantity',            label: 'Quantity' },
             { key: 'rate',                label: 'Rate' },
             { key: 'currency',            label: 'Currency' },
@@ -429,7 +461,7 @@ const fetchSoVersionHistory = async (sid) => {
                 const changed = LINE_FIELDS
                     .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
                     .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
-                if (changed.length) lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c.materialDescription || `Item ${i + 1}` });
+                if (changed.length) lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c.jobDescription || `Item ${i + 1}` });
             }
         }
 
@@ -554,7 +586,7 @@ const fetchSoVersionHistory = async (sid) => {
                                         return (
                                             <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
                                                 <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
-                                                    {prefix}Item {diff.idx + 1}{diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}{diff.type !== 'modified' && diff.item?.materialDescription ? ` — ${diff.item.materialDescription}` : ''}
+                                                    {prefix}Item {diff.idx + 1}{diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}{diff.type !== 'modified' && diff.item?.jobDescription ? ` — ${diff.item.jobDescription}` : ''}
                                                 </div>
                                                 <div style={{ padding: '8px 12px', background: '#fff' }}>
                                                     {diff.type === 'modified'

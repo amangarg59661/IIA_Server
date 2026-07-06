@@ -219,7 +219,7 @@ const isLimitedOrProp = ['LIMITED_TENDER', 'PROPRIETARY'].includes(formData.mode
 const showPpPreInitiateClarif = isPurchasePersonnelRole
   && (evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD'
       || evalStatus?.evaluationStatus === 'PENDING_FINANCIAL_SHEET_UPLOAD')
-  && isBelow10L
+  // && isBelow10L
   && quotationData.length > 0;
 
   // ── PP: line-level Seek Clarification & Reject — during document upload phases ──
@@ -1683,6 +1683,15 @@ if (isSpoRole) {
           }
         },
         {
+          title: 'PP Response',
+          key: 'ppDocUploadRemarks',
+          dataIndex: 'ppDocUploadRemarks',
+          width: 150,
+          render: (val) => val
+            ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+            : '-',
+        },
+        {
           title: 'SPO Status',
           key: 'sopStatus',
           dataIndex: 'sopStatus',
@@ -2059,6 +2068,15 @@ if (isSpoRole) {
     return indentorStatus || 'N/A';
   }
 },
+    {
+      title: 'PP Response',
+      key: 'ppDocUploadRemarks',
+      dataIndex: 'ppDocUploadRemarks',
+      width: 150,
+      render: (val) => val
+        ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+        : '-',
+    },
     // {
     //   title: indentorStatusLabel,
     //   key: 'indentorStatus',
@@ -2409,28 +2427,30 @@ if (isSpoRole) {
     const isChairmanVotingPhase = evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING' ||
       (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
        evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
+    const chairmanCanAct = isChairmanVotingPhase;
     const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
     const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === currentVotePhase);
     const viewed = viewedVendorIds.has(record.vendorId);
     const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+    const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
     const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
     if (cv) {
       return (
         <Space size={4}>
           <Tag color={cv.decision === 'ACCEPTED' ? 'green' : 'red'}>{cv.decision}</Tag>
           {cv.decision === 'ACCEPTED'
-            ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
-            : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-          <Button size="small" disabled={vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+            ? <Button size="small" danger disabled={!chairmanCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
+            : <Button size="small" type="primary" disabled={!chairmanCanAct || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+          <Button size="small" disabled={!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
     }
     return (
       <Space size={4}>
-        <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-        <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
-        <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
+        <Button size="small" type="primary" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
+        <Button size="small" danger disabled={!onlyReject && (!chairmanCanAct || (!viewed && !vendorUnderClarif))} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+        <Button size="small" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} style={{ color: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
           onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
       </Space>
     );
@@ -2442,25 +2462,29 @@ if (isSpoRole) {
   key: 'directorSingleAction',
   width: 280,
   render: (_, record) => {
+    const directorCanAct = evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
+      (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
+       evalStatus?.clarificationRequestedByRole === 'DIRECTOR');
     const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === currentVotePhase);
     const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+    const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
     if (dv) {
       return (
         <Space size={4}>
           <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
           {dv.decision === 'ACCEPTED'
-            ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
-            : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-          <Button size="small" disabled={vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+            ? <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+            : <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+          <Button size="small" disabled={!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
     }
     return (
       <Space size={4}>
-        <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
-        <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
-        <Button size="small" disabled={vendorUnderClarif} style={{ color: vendorUnderClarif ? undefined : '#fa8c16', borderColor: vendorUnderClarif ? undefined : '#fa8c16' }}
+        <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
+        <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
+        <Button size="small" disabled={!directorCanAct || vendorUnderClarif} style={{ color: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined }}
           onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
       </Space>
     );
@@ -2569,6 +2593,15 @@ const doubleBidTechColumns = [
     },
   },
   {
+    title: 'PP Response',
+    key: 'ppDocUploadRemarks',
+    dataIndex: 'ppDocUploadRemarks',
+    width: 150,
+    render: (val) => val
+      ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+      : '-',
+  },
+  {
     title: isAbove10L ? 'Chairman Status' : 'SPO Status',
     key: 'sopStatus',
     width: 150,
@@ -2605,28 +2638,30 @@ const doubleBidTechColumns = [
       const isChairmanVotingPhase = evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING' ||
         (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
          evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
+      const chairmanCanAct = isChairmanVotingPhase;
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
       const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'TECHNICAL');
       const viewed = viewedVendorIds.has(record.vendorId);
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+      const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
       if (cv) {
         return (
           <Space size={4}>
             <Tag color={cv.decision === 'ACCEPTED' ? 'green' : 'red'}>{cv.decision}</Tag>
             {cv.decision === 'ACCEPTED'
-              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
-              : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-            <Button size="small" disabled={vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+              ? <Button size="small" danger disabled={!chairmanCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
+              : <Button size="small" type="primary" disabled={!chairmanCanAct || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" disabled={!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
               onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
           </Space>
         );
       }
       return (
         <Space size={4}>
-          <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
-          <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
+          <Button size="small" type="primary" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
+          <Button size="small" danger disabled={!onlyReject && (!chairmanCanAct || (!viewed && !vendorUnderClarif))} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+          <Button size="small" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} style={{ color: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
@@ -2637,25 +2672,29 @@ const doubleBidTechColumns = [
     key: 'directorAction',
     width: 280,
     render: (_, record) => {
+      const directorCanAct = evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
+        (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
+         evalStatus?.clarificationRequestedByRole === 'DIRECTOR');
       const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'TECHNICAL');
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+      const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
       if (dv) {
         return (
           <Space size={4}>
             <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
             {dv.decision === 'ACCEPTED'
-              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
-              : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-            <Button size="small" disabled={vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+              ? <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+              : <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" disabled={!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
               onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
           </Space>
         );
       }
       return (
         <Space size={4}>
-          <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
-          <Button size="small" disabled={vendorUnderClarif} style={{ color: vendorUnderClarif ? undefined : '#fa8c16', borderColor: vendorUnderClarif ? undefined : '#fa8c16' }}
+          <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
+          <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
+          <Button size="small" disabled={!directorCanAct || vendorUnderClarif} style={{ color: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
@@ -2957,6 +2996,15 @@ const doubleBidFinColumns = [
     },
   },
   {
+    title: 'PP Response',
+    key: 'ppDocUploadRemarks',
+    dataIndex: 'ppDocUploadRemarks',
+    width: 150,
+    render: (val) => val
+      ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+      : '-',
+  },
+  {
     title: isAbove10L ? 'Chairman Status' : 'SPO Status',
     key: 'financialSpoStatus',
     dataIndex: 'financialSpoStatus',
@@ -3154,28 +3202,30 @@ const doubleBidFinColumns = [
       const isChairmanVotingPhase = evalStatus?.evaluationStatus === 'PENDING_CHAIRMAN_VOTING' ||
         (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
          evalStatus?.clarificationRequestedByRole === 'CHAIRMAN');
+      const chairmanCanAct = isChairmanVotingPhase;
       const vendorVotes = evalStatus?.committeeVendorVotes?.[record.vendorId];
       const cv = vendorVotes?.find(v => v.voterRole === 'CHAIRMAN' && v.decision && v.phase === 'FINANCIAL');
       const viewed = viewedVendorIds.has(record.vendorId);
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+      const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
       const voteHandler = isChairmanVotingPhase ? handleChairmanVendorVote : handleChairmanVendorResolve;
       if (cv) {
         return (
           <Space size={4}>
             <Tag color={cv.decision === 'ACCEPTED' ? 'green' : 'red'}>{cv.decision}</Tag>
             {cv.decision === 'ACCEPTED'
-              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
-              : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-            <Button size="small" disabled={vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+              ? <Button size="small" danger disabled={!chairmanCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Change to Reject</Button>
+              : <Button size="small" type="primary" disabled={!chairmanCanAct || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" disabled={!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED'} style={{ color: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!chairmanCanAct || vendorUnderClarif || cv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
               onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
           </Space>
         );
       }
       return (
         <Space size={4}>
-          <Button size="small" type="primary" disabled={!viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger disabled={!viewed && !vendorUnderClarif} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
-          <Button size="small" disabled={!viewed || vendorUnderClarif} style={{ color: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
+          <Button size="small" type="primary" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} onClick={() => voteHandler(record.vendorId, 'ACCEPTED')}>Accept</Button>
+          <Button size="small" danger disabled={!onlyReject && (!chairmanCanAct || (!viewed && !vendorUnderClarif))} onClick={() => openVendorRejectModal(record.vendorId, voteHandler)}>Reject</Button>
+          <Button size="small" disabled={!chairmanCanAct || !viewed || vendorUnderClarif} style={{ color: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (chairmanCanAct && viewed && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'CHAIRMAN')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
@@ -3186,25 +3236,29 @@ const doubleBidFinColumns = [
     key: 'directorFinAction',
     width: 280,
     render: (_, record) => {
+      const directorCanAct = evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
+        (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
+         evalStatus?.clarificationRequestedByRole === 'DIRECTOR');
       const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]?.find(v => v.voterRole === 'DIRECTOR' && v.decision && v.phase === 'FINANCIAL');
       const vendorUnderClarif = record.status === 'CHANGE_REQUESTED' || clarificationHistory.some(h => (h.targetVendorId === record.vendorId || (!h.targetVendorId && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget))) && ['VENDOR','ALL_VENDORS'].includes(h.clarificationTarget) && !h.responseText) || (evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION' && (!evalStatus?.clarificationTargetVendorId || evalStatus.clarificationTargetVendorId === record.vendorId));
+      const onlyReject = vendorUnderClarif && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
       if (dv) {
         return (
           <Space size={4}>
             <Tag color={dv.decision === 'ACCEPTED' ? 'green' : 'red'}>{dv.decision}</Tag>
             {dv.decision === 'ACCEPTED'
-              ? <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
-              : <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
-            <Button size="small" disabled={vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
+              ? <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Change to Reject</Button>
+              : <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Change to Accept</Button>}
+            <Button size="small" disabled={!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED'} style={{ color: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16', borderColor: (!directorCanAct || vendorUnderClarif || dv.decision === 'REJECTED') ? undefined : '#fa8c16' }}
               onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
           </Space>
         );
       }
       return (
         <Space size={4}>
-          <Button size="small" type="primary" disabled={vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
-          <Button size="small" danger onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
-          <Button size="small" disabled={vendorUnderClarif} style={{ color: vendorUnderClarif ? undefined : '#fa8c16', borderColor: vendorUnderClarif ? undefined : '#fa8c16' }}
+          <Button size="small" type="primary" disabled={!directorCanAct || vendorUnderClarif} onClick={() => handleDirectorVendorVote(record.vendorId, 'ACCEPTED')}>Accept</Button>
+          <Button size="small" danger disabled={!directorCanAct && !onlyReject} onClick={() => openVendorRejectModal(record.vendorId, handleDirectorVendorVote)}>Reject</Button>
+          <Button size="small" disabled={!directorCanAct || vendorUnderClarif} style={{ color: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined, borderColor: (directorCanAct && !vendorUnderClarif) ? '#fa8c16' : undefined }}
             onClick={() => openVendorClarificationModal(record.vendorId, 'DIRECTOR')}>{vendorUnderClarif ? 'Pending Clarification' : 'Clarify'}</Button>
         </Space>
       );
@@ -3284,6 +3338,15 @@ const spoTechColumns = [
       if (indentorStatus === 'Completed' || indentorStatus === 'ACCEPTED') return <span style={{ color: 'green' }}>Accepted</span>;
       return indentorStatus || 'N/A';
     },
+  },
+  {
+    title: 'PP Response',
+    key: 'ppDocUploadRemarks',
+    dataIndex: 'ppDocUploadRemarks',
+    width: 150,
+    render: (val) => val
+      ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+      : '-',
   },
   {
     title: 'SPO Status',
@@ -3540,6 +3603,15 @@ const spoFinColumns = [
       if (val === 'ACCEPTED' || val === 'Completed') return <Tag color="green">Accepted</Tag>;
       return val || <Tag>Pending</Tag>;
     },
+  },
+  {
+    title: 'PP Response',
+    key: 'ppDocUploadRemarks',
+    dataIndex: 'ppDocUploadRemarks',
+    width: 150,
+    render: (val) => val
+      ? <Popover content={<span>{val}</span>} title="PP Rejection Remarks"><span style={{ color: 'red', cursor: 'help', borderBottom: '1px dashed red' }}>Rejected ⓘ</span></Popover>
+      : '-',
   },
   {
     title: 'SPO Status',
@@ -5540,17 +5612,54 @@ useEffect(() => {
             </Select>
           </div>
         )}
-        {(clarifTarget === 'SPECIFIC_MEMBER' || clarifTarget === 'INDENTOR') && (
+        {clarifTarget === 'SPECIFIC_MEMBER' && evalStatus?.committeeVotes?.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <Text strong>Select Member:</Text>
+            <Select
+              value={clarifTargetUserId || undefined}
+              onChange={val => {
+                const member = evalStatus.committeeVotes.find(m => String(m.committeeUserId) === String(val));
+                setClarifTargetUserId(String(val));
+                setClarifTargetUserName(member?.committeeMemberName || '');
+              }}
+              placeholder="Select committee member"
+              style={{ width: '100%', marginTop: 4 }}
+            >
+              {evalStatus.committeeVotes
+                .filter(m => m.role !== 'CHAIRMAN')
+                .map(m => (
+                  <Option key={m.committeeUserId} value={String(m.committeeUserId)}>
+                    {m.committeeMemberName} (ID: {m.committeeUserId})
+                  </Option>
+                ))}
+            </Select>
+          </div>
+        )}
+        {clarifTarget === 'SPECIFIC_MEMBER' && (!evalStatus?.committeeVotes || evalStatus.committeeVotes.length === 0) && (
           <>
             <div style={{ marginBottom: 8 }}>
-              <Text strong>{clarifTarget === 'INDENTOR' ? 'Indentor User ID (optional):' : 'Member User ID:'}</Text>
+              <Text strong>Member User ID:</Text>
               <Input value={clarifTargetUserId} onChange={e => setClarifTargetUserId(e.target.value)}
-                style={{ marginTop: 4 }} placeholder={clarifTarget === 'INDENTOR' ? 'Enter Indentor user ID (if known)' : 'Enter user ID of the member'} />
+                style={{ marginTop: 4 }} placeholder="Enter user ID of the member" />
             </div>
             <div style={{ marginBottom: 12 }}>
-              <Text strong>{clarifTarget === 'INDENTOR' ? 'Indentor Name (optional):' : 'Member Name:'}</Text>
+              <Text strong>Member Name:</Text>
               <Input value={clarifTargetUserName} onChange={e => setClarifTargetUserName(e.target.value)}
-                style={{ marginTop: 4 }} placeholder={clarifTarget === 'INDENTOR' ? 'Enter Indentor name (if known)' : 'Member name'} />
+                style={{ marginTop: 4 }} placeholder="Member name" />
+            </div>
+          </>
+        )}
+        {clarifTarget === 'INDENTOR' && (
+          <>
+            <div style={{ marginBottom: 8 }}>
+              <Text strong>Indentor User ID (optional):</Text>
+              <Input value={clarifTargetUserId} onChange={e => setClarifTargetUserId(e.target.value)}
+                style={{ marginTop: 4 }} placeholder="Enter Indentor user ID (if known)" />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <Text strong>Indentor Name (optional):</Text>
+              <Input value={clarifTargetUserName} onChange={e => setClarifTargetUserName(e.target.value)}
+                style={{ marginTop: 4 }} placeholder="Enter Indentor name (if known)" />
             </div>
           </>
         )}

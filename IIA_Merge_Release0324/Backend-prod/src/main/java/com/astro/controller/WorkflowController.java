@@ -164,6 +164,16 @@ public class WorkflowController {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getApprovedTenderIdsForPOAndSO()), HttpStatus.OK);
     }
 
+    @GetMapping("/getApprovedTenderIdForPO")
+    public ResponseEntity<Object> getApprovedTenderIdForPO() {
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getApprovedTenderIdsForPO()), HttpStatus.OK);
+    }
+
+    @GetMapping("/getApprovedTenderIdForSO")
+    public ResponseEntity<Object> getApprovedTenderIdForSO() {
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.getApprovedTenderIdsForSO()), HttpStatus.OK);
+    }
+
     @PostMapping("/performAllTransitionAction")
     public ResponseEntity<Object> performAllTransitionAction(@RequestBody List<TransitionActionReqDto> transitionActionReqDto) {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.performAllTransitionAction(transitionActionReqDto)), HttpStatus.OK);

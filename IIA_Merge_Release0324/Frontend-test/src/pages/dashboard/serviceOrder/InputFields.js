@@ -53,21 +53,21 @@ export const SoDetails = [
       ]
     },
     {
-      heading: "Material Details",
-      name: "materialDtlList",
+      heading: "Job/Service Details",
+      name: "jobDtlList",
       colCnt: 6,
       children: [
         {
-          name: "materialCode",
-          label: "Material Code",
+          name: "jobCode",
+          label: "Job Code",
           type: "text",
           disabled: true,
           required: true,
           span: 2
         },
         {
-          name: "materialDescription",
-          label: "Material Description",
+          name: "jobDescription",
+          label: "Job Description",
           type: "text",
           disabled: true,
           required: true,
@@ -97,7 +97,6 @@ export const SoDetails = [
           label: "Budget Code",
           type: "text",
           span: 2,
-        //   disabled: true,
           required: true
         },
         {

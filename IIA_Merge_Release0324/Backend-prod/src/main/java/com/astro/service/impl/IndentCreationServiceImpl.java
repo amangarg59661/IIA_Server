@@ -2730,29 +2730,29 @@ public List<SearchIndentIdDto> searchIndentIds(String type, String value,
 @Override
 public List<IndentAssignmentResponseDto> getMyAssignments(Integer assignedByUserId) {
 
-    // Fetch ALL active assignments regardless of who assigned
     List<IndentAssignment> assignments =
         indentAssignmentRepository.findByStatus("ACTIVE");
 
-    // Step 3: map to response DTO
-    return assignments.stream().map(a -> {
-        IndentAssignmentResponseDto dto = new IndentAssignmentResponseDto();
-        dto.setIndentId(a.getIndentId());
-        dto.setAssignedToEmployeeId(a.getAssignedToEmployeeId());
-        dto.setAssignedDate(a.getAssignedDate());
+    return assignments.stream()
+        .filter(a -> !indentIdRepository.existsByIndentId(a.getIndentId()))
+        .map(a -> {
+            IndentAssignmentResponseDto dto = new IndentAssignmentResponseDto();
+            dto.setIndentId(a.getIndentId());
+            dto.setAssignedToEmployeeId(a.getAssignedToEmployeeId());
+            dto.setAssignedDate(a.getAssignedDate());
 
-        employeeDepartmentMasterRepository
-            .findByEmployeeId(a.getAssignedToEmployeeId())
-            .ifPresent(emp -> dto.setAssignedToEmployeeName(emp.getEmployeeName()));
+            employeeDepartmentMasterRepository
+                .findByEmployeeId(a.getAssignedToEmployeeId())
+                .ifPresent(emp -> dto.setAssignedToEmployeeName(emp.getEmployeeName()));
 
-        IndentCreation indent = indentCreationRepository.findByIndentId(a.getIndentId());
-        if (indent != null) {
-            dto.setIndentorName(indent.getIndentorName());
-            dto.setSubject(indent.getPurpose());
-        }
+            IndentCreation indent = indentCreationRepository.findByIndentId(a.getIndentId());
+            if (indent != null) {
+                dto.setIndentorName(indent.getIndentorName());
+                dto.setSubject(indent.getPurpose());
+            }
 
-        return dto;
-    }).collect(Collectors.toList());
+            return dto;
+        }).collect(Collectors.toList());
 
 }
 // @Override

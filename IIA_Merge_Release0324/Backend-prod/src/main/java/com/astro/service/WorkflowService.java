@@ -50,6 +50,10 @@ public interface WorkflowService {
 
     public List<String> getApprovedTenderIdsForPOAndSO();
 
+    public List<String> getApprovedTenderIdsForPO();
+
+    public List<String> getApprovedTenderIdsForSO();
+
     // public List<ApprovedPoIdsDto> getApprovedPoIds();
     public List<String> getApprovedPoIds();
 

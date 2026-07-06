@@ -2884,6 +2884,16 @@ public List<ApprovedIndentsDto> getApprovedIndents() {
     }
 
     @Override
+    public List<String> getApprovedTenderIdsForPO() {
+        return workflowTransitionRepository.findApprovedTenderIdsForPO();
+    }
+
+    @Override
+    public List<String> getApprovedTenderIdsForSO() {
+        return workflowTransitionRepository.findApprovedTenderIdsForSO();
+    }
+
+    @Override
     public List<String> getApprovedPoIds() {
         return workflowTransitionRepository.findApprovedPoIds();
     }

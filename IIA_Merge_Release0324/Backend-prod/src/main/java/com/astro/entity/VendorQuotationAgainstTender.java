@@ -122,6 +122,9 @@ public class VendorQuotationAgainstTender {
     @Column(name = "registered_vendor_name", length = 300)
     private String registeredVendorName;
 
+    @Column(name = "pp_doc_upload_remarks", columnDefinition = "TEXT")
+    private String ppDocUploadRemarks;
+
     /** Rank assigned after financial evaluation (L1, L2, L3...) */
     @Column(name = "`rank`")
     private Integer rank;

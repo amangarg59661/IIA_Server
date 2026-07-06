@@ -1218,7 +1218,10 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                     // Mark a specific vendor's quotation as CHANGE_REQUESTED
                     // Above 10L: don't change eval status for single-vendor clarification —
                     // other vendors can still be voted on while this one is pending clarification
-                    if (!isAbove10L || eval.getEvaluationStatus().equalsIgnoreCase("PENDING_DOCUMENT_UPLOAD")) {
+                    if (!isAbove10L
+                            || eval.getEvaluationStatus().equalsIgnoreCase("PENDING_DOCUMENT_UPLOAD")
+                            || Set.of("CHAIRMAN", "SPO", "DIRECTOR").contains(
+                                    dto.getRequestedByRole() != null ? dto.getRequestedByRole().toUpperCase() : "")) {
                         eval.setEvaluationStatus("PENDING_VENDOR_CLARIFICATION");
                     }
                     String specificVendorId = dto.getTargetVendorId();
@@ -1871,6 +1874,12 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                                 if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialSpoStatus())) {
                                     q.setFinancialSpoStatus("PENDING");
                                 }
+                                if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getIndentorStatus())) {
+                                    q.setIndentorStatus(null);
+                                }
+                                if ("CHANGE_REQUESTED".equalsIgnoreCase(q.getFinancialIndentorStatus())) {
+                                    q.setFinancialIndentorStatus(null);
+                                }
                                 q.setUpdatedDate(LocalDateTime.now());
                                 quotationRepository.saveAndFlush(q);
                             });
@@ -2426,6 +2435,11 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             } else {
                 quotation.setIndentorStatus(normalizedDecision);
                 quotation.setIndentorRemarks(remarks);
+            }
+            if ("REJECTED".equals(normalizedDecision)
+                    && Set.of("PENDING_DOCUMENT_UPLOAD", "PENDING_FINANCIAL_SHEET_UPLOAD")
+                            .contains(eval.getEvaluationStatus())) {
+                quotation.setPpDocUploadRemarks(remarks);
             }
             quotation.setUpdatedBy(String.valueOf(evaluatorUserId));
             quotation.setUpdatedDate(LocalDateTime.now());

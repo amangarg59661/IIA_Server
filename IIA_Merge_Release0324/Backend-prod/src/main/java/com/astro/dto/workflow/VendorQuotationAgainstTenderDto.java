@@ -34,6 +34,6 @@ public class VendorQuotationAgainstTenderDto {
     private String registeredVendorId;
     private String registeredVendorName;
 
-
+    private String ppDocUploadRemarks;
 
 }

@@ -26,6 +26,7 @@ public interface IndentIdRepository extends JpaRepository<IndentId,Long> {
 
     Optional<IndentId> findByIndentId(String requestId);
 
+    boolean existsByIndentId(String indentId);
 
     //  List<String> findIndentIdsByTenderId(String tenderId);
 }

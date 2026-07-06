@@ -80,6 +80,69 @@ public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTran
     """)
     List<String> findApprovedTenderIdsForPOANDSO();
 
+    /**
+     * Tender IDs eligible for PO creation:
+     * - Workflow-approved (Tender Approver Workflow, Completed)
+     * - No active PO/SO already for the tender
+     * - TenderEvaluation missing OR APPROVED
+     * - Tender has at least one linked indent whose indentType = 'material'
+     *   (a mixed tender with any material indent is still PO)
+     */
+    @Query("""
+        SELECT wt.requestId FROM WorkflowTransition wt
+        WHERE wt.workflowName = 'Tender Approver Workflow'
+          AND wt.status = 'Completed'
+          AND wt.nextAction IS NULL
+          AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po)
+          AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)
+          AND (
+            wt.requestId NOT IN (SELECT te.tenderId FROM TenderEvaluation te)
+            OR wt.requestId IN (SELECT te.tenderId FROM TenderEvaluation te WHERE te.evaluationStatus = 'APPROVED')
+          )
+          AND wt.requestId IN (
+            SELECT ii.tenderRequest.tenderId FROM IndentId ii
+            WHERE ii.indentId IN (
+              SELECT ic.indentId FROM IndentCreation ic WHERE LOWER(ic.indentType) = 'material'
+            )
+          )
+    """)
+    List<String> findApprovedTenderIdsForPO();
+
+    /**
+     * Tender IDs eligible for SO creation:
+     * - Workflow-approved (Tender Approver Workflow, Completed)
+     * - No active PO/SO already for the tender
+     * - TenderEvaluation missing OR APPROVED
+     * - Tender has at least one linked indent whose indentType = 'job'
+     * - Tender has ZERO linked indents whose indentType = 'material'
+     *   (any material indent forces the tender to PO instead)
+     */
+    @Query("""
+        SELECT wt.requestId FROM WorkflowTransition wt
+        WHERE wt.workflowName = 'Tender Approver Workflow'
+          AND wt.status = 'Completed'
+          AND wt.nextAction IS NULL
+          AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po)
+          AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so)
+          AND (
+            wt.requestId NOT IN (SELECT te.tenderId FROM TenderEvaluation te)
+            OR wt.requestId IN (SELECT te.tenderId FROM TenderEvaluation te WHERE te.evaluationStatus = 'APPROVED')
+          )
+          AND wt.requestId IN (
+            SELECT ii.tenderRequest.tenderId FROM IndentId ii
+            WHERE ii.indentId IN (
+              SELECT ic.indentId FROM IndentCreation ic WHERE LOWER(ic.indentType) = 'job'
+            )
+          )
+          AND wt.requestId NOT IN (
+            SELECT ii2.tenderRequest.tenderId FROM IndentId ii2
+            WHERE ii2.indentId IN (
+              SELECT ic2.indentId FROM IndentCreation ic2 WHERE LOWER(ic2.indentType) = 'material'
+            )
+          )
+    """)
+    List<String> findApprovedTenderIdsForSO();
+
     @Query("SELECT wt.requestId FROM WorkflowTransition wt WHERE wt.workflowName = 'PO Workflow' AND wt.status = 'Completed' AND wt.nextAction IS NULL")
     List<String> findApprovedPoIds();
 

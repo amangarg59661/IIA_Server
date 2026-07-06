@@ -47,9 +47,8 @@ public interface TenderRequestRepository extends JpaRepository<TenderRequest, St
             "AND wt.status = 'Completed' " +
             "AND wt.nextAction IS NULL " +
             "AND tr.lockedForPO IS NULL " +
-           // "AND wt.requestId NOT IN (SELECT po.tenderId FROM PurchaseOrder po) " +
-           // "AND wt.requestId NOT IN (SELECT so.tenderId FROM ServiceOrder so) " +
-            "AND tr.modeOfProcurement IN ('Gem','CPPP','OPEN_TENDER', 'GLOBAL_TENDER')")   // filter applied
+            "AND tr.modeOfProcurement IN ('Gem','CPPP','OPEN_TENDER', 'GLOBAL_TENDER') " +
+            "AND NOT EXISTS (SELECT te FROM TenderEvaluation te WHERE te.tenderId = wt.requestId)")
     List<ApprovedTenderIdDtos> findApprovedTenderIdsForGemAndTitlesForPOANDSO();
 
 

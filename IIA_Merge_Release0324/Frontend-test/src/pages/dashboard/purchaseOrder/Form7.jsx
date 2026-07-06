@@ -124,7 +124,7 @@ const Form7 = () => {
     const fetchData = async () => {
       try {
         // Get approved tender IDs
-        const { data: approvedData } = await axios.get("/getApprovedTenderIdForPOAndSO");
+        const { data: approvedData } = await axios.get("/getApprovedTenderIdForPO");
         const approvedIds = approvedData.responseData || [];
 
         // Get all tender details
