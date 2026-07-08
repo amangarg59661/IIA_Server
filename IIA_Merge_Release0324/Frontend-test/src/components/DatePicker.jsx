@@ -119,40 +119,38 @@ const InputDatePicker = ({
   onChange,
   readOnly,
   required,
+  rules = [],
 }) => {
   const initialValue = defaultValue ? dayjs(defaultValue, dateFormat) : null;
 
-  const handleDateChange = (date) => {
-    if (date) {
-      if (dayjs.isDayjs(date)) {
-        onChange(name, date.format(dateFormat));
+  const handleDateChange = (date, dateString) => {
+    if (onChange) {
+      if (date && dayjs.isDayjs(date)) {
+        onChange(name, dateString || date.format(dateFormat));
       } else {
         onChange(name, null);
       }
-    } else {
-      onChange(name, null);
     }
   };
 
-//   if(readOnly){
-//     return <FormInputItem label={label} value={defaultValue} name={name} readOnly />
-//   }
-
   return (
     <Form.Item
-    required={required}
-    rules={[{ required: required ? true : false, message: 'Please input a value!' }]}
+      name={name}
       label={label}
-      // rules={[
-      //   { required: required ?? false, message: "Please input value!" },
-      // ]}
-      initialValue={initialValue} // Set initial value
+      rules={
+        rules.length
+          ? rules
+          : required
+          ? [{ required: true, message: `Please select ${label}` }]
+          : []
+      }
+      initialValue={initialValue}
     >
       <DatePicker
         style={{ width: "100%" }}
         format={dateFormat}
+        disabled={readOnly}
         onChange={handleDateChange}
-        value={initialValue} // Control the value of DatePicker
       />
     </Form.Item>
   );
