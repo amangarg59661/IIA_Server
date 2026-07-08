@@ -21,6 +21,7 @@ const Login = () => {
     password: ''
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [messageText, setMessageText] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -56,10 +57,18 @@ const Login = () => {
 
     try {
       // Server-side login — password validated on backend
-      const response = await axios.post('/api/vendor-quotation/vendor-login', {
-        vendorId: userId,
-        password: password
-      });
+      const response = await axios.post(
+        '/api/vendor-quotation/vendor-login',
+        {
+          vendorId: userId,
+          password: password
+        },
+        {
+          headers: {
+            Authorization: ''
+          }
+        }
+      );
       const data = response.data;
       const responseData = data.responseData;
       const status = responseData.status;
@@ -163,14 +172,24 @@ const Login = () => {
               value={formData.userId}
               required
             />
-            <FormInputItem
-              type='password'
-              label="Password"
-              placeholder="*****"
-              name='password'
-              onChange={handleFormValueChange}
-              required
-            />
+            <div className="relative w-full">
+              <FormInputItem
+                type={showPassword ? 'text' : 'password'}
+                label="Password"
+                placeholder="*****"
+                name='password'
+                onChange={handleFormValueChange}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3 top-[50%] -translate-y-1/2 text-sm text-gray-600"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
             {messageText && (
               <p className="text-red-500" style={{
                 backgroundColor: '#fee2e2',
