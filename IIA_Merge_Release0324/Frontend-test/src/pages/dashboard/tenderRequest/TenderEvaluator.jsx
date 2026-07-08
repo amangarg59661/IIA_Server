@@ -94,6 +94,11 @@ const TenderEvaluator = () => {
   const expertSearchTimer = useRef(null);
   const dirUserSearchTimer = useRef(null);
 
+  // ── Chairman selection (10L–1CR) ──
+  const [chairmanOptions, setChairmanOptions] = useState([]);
+  const [selectedChairmanUserId, setSelectedChairmanUserId] = useState(null);
+  const [chairmanOptionsLoading, setChairmanOptionsLoading] = useState(false);
+
   // ── Per-vendor reject reason modal (above 10L) ──
   const [vendorRejectModal, setVendorRejectModal] = useState(false);
   const [vendorRejectTarget, setVendorRejectTarget] = useState(null); // { vendorId, handler }
@@ -162,6 +167,7 @@ const TenderEvaluator = () => {
   const role = useSelector(state => state.auth.role);
   const normalizedRole = (role || '').toLowerCase().trim();
   const isBelow10L = formData.totalValue != null && formData.totalValue < 1000000;
+  const is10Lto1Cr = formData.totalValue != null && formData.totalValue >= 1000000 && formData.totalValue < 10000000;
   const hasMultipleIndents = formData.indentNumber > 1;
   const isPurchasePersonnelRole = normalizedRole === 'purchase personnel' || normalizedRole === 'purchase person';
   const isIndentCreatorRole = normalizedRole === 'indent creator';
@@ -766,6 +772,32 @@ const handleApprovalSubmit = async () => {
     await fetchEvalStatus(tenderId);
   } catch (e) {
     message.error('Failed to submit approval.');
+  }
+};
+
+const fetchChairmanOptions = async (tid) => {
+  if (!tid) return;
+  setChairmanOptionsLoading(true);
+  try {
+    const res = await axios.get('/api/tender-evaluation/chairman-options', { params: { tenderId: tid } });
+    setChairmanOptions(res.data?.responseData || []);
+  } catch (e) {
+    setChairmanOptions([]);
+  } finally {
+    setChairmanOptionsLoading(false);
+  }
+};
+
+const handleSelectChairman = async (chairmanUserId) => {
+  setSelectedChairmanUserId(chairmanUserId);
+  try {
+    await axios.put('/api/tender-evaluation/select-chairman', null, {
+      params: { tenderId, chairmanUserId }
+    });
+    message.success('Chairman selected.');
+    await fetchEvalStatus(tenderId);
+  } catch (e) {
+    message.error(e?.response?.data?.responseStatus?.message || 'Failed to select chairman.');
   }
 };
 
@@ -3779,6 +3811,13 @@ const spoFinColumns = [
     : []),
 ];
 
+// Pre-populate chairman selection from evalStatus
+useEffect(() => {
+  if (evalStatus?.adHocChairmanUserId) {
+    setSelectedChairmanUserId(evalStatus.adHocChairmanUserId);
+  }
+}, [evalStatus?.adHocChairmanUserId]);
+
 // Unified effect: all tender-level fetches triggered once when tenderId changes
 useEffect(() => {
   if (tenderId && tenderId.trim()) {
@@ -4346,6 +4385,25 @@ useEffect(() => {
               )}
             {isPurchasePersonnelRole && evalStatus?.evaluationStatus === 'PENDING_DOCUMENT_UPLOAD' && (
                 <div style={{ marginTop: 16 }}>
+                  {is10Lto1Cr && (
+                    <div style={{ marginBottom: 16 }}>
+                      <Text strong>Select Chairman for this Tender:</Text>
+                      <Select
+                        style={{ width: 400, marginLeft: 8 }}
+                        placeholder="Choose Chairman or Co-Chairman"
+                        value={evalStatus?.adHocChairmanUserId || selectedChairmanUserId || undefined}
+                        onChange={handleSelectChairman}
+                        loading={chairmanOptionsLoading}
+                        onDropdownVisibleChange={(open) => { if (open && chairmanOptions.length === 0) fetchChairmanOptions(tenderId); }}
+                      >
+                        {chairmanOptions.map(opt => (
+                          <Option key={opt.userId} value={opt.userId}>
+                            {opt.memberName} ({opt.role === 'CHAIRMAN' ? 'Chairman' : 'Co-Chairman'})
+                          </Option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
                   {renderFormFields(
                     [{ heading: '', colCnt: 1, fieldList: [{ name: 'comparationStatementFileName', label: 'Technical Comparison Sheet (PDF / Excel / Word)', type: 'multiImage', accept: '.pdf,.xlsx,.xls,.doc,.docx', span: 1 }] }],
                     handleChange, formData, '', null, setFormData, null
@@ -4356,7 +4414,7 @@ useEffect(() => {
                       loading={initiating}
                       style={{ marginTop: 8 }}
                       onClick={handleSubmitDocumentAndProceed}
-                      disabled={!formData.comparationStatementFileName?.[0] && !evalStatus?.comparisonSheetFileName}
+                      disabled={(!formData.comparationStatementFileName?.[0] && !evalStatus?.comparisonSheetFileName) || (is10Lto1Cr && !evalStatus?.adHocChairmanUserId && !selectedChairmanUserId)}
                     >
                       Submit & Proceed
                     </Button>

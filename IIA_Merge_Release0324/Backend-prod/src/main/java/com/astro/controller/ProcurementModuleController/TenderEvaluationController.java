@@ -86,6 +86,23 @@ public class TenderEvaluationController {
         return ResponseEntity.ok("Tender Evaluation deleted successfully. tenderId: " + tenderId);
     }
 
+    // ─── CHAIRMAN SELECTION (10L–1CR) ─────────────────────────────────
+
+    @GetMapping("/chairman-options")
+    public ResponseEntity<Object> getChairmanOptions(@RequestParam String tenderId) {
+        List<Map<String, Object>> options = approvalService.getChairmanOptions(tenderId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(options), HttpStatus.OK);
+    }
+
+    @PutMapping("/select-chairman")
+    public ResponseEntity<Object> selectChairman(
+            @RequestParam String tenderId,
+            @RequestParam Integer chairmanUserId) {
+        log.info("Select chairman tenderId={} chairmanUserId={}", tenderId, chairmanUserId);
+        TenderEvaluationStatusDto status = approvalService.selectChairman(tenderId, chairmanUserId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
+    }
+
     // ─── EVALUATION WORKFLOW ─────────────────────────────────────────
 
     @PostMapping("/begin")

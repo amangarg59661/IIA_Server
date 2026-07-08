@@ -26,6 +26,8 @@ private Integer soVersion;
 private String parentSoId;
     private String vendorsAccountNo;
     private String vendorsZRSCCode;
+    private String vendorSwiftCode;
+    private String vendorType;
     private String vendorsAccountName;
     private BigDecimal totalValue;
     private String projectName;

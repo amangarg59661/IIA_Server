@@ -193,6 +193,8 @@ purchaseOrder.setParentPoId(null);
         purchaseOrder.setTransporterAndFreightForWarderDetails(purchaseOrderRequestDTO.getTransporterAndFreightForWarderDetails());
         purchaseOrder.setVendorAccountNumber(purchaseOrderRequestDTO.getVendorAccountNumber());
         purchaseOrder.setVendorsZfscCode(purchaseOrderRequestDTO.getVendorsIfscCode());
+        purchaseOrder.setVendorSwiftCode(purchaseOrderRequestDTO.getVendorSwiftCode());
+        purchaseOrder.setVendorType(purchaseOrderRequestDTO.getVendorType());
         purchaseOrder.setVendorAccountName(purchaseOrderRequestDTO.getVendorAccountName());
         purchaseOrder.setVendorId(purchaseOrderRequestDTO.getVendorId());
         purchaseOrder.setQuotationNumber(purchaseOrderRequestDTO.getQuotationNumber());
@@ -418,6 +420,8 @@ public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRe
     newPO.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
     newPO.setVendorAccountNumber(dto.getVendorAccountNumber());
     newPO.setVendorsZfscCode(dto.getVendorsIfscCode());
+    newPO.setVendorSwiftCode(dto.getVendorSwiftCode());
+    newPO.setVendorType(dto.getVendorType());
     newPO.setVendorAccountName(dto.getVendorAccountName());
     newPO.setVendorId(dto.getVendorId());
     newPO.setProjectName(dto.getProjectName());
@@ -671,6 +675,8 @@ public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRe
         responseDTO.setTransporterAndFreightForWarderDetails(purchaseOrder.getTransporterAndFreightForWarderDetails());
         responseDTO.setVendorAccountNumber(purchaseOrder.getVendorAccountNumber());
         responseDTO.setVendorsIfscCode(purchaseOrder.getVendorsZfscCode());
+        responseDTO.setVendorSwiftCode(purchaseOrder.getVendorSwiftCode());
+        responseDTO.setVendorType(purchaseOrder.getVendorType());
         responseDTO.setVendorAccountName(purchaseOrder.getVendorAccountName());
         responseDTO.setVendorId(purchaseOrder.getVendorId());
         responseDTO.setComparativeStatementFileName(purchaseOrder.getComparativeStatementFileName());
@@ -809,6 +815,8 @@ if (materialDetails != null) {
         responseDTO.setTransporterAndFreightForWarderDetails(purchaseOrder.getTransporterAndFreightForWarderDetails());
         responseDTO.setVendorAccountNumber(purchaseOrder.getVendorAccountNumber());
         responseDTO.setVendorsIfscCode(purchaseOrder.getVendorsZfscCode());
+        responseDTO.setVendorSwiftCode(purchaseOrder.getVendorSwiftCode());
+        responseDTO.setVendorType(purchaseOrder.getVendorType());
         responseDTO.setVendorAccountName(purchaseOrder.getVendorAccountName());
         responseDTO.setVendorId(purchaseOrder.getVendorId());
         responseDTO.setComparativeStatementFileName(purchaseOrder.getComparativeStatementFileName());
@@ -1051,6 +1059,8 @@ if (materialDetails != null) {
         responseDTO.setTransporterAndFreightForWarderDetails(purchaseOrder.getTransporterAndFreightForWarderDetails());
         responseDTO.setVendorAccountNumber(purchaseOrder.getVendorAccountNumber());
         responseDTO.setVendorsIfscCode(purchaseOrder.getVendorsZfscCode());
+        responseDTO.setVendorSwiftCode(purchaseOrder.getVendorSwiftCode());
+        responseDTO.setVendorType(purchaseOrder.getVendorType());
         responseDTO.setVendorAccountName(purchaseOrder.getVendorAccountName());
         responseDTO.setVendorId(purchaseOrder.getVendorId());
         responseDTO.setProjectName(purchaseOrder.getProjectName());
@@ -1839,6 +1849,8 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         draft.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
         draft.setVendorAccountNumber(dto.getVendorAccountNumber());
         draft.setVendorsZfscCode(dto.getVendorsIfscCode());
+        draft.setVendorSwiftCode(dto.getVendorSwiftCode());
+        draft.setVendorType(dto.getVendorType());
         draft.setVendorAccountName(dto.getVendorAccountName());
         draft.setVendorId(dto.getVendorId());
         draft.setQuotationNumber(dto.getQuotationNumber());
@@ -1938,6 +1950,8 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
         existing.setVendorAccountNumber(dto.getVendorAccountNumber());
         existing.setVendorsZfscCode(dto.getVendorsIfscCode());
+        existing.setVendorSwiftCode(dto.getVendorSwiftCode());
+        existing.setVendorType(dto.getVendorType());
         existing.setVendorAccountName(dto.getVendorAccountName());
         existing.setVendorId(dto.getVendorId());
         existing.setQuotationNumber(dto.getQuotationNumber());
@@ -2037,6 +2051,8 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
         existing.setVendorAccountNumber(dto.getVendorAccountNumber());
         existing.setVendorsZfscCode(dto.getVendorsIfscCode());
+        existing.setVendorSwiftCode(dto.getVendorSwiftCode());
+        existing.setVendorType(dto.getVendorType());
         existing.setVendorAccountName(dto.getVendorAccountName());
         existing.setVendorId(dto.getVendorId());
         existing.setQuotationNumber(dto.getQuotationNumber());

@@ -100,6 +100,8 @@ serviceOrder.setParentSoId(null);
         serviceOrder.setApplicablePBGToBeSubmitted(serviceOrderRequestDTO.getApplicablePBGToBeSubmitted());
         serviceOrder.setVendorsAccountNo(serviceOrderRequestDTO.getVendorsAccountNo());
         serviceOrder.setVendorsZRSCCode(serviceOrderRequestDTO.getVendorsZRSCCode());
+        serviceOrder.setVendorSwiftCode(serviceOrderRequestDTO.getVendorSwiftCode());
+        serviceOrder.setVendorType(serviceOrderRequestDTO.getVendorType());
         serviceOrder.setVendorsAccountName(serviceOrderRequestDTO.getVendorsAccountName());
         serviceOrder.setVendorId(serviceOrderRequestDTO.getVendorId());
         String Date = serviceOrderRequestDTO.getStartDateAmc();
@@ -210,6 +212,8 @@ public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderReque
     newSO.setApplicablePBGToBeSubmitted(dto.getApplicablePBGToBeSubmitted());
     newSO.setVendorsAccountNo(dto.getVendorsAccountNo());
     newSO.setVendorsZRSCCode(dto.getVendorsZRSCCode());
+    newSO.setVendorSwiftCode(dto.getVendorSwiftCode());
+    newSO.setVendorType(dto.getVendorType());
     newSO.setVendorsAccountName(dto.getVendorsAccountName());
     newSO.setVendorId(dto.getVendorId());
     newSO.setProjectName(dto.getProjectName());
@@ -357,6 +361,8 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setApplicablePBGToBeSubmitted(serviceOrder.getApplicablePBGToBeSubmitted());
         response.setVendorsAccountNo(serviceOrder.getVendorsAccountNo());
         response.setVendorsZRSCCode(serviceOrder.getVendorsZRSCCode());
+        response.setVendorSwiftCode(serviceOrder.getVendorSwiftCode());
+        response.setVendorType(serviceOrder.getVendorType());
         response.setVendorsAccountName(serviceOrder.getVendorsAccountName());
         // response.setTotalValueOfSo(ServiceOrder.getTotalValueOfSo());
         //response.setProjectName(serviceOrder.getProjectName());
@@ -440,6 +446,8 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setApplicablePBGToBeSubmitted(ServiceOrder.getApplicablePBGToBeSubmitted());
         response.setVendorsAccountNo(ServiceOrder.getVendorsAccountNo());
         response.setVendorsZRSCCode(ServiceOrder.getVendorsZRSCCode());
+        response.setVendorSwiftCode(ServiceOrder.getVendorSwiftCode());
+        response.setVendorType(ServiceOrder.getVendorType());
         response.setVendorsAccountName(ServiceOrder.getVendorsAccountName());
         response.setVendorId(ServiceOrder.getVendorId());
         // response.setTotalValueOfSo(ServiceOrder.getTotalValueOfSo());

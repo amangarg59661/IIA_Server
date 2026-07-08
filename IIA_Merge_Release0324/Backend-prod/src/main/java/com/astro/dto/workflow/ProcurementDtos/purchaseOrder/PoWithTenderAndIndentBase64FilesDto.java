@@ -51,7 +51,8 @@ public class PoWithTenderAndIndentBase64FilesDto {
         private String securityNumber;
 
         private String securityDate;
-
+        private String vendorSwiftCode;
+private String vendorType;
         private String expiryDate;
 
         private PoFormateDto poFormateData;

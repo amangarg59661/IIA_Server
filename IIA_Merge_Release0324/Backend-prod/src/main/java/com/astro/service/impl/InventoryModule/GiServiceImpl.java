@@ -933,7 +933,7 @@ private void updatePoBasedonRejectionType(GiApprovalDto req) {
 @Transactional
 public void rejectGi(GiApprovalDto req) {
     // Validate rejection reason is provided
-    if (req.getRejectionReason() == null || req.getRejectionReason().isBlank()) {
+    if (req.getRemarks() == null || req.getRemarks().isBlank()) {
         throw new InvalidInputException(new ErrorDetails(
                 AppConstant.USER_INVALID_INPUT,
                 AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -962,7 +962,7 @@ public void rejectGi(GiApprovalDto req) {
     history.setProcessId(processNoSplit[0]);
     history.setSubProcessId(inspectionId);
     history.setAction("REJECTED PENDING REINSPECTION");
-    history.setRemarks(req.getRejectionReason());
+    history.setRemarks(req.getRemarks());
     history.setCreatedBy(req.getCreatedBy());
     history.setCreateDate(LocalDateTime.now());
     gistausRepo.save(history);

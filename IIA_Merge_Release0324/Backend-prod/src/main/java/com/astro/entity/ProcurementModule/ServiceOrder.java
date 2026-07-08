@@ -56,6 +56,10 @@ private String parentSoId;
     private String vendorsAccountNo;
     @Column(name = "vendors_zrsc_code")
     private String vendorsZRSCCode;
+    @Column(name = "vendor_swift_code")
+    private String vendorSwiftCode;
+    @Column(name = "vendor_type")
+    private String vendorType;
     @Column(name = "vendors_account_name")
     private String vendorsAccountName;
     @Column(name = "total_value_of_so")

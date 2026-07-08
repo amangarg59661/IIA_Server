@@ -16,7 +16,8 @@ const TextAreaComponent = ({
   };
 
   return (
-    <Form.Item label={label} name={name} required className={`${className}`}>
+    // <Form.Item label={label} name={name} required className={`${className}`}>
+    <Form.Item label={label} name={name} required={!!required} className={`${className}`}>
       <TextArea rows={rows} onChange={handleChange} value={value} autoSize={{ minRows: 1, maxRows: 16 }} />
     </Form.Item>
   );

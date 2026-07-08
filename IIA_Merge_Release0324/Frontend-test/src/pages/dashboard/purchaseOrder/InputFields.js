@@ -382,14 +382,21 @@ export const PoDetails = [
             label: "Vendor IFSC Code",
             type: "text",
             required: true,
-           disabled: true,
+            disabled: true,
+        },
+        {
+            name: "vendorSwiftCode",
+            label: "Vendor SWIFT Code",
+            type: "text",
+            required: true,
+            disabled: true,
         },
         {
             name: "vendorAccountName",
             label: "Vendor A/C Name",
             type: "text",
             required: true,
-           disabled: true,
+            disabled: true,
         }
       ]
     }

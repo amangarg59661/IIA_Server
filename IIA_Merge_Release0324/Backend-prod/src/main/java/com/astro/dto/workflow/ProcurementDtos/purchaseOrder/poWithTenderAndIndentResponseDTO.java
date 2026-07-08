@@ -41,7 +41,8 @@ public class poWithTenderAndIndentResponseDTO {
  private LocalDateTime createdDate;
  private LocalDateTime updatedDate;
  private List<String> gemContractFileName;
-
+private String vendorSwiftCode;
+private String vendorType;
  private TenderWithIndentResponseDTO tenderDetails;
 
 

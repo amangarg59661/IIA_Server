@@ -24,6 +24,8 @@ public class ServiceOrderRequestDTO {
     private String vendorId;
     private String vendorsAccountNo;
     private String vendorsZRSCCode;
+    private String vendorSwiftCode;
+    private String vendorType;
     private String vendorsAccountName;
     private String startDateAmc;
     private String endDateAmc;

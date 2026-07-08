@@ -44,7 +44,7 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
     @Query("SELECT DISTINCT g FROM GprnMasterEntity g " +
             "LEFT JOIN GprnMaterialDtlEntity m ON g.subProcessId = m.subProcessId " +
             "LEFT JOIN GiMasterEntity gi ON g.subProcessId = gi.gprnSubProcessId " +
-            "WHERE gi.gprnSubProcessId IS NULL")
+            "WHERE gi.gprnSubProcessId IS NULL OR gi.status = 'REJECTED PENDING REINSPECTION'")
     List<GprnMasterEntity> findPendingGprnsWithMaterial();
 
     @Query("SELECT new com.astro.dto.workflow.InventoryModule.GprnPoVendorDto(g.poId, g.vendorId) " +

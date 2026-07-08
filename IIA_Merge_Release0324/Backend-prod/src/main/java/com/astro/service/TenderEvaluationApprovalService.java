@@ -259,4 +259,14 @@ public interface TenderEvaluationApprovalService {
      * Used for OPEN_TENDER / GLOBAL_TENDER / GEM procurement modes after evaluation is APPROVED.
      */
     void mapRegisteredVendor(String tenderId, String vendorId, String registeredVendorId);
+
+    /**
+     * Returns CHAIRMAN and CO_CHAIRMAN options for the relevant STEC committee (10L–1CR tenders).
+     */
+    List<Map<String, Object>> getChairmanOptions(String tenderId);
+
+    /**
+     * PP selects chairman for a 10L–1CR tender during PENDING_DOCUMENT_UPLOAD.
+     */
+    TenderEvaluationStatusDto selectChairman(String tenderId, Integer chairmanUserId);
 }

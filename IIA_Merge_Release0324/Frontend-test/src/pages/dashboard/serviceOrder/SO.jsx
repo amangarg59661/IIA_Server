@@ -52,6 +52,8 @@ const [searchDone, setSearchDone] = useState(false);
           address: vendor.address,
           accountNumber: vendor.accountNo,
           ifscCode: vendor.ifscCode,
+          swiftCode: vendor.swiftCode,
+          vendorType: vendor.vendorType,
           accountName: vendor.vendorName,
         })
       );
@@ -172,6 +174,18 @@ const [searchDone, setSearchDone] = useState(false);
               : vendors.map((v) => ({ label: v.id, value: v.id }));
             return { ...field, options: vendorOptions };
           }
+          if (field.name === "vendorsZRSCCode") {
+            return {
+              ...field,
+              shouldShow: () => !formData.vendorType || formData.vendorType?.toLowerCase() === "domestic",
+            };
+          }
+          if (field.name === "vendorSwiftCode") {
+            return {
+              ...field,
+              shouldShow: () => formData.vendorType?.toLowerCase() === "international",
+            };
+          }
           return field;
         }),
       };
@@ -199,6 +213,8 @@ const [searchDone, setSearchDone] = useState(false);
         vendorAddress: selectedVendor?.address || "",
         vendorsAccountNo: selectedVendor?.accountNumber || "",
         vendorsZRSCCode: selectedVendor?.ifscCode || "",
+        vendorSwiftCode: selectedVendor?.swiftCode || "",
+        vendorType: selectedVendor?.vendorType || "",
         vendorsAccountName: selectedVendor?.accountName || "",
       }));
       return;
@@ -212,6 +228,8 @@ const [searchDone, setSearchDone] = useState(false);
           vendorAddress: selectedVendor?.address || "",
           vendorsAccountNo: selectedVendor?.accountNumber || "",
           vendorsZRSCCode: selectedVendor?.ifscCode || "",
+          vendorSwiftCode: selectedVendor?.swiftCode || "",
+          vendorType: selectedVendor?.vendorType || "",
           vendorsAccountName: selectedVendor?.accountName || "",
         }));
         return;
@@ -415,6 +433,8 @@ const fetchSoVersionHistory = async (sid) => {
             { key: 'vendorAddress',            label: 'Vendor Address' },
             { key: 'vendorsAccountNo',         label: 'Vendor Account No.' },
             { key: 'vendorsZRSCCode',          label: 'Vendor IFSC Code' },
+            { key: 'vendorSwiftCode',          label: 'Vendor SWIFT Code' },
+            { key: 'vendorType',               label: 'Vendor Type' },
             { key: 'vendorsAccountName',       label: 'Vendor Account Name' },
             { key: 'tenderId',                 label: 'Tender ID' },
             { key: 'jobCompletionPeriod',      label: 'Job Completion Period' },

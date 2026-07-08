@@ -297,7 +297,8 @@
                 List<TechnoFinancialCommittee> members =
                         committeeRepository.findByCommitteeTypeAndIsActiveTrue(committeeType);
                 members.stream()
-                        .filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole()))
+                        .filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole())
+                                  && !"CO_CHAIRMAN".equalsIgnoreCase(m.getRole()))
                         .forEach(m -> {
                             TenderCommitteeDecision row = new TenderCommitteeDecision();
                             row.setTenderId(tenderId);
@@ -314,7 +315,8 @@
                     && "DOUBLE_BID".equalsIgnoreCase(bidType)) {
                 String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
                 List<TechnoFinancialCommittee> members = committeeRepository.findByCommitteeTypeAndIsActiveTrue(stecType)
-                        .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole()))
+                        .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole())
+                                           && !"CO_CHAIRMAN".equalsIgnoreCase(m.getRole()))
                         .collect(Collectors.toList());
                 List<VendorQuotationAgainstTender> vendors =
                         quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
@@ -339,7 +341,8 @@
         String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
         List<TechnoFinancialCommittee> members = committeeRepository
                 .findByCommitteeTypeAndIsActiveTrue(stecType)
-                .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole()))
+                .stream().filter(m -> !"CHAIRMAN".equalsIgnoreCase(m.getRole())
+                                   && !"CO_CHAIRMAN".equalsIgnoreCase(m.getRole()))
                 .collect(Collectors.toList());
         List<VendorQuotationAgainstTender> vendors =
                 quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
@@ -684,17 +687,10 @@
                             + ") can confirm committee composition."));
                 }
             } else {
-                String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
-
-                TechnoFinancialCommittee chairman = committeeRepository
-                        .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
-                        .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
-                                "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
-
-                if (!chairman.getUserId().equals(chairmanUserId)) {
+                Integer expectedChairman = resolveChairmanUserId(eval);
+                if (expectedChairman == null || !expectedChairman.equals(chairmanUserId)) {
                     throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                            "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
-                            + ") can confirm committee composition."));
+                            "Only the designated Chairman can confirm committee composition."));
                 }
             }
 
@@ -807,18 +803,10 @@
             TenderEvaluation eval = requireEval(tenderId);
             TenderRequest tender = requireTender(tenderId);
 
-            String amtCat = eval.getAmountCategory();
-            if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat)
-                    || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(amtCat)) {
-                String expectedType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
-                TechnoFinancialCommittee chairman = committeeRepository
-                        .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", expectedType)
-                        .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
-                                "CONFIGURATION_ERROR", "No active Chairman for " + expectedType)));
-                if (!chairman.getUserId().equals(chairmanUserId)) {
-                    throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                            "Only the " + expectedType + " Chairman can resolve vendor decisions."));
-                }
+            Integer expectedChairman = resolveChairmanUserId(eval);
+            if (expectedChairman == null || !expectedChairman.equals(chairmanUserId)) {
+                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                        "Only the designated Chairman can resolve vendor decisions."));
             }
 
             String normalizedDecision = decision.toUpperCase();
@@ -905,27 +893,11 @@
             String chairPhase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
             validateAllPerVendorVotes(tenderId, chairPhase, "CHAIRMAN", dto.getChairmanUserId(), eval);
 
-            // Validate chairman identity for STEC-I / STEC-II
-            if ("ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
-                    || "ABOVE_50_LAKH_UPTO_1_CRORE".equals(eval.getAmountCategory())) {
-                String expectedType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
-                        ? "STEC_I" : "STEC_II";
-                TechnoFinancialCommittee configuredChair = committeeRepository
-                        .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", expectedType)
-                        .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "CONFIGURATION_ERROR",
-                                "No active Chairman configured for " + expectedType)));
-                if (!configuredChair.getUserId().equals(dto.getChairmanUserId())) {
-                    throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                            "Only the " + expectedType + " Chairman (" + configuredChair.getMemberName()
-                            + ") can make this decision."));
-                }
-            }
-            // For ABOVE_1_CRORE ad-hoc: validate against adHocChairmanUserId
-            if ("ABOVE_1_CRORE".equals(eval.getAmountCategory()) && eval.getAdHocChairmanUserId() != null) {
-                if (!eval.getAdHocChairmanUserId().equals(dto.getChairmanUserId())) {
-                    throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                            "Only the designated ad-hoc Chairman can make this decision."));
-                }
+            // Validate chairman identity
+            Integer expectedChairmanId = resolveChairmanUserId(eval);
+            if (expectedChairmanId == null || !expectedChairmanId.equals(dto.getChairmanUserId())) {
+                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                        "Only the designated Chairman can make this decision."));
             }
 
             TenderCommitteeDecision chairRow = committeeDecisionRepository
@@ -3646,8 +3618,11 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
         }
 
         private Integer resolveChairmanUserId(TenderEvaluation eval) {
-            if ("ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+            if (eval.getAdHocChairmanUserId() != null) {
                 return eval.getAdHocChairmanUserId();
+            }
+            if ("ABOVE_1_CRORE".equals(eval.getAmountCategory())) {
+                return null;
             }
             String stecType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(eval.getAmountCategory())
                     ? "STEC_I" : "STEC_II";
@@ -3656,7 +3631,72 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                     .orElse(null);
         }
 
-        // ADD after line 2858, before the class-closing }:
+        // ─────────────────────────────────────────────────────────────────
+        // CHAIRMAN OPTIONS & SELECTION (10L–1CR)
+        // ─────────────────────────────────────────────────────────────────
+        @Override
+        public List<Map<String, Object>> getChairmanOptions(String tenderId) {
+            TenderRequest tender = requireTender(tenderId);
+            BigDecimal totalValue = tender.getTotalTenderValue() != null
+                    ? tender.getTotalTenderValue() : BigDecimal.ZERO;
+            if (totalValue.compareTo(TEN_LAKH) < 0 || totalValue.compareTo(ONE_CRORE) >= 0) {
+                return java.util.Collections.emptyList();
+            }
+            String stecType = totalValue.compareTo(FIFTY_LAKH) < 0 ? "STEC_I" : "STEC_II";
+            return committeeRepository.findByCommitteeTypeAndIsActiveTrue(stecType).stream()
+                    .filter(m -> "CHAIRMAN".equalsIgnoreCase(m.getRole())
+                              || "CO_CHAIRMAN".equalsIgnoreCase(m.getRole()))
+                    .map(m -> {
+                        Map<String, Object> map = new java.util.LinkedHashMap<>();
+                        map.put("userId", m.getUserId());
+                        map.put("memberName", m.getMemberName());
+                        map.put("role", m.getRole());
+                        map.put("employeeId", m.getEmployeeId());
+                        return map;
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        @Transactional
+        @Override
+        public TenderEvaluationStatusDto selectChairman(String tenderId, Integer chairmanUserId) {
+            TenderEvaluation eval = requireEval(tenderId);
+            TenderRequest tender = requireTender(tenderId);
+
+            if (!"PENDING_DOCUMENT_UPLOAD".equals(eval.getEvaluationStatus())) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Chairman can only be selected during PENDING_DOCUMENT_UPLOAD. Current: "
+                        + eval.getEvaluationStatus()));
+            }
+
+            BigDecimal totalValue = tender.getTotalTenderValue() != null
+                    ? tender.getTotalTenderValue() : BigDecimal.ZERO;
+            if (totalValue.compareTo(TEN_LAKH) < 0 || totalValue.compareTo(ONE_CRORE) >= 0) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Chairman selection is only for tenders between ₹10 Lakh and ₹1 Crore."));
+            }
+
+            String stecType = totalValue.compareTo(FIFTY_LAKH) < 0 ? "STEC_I" : "STEC_II";
+            List<TechnoFinancialCommittee> candidates = committeeRepository
+                    .findByCommitteeTypeAndIsActiveTrue(stecType).stream()
+                    .filter(m -> "CHAIRMAN".equalsIgnoreCase(m.getRole())
+                              || "CO_CHAIRMAN".equalsIgnoreCase(m.getRole()))
+                    .collect(Collectors.toList());
+
+            TechnoFinancialCommittee selected = candidates.stream()
+                    .filter(m -> m.getUserId().equals(chairmanUserId))
+                    .findFirst()
+                    .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                            "Selected user is not a Chairman or Co-Chairman in " + stecType + ".")));
+
+            eval.setAdHocChairmanUserId(selected.getUserId());
+            eval.setAdHocChairmanName(selected.getMemberName());
+            eval.setUpdatedDate(LocalDateTime.now());
+            tenderEvaluationRepository.save(eval);
+
+            return buildStatusDto(eval, tender, tenderId);
+        }
+
 
         /**
          * Maps the respondedByRole to the clarificationTarget string stored in

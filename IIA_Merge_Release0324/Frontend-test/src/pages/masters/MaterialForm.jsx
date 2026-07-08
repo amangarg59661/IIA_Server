@@ -641,7 +641,7 @@ options={Array.isArray(materialList) ? materialList : []}
           <TextAreaComponent
             label="Brief Description of Material"
             name="briefDescription"
-            required
+            
           />
           <FormInputItem
             type="number"

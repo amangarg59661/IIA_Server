@@ -1151,8 +1151,8 @@ const handleSaveDraft = async () => {
                             <Form.Item
                               {...restField}
                               name={[name, "briefDescription"]}
-                              label={<span><span style={{ color: "red" }}>*</span> Brief Description of Job</span>}
-                              rules={[{ required: true, message: "Enter brief description" }]}
+                              label={<span><span style={{ color: "red" }}></span> Brief Description of Job</span>}
+                              rules={[{ required: false}]}
                             >
                               <Input placeholder="Enter Brief Description" />
                             </Form.Item>

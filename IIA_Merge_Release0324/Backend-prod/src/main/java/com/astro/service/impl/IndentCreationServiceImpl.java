@@ -2469,7 +2469,7 @@ public List<SearchIndentIdDto> searchIndentIds(String type, String value,
 
         case "processid":
             result = indentCreationRepository
-                .findByIndentIdContainingIgnoreCase(value);
+                .findByIndentIdContainingIgnoreCaseAndIsActiveTrue(value);
             break;
 
         case "submitteddate":

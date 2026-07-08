@@ -184,6 +184,13 @@ export const SoDetails = [
             disabled: true,
         },
         {
+            name: "vendorSwiftCode",
+            label: "Vendor SWIFT Code",
+            type: "text",
+            required: true,
+            disabled: true,
+        },
+        {
             name: "vendorsAccountName",
             label: "Vendor A/C Name",
             type: "text",

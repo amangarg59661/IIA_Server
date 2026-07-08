@@ -60,6 +60,10 @@ public class PurchaseOrder {
     private String vendorAccountNumber;
     @Column(name = "vendors_zfsc_code")
     private String vendorsZfscCode;
+    @Column(name = "vendor_swift_code")
+    private String vendorSwiftCode;
+    @Column(name = "vendor_type")
+    private String vendorType;
     @Column(name = "vendor_account_name")
     private String vendorAccountName;
     @Column(name = "total_value_of_po")

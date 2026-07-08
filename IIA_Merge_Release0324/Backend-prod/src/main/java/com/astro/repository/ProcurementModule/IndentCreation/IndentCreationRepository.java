@@ -329,13 +329,13 @@ Optional<IndentCreation> findActiveVersionByBaseId(@Param("baseId") String baseI
 
 // Update all existing search queries — add AND i.isActive = true to each one
 // Example — replace the existing findByIndentIdContainingIgnoreCase:
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIsActiveTrue(String indentId);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIsActiveTrue(String indentId);
 
 // Replace findByIndentIdContainingIgnoreCaseAndIndentType:
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndIsActiveTrue(String indentId, String indentType);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndIsActiveTrue(String indentId, String indentType);
 
 // Replace findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType:
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndIsActiveTrue(String indentId, String indentType, String materialCategoryType);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndIsActiveTrue(String indentId, String indentType, String materialCategoryType);
 
 // Replace the JPQL date-range searches — add AND i.isActive = true:
 @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.isActive = true")
@@ -388,16 +388,16 @@ List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryType(@
 """)
    List<ApprovedIndentsDto> findApprovedIndents(@Param("approvedIndentIds") List<String> approvedIndentIds);
 
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCurrentStatusNot(String value, String status);
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
-List<SearchIndentIdDto> findByCreatedDateBetweenAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String status);
-List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String status);
-List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String materialCategoryType, String status);
-List<SearchIndentIdDto> findByIndentorNameAndCurrentStatusNot(String value, String status);
-List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
-List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
-// List<SearchIndentIdDto> findByMaterialDescriptionAndCurrentStatusNot(String value, String status);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCurrentStatusNot(String value, String status);
+// // List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
+// List<SearchIndentIdDto> findByCreatedDateBetweenAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String status);
+// List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String status);
+// List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(LocalDateTime start, LocalDateTime end, String indentType, String materialCategoryType, String status);
+// List<SearchIndentIdDto> findByIndentorNameAndCurrentStatusNot(String value, String status);
+// List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndCurrentStatusNot(String value, String indentType, String status);
+// List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(String value, String indentType, String materialCategoryType, String status);
+// // List<SearchIndentIdDto> findByMaterialDescriptionAndCurrentStatusNot(String value, String status);
 List<IndentCreation> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
 
@@ -405,14 +405,14 @@ List<IndentCreation> findByCreatedByAndCurrentStatus(String createdBy, String cu
 // ─── DRAFT-INCLUSIVE search methods (no status filter) ───────────────────────
 
 // processid search — all statuses including DRAFT
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCreatedBy(
-    String indentId, String createdBy);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCreatedBy(
+//     String indentId, String createdBy);
 
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCreatedBy(
-    String indentId, String indentType, String createdBy);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCreatedBy(
+//     String indentId, String indentType, String createdBy);
 
-List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCreatedBy(
-    String indentId, String indentType, String materialCategoryType, String createdBy);
+// List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCreatedBy(
+//     String indentId, String indentType, String materialCategoryType, String createdBy);
 
 // submitteddate search — all statuses
 // List<SearchIndentIdDto> findByCreatedDateBetween(
@@ -425,11 +425,83 @@ List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMateri
 //     LocalDateTime start, LocalDateTime end, String indentType, String materialCategoryType);
 
 // indentorname search — all statuses
-List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCase(String name);
+// List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCase(String name);
 
-List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentType(
-    String name, String indentType);
+// List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentType(
+//     String name, String indentType);
 
-List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
-    String name, String indentType, String materialCategoryType);
+// List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(
+    // String name, String indentType, String materialCategoryType);
+
+    // ── L332 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIsActiveTrue(@Param("indentId") String indentId);
+
+// ── L335 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.indentType = :indentType AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndIsActiveTrue(@Param("indentId") String indentId, @Param("indentType") String indentType);
+
+// ── L338 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.isActive = true")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndIsActiveTrue(@Param("indentId") String indentId, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
+
+// ── L391 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:value,'%')) AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCurrentStatusNot(@Param("value") String value, @Param("status") String status);
+
+// ── L392 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:value,'%')) AND i.indentType = :indentType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCurrentStatusNot(@Param("value") String value, @Param("indentType") String indentType, @Param("status") String status);
+
+// ── L393 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:value,'%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(@Param("value") String value, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType, @Param("status") String status);
+
+// ── L394 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByCreatedDateBetweenAndCurrentStatusNot(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("status") String status);
+
+// ── L395 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndCurrentStatusNot(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType, @Param("status") String status);
+
+// ── L396 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.createdDate >= :start AND i.createdDate < :end AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByCreatedDateBetweenAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType, @Param("status") String status);
+
+// ── L397 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.indentorName = :value AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentorNameAndCurrentStatusNot(@Param("value") String value, @Param("status") String status);
+
+// ── L398 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.indentorName = :value AND i.indentType = :indentType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndCurrentStatusNot(@Param("value") String value, @Param("indentType") String indentType, @Param("status") String status);
+
+// ── L399 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE i.indentorName = :value AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.currentStatus <> :status")
+List<SearchIndentIdDto> findByIndentorNameAndIndentTypeAndMaterialCategoryTypeAndCurrentStatusNot(@Param("value") String value, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType, @Param("status") String status);
+
+// ── L408 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.createdBy = :createdBy")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndCreatedBy(@Param("indentId") String indentId, @Param("createdBy") String createdBy);
+
+// ── L411 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.indentType = :indentType AND i.createdBy = :createdBy")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndCreatedBy(@Param("indentId") String indentId, @Param("indentType") String indentType, @Param("createdBy") String createdBy);
+
+// ── L414 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE UPPER(i.indentId) LIKE UPPER(CONCAT('%',:indentId,'%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType AND i.createdBy = :createdBy")
+List<SearchIndentIdDto> findByIndentIdContainingIgnoreCaseAndIndentTypeAndMaterialCategoryTypeAndCreatedBy(@Param("indentId") String indentId, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType, @Param("createdBy") String createdBy);
+
+// ── L428 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%',:name,'%'))")
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCase(@Param("name") String name);
+
+// ── L430 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%',:name,'%')) AND i.indentType = :indentType")
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentType(@Param("name") String name, @Param("indentType") String indentType);
+
+// ── L433 ──
+@Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%',:name,'%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
+List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(@Param("name") String name, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
 }

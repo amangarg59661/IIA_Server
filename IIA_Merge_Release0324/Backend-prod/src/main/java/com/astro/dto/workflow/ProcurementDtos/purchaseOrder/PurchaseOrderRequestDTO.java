@@ -26,6 +26,8 @@ public class PurchaseOrderRequestDTO{
         private String transporterAndFreightForWarderDetails;
         private String vendorAccountNumber;
         private String vendorsIfscCode;
+        private String vendorSwiftCode;
+        private String vendorType;
         private String vendorAccountName;
         private String deliveryDate;
        // private BigDecimal totalValueOfPo;

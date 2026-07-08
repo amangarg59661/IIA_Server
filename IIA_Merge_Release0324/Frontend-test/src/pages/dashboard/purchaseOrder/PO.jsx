@@ -71,6 +71,8 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
           address: vendor.address,
           accountNumber: vendor.accountNo,
           ifscCode: vendor.ifscCode,
+          swiftCode: vendor.swiftCode,
+          vendorType: vendor.vendorType,
           accountName: vendor.vendorName,
         })
       );
@@ -352,6 +354,8 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
         vendorAddress: selectedVendor?.address || "",
         vendorAccountNumber: selectedVendor?.accountNumber || "",
         vendorsIfscCode: selectedVendor?.ifscCode || "",
+        vendorSwiftCode: selectedVendor?.swiftCode || "",
+        vendorType: selectedVendor?.vendorType || "",
         vendorAccountName: selectedVendor?.accountName || "",
       }));
       return;
@@ -368,6 +372,8 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
           vendorAddress: "",
           vendorAccountNumber: "",
           vendorsIfscCode: "",
+          vendorSwiftCode: "",
+          vendorType: "",
           vendorAccountName: "",
         }));
         return;
@@ -382,6 +388,8 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
         vendorAddress: selectedVendor?.address || "",
         vendorAccountNumber: selectedVendor?.accountNumber || "",
         vendorsIfscCode: selectedVendor?.ifscCode || "",
+        vendorSwiftCode: selectedVendor?.swiftCode || "",
+        vendorType: selectedVendor?.vendorType || "",
         vendorAccountName: selectedVendor?.accountName || "",
       }));
     }
@@ -653,6 +661,19 @@ updated[index].estimatedItemTotal = (
   };
 }
 
+        if (field.name === "vendorsIfscCode") {
+          return {
+            ...field,
+            shouldShow: () => !formData.vendorType || formData.vendorType?.toLowerCase() === "domestic",
+          };
+        }
+        if (field.name === "vendorSwiftCode") {
+          return {
+            ...field,
+            shouldShow: () => formData.vendorType?.toLowerCase() === "international",
+          };
+        }
+
         if (
           field.name === "typeOfSecurity" ||
           field.name === "securityNumber" ||
@@ -781,6 +802,8 @@ updated[index].estimatedItemTotal = (
             { key: 'vendorAddress',       label: 'Vendor Address' },
             { key: 'vendorAccountNumber', label: 'Vendor Account No.' },
             { key: 'vendorsIfscCode',     label: 'Vendor IFSC Code' },
+            { key: 'vendorSwiftCode',     label: 'Vendor SWIFT Code' },
+            { key: 'vendorType',          label: 'Vendor Type' },
             { key: 'vendorAccountName',   label: 'Vendor Account Name' },
             { key: 'deliveryPeriod',      label: 'Delivery Period' },
             { key: 'deliveryDate',        label: 'Delivery Date' },

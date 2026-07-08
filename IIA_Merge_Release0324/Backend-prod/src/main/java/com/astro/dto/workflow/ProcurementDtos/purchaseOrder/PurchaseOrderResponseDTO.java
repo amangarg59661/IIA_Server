@@ -30,6 +30,8 @@ private Integer poVersion;
     private String vendorId;
     private String vendorAccountNumber;
     private String vendorsIfscCode;
+    private String vendorSwiftCode;
+    private String vendorType;
     private String vendorAccountName;
     private BigDecimal totalValue;
     private String projectName;

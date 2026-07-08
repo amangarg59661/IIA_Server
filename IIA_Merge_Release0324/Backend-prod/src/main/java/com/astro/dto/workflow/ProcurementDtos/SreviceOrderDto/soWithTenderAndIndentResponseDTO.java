@@ -32,6 +32,8 @@ public class soWithTenderAndIndentResponseDTO {
     private List<ServiceOrderMaterialResponseDTO> materials;
     private String createdBy;
     private String updatedBy;
+    private String vendorSwiftCode;
+private String vendorType;
     private TenderWithIndentResponseDTO tenderDetails;
 
 

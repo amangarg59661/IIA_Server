@@ -357,7 +357,7 @@ reasonForDeactive: values.reasonForDeactive || null,
           <TextAreaComponent
             label="Brief Description of Job"
             name="briefDescription"
-            required
+            // required
           />
           <FormInputItem
             type="number"
