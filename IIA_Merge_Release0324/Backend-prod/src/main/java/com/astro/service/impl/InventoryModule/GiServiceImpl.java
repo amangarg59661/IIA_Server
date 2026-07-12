@@ -122,6 +122,23 @@ if (gprnForCheck != null && !isGprnAccessibleToUser(gprnForCheck, req.getCreated
 }
         SaveGprnDto gprnDto = gprnService.getGprnDtls(req.getGprnNo());
 
+        Optional<GiMasterEntity> existingGi = gimr.findByGprnSubProcessId(gprn);
+        if (existingGi.isPresent()) {
+            GiMasterEntity oldGi = existingGi.get();
+            if ("REJECTED PENDING REINSPECTION".equals(oldGi.getStatus())) {
+                gimdr.deleteByInspectionSubProcessId(oldGi.getInspectionSubProcessId());
+                gicdr.deleteByInspectionSubProcessId(oldGi.getInspectionSubProcessId());
+                gimr.delete(oldGi);
+                gimr.flush();
+            } else {
+                throw new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_RESOURCE,
+                        "GI already exists for this GPRN with status: " + oldGi.getStatus()));
+            }
+        }
+
         ModelMapper mapper = new ModelMapper();
         GiMasterEntity gime = new GiMasterEntity();
         gime.setCommissioningDate(CommonUtils.convertStringToDateObject(req.getCommissioningDate()));

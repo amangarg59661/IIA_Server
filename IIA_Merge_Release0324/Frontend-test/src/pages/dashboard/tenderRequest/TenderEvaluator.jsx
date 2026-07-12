@@ -1462,7 +1462,9 @@ const handleIndentorRespondPerQuestion = async (historyId) => {
 const isAbove10L = evalStatus?.amountCategory !== 'UNDER_10_LAKH' && evalStatus?.amountCategory != null;
 const isAdHocChairman = evalStatus?.adHocChairmanUserId != null
   && String(evalStatus.adHocChairmanUserId) === String(userId);
-const isChairman = role === 'Committee Chairman' || isAdHocChairman;
+const isChairman = evalStatus?.adHocChairmanUserId != null
+  ? isAdHocChairman
+  : role === 'Committee Chairman';
 const isDirector = role === 'Director';
 const isCommitteeMember = role === 'Committee Member' && !isAdHocChairman;
 const isVotingMember = evalStatus?.committeeVotes?.some(
@@ -5036,11 +5038,11 @@ useEffect(() => {
                     onClick={() => { setApprovalType('chairman'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
                     {isDoubleBidEval && !isFinancialPhase ? 'Approve Technical Phase' : 'Confirm Evaluation'}
                   </Button>
-                  <Button danger
+                  {/* <Button danger
                     disabled={!allChairmanVendorsDecided || isAnyClarificationPending}
                     onClick={() => { setApprovalType('chairman'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
                     Reject
-                  </Button>
+                  </Button> */}
                   <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
                     onClick={() => openClarificationModal('CHAIRMAN')}>
                     Seek Clarification
@@ -5082,11 +5084,11 @@ useEffect(() => {
                     onClick={() => { setApprovalType('director'); setApprovalDecision('APPROVED'); setApprovalModal(true); }}>
                     {isDoubleBidEval && !isFinancialPhase ? 'Approve Technical Phase' : 'Confirm Evaluation'}
                   </Button>
-                  <Button danger
+                  {/* <Button danger
                     disabled={!allDirectorVendorsDecided || isAnyClarificationPending}
                     onClick={() => { setApprovalType('director'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
                     Reject
-                  </Button>
+                  </Button> */}
                   <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
                     onClick={() => openClarificationModal('DIRECTOR')}>
                     Seek Clarification
@@ -5466,7 +5468,7 @@ useEffect(() => {
       </Modal>
 
       {/* ── Chairman Decision Modal ── */}
-      <Modal
+      {/* <Modal
         title={chairmanIsOverride ? 'Chairman Override Committee Decision' : 'Chairman Final Decision'}
         open={chairmanModal}
         onOk={handleChairmanDecisionSubmit}
@@ -5487,7 +5489,7 @@ useEffect(() => {
           <Text strong>{chairmanIsOverride ? 'Override Reason:' : 'Remarks:'}</Text>
           <Input.TextArea rows={4} value={chairmanRemarks} onChange={e => setChairmanRemarks(e.target.value)} style={{ marginTop: 4 }} />
         </div>
-      </Modal>
+      </Modal> */}
 
       {/* ── Chairman Forward Member Clarification Modal ── */}
       <Modal

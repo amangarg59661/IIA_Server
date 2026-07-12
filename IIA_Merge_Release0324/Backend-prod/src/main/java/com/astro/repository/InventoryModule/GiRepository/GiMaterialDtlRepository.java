@@ -25,4 +25,6 @@ public interface GiMaterialDtlRepository extends JpaRepository<GiMaterialDtlEnti
     List<String> findMaterialDescriptionsByInspectionSubProcessId(@Param("inspectionSubProcessId") Integer inspectionSubProcessId);
 
     List<GiMaterialDtlEntity> findByRejectionType(String rejectionType);
+
+    void deleteByInspectionSubProcessId(Integer inspectionSubProcessId);
 }

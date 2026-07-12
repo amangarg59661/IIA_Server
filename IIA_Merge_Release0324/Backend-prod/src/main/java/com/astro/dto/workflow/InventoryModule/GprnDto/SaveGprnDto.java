@@ -34,4 +34,8 @@ public class SaveGprnDto {
     private List<MaterialDtlDto> materialDtlList;
     private BigDecimal gprnAmount;
     private BigDecimal poAmount;
+    private String giStatus;
+    private String spoRejectionReason;
+    private Integer spoRejectionCount;
+    private String rejectionRemarks;
 }

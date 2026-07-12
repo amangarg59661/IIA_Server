@@ -25,6 +25,10 @@ import com.astro.entity.InventoryModule.GprnMasterEntity;
 import com.astro.entity.InventoryModule.GprnMaterialDtlEntity;
 import com.astro.entity.VendorMaster;
 import com.astro.dto.workflow.InventoryModule.GprnDto.*;
+import com.astro.entity.InventoryModule.GiMasterEntity;
+import com.astro.entity.InventoryModule.GiWorkflowStatus;
+import com.astro.repository.InventoryModule.GiRepository.GiMasterRepository;
+import com.astro.repository.InventoryModule.GiRepository.GiWorkflowStatusRepository;
 import com.astro.exception.*;
 import com.astro.constant.AppConstant;
 import com.astro.util.CommonUtils;
@@ -49,6 +53,10 @@ public class GprnServiceImpl implements GprnService {
     private PurchaseOrderAttributesRepository poMaterialRepo;
     @Autowired
     private UserMasterRepository userMasterRepository;
+    @Autowired
+    private GiMasterRepository giMasterRepository;
+    @Autowired
+    private GiWorkflowStatusRepository giWorkflowStatusRepository;
 
     private final String basePath;
 
@@ -234,6 +242,21 @@ return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
         String custodainName = userMasterRepository.findUserNameByUserId(Integer.valueOf(gme.getReceivedBy()));
 
         gprnRes.setReceivedName(custodainName);
+
+        java.util.Optional<GiMasterEntity> giOpt = giMasterRepository.findByGprnSubProcessId(subProcessId);
+        if (giOpt.isPresent()) {
+            GiMasterEntity gi = giOpt.get();
+            gprnRes.setGiStatus(gi.getStatus());
+            gprnRes.setSpoRejectionReason(gi.getSpoRejectionReason());
+            gprnRes.setSpoRejectionCount(gi.getSpoRejectionCount());
+
+            List<GiWorkflowStatus> rejectionHistory = giWorkflowStatusRepository
+                    .findBySubProcessIdAndActionOrderByIdDesc(gi.getInspectionSubProcessId(), "REJECTED PENDING REINSPECTION");
+            if (!rejectionHistory.isEmpty()) {
+                gprnRes.setRejectionRemarks(rejectionHistory.get(0).getRemarks());
+            }
+        }
+
         return gprnRes;
     }
 

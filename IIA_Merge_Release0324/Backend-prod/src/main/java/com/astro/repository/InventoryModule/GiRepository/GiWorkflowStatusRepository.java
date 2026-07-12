@@ -13,4 +13,6 @@ public interface GiWorkflowStatusRepository extends JpaRepository<GiWorkflowStat
 
     List<GiWorkflowStatus> findByProcessIdAndSubProcessIdOrderByIdAsc(String processId, Integer subProcessId);
 
+    List<GiWorkflowStatus> findBySubProcessIdAndActionOrderByIdDesc(Integer subProcessId, String action);
+
 }

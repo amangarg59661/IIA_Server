@@ -27,4 +27,6 @@ public interface GoodsInspectionConsumableDetailRepository extends JpaRepository
 
     @Query("SELECT g.materialDesc FROM GoodsInspectionConsumableDetailEntity g WHERE g.inspectionSubProcessId = :subProcessId")
     List<String> findMaterialDescriptionsByInspectionSubProcessId(@Param("subProcessId") Integer subProcessId);
+
+    void deleteByInspectionSubProcessId(Integer inspectionSubProcessId);
 }
