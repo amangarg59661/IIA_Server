@@ -3,14 +3,15 @@ import MyLogo from "../assets/iia-logo.png";
 import { MenuOutlined, LogoutOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import IconBtn from "./DKG_IconBtn";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../store/slice/authSlice";
 
 const DKGHeader = ({ toggleCollapse }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { token } = useSelector((state) => state.auth);
 
-const handleLogout = () => {
+  const handleLogout = () => {
     dispatch(logout());
     navigate("/");
   };
@@ -26,13 +27,15 @@ const handleLogout = () => {
         </span>
       </div>
 
-      <button
-        onClick={handleLogout}
-       className="text-gray-700 hover:text-black border border-gray-300 px-4 py-1 rounded-md transition duration-150"
-      >
-        <LogoutOutlined />
-        Logout
-      </button>
+      {token && (
+        <button
+          onClick={handleLogout}
+          className="text-gray-700 hover:text-black border border-gray-300 px-4 py-1 rounded-md transition duration-150"
+        >
+          <LogoutOutlined />
+          Logout
+        </button>
+      )}
     </header>
   );
 };

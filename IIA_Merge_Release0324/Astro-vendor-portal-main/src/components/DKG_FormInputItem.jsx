@@ -1,7 +1,7 @@
 import React from 'react'
 import {Form, Input, InputNumber} from "antd"
 
-const FormInputItem = ({label, name, value, onChange, readOnly, disabled, className, placeholder, required, min, max, type}) => {
+const FormInputItem = ({label, name, value, onChange, readOnly, disabled, className, placeholder, required, min, max, type = 'text'}) => {
   const handleChange = (e) => {
 
     if(onChange)
@@ -20,13 +20,15 @@ const FormInputItem = ({label, name, value, onChange, readOnly, disabled, classN
       {
         type === 'number' ? 
         <InputNumber
-        step={1}          // Increment/decrement step
-        value={value}
-        min={min}
-        max={max}
-        onChange={handleChange}
-        style={{ width: '100%' }} // Adjust width as needed
-      />
+          step={1}          // Increment/decrement step
+          value={value}
+          min={min}
+          max={max}
+          onChange={handleChange}
+          style={{ width: '100%' }} // Adjust width as needed
+        />
+      : type === 'password' ?
+        <Input.Password value={value} onChange={handleChange} readOnly={readOnly} disabled={disabled} placeholder={placeholder}/>
       :
         <Input value={value} onChange={handleChange} readOnly={readOnly} disabled={disabled} placeholder={placeholder}/>
       }

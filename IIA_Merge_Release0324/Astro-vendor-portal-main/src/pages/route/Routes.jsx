@@ -20,6 +20,11 @@ const RoutesComponent = () => {
         <Route path="/" element={<Login />} />
         <Route path="/change-password" element={<ChangePassword />} />  {/* NEW ROUTE */}
         
+        {/* Public Registration Route */}
+        <Route path="/app" element={<LayoutWithDashboard />}>
+          <Route index element={<Dashboard />} />
+        </Route>
+        
         {/* All protected routes - requires valid token */}
         <Route element={<PrivateRoutes />}>
           {/* Vendor Routes with Layout */}
@@ -30,7 +35,6 @@ const RoutesComponent = () => {
 
           {/* Dashboard Routes */}
           <Route path="/app" element={<LayoutWithDashboard/>}>
-            <Route index element={<Dashboard />} />
             <Route path="dashboard" element={<MainDashboard />} />
           </Route>
         </Route>

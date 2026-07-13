@@ -136,6 +136,7 @@ const Login = () => {
   };
 
   const handleRegisterRedirect = () => {
+    // console.log("clicked");
     navigate('/app');
   };
 
@@ -187,7 +188,6 @@ const Login = () => {
                 className="absolute right-3 top-[50%] -translate-y-1/2 text-sm text-gray-600"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
             {messageText && (
@@ -209,7 +209,7 @@ const Login = () => {
             Request Admin for your credentials.
           </h2>
           <p className='text-gray-500 text-center'>
-            New to us? <span className="text-sm text-blue-600 cursor-pointer hover:underline" onClick={handleRegisterRedirect}>Register here</span>
+            New to us? <span className="text-sm text-blue-600 cursor-pointer hover:underline"    onClick={handleRegisterRedirect}>Register here</span>
           </p>
         </main>
       </FormContainer>

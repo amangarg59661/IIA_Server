@@ -39,6 +39,11 @@ const [showCityField, setShowCityField] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedState, setSelectedState] = useState('');
 
+  // Refs to cache and optimize PAN uniqueness validation calls
+  const lastCheckedPan = React.useRef("");
+  const lastCheckedResult = React.useRef(null);
+  const inProgressPromise = React.useRef(null);
+
   const handleSubmit = async (values) => {
     setLoading(true);
     // If state field is hidden, set state to null
@@ -89,7 +94,7 @@ if (!showCityField) finalCity = null;
         {
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${auth.token}`,
+            Authorization: auth.token ? `Bearer ${auth.token}` : "",
           },
         }
       );
@@ -100,6 +105,9 @@ if (!showCityField) finalCity = null;
           "You have registered successfully. Check your email for the credentials and Sign-in again using those credentials for further interactions!"
         );
         form.resetFields();
+        lastCheckedPan.current = "";
+        lastCheckedResult.current = null;
+        inProgressPromise.current = null;
 
         // Reset vendor type and location states
         setVendorType('');
@@ -117,7 +125,7 @@ if (!showCityField) finalCity = null;
               {
                 headers: {
                   "Content-Type": "application/json",
-                  Authorization: `Bearer ${auth.token}`,
+                  Authorization: auth.token ? `Bearer ${auth.token}` : "",
                 },
               }
             );
@@ -288,7 +296,6 @@ if (!showCityField) finalCity = null;
                 cursor: "pointer",
               }}
             >
-              ×
             </button>
           </motion.div>
         )}
@@ -448,23 +455,70 @@ if (!showCityField) finalCity = null;
             <Form.Item
               label="PAN Number"
               name="panNo"
+              dependencies={['vendorType']}
               normalize={(value) => (value ? value.toUpperCase() : value)} 
+              validateTrigger={["onChange", "onBlur"]}
               rules={[
                 { required: vendorType === 'Domestic', message: "PAN Number is required" },
                 { min: 10, max: 10, message: "PAN Number must be 10 characters" },
                 { pattern: /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, message: "PAN Number must be in format: ABCDE1234F (5 uppercase letters, 4 digits, 1 uppercase letter)" },
                 {
                   validator: async (_, value) => {
-                    if (vendorType === 'Domestic') {
-                      if (!value || value.length < 10) {
+                    const currentVendorType = form.getFieldValue('vendorType') || vendorType;
+                    console.log("PAN Validator triggered. Value:", value, "vendorType:", currentVendorType);
+                    if (currentVendorType === 'Domestic') {
+                      if (!value) {
+                        console.log("PAN Validator: empty value, resolving.");
                         return Promise.resolve();
                       }
 
-                      if (value.length === 10) {
-                        const response = await axios.get(`/api/vendor-master-util/check-panNumber/${value}`);
-                        if (response.data.responseData.exists) {
-                          return Promise.reject("PAN number already exists");
+                      const panPattern = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+                      const isValidFormat = panPattern.test(value);
+                      console.log("PAN Validator: format check result:", isValidFormat);
+
+                      if (!isValidFormat) {
+                        return Promise.resolve();
+                      }
+
+                      if (lastCheckedPan.current === value) {
+                        console.log("PAN Validator: using cache for:", value);
+                        if (inProgressPromise.current) {
+                          console.log("PAN Validator: awaiting existing in-progress check.");
+                          const exists = await inProgressPromise.current;
+                          if (exists) {
+                            return Promise.reject("PAN number already exists.");
+                          }
+                          return Promise.resolve();
                         }
+                        if (lastCheckedResult.current?.exists) {
+                          return Promise.reject("PAN number already exists.");
+                        }
+                        return Promise.resolve();
+                      }
+
+                      console.log("PAN Validator: calling check API for:", value);
+                      lastCheckedPan.current = value;
+                      const checkPromise = (async () => {
+                        try {
+                          const response = await axios.get(`/api/vendor-master-util/check-panNumber/${value}`);
+                          console.log("PAN Validator: API response:", response.data);
+                          const exists = response.data?.responseData?.exists || false;
+                          lastCheckedResult.current = { exists };
+                          return exists;
+                        } catch (error) {
+                          console.error("PAN uniqueness check failed:", error);
+                          lastCheckedResult.current = { exists: false };
+                          return false;
+                        } finally {
+                          inProgressPromise.current = null;
+                        }
+                      })();
+
+                      inProgressPromise.current = checkPromise;
+                      const exists = await checkPromise;
+
+                      if (exists) {
+                        return Promise.reject("PAN number already exists.");
                       }
                     }
                     return Promise.resolve();
