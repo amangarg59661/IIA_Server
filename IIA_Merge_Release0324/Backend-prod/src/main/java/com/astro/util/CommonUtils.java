@@ -271,14 +271,26 @@ public class CommonUtils {
         }
     }
 
-   private static String getMimeType(String fileName) {
-        if (fileName.endsWith(".png")) return "image/png";
-        if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
-        if (fileName.endsWith(".gif")) return "image/gif";
+//    private static String getMimeType(String fileName) {
+//         if (fileName.endsWith(".png")) return "image/png";
+//         if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
+//         if (fileName.endsWith(".gif")) return "image/gif";
 
-        return "image/jpeg"; // Default type
-    }
-
+//         return "image/jpeg"; // Default type
+//     }
+private static String getMimeType(String fileName) {
+    String lower = fileName.toLowerCase();
+    if (lower.endsWith(".png")) return "image/png";
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+    if (lower.endsWith(".gif")) return "image/gif";
+    if (lower.endsWith(".pdf")) return "application/pdf";
+    if (lower.endsWith(".doc")) return "application/msword";
+    if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    if (lower.endsWith(".xls")) return "application/vnd.ms-excel";
+    if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (lower.endsWith(".txt")) return "text/plain";
+    return "application/octet-stream"; // was: image/jpeg
+}
 
 
     public static List<LocalDateTime> getDateRenge(String startDate, String endDate) {
