@@ -34,7 +34,7 @@ export const SoDetails = [
         },
         {
             name: "jobCompletionPeriod",
-            label: "Job Completion Period",
+            label: "Job Completion Period (in days)",
             type: "text",
             required: true
         },
@@ -115,6 +115,13 @@ export const SoDetails = [
             label: "Duties (%)",
             type: "text",
             required: true
+        },
+        {
+          name: "totalAmount",
+          label: "Total Amount",  type: "text",
+          disabled: true,
+          required: true, 
+          span: 3
         },
       ]
     },

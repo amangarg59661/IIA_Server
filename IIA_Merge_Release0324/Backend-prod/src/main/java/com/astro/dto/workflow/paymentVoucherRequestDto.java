@@ -31,6 +31,7 @@ public class paymentVoucherRequestDto {
    private BigDecimal paymentVoucherNetAmount;
 
 
+   private String cpDetails;
    private String createdBy;
 
     private List<paymentVoucherMaterialRequestDto> materials;

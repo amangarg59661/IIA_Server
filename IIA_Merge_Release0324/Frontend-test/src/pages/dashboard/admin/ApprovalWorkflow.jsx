@@ -2034,7 +2034,7 @@ const ApprovalWorkflow = () => {
     { id: 3, name: 'Purchase Order Workflow', key: 'PO' },
     { id: 4, name: 'Tender Approver Workflow', key: 'TENDER_APPROVER' },
     { id: 5 , name: 'Service Order Workflow' , key:'SO'},
-    { id: 7, name: 'Tender Evaluator Workflow', key: 'TENDER_EVALUATOR' },
+    // { id: 7, name: 'Tender Evaluator Workflow', key: 'TENDER_EVALUATOR' },
     {id:10 , name:'Payment Voucher Workflow', key:'Payment'},
   ]);
   // End

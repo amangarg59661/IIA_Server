@@ -26,6 +26,7 @@ public class PaymentVoucherReportDto {
     private BigDecimal advanceAmount;
     private BigDecimal paidAmount;
     private String soId;
+    private String cpDetails;
     private String createdBy;
     private LocalDateTime createdDate;
     private List<PaymentVoucherMaterialDto> materials;

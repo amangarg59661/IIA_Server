@@ -72,6 +72,7 @@ public class PaymentVoucher {
     private BigDecimal paymentVoucherNetAmount;
 
     private String soId;
+    private String cpDetails;
 
     @CreatedBy
     private String createdBy;

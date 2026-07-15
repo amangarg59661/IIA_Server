@@ -19,7 +19,7 @@ export const locatorMaster = [
     },
 ]
 
-export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions)=> [
+export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions)=> [
      {
     heading: "Invoice Details",
     colCnt: 2,
@@ -44,6 +44,7 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
         options: [
             { value: "Purchase Order", label: "Purchase Order" },
             { value: "Service Order", label: "Service Order" },
+            {value: "CP", label: "Contengency Purchase"},
         ],
       },
      ...(formData.paymentVoucherIsFor === "Purchase Order"
@@ -76,6 +77,17 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
           required: true,
           options: soOptions,
         },
+      ]
+    : []),
+    ...(formData.paymentVoucherIsFor === "CP"
+    ? [
+        {
+          name: "cpDetails",
+          label: "Contingency Purchase Ids",
+          type: "select",
+          required: true,
+          options: cpOptions,
+        }
       ]
     : []),
     {

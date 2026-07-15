@@ -52,10 +52,20 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         voucher.setPartialAmount(dto.getPartialAmount());
         voucher.setAdvanceAmount(dto.getAdvanceAmount());
         voucher.setSoId(dto.getServiceOrderDetails());
+        voucher.setCpDetails(dto.getCpDetails());
         voucher.setTdsAmount(dto.getTdsAmount());
         voucher.setPaymentVoucherNetAmount(dto.getPaymentVoucherNetAmount());
 
-        Optional<PaymentVoucher> existingVoucherOpt = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(dto.getGrnNumber());
+        Optional<PaymentVoucher> existingVoucherOpt;
+        String paymentFor = dto.getPaymentVoucherIsFor();
+
+        if ("Service Order".equalsIgnoreCase(paymentFor)) {
+            existingVoucherOpt = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(dto.getServiceOrderDetails());
+        } else if ("CP".equalsIgnoreCase(paymentFor)) {
+            existingVoucherOpt = paymentVoucherReposiotry.findTopByCpDetailsOrderByIdDesc(dto.getCpDetails());
+        } else {
+            existingVoucherOpt = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(dto.getGrnNumber());
+        }
 
         if (existingVoucherOpt.isPresent()) {
             PaymentVoucher existingVoucher = existingVoucherOpt.get();
@@ -100,9 +110,15 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
 
         voucher.setMaterialsList(materialsList);
 
-     PaymentVoucher pv=   paymentVoucherReposiotry.save(voucher);
+        PaymentVoucher pv = paymentVoucherReposiotry.save(voucher);
 
-        return dto.getGrnNumber() + "/" + pv.getId();
+        if ("Service Order".equalsIgnoreCase(paymentFor)) {
+            return dto.getServiceOrderDetails() + "/" + pv.getId();
+        } else if ("CP".equalsIgnoreCase(paymentFor)) {
+            return dto.getCpDetails() + "/" + pv.getId();
+        } else {
+            return dto.getGrnNumber() + "/" + pv.getId();
+        }
     }
 
 
@@ -137,6 +153,7 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setPaymentVoucherNetAmount(entity.getPaymentVoucherNetAmount());
         dto.setTdsAmount(entity.getTdsAmount());
+        dto.setCpDetails(entity.getCpDetails());
 
         // Map materials
         if (entity.getMaterialsList() != null) {
@@ -176,17 +193,26 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
             PaymentVoucherReportDto dto = new PaymentVoucherReportDto();
 
 
-            String id = voucher.getGrnNumber()+"/"+ voucher.getId();
+            String pvIsFor = voucher.getPaymentVoucherIsFor();
+            String id;
+            if ("Service Order".equalsIgnoreCase(pvIsFor)) {
+                id = voucher.getServiceOrderDetails() + "/" + voucher.getId();
+            } else if ("CP".equalsIgnoreCase(pvIsFor)) {
+                id = voucher.getCpDetails() + "/" + voucher.getId();
+            } else {
+                id = voucher.getGrnNumber() + "/" + voucher.getId();
+            }
             dto.setPaymentVoucherNumber(id);
             dto.setPaymentVoucherDate(voucher.getPaymentVoucherDate());
-            dto.setPaymentVoucherIsFor(voucher.getPaymentVoucherIsFor());
+            dto.setPaymentVoucherIsFor(pvIsFor);
             dto.setGrnNumber(voucher.getGrnNumber());
-            if(voucher.getPaymentVoucherIsFor().equalsIgnoreCase("Purchase Order")){
-                String poId = "PO"+voucher.getPurchaseOrderId();
+            if ("Purchase Order".equalsIgnoreCase(pvIsFor)) {
+                String poId = "PO" + voucher.getPurchaseOrderId();
                 dto.setPurchaseOrderId(poId);
-            }else{
-                String soId = "SO"+voucher.getSoId();
+            } else if ("Service Order".equalsIgnoreCase(pvIsFor)) {
                 dto.setSoId(voucher.getSoId());
+            } else if ("CP".equalsIgnoreCase(pvIsFor)) {
+                dto.setCpDetails(voucher.getCpDetails());
             }
 
            // dto.setServiceOrderDetails(voucher.getServiceOrderDetails());

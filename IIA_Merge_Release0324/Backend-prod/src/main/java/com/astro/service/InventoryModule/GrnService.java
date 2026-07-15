@@ -36,6 +36,8 @@ public interface GrnService {
     public paymentVoucherDto getPaymentVoucherData(String grnProcessId);
 
     public paymentVoucherDto getPaymentVoucherDtoBySoId(String soId);
+    public List<String> getApprovedCpIds();
+    public paymentVoucherDto getPaymentVoucherDtoByCpId(String cpId);
     public List<GrnDropdownDto> getPendingGrns();
 
 }

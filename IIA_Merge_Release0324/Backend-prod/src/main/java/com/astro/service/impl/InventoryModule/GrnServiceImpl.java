@@ -15,6 +15,9 @@ import com.astro.repository.InventoryModule.GprnRepository.GprnMaterialDtlReposi
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderAttributesRepository;
 import com.astro.repository.ProcurementModule.PurchaseOrder.PurchaseOrderRepository;
 import com.astro.repository.ProcurementModule.ServiceOrderRepository.ServiceOrderRepository;
+import com.astro.repository.ProcurementModule.ContigencyPurchaseRepository;
+import com.astro.entity.ProcurementModule.ContigencyPurchase;
+import com.astro.entity.ProcurementModule.CpMaterials;
 import com.astro.repository.WorkflowTransitionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +102,8 @@ private com.astro.service.BudgetService budgetService;
     private ServiceOrderRepository serviceOrderRepository;
     @Autowired
     private PurchaseOrderRepository purchaseOrderRepository;
+    @Autowired
+    private ContigencyPurchaseRepository contigencyPurchaseRepository;
 
     @Override
     @Transactional
@@ -1387,6 +1392,68 @@ dto.setMaterialsList(mergedMaterials);
                 dto.setPaymentVoucherType("Advance");
                 dto.setAdvanceAmountAlreadyPaid(advancePaid);
                 dto.setAdvanceBalanceAmount(totalAmount.subtract(advancePaid));
+            }
+        }
+        return dto;
+    }
+
+    @Override
+    public List<String> getApprovedCpIds() {
+        return workflowTransitionRepository.findApprovedCpIds();
+    }
+
+    @Override
+    public paymentVoucherDto getPaymentVoucherDtoByCpId(String cpId) {
+        ContigencyPurchase cp = contigencyPurchaseRepository.findById(cpId)
+                .orElseThrow(() -> new RuntimeException("Contingency Purchase not found: " + cpId));
+
+        paymentVoucherDto dto = new paymentVoucherDto();
+        dto.setProcessId(cp.getContigencyId());
+
+        if ("vendor".equalsIgnoreCase(cp.getPaymentTo())) {
+            dto.setVendorName(cp.getPaymentToVendor());
+        } else {
+            dto.setVendorName(cp.getPaymentToEmployee());
+        }
+
+        dto.setVendorInvoiceName(cp.getVendorsInvoiceNo());
+        if (cp.getDate() != null) {
+            dto.setVendorInvoiceDate(cp.getDate().toString());
+        }
+
+        List<paymentVoucherMaterials> materials = cp.getCpMaterials().stream().map(mat -> {
+            paymentVoucherMaterials m = new paymentVoucherMaterials();
+            m.setMaterialCode(mat.getMaterialCode());
+            m.setMaterialDescription(mat.getMaterialDescription());
+            m.setQuantity(mat.getQuantity());
+            m.setUnitPrice(mat.getUnitPrice());
+            m.setCurrency(mat.getCurrency());
+            m.setGst(mat.getGst());
+            BigDecimal qty = mat.getQuantity() != null ? mat.getQuantity() : BigDecimal.ZERO;
+            BigDecimal price = mat.getUnitPrice() != null ? mat.getUnitPrice() : BigDecimal.ZERO;
+            m.setAmount(qty.multiply(price));
+            return m;
+        }).collect(Collectors.toList());
+
+        dto.setMaterialsList(materials);
+        dto.setTotalAmount(cp.getTotalCpValue());
+
+        Optional<PaymentVoucher> existingVoucherOpt = paymentVoucherReposiotry.findTopByCpDetailsOrderByIdDesc(cpId);
+
+        if (existingVoucherOpt.isPresent()) {
+            PaymentVoucher existingVoucher = existingVoucherOpt.get();
+            String type = existingVoucher.getPaymentVoucherType();
+
+            if ("Partial".equalsIgnoreCase(type)) {
+                BigDecimal partialPaid = existingVoucher.getPaidAmount() != null ? existingVoucher.getPaidAmount() : BigDecimal.ZERO;
+                dto.setPaymentVoucherType("Partial");
+                dto.setPartialAmountAlreadypaid(partialPaid);
+                dto.setPartialBalanceAmount(cp.getTotalCpValue().subtract(partialPaid));
+            } else if ("Advance".equalsIgnoreCase(type)) {
+                BigDecimal advancePaid = existingVoucher.getPaidAmount() != null ? existingVoucher.getPaidAmount() : BigDecimal.ZERO;
+                dto.setPaymentVoucherType("Advance");
+                dto.setAdvanceAmountAlreadyPaid(advancePaid);
+                dto.setAdvanceBalanceAmount(cp.getTotalCpValue().subtract(advancePaid));
             }
         }
         return dto;

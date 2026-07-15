@@ -21,6 +21,8 @@ public interface PaymentVoucherReposiotry extends JpaRepository<PaymentVoucher, 
 
     Optional<PaymentVoucher> findTopByServiceOrderDetailsOrderByIdDesc(String soId);
 
+    Optional<PaymentVoucher> findTopByCpDetailsOrderByIdDesc(String cpDetails);
+
     List<PaymentVoucher> findByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
 
 }

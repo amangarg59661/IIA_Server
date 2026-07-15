@@ -63,11 +63,7 @@ const Login = () => {
           vendorId: userId,
           password: password
         },
-        {
-          headers: {
-            Authorization: ''
-          }
-        }
+        
       );
       const data = response.data;
       const responseData = data.responseData;
@@ -188,6 +184,7 @@ const Login = () => {
                 className="absolute right-3 top-[50%] -translate-y-1/2 text-sm text-gray-600"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
+                {/* {showPassword ? '👁‍🗨' : '⊘'} */}
               </button>
             </div>
             {messageText && (

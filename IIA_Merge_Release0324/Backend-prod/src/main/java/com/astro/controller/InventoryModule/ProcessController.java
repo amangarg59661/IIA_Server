@@ -666,6 +666,16 @@ public class ProcessController {
         List<String> res=   grns.getApprovedSoIds();
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
+    @GetMapping("/approvedCpIds")
+    public ResponseEntity<Object> getApprovedCpIds() {
+        List<String> res = grns.getApprovedCpIds();
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+    }
+    @GetMapping("/paymentVoucherCPData")
+    public ResponseEntity<Object> getPaymentVoucherCpDetails(@RequestParam("processNo") String processNo) {
+        paymentVoucherDto res = grns.getPaymentVoucherDtoByCpId(processNo);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+    }
     @GetMapping("/paymentVoucherGrnId")
     public ResponseEntity<Object> getPaymentVoucherPaymentGrnIds( @RequestParam("grnProcessId") String grnProcessId) {
         List<String> res=   grns.getGrnDetailsByProcessId(grnProcessId);

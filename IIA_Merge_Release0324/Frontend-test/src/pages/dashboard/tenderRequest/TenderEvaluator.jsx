@@ -2205,6 +2205,9 @@ if (isSpoRole) {
       if (techRejected) return <Tag color="default">N/A (Technical Rejected)</Tag>;
       const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
       const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
+      const vendorUnderVendorClarif = isIndentCreatorRole && !isMultipleIndentEval && isBelow10L
+        && record.status === 'CHANGE_REQUESTED'
+        && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
       const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
       return (status === 'ACCEPTED' && !spoRequestedReview) ? (
         <Tag color="green">Accepted</Tag>
@@ -2216,9 +2219,10 @@ if (isSpoRole) {
             (status === 'ACCEPTED' && !spoRequestedReview) ||
             status === 'REJECTED' ||
             (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
-            isGemMultiVendorClarif
+            isGemMultiVendorClarif ||
+            vendorUnderVendorClarif
           }
-          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
+          title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorUnderVendorClarif ? 'Cannot accept while clarification is pending for this vendor' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : vendorClarifPending ? 'Cannot accept while clarification is pending for this vendor' : ''}
         >
           Accept
         </Button>
@@ -2743,6 +2747,9 @@ const doubleBidTechColumns = [
             const st = record.indentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
             const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
+            const vendorUnderVendorClarif = isIndentCreatorRole && !isMultipleIndentEval && isBelow10L
+              && record.status === 'CHANGE_REQUESTED'
+              && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
             const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
             return (st === 'ACCEPTED' && !spoRequestedReview) ? (
               <Tag color="green">Accepted</Tag>
@@ -2753,9 +2760,10 @@ const doubleBidTechColumns = [
                 disabled={
                   (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' ||
                   (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
-                  isGemMultiVendorClarif
+                  isGemMultiVendorClarif ||
+                  vendorUnderVendorClarif
                 }
-                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorUnderVendorClarif ? 'Cannot accept while clarification is pending for this vendor' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>
@@ -3076,6 +3084,9 @@ const doubleBidFinColumns = [
             const st = record.financialIndentorStatus;
             const vendorHasIndentorClarif = indentorOpenQuestions.some(q => q.targetVendorId === record.vendorId);
             const vendorClarifPending = record.status === 'CHANGE_REQUESTED' && !vendorHasIndentorClarif;
+            const vendorUnderVendorClarif = isIndentCreatorRole && !isMultipleIndentEval && isBelow10L
+              && record.status === 'CHANGE_REQUESTED'
+              && evalStatus?.evaluationStatus === 'PENDING_VENDOR_CLARIFICATION';
             const spoRequestedReview = isGemMultiIndentorClarif && record.changeRequestToIndentor;
             return (st === 'ACCEPTED' && !spoRequestedReview) ? (
               <Tag color="green">Accepted</Tag>
@@ -3086,9 +3097,10 @@ const doubleBidFinColumns = [
                 disabled={
                   (st === 'ACCEPTED' && !spoRequestedReview) || st === 'REJECTED' ||
                   (vendorClarifPending && !isGemMultiIndentorClarif && !ppIndentorClarifPending) ||
-                  isGemMultiVendorClarif
+                  isGemMultiVendorClarif ||
+                  vendorUnderVendorClarif
                 }
-                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
+                title={isGemMultiVendorClarif ? 'Cannot accept while vendor clarification is pending' : vendorUnderVendorClarif ? 'Cannot accept while clarification is pending for this vendor' : vendorHasIndentorClarif ? 'Respond to clarification for this vendor first' : ''}
               >
                 Accept
               </Button>

@@ -315,6 +315,12 @@ ORDER BY wt.requestId, wt.createdDate
             "AND wt.nextAction IS NULL")
     List<String> findApprovedSoIds();
 
+    @Query("SELECT wt.requestId FROM WorkflowTransition wt " +
+            "WHERE wt.workflowName = 'Contingency Purchase Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL")
+    List<String> findApprovedCpIds();
+
     @Query("SELECT wt FROM WorkflowTransition wt WHERE wt.branchId IS NOT NULL " +
            "AND wt.approverId IS NOT NULL AND wt.nextAction = 'Pending' " +
            "AND wt.status NOT IN ('Completed', 'Canceled')")

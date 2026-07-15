@@ -32,6 +32,7 @@ const printRef = useRef();
   });
   const [poOptions, setPoOptions] = useState([]);
   const [soOptions, setSoOptions] = useState([]);
+  const [cpOptions, setCpOptions] = useState([]);
   const userId = useSelector(state => state.auth.userId);
   useEffect(() => {
  /* const fetchPoIds = async () => {
@@ -93,6 +94,19 @@ const printRef = useRef();
   };
 
   fetchSoIds();
+}, []);
+ useEffect(() => {
+  const fetchCpIds = async () => {
+    try {
+      const { data } = await axios.get("/api/process-controller/approvedCpIds");
+      const ids = data?.responseData || [];
+      const options = ids.map(id => ({ value: id, label: id }));
+      setCpOptions(options);
+    } catch (error) {
+      message.error("Failed to fetch Contingency Purchase IDs");
+    }
+  };
+  fetchCpIds();
 }, []);
   useEffect(() => {
   const draft = localStorage.getItem("grnDraft");
@@ -160,6 +174,43 @@ const fetchServiceOrderData = async (soId) => {
     }
   } catch (error) {
     message.error("Failed to fetch Service Order data");
+    console.error(error);
+  }
+};
+
+const fetchCpData = async (cpId) => {
+  try {
+    const { data } = await axios.get(`/api/process-controller/paymentVoucherCPData?processNo=${cpId}`);
+    const res = data?.responseData;
+
+    if (res) {
+      setFormData(prev => ({
+        ...prev,
+        vendorName: res.vendorName,
+        vendorInvoiceNumber: res.vendorInvoiceName,
+        vendorInvoiceDate: res.vendorInvoiceDate,
+        currency: res.materialsList?.[0]?.currency || "INR",
+        exchangeRate: res.materialsList?.[0]?.exchangeRate || 0,
+        totalAmount: res.totalAmount,
+        paymentVoucherType: res.paymentVoucherType,
+        partialAmount: res.partialAmountAlreadypaid || null,
+        partialBalanceAmount: res.partialBalanceAmount || null,
+        advanceAmountpaid: res.advanceAmountAlreadyPaid || null,
+        advanceBalanceAmount: res.advanceBalanceAmount || null,
+        materialDtlList: res.materialsList?.map(mat => ({
+          materialCode: mat.materialCode,
+          materialDescription: mat.materialDescription,
+          quantity: mat.quantity,
+          rate: mat.unitPrice,
+          currency: mat.currency,
+          exchangeRate: mat.exchangeRate,
+          gst: mat.gst,
+          amount: mat.amount,
+        })) || []
+      }));
+    }
+  } catch (error) {
+    message.error("Failed to fetch Contingency Purchase data");
     console.error(error);
   }
 };
@@ -243,7 +294,10 @@ useEffect(() => {
   }
    if (fieldName === "ServiceOrderDetails") {
       setSelectedSoId(value);
-      fetchServiceOrderData(value); 
+      fetchServiceOrderData(value);
+    }
+    if (fieldName === "cpDetails") {
+      fetchCpData(value);
     }
    if (fieldName === "paymentVoucherType") {
       if (value !== "Partial") {
@@ -367,6 +421,7 @@ const onFinish = async () => {
       totalAmount: formData.totalAmount,
       advanceAmount: formData.advanceAmount,
       serviceOrderDetails: formData.ServiceOrderDetails,
+      cpDetails: formData.cpDetails || "",
       createdBy: userId,
       tdsAmount: formData.tdsAmount,
       paymentVoucherNetAmount: formData.paymentVoucherNetAmount,
@@ -418,7 +473,7 @@ const onFinish = async () => {
       <CustomForm formData={formData} onFinish={onFinish}>
         
         
-        {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions), handleChange, formData, "", null, setFormData, handleSearch)}
+        {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions), handleChange, formData, "", null, setFormData, handleSearch)}
 
         
         {/* {renderFormFields(grvFields, handleChange, formData, "", null, setFormData, handleSearch)} */}

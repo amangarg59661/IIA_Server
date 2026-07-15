@@ -133,6 +133,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
           indentorName: indent.indentorName || "",
           createdDate: indent.createdDate || "",
           materialDes: indent.materialDes || [],
+              indentType: indent.materialDes && indent.materialDes.length > 0 ? "material" : "job",
         }))
       );
 
@@ -154,6 +155,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   // Custom filter function for indent search across all fields
   const filterIndentOption = (input, option) => {
     if (!input) return true;
+    
 
     const searchTerm = input.toLowerCase();
     // In Ant Design Select, the option object contains the properties directly
@@ -194,7 +196,14 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
     value: indent.indentId,
     label: `Indent ${indent.indentId} (${indent.projectName})`,
   }));
+// ADD (new code, right after the existing indentOptions const)
+const lockType = formData.indentId?.length
+  ? approvedIndents.find(i => i.value === formData.indentId[0])?.indentType
+  : null;
 
+const filteredIndentOptions = lockType
+  ? approvedIndents.filter(i => i.indentType === lockType)
+  : approvedIndents;
 
   ;
   
@@ -318,7 +327,11 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
       const selectedIndents = approvedIndents.filter(indent =>
         value.includes(indent.value)
       );
-  
+    const indentTypes = [...new Set(selectedIndents.map(i => i.indentType))];
+  if (indentTypes.length > 1) {
+    message.error("All selected indents must be of the same type (Material or Job)");
+    return;
+  }
       const projectNames = [...new Set(selectedIndents.map(i => i.projectName))];
   
       if (projectNames.length > 1) {
@@ -872,7 +885,8 @@ useEffect(() => {
               type: "multiIndentselect", // or "select" if single-select
               mode: "multiple",
               required: true,
-              options: approvedIndents, // This will be overridden dynamically
+              options: filteredIndentOptions,
+              // options: approvedIndents, // This will be overridden dynamically
               onChange: (val) => handleChange("indentId", val),
               showSearch: true,
               filterOption: filterIndentOption,
