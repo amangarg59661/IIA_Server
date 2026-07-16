@@ -2049,6 +2049,8 @@ const ApprovalWorkflow = () => {
   const [editingApprover, setEditingApprover] = useState(null);
   const [editingBranch, setEditingBranch] = useState(null);
   const [activeTab, setActiveTab] = useState('approvers');
+  const [workflowLimit, setWorkflowLimit] = useState(null);
+  const [limitLoading, setLimitLoading] = useState(false);
 
   // Add Branch modal: Condition Configuration builder state (replaces manual JSON editing)
   const [condProjectBasedChecked, setCondProjectBasedChecked] = useState(false);
@@ -2377,10 +2379,42 @@ const ApprovalWorkflow = () => {
     }
   };
 
+  const fetchWorkflowLimit = async (workflowId) => {
+    try {
+      setLimitLoading(true);
+      const response = await axios.get(`/getWorkflowLimit?workflowId=${workflowId}`);
+      setWorkflowLimit(response.data.responseData ?? null);
+    } catch (error) {
+      console.error('Error fetching workflow limit:', error);
+      setWorkflowLimit(null);
+    } finally {
+      setLimitLoading(false);
+    }
+  };
+
+  const handleSaveLimit = async () => {
+    if (workflowLimit === null || workflowLimit === undefined || workflowLimit === '') {
+      message.warning('Please enter a limit value');
+      return;
+    }
+    try {
+      await axios.put(`/updateWorkflowLimit?workflowId=${selectedWorkflow}&limit=${workflowLimit}`);
+      message.success('Limit saved successfully');
+    } catch (error) {
+      message.error('Failed to save limit');
+      console.error('Save limit error:', error);
+    }
+  };
+
   const handleWorkflowChange = (workflowId) => {
     setSelectedWorkflow(workflowId);
     setActiveTab('approvers');
+    setWorkflowLimit(null);
     fetchBranches(workflowId);
+    const selected = workflows.find(w => w.id === workflowId);
+    if (selected && selected.key === 'CP') {
+      fetchWorkflowLimit(workflowId);
+    }
   };
 
   const handleBranchChange = (branchId) => {
@@ -2737,6 +2771,25 @@ const ApprovalWorkflow = () => {
               </div>
             </div>
           </div>
+
+          {selectedWorkflow && workflows.find(w => w.id === selectedWorkflow)?.key === 'CP' && (
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'flex-end', marginTop: '16px' }}>
+              <div style={{ minWidth: '200px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Limit Amount</label>
+                <InputNumber
+                  style={{ width: '250px' }}
+                  placeholder="Enter limit"
+                  value={workflowLimit}
+                  onChange={(val) => setWorkflowLimit(val)}
+                  min={0}
+                  disabled={limitLoading}
+                />
+              </div>
+              <Button type="primary" onClick={handleSaveLimit} loading={limitLoading}>
+                Save Limit
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Branch Management Tab */}

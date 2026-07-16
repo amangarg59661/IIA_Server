@@ -14,6 +14,7 @@ const SO = () => {
   const printRef = useRef();
   const [modalOpen, setModalOpen] = useState(false);
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
+  const [draftBtnLoading, setDraftBtnLoading] = useState(false);
   const [generatedSOId, setGeneratedSOId] = useState("");
 const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
@@ -248,55 +249,110 @@ const [searchDone, setSearchDone] = useState(false);
     }
   };
 
+  // Shared payload builder
+  const buildSoPayload = () => ({
+    ...formData,
+    createdBy: actionPerformer,
+    materials: (formData.jobDtlList || []).map((j) => ({
+      budgetCode: j.budgetCode || "",
+      currency: j.currency || "",
+      duties: Number(j.duties) || 0,
+      exchangeRate: Number(j.exchangeRate) || 0,
+      gst: Number(j.gst) || 0,
+      materialCode: j.jobCode || j.materialCode || "",
+      materialDescription: j.jobDescription || j.materialDescription || "",
+      quantity: Number(j.quantity) || 0,
+      rate: Number(j.rate) || 0,
+    })),
+    applicablePBGToBeSubmitted: formData.applicablePBGToBeSubmitted || "",
+  });
+
+  const handleSaveDraft = async () => {
+    try {
+      setDraftBtnLoading(true);
+      const payload = buildSoPayload();
+      let response;
+
+      if (formData?.soId && formData?.currentStatus === "DRAFT") {
+        response = await axios.put(`/api/service-orders/draft`, payload, {
+          params: { soId: formData.soId },
+        });
+        message.success("Draft updated successfully.");
+      } else if (!formData?.soId) {
+        response = await axios.post(`/api/service-orders/draft`, payload);
+        message.success("Draft saved successfully.");
+      } else {
+        message.warning("This Service Order has already been submitted and cannot be saved as a draft.");
+        return;
+      }
+
+      const savedData = response?.data?.responseData;
+      setFormData((prev) => ({
+        ...prev,
+        soId: savedData?.soId,
+        currentStatus: "DRAFT",
+      }));
+    } catch (error) {
+      message.error(
+        error?.response?.data?.responseStatus?.message || "Error saving draft."
+      );
+    } finally {
+      setDraftBtnLoading(false);
+    }
+  };
+
   // Form submission
   const onFinish = async () => {
     try {
+      if (formData?.soId && formData?.currentStatus === "DRAFT") {
+        setSubmitBtnLoading(true);
+        if (!formData.tenderId) {
+          message.error("Please select a Tender ID before submitting.");
+          return;
+        }
+        const payload = buildSoPayload();
+        const response = await axios.post(
+          `/api/service-orders/draft/submit`,
+          payload,
+          { params: { soId: formData.soId } }
+        );
+        const submittedSoId = response.data?.responseData?.soId;
+        setFormData((prev) => ({
+          ...prev,
+          soId: submittedSoId,
+          currentStatus: null,
+        }));
+        message.success("Service Order submitted successfully.");
+        setGeneratedSOId(submittedSoId || formData.soId);
+        setModalOpen(true);
+        return;
+      }
+
       if (!formData.tenderId) {
         message.error("Please select a Tender ID before submitting.");
         return;
       }
       setSubmitBtnLoading(true);
-      const payload = {
-        ...formData,
-        createdBy: actionPerformer,
-        materials: (formData.jobDtlList || []).map((j) => ({
-          budgetCode: j.budgetCode || "",
-          currency: j.currency || "",
-          duties: Number(j.duties) || 0,
-          exchangeRate: Number(j.exchangeRate) || 0,
-          gst: Number(j.gst) || 0,
-          jobCode: j.jobCode || "",
-          jobDescription: j.jobDescription || "",
-          quantity: Number(j.quantity) || 0,
-          rate: Number(j.rate) || 0,
-        })),
-        applicablePBGToBeSubmitted: formData.applicablePBGToBeSubmitted || "",
-      };
+      const payload = buildSoPayload();
 
-      // const { data } = await axios.post("/api/service-orders", payload);
-      // setGeneratedSOId(data.responseData.soId);
-      // setModalOpen(true);
-      // Replace the existing onFinish axios.post block:
-let data;
-if (formData.soId) {
-  // Update
-  const response = await axios.put(`/api/service-orders`, payload, {
-    params: { soId: formData.soId }
-  });
-  data = response.data;
-  const newSoId = data?.responseData?.soId;
-  if (newSoId) {
-    setFormData(prev => ({ ...prev, soId: newSoId }));
-  }
-  message.success("Service Order updated successfully");
-} else {
-  // Create
-  const response = await axios.post("/api/service-orders", payload);
-  data = response.data;
-  message.success("Service Order created successfully");
-}
-setGeneratedSOId(data.responseData.soId);
-setModalOpen(true);
+      let data;
+      if (formData.soId) {
+        const response = await axios.put(`/api/service-orders`, payload, {
+          params: { soId: formData.soId }
+        });
+        data = response.data;
+        const newSoId = data?.responseData?.soId;
+        if (newSoId) {
+          setFormData(prev => ({ ...prev, soId: newSoId }));
+        }
+        message.success("Service Order updated successfully");
+      } else {
+        const response = await axios.post("/api/service-orders", payload);
+        data = response.data;
+        message.success("Service Order created successfully");
+      }
+      setGeneratedSOId(data.responseData.soId);
+      setModalOpen(true);
     } catch (error) {
       message.error("Failed to create service order");
     } finally {
@@ -317,7 +373,11 @@ setModalOpen(true);
 
       setFormData({
         ...responseData,
-        jobDtlList: responseData?.materials || [],
+        jobDtlList: (responseData?.materials || []).map((m) => ({
+          ...m,
+          jobCode: m.materialCode || m.jobCode || "",
+          jobDescription: m.materialDescription || m.jobDescription || "",
+        })),
       });
 
       setSearchDone(true);
@@ -338,16 +398,30 @@ if (responseData.isActive === false) {
   }, []);
 
   useEffect(() => {
-    const soDraft = localStorage.getItem("soDraft");
-    if (soDraft) {
-      setFormData(JSON.parse(soDraft));
-      message.success("Form loaded from draft.");
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("soDraft", JSON.stringify(formData));
-  }, [formData]);
+    const loadUserDrafts = async () => {
+      try {
+        const { data } = await axios.get(`/api/service-orders/drafts`, {
+          params: { userId: actionPerformer },
+        });
+        const drafts = data?.responseData || [];
+        if (drafts.length > 0) {
+          const latest = drafts[0];
+          setFormData((prev) => ({
+            ...prev,
+            ...latest,
+            jobDtlList: (latest.materials || []).map((m) => ({
+              ...m,
+              jobCode: m.materialCode || m.jobCode || "",
+              jobDescription: m.materialDescription || m.jobDescription || "",
+            })),
+            currentStatus: "DRAFT",
+          }));
+          message.info("Draft loaded from server.");
+        }
+      } catch (_) {}
+    };
+    if (actionPerformer) loadUserDrafts();
+  }, [actionPerformer]);
 
   // --- Printing Function ---
   const handlePrint = useReactToPrint({
@@ -378,6 +452,15 @@ const fetchSoVersionHistory = async (sid) => {
         ⚠️ Viewing Old Version (V{formData.soVersion}) — This is a superseded version. Load the latest to make changes.
       </div>
     )}
+    {formData.currentStatus === "DRAFT" && (
+      <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 16px', borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>📝</span>
+        <span>
+          <strong>Saved Draft</strong> — This Service Order ({formData.soId}) is a saved draft and has <strong>not</strong> been submitted for approval.
+          Click <strong>Submit</strong> when ready to send it through the workflow.
+        </span>
+      </div>
+    )}
     <Button onClick={() => fetchSoVersionHistory(formData.soId)}>
       View Version History
     </Button>
@@ -396,7 +479,8 @@ const fetchSoVersionHistory = async (sid) => {
         <ButtonContainer
           onFinish={onFinish}
           formData={formData}
-          draftDataName="soDraft"
+          onDraft={handleSaveDraft}
+          draftBtnLoading={draftBtnLoading}
           submitBtnLoading={submitBtnLoading}
           submitBtnEnabled
           printBtnEnabled
@@ -447,6 +531,18 @@ const fetchSoVersionHistory = async (sid) => {
             { key: 'billingAddress',           label: 'Billing Address' },
             { key: 'applicablePBGToBeSubmitted', label: 'Applicable PBG' },
             { key: 'projectName',              label: 'Project Name' },
+            { key: 'warranty',                 label: 'Warranty' },
+            { key: 'deliveryPeriod',           label: 'Delivery Period' },
+            { key: 'deliveryDate',             label: 'Delivery Date' },
+            { key: 'quotationNumber',          label: 'Quotation Number' },
+            { key: 'quotationDate',            label: 'Quotation Date' },
+            { key: 'buyBackAmount',            label: 'Buy Back Amount' },
+            { key: 'additionalTermsAndConditions', label: 'ATC' },
+            { key: 'transporterAndFreightForWarderDetails', label: 'Freight Forwarder' },
+            { key: 'typeOfSecurity',           label: 'Type Of Security' },
+            { key: 'securityNumber',           label: 'Security Number' },
+            { key: 'securityDate',             label: 'Security Date' },
+            { key: 'expiryDate',               label: 'Expiry Date' },
         ];
 
         const LINE_FIELDS = [

@@ -21,16 +21,19 @@ import com.astro.service.IndentCreationService;
 import com.astro.service.ServiceOrderService;
 import com.astro.service.TenderRequestService;
 import com.astro.util.CommonUtils;
+import com.astro.exception.InvalidInputException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.astro.repository.WorkflowTransitionRepository;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.context.annotation.Lazy; // added by abhinav
@@ -39,7 +42,13 @@ import org.springframework.context.annotation.Lazy; // added by abhinav
 public class ServiceOrderServiceImpl implements ServiceOrderService {
 
     @Autowired
-private com.astro.service.BudgetService budgetService;
+    private com.astro.service.BudgetService budgetService;
+
+    private final String basePath;
+
+    public ServiceOrderServiceImpl(@Value("${filePath}") String bp) {
+        this.basePath = bp + "/Tender";
+    }
 
     @Autowired
     private ServiceOrderRepository serviceOrderRepository;
@@ -104,6 +113,30 @@ serviceOrder.setParentSoId(null);
         serviceOrder.setVendorType(serviceOrderRequestDTO.getVendorType());
         serviceOrder.setVendorsAccountName(serviceOrderRequestDTO.getVendorsAccountName());
         serviceOrder.setVendorId(serviceOrderRequestDTO.getVendorId());
+        serviceOrder.setIndentId(serviceOrderRequestDTO.getIndentId());
+        serviceOrder.setWarranty(serviceOrderRequestDTO.getWarranty());
+        serviceOrder.setDeliveryPeriod(serviceOrderRequestDTO.getDeliveryPeriod());
+        serviceOrder.setQuotationNumber(serviceOrderRequestDTO.getQuotationNumber());
+        serviceOrder.setAdditionalTermsAndConditions(serviceOrderRequestDTO.getAdditionalTermsAndConditions());
+        serviceOrder.setBuyBackAmount(serviceOrderRequestDTO.getBuyBackAmount());
+        serviceOrder.setTransporterAndFreightForWarderDetails(serviceOrderRequestDTO.getTransporterAndFreightForWarderDetails());
+        serviceOrder.setTypeOfSecurity(serviceOrderRequestDTO.getTypeOfSecurity());
+        serviceOrder.setSecurityNumber(serviceOrderRequestDTO.getSecurityNumber());
+
+        String deliveryDate = serviceOrderRequestDTO.getDeliveryDate();
+        serviceOrder.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = serviceOrderRequestDTO.getQuotationDate();
+        serviceOrder.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = serviceOrderRequestDTO.getSecurityDate();
+        serviceOrder.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = serviceOrderRequestDTO.getExpiryDate();
+        serviceOrder.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (serviceOrderRequestDTO.getComparativeStatementFileName() != null && !serviceOrderRequestDTO.getComparativeStatementFileName().isEmpty())
+            serviceOrder.setComparativeStatementFileName(saveBase64Files(serviceOrderRequestDTO.getComparativeStatementFileName(), basePath));
+        if (serviceOrderRequestDTO.getGemContractFileName() != null && !serviceOrderRequestDTO.getGemContractFileName().isEmpty())
+            serviceOrder.setGemContractUpload(saveBase64Files(serviceOrderRequestDTO.getGemContractFileName(), basePath));
+
         String Date = serviceOrderRequestDTO.getStartDateAmc();
         if (Date != null) {
             serviceOrder.setStartDateAmc(CommonUtils.convertStringToDateObject(Date));
@@ -111,13 +144,12 @@ serviceOrder.setParentSoId(null);
             serviceOrder.setStartDateAmc(null);
         }
         String endDate = serviceOrderRequestDTO.getEndDateAmc();
-        if (Date != null) {
+        if (endDate != null) {
             serviceOrder.setEndDateAmc(CommonUtils.convertStringToDateObject(endDate));
         } else {
             serviceOrder.setEndDateAmc(null);
         }
 
-        //  serviceOrder.setTotalValueOfSo(serviceOrderRequestDTO.getTotalValueOfSo());
         serviceOrder.setProjectName(serviceOrderRequestDTO.getProjectName());
         serviceOrder.setCreatedBy(serviceOrderRequestDTO.getCreatedBy());
         serviceOrder.setUpdatedBy(serviceOrderRequestDTO.getUpdatedBy());
@@ -151,6 +183,23 @@ serviceOrder.setParentSoId(null);
     public String generatePoId(String tenderId) {
         String numericPart = tenderId.replaceAll("\\D+", "");
         return "SO" + numericPart;
+    }
+
+    public String saveBase64Files(List<String> base64Files, String basePath) {
+        try {
+            List<String> fileNames = new ArrayList<>();
+            for (String base64File : base64Files) {
+                String fileName = CommonUtils.saveBase64Image(base64File, basePath);
+                fileNames.add(fileName);
+            }
+            return String.join(",", fileNames);
+        } catch (Exception e) {
+            throw new InvalidInputException(new ErrorDetails(
+                    AppConstant.FILE_UPLOAD_ERROR,
+                    AppConstant.USER_INVALID_INPUT,
+                    AppConstant.ERROR_TYPE_CORRUPTED,
+                    "Error while uploading files."));
+        }
     }
 
 public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderRequestDTO dto) {
@@ -217,6 +266,29 @@ public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderReque
     newSO.setVendorsAccountName(dto.getVendorsAccountName());
     newSO.setVendorId(dto.getVendorId());
     newSO.setProjectName(dto.getProjectName());
+    newSO.setIndentId(dto.getIndentId());
+    newSO.setWarranty(dto.getWarranty());
+    newSO.setDeliveryPeriod(dto.getDeliveryPeriod());
+    newSO.setQuotationNumber(dto.getQuotationNumber());
+    newSO.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+    newSO.setBuyBackAmount(dto.getBuyBackAmount());
+    newSO.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+    newSO.setTypeOfSecurity(dto.getTypeOfSecurity());
+    newSO.setSecurityNumber(dto.getSecurityNumber());
+
+    String deliveryDate = dto.getDeliveryDate();
+    newSO.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+    String quotationDate = dto.getQuotationDate();
+    newSO.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+    String securityDateStr = dto.getSecurityDate();
+    newSO.setSecurityDate(securityDateStr != null ? CommonUtils.convertStringToDateObject(securityDateStr) : null);
+    String expiryDateStr = dto.getExpiryDate();
+    newSO.setExpiryDate(expiryDateStr != null ? CommonUtils.convertStringToDateObject(expiryDateStr) : null);
+
+    if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+        newSO.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+    if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+        newSO.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
 
     String startDate = dto.getStartDateAmc();
     newSO.setStartDateAmc(startDate != null ? CommonUtils.convertStringToDateObject(startDate) : null);
@@ -372,6 +444,28 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setUpdatedDate(serviceOrder.getUpdatedDate());
         response.setTotalValueOfSo(tenderWithIndent.getTotalTenderValue());
         response.setVendorId(serviceOrder.getVendorId());
+        response.setIndentId(serviceOrder.getIndentId());
+        response.setWarranty(serviceOrder.getWarranty());
+        response.setDeliveryPeriod(serviceOrder.getDeliveryPeriod());
+        response.setDeliveryDate(CommonUtils.convertDateToString(serviceOrder.getDeliveryDate()));
+        response.setQuotationNumber(serviceOrder.getQuotationNumber());
+        response.setQuotationDate(CommonUtils.convertDateToString(serviceOrder.getQuotationDate()));
+        response.setAdditionalTermsAndConditions(serviceOrder.getAdditionalTermsAndConditions());
+        response.setBuyBackAmount(serviceOrder.getBuyBackAmount());
+        response.setTransporterAndFreightForWarderDetails(serviceOrder.getTransporterAndFreightForWarderDetails());
+        response.setComparativeStatementFileName(serviceOrder.getComparativeStatementFileName());
+        response.setGemContractFileName(serviceOrder.getGemContractUpload() != null
+                ? Arrays.asList(serviceOrder.getGemContractUpload().split(",")) : null);
+        response.setTypeOfSecurity(serviceOrder.getTypeOfSecurity());
+        response.setSecurityNumber(serviceOrder.getSecurityNumber());
+        response.setSecurityDate(CommonUtils.convertDateToString(serviceOrder.getSecurityDate()));
+        response.setExpiryDate(CommonUtils.convertDateToString(serviceOrder.getExpiryDate()));
+        response.setStartDateAmc(CommonUtils.convertDateToString(serviceOrder.getStartDateAmc()));
+        response.setEndDateAmc(CommonUtils.convertDateToString(serviceOrder.getEndDateAmc()));
+        response.setIsActive(serviceOrder.getIsActive());
+        response.setSoVersion(serviceOrder.getSoVersion());
+        response.setParentSoId(serviceOrder.getParentSoId());
+        response.setCurrentStatus(serviceOrder.getCurrentStatus());
         response.setMaterials(serviceOrder.getMaterials().stream()
                 .map(dto -> {
                     ServiceOrderMaterialResponseDTO material = new ServiceOrderMaterialResponseDTO();
@@ -431,6 +525,318 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
     }
 
 
+    // ── DRAFT LIFECYCLE ──────────────────────────────────────────────
+
+    @Override
+    public ServiceOrderResponseDTO saveSoDraft(ServiceOrderRequestDTO dto) {
+        ServiceOrder draft = new ServiceOrder();
+
+        String tenderId = dto.getTenderId();
+        String soId;
+        if (tenderId != null && !tenderId.isBlank()) {
+            String base = generatePoId(tenderId);
+            soId = serviceOrderRepository.existsById(base) ? base + "D" : base;
+        } else {
+            soId = "SO" + (System.currentTimeMillis() % 1000000);
+        }
+
+        draft.setSoId(soId);
+        draft.setSoVersion(1);
+        draft.setIsActive(true);
+        draft.setParentSoId(null);
+        draft.setCurrentStatus("DRAFT");
+
+        draft.setTenderId(tenderId);
+        draft.setConsignesAddress(dto.getConsignesAddress());
+        draft.setBillingAddress(dto.getBillingAddress());
+        draft.setJobCompletionPeriod(dto.getJobCompletionPeriod());
+        draft.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        draft.setIncoTerms(dto.getIncoTerms());
+        draft.setPaymentTerms(dto.getPaymentTerms());
+        draft.setVendorName(dto.getVendorName());
+        draft.setVendorAddress(dto.getVendorAddress());
+        draft.setApplicablePBGToBeSubmitted(dto.getApplicablePBGToBeSubmitted());
+        draft.setVendorsAccountNo(dto.getVendorsAccountNo());
+        draft.setVendorsZRSCCode(dto.getVendorsZRSCCode());
+        draft.setVendorSwiftCode(dto.getVendorSwiftCode());
+        draft.setVendorType(dto.getVendorType());
+        draft.setVendorsAccountName(dto.getVendorsAccountName());
+        draft.setVendorId(dto.getVendorId());
+        draft.setProjectName(dto.getProjectName());
+        draft.setIndentId(dto.getIndentId());
+        draft.setWarranty(dto.getWarranty());
+        draft.setDeliveryPeriod(dto.getDeliveryPeriod());
+        draft.setQuotationNumber(dto.getQuotationNumber());
+        draft.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        draft.setBuyBackAmount(dto.getBuyBackAmount());
+        draft.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        draft.setTypeOfSecurity(dto.getTypeOfSecurity());
+        draft.setSecurityNumber(dto.getSecurityNumber());
+        draft.setCreatedBy(dto.getCreatedBy());
+        draft.setUpdatedBy(dto.getUpdatedBy());
+
+        String startDate = dto.getStartDateAmc();
+        draft.setStartDateAmc(startDate != null ? CommonUtils.convertStringToDateObject(startDate) : null);
+        String endDate = dto.getEndDateAmc();
+        draft.setEndDateAmc(endDate != null ? CommonUtils.convertStringToDateObject(endDate) : null);
+        String deliveryDate = dto.getDeliveryDate();
+        draft.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        draft.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        draft.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        draft.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            draft.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            draft.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        List<ServiceOrderMaterial> materials = dto.getMaterials() == null
+                ? Collections.emptyList()
+                : dto.getMaterials().stream().map(m -> {
+                    ServiceOrderMaterial mat = new ServiceOrderMaterial();
+                    mat.setMaterialCode(m.getMaterialCode());
+                    mat.setSoId(soId);
+                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setQuantity(m.getQuantity());
+                    mat.setRate(m.getRate());
+                    mat.setExchangeRate(m.getExchangeRate());
+                    mat.setCurrency(m.getCurrency());
+                    mat.setGst(m.getGst());
+                    mat.setDuties(m.getDuties());
+                    mat.setBudgetCode(m.getBudgetCode());
+                    mat.setServiceOrder(draft);
+                    return mat;
+                }).collect(Collectors.toList());
+
+        draft.setMaterials(materials);
+
+        BigDecimal totalValue = materials.stream()
+                .map(m -> {
+                    BigDecimal qty = m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal rate = m.getRate() != null ? m.getRate() : BigDecimal.ZERO;
+                    return qty.multiply(rate);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        draft.setTotalValueOfSo(totalValue);
+
+        serviceOrderRepository.save(draft);
+        return mapToResponseDTO(draft);
+    }
+
+    @Override
+    public ServiceOrderResponseDTO updateSoDraft(String soId, ServiceOrderRequestDTO dto) {
+        ServiceOrder existing = serviceOrderRepository.findById(soId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Service Order not found: " + soId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT SOs can be updated via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        if (!existing.getCreatedBy().equals(dto.getCreatedBy()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Only the original creator can update this draft."));
+
+        existing.setTenderId(dto.getTenderId());
+        existing.setConsignesAddress(dto.getConsignesAddress());
+        existing.setBillingAddress(dto.getBillingAddress());
+        existing.setJobCompletionPeriod(dto.getJobCompletionPeriod());
+        existing.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        existing.setIncoTerms(dto.getIncoTerms());
+        existing.setPaymentTerms(dto.getPaymentTerms());
+        existing.setVendorName(dto.getVendorName());
+        existing.setVendorAddress(dto.getVendorAddress());
+        existing.setApplicablePBGToBeSubmitted(dto.getApplicablePBGToBeSubmitted());
+        existing.setVendorsAccountNo(dto.getVendorsAccountNo());
+        existing.setVendorsZRSCCode(dto.getVendorsZRSCCode());
+        existing.setVendorSwiftCode(dto.getVendorSwiftCode());
+        existing.setVendorType(dto.getVendorType());
+        existing.setVendorsAccountName(dto.getVendorsAccountName());
+        existing.setVendorId(dto.getVendorId());
+        existing.setProjectName(dto.getProjectName());
+        existing.setIndentId(dto.getIndentId());
+        existing.setWarranty(dto.getWarranty());
+        existing.setDeliveryPeriod(dto.getDeliveryPeriod());
+        existing.setQuotationNumber(dto.getQuotationNumber());
+        existing.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        existing.setBuyBackAmount(dto.getBuyBackAmount());
+        existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        existing.setTypeOfSecurity(dto.getTypeOfSecurity());
+        existing.setSecurityNumber(dto.getSecurityNumber());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String startDate = dto.getStartDateAmc();
+        existing.setStartDateAmc(startDate != null ? CommonUtils.convertStringToDateObject(startDate) : null);
+        String endDate = dto.getEndDateAmc();
+        existing.setEndDateAmc(endDate != null ? CommonUtils.convertStringToDateObject(endDate) : null);
+        String deliveryDate = dto.getDeliveryDate();
+        existing.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        existing.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        existing.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        existing.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            existing.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            existing.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        existing.getMaterials().clear();
+        List<ServiceOrderMaterial> newMaterials = dto.getMaterials() == null
+                ? Collections.emptyList()
+                : dto.getMaterials().stream().map(m -> {
+                    ServiceOrderMaterial mat = new ServiceOrderMaterial();
+                    mat.setMaterialCode(m.getMaterialCode());
+                    mat.setSoId(soId);
+                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setQuantity(m.getQuantity());
+                    mat.setRate(m.getRate());
+                    mat.setExchangeRate(m.getExchangeRate());
+                    mat.setCurrency(m.getCurrency());
+                    mat.setGst(m.getGst());
+                    mat.setDuties(m.getDuties());
+                    mat.setBudgetCode(m.getBudgetCode());
+                    mat.setServiceOrder(existing);
+                    return mat;
+                }).collect(Collectors.toList());
+
+        existing.getMaterials().addAll(newMaterials);
+
+        BigDecimal totalValue = newMaterials.stream()
+                .map(m -> {
+                    BigDecimal qty = m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal rate = m.getRate() != null ? m.getRate() : BigDecimal.ZERO;
+                    return qty.multiply(rate);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        existing.setTotalValueOfSo(totalValue);
+
+        serviceOrderRepository.save(existing);
+        return mapToResponseDTO(existing);
+    }
+
+    @Override
+    public ServiceOrderResponseDTO submitSoDraft(String soId, ServiceOrderRequestDTO dto) {
+        ServiceOrder existing = serviceOrderRepository.findById(soId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Service Order not found: " + soId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT SOs can be submitted via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        if (dto.getTenderId() == null || dto.getTenderId().isBlank())
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Tender ID is required to submit a Service Order."));
+
+        existing.setTenderId(dto.getTenderId());
+        existing.setConsignesAddress(dto.getConsignesAddress());
+        existing.setBillingAddress(dto.getBillingAddress());
+        existing.setJobCompletionPeriod(dto.getJobCompletionPeriod());
+        existing.setIfLdClauseApplicable(dto.getIfLdClauseApplicable());
+        existing.setIncoTerms(dto.getIncoTerms());
+        existing.setPaymentTerms(dto.getPaymentTerms());
+        existing.setVendorName(dto.getVendorName());
+        existing.setVendorAddress(dto.getVendorAddress());
+        existing.setApplicablePBGToBeSubmitted(dto.getApplicablePBGToBeSubmitted());
+        existing.setVendorsAccountNo(dto.getVendorsAccountNo());
+        existing.setVendorsZRSCCode(dto.getVendorsZRSCCode());
+        existing.setVendorSwiftCode(dto.getVendorSwiftCode());
+        existing.setVendorType(dto.getVendorType());
+        existing.setVendorsAccountName(dto.getVendorsAccountName());
+        existing.setVendorId(dto.getVendorId());
+        existing.setProjectName(dto.getProjectName());
+        existing.setIndentId(dto.getIndentId());
+        existing.setWarranty(dto.getWarranty());
+        existing.setDeliveryPeriod(dto.getDeliveryPeriod());
+        existing.setQuotationNumber(dto.getQuotationNumber());
+        existing.setAdditionalTermsAndConditions(dto.getAdditionalTermsAndConditions());
+        existing.setBuyBackAmount(dto.getBuyBackAmount());
+        existing.setTransporterAndFreightForWarderDetails(dto.getTransporterAndFreightForWarderDetails());
+        existing.setTypeOfSecurity(dto.getTypeOfSecurity());
+        existing.setSecurityNumber(dto.getSecurityNumber());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String startDate = dto.getStartDateAmc();
+        existing.setStartDateAmc(startDate != null ? CommonUtils.convertStringToDateObject(startDate) : null);
+        String endDate = dto.getEndDateAmc();
+        existing.setEndDateAmc(endDate != null ? CommonUtils.convertStringToDateObject(endDate) : null);
+        String deliveryDate = dto.getDeliveryDate();
+        existing.setDeliveryDate(deliveryDate != null ? CommonUtils.convertStringToDateObject(deliveryDate) : null);
+        String quotationDate = dto.getQuotationDate();
+        existing.setQuotationDate(quotationDate != null ? CommonUtils.convertStringToDateObject(quotationDate) : null);
+        String securityDate = dto.getSecurityDate();
+        existing.setSecurityDate(securityDate != null ? CommonUtils.convertStringToDateObject(securityDate) : null);
+        String expiryDate = dto.getExpiryDate();
+        existing.setExpiryDate(expiryDate != null ? CommonUtils.convertStringToDateObject(expiryDate) : null);
+
+        if (dto.getComparativeStatementFileName() != null && !dto.getComparativeStatementFileName().isEmpty())
+            existing.setComparativeStatementFileName(saveBase64Files(dto.getComparativeStatementFileName(), basePath));
+        if (dto.getGemContractFileName() != null && !dto.getGemContractFileName().isEmpty())
+            existing.setGemContractUpload(saveBase64Files(dto.getGemContractFileName(), basePath));
+
+        existing.getMaterials().clear();
+        List<ServiceOrderMaterial> finalMaterials = dto.getMaterials() == null
+                ? Collections.emptyList()
+                : dto.getMaterials().stream().map(m -> {
+                    ServiceOrderMaterial mat = new ServiceOrderMaterial();
+                    mat.setMaterialCode(m.getMaterialCode());
+                    mat.setSoId(soId);
+                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setQuantity(m.getQuantity());
+                    mat.setRate(m.getRate());
+                    mat.setExchangeRate(m.getExchangeRate());
+                    mat.setCurrency(m.getCurrency());
+                    mat.setGst(m.getGst());
+                    mat.setDuties(m.getDuties());
+                    mat.setBudgetCode(m.getBudgetCode());
+                    mat.setServiceOrder(existing);
+                    return mat;
+                }).collect(Collectors.toList());
+
+        existing.getMaterials().addAll(finalMaterials);
+
+        BigDecimal totalValue = finalMaterials.stream()
+                .map(m -> {
+                    BigDecimal qty = m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO;
+                    BigDecimal rate = m.getRate() != null ? m.getRate() : BigDecimal.ZERO;
+                    return qty.multiply(rate);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        existing.setTotalValueOfSo(totalValue);
+
+        budgetService.checkBudgetForSo(soId, dto.getTenderId(), finalMaterials);
+
+        existing.setCurrentStatus(null);
+        serviceOrderRepository.save(existing);
+
+        return mapToResponseDTO(existing);
+    }
+
+    @Override
+    public List<ServiceOrderResponseDTO> getUserSoDrafts(Integer userId) {
+        return serviceOrderRepository
+                .findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT")
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+
     private ServiceOrderResponseDTO mapToResponseDTO(ServiceOrder ServiceOrder) {
         ServiceOrderResponseDTO response = new ServiceOrderResponseDTO();
         response.setSoId(ServiceOrder.getSoId());
@@ -450,12 +856,30 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setVendorType(ServiceOrder.getVendorType());
         response.setVendorsAccountName(ServiceOrder.getVendorsAccountName());
         response.setVendorId(ServiceOrder.getVendorId());
-        // response.setTotalValueOfSo(ServiceOrder.getTotalValueOfSo());
         response.setProjectName(ServiceOrder.getProjectName());
+        response.setIndentId(ServiceOrder.getIndentId());
+        response.setWarranty(ServiceOrder.getWarranty());
+        response.setDeliveryPeriod(ServiceOrder.getDeliveryPeriod());
+        response.setDeliveryDate(CommonUtils.convertDateToString(ServiceOrder.getDeliveryDate()));
+        response.setQuotationNumber(ServiceOrder.getQuotationNumber());
+        response.setQuotationDate(CommonUtils.convertDateToString(ServiceOrder.getQuotationDate()));
+        response.setAdditionalTermsAndConditions(ServiceOrder.getAdditionalTermsAndConditions());
+        response.setBuyBackAmount(ServiceOrder.getBuyBackAmount());
+        response.setTransporterAndFreightForWarderDetails(ServiceOrder.getTransporterAndFreightForWarderDetails());
+        response.setComparativeStatementFileName(ServiceOrder.getComparativeStatementFileName());
+        response.setGemContractFileName(ServiceOrder.getGemContractUpload() != null
+                ? Arrays.asList(ServiceOrder.getGemContractUpload().split(",")) : null);
+        response.setTypeOfSecurity(ServiceOrder.getTypeOfSecurity());
+        response.setSecurityNumber(ServiceOrder.getSecurityNumber());
+        response.setSecurityDate(CommonUtils.convertDateToString(ServiceOrder.getSecurityDate()));
+        response.setExpiryDate(CommonUtils.convertDateToString(ServiceOrder.getExpiryDate()));
+        response.setStartDateAmc(CommonUtils.convertDateToString(ServiceOrder.getStartDateAmc()));
+        response.setEndDateAmc(CommonUtils.convertDateToString(ServiceOrder.getEndDateAmc()));
         response.setCreatedBy(ServiceOrder.getCreatedBy());
         response.setUpdatedBy(ServiceOrder.getUpdatedBy());
         response.setCreatedDate(ServiceOrder.getCreatedDate());
         response.setUpdatedDate(ServiceOrder.getUpdatedDate());
+        response.setCurrentStatus(ServiceOrder.getCurrentStatus());
         response.setMaterials(ServiceOrder.getMaterials().stream()
                 .map(dto -> {
                     ServiceOrderMaterialResponseDTO material = new ServiceOrderMaterialResponseDTO();

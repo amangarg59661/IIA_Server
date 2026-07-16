@@ -33,8 +33,27 @@ public class soWithTenderAndIndentResponseDTO {
     private String createdBy;
     private String updatedBy;
     private String vendorSwiftCode;
-private String vendorType;
+    private String vendorType;
+    private String indentId;
+    private String warranty;
+    private String deliveryPeriod;
+    private String deliveryDate;
+    private String quotationNumber;
+    private String quotationDate;
+    private String additionalTermsAndConditions;
+    private BigDecimal buyBackAmount;
+    private String transporterAndFreightForWarderDetails;
+    private String comparativeStatementFileName;
+    private List<String> gemContractFileName;
+    private String typeOfSecurity;
+    private String securityNumber;
+    private String securityDate;
+    private String expiryDate;
+    private String startDateAmc;
+    private String endDateAmc;
+    private Boolean isActive;
+    private Integer soVersion;
+    private String parentSoId;
+    private String currentStatus;
     private TenderWithIndentResponseDTO tenderDetails;
-
-
 }

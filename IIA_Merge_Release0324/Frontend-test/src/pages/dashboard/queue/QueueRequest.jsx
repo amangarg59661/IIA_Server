@@ -1,5 +1,3 @@
-
-
 import React, { useState, useCallback } from "react";
 import {
   Table,
@@ -383,6 +381,10 @@ const [reassignLoading, setReassignLoading] = useState(false);
   const [versionHistoryList, setVersionHistoryList] = useState([]);
   const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   const [versionHistoryLoading, setVersionHistoryLoading] = useState(false);
+  // Reliable workflow type for the modal to use -- do NOT rely on `workflowId`
+  // being present inside the version-history API response itself (it isn't,
+  // at least for the indent endpoint), always set this from the row record.
+  const [versionHistoryWorkflowId, setVersionHistoryWorkflowId] = useState(null);
 
   // Fetch employees for assignment
 const fetchEmployees = () => {
@@ -624,6 +626,7 @@ const handleReassign = async () => {
 
     setVersionHistoryLoading(true);
     const workflowIdNum = parseInt(record.workflowId, 10);
+    setVersionHistoryWorkflowId(workflowIdNum);
 
     let endpoint = null;
     let paramKey = null;
@@ -2384,21 +2387,6 @@ const columnsToRender =
         />
       )}
 
-      {/* <QueueModal
-        modalVisible={modalVisible}
-        setModalVisible={setModalVisible}
-        selectedRecord={selectedRecord}
-        detailsData={detailsData}
-        historyVisible={historyVisible}
-        setHistoryVisible={setHistoryVisible}
-        materialHistoryVisible={materialHistoryVisible}
-        setMaterialHistoryVisible={setMaterialHistoryVisible}
-        selectedMaterialCode={selectedMaterialCode}
-        setSelectedMaterialCode={setSelectedMaterialCode}
-        fetchVersionHistory={fetchVersionHistory}        
-  versionHistoryLoading={versionHistoryLoading}
-      /> */}
-
       <QueueModal
               modalVisible={modalVisible}
               setModalVisible={setModalVisible}
@@ -2418,6 +2406,7 @@ const columnsToRender =
               versionHistoryList={versionHistoryList}
               selectedVersionIdx={selectedVersionIdx}
               setSelectedVersionIdx={setSelectedVersionIdx}
+              versionHistoryWorkflowId={versionHistoryWorkflowId}
             />
       
       <MaterialDetailModal
@@ -2436,370 +2425,6 @@ const columnsToRender =
         jobData={jobDtl}
       />
 
-      {/* ── Version History Modal ── */}
-      <Modal
-        open={versionHistoryOpen}
-        onCancel={() => { setVersionHistoryOpen(false); setVersionHistoryList([]); }}
-        title="Version History"
-        footer={null}
-        width={960}
-        destroyOnClose
-      >
-        {(() => {
-          if (versionHistoryList.length === 0) {
-            return (
-              <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>
-                No version history found.
-              </div>
-            );
-          }
-
-          // Sort ASC so index 0 = V1, last = latest
-          const sorted = [...versionHistoryList].sort(
-            (a, b) => (a.version || 0) - (b.version || 0)
-          );
-          const selIdx = Math.max(0, Math.min(selectedVersionIdx, sorted.length - 1));
-          const curr = sorted[selIdx];
-          const prev = selIdx > 0 ? sorted[selIdx - 1] : null;
-
-          if (!curr) return null;
-
-          // ── Field definitions per workflow type ──
-          const workflowId = curr.workflowId || versionHistoryList[0]?.workflowId;
-          const wId = parseInt(workflowId, 10);
-
-          const HEADER_FIELDS = [
-            { key: 'indentorName',                     label: 'Indentor' },
-            { key: 'indentorMobileNo',                 label: 'Mobile No.' },
-            { key: 'indentorEmailAddress',             label: 'Email' },
-            { key: 'createdBy',                        label: 'Created By' },
-            { key: 'modeOfProcurement',                label: 'Mode of Procurement' },
-            { key: 'projectName',                      label: 'Project' },
-            { key: 'projectCode',                      label: 'Project Code' },
-            { key: 'isUnderProject',                   label: 'Under Project' },
-            { key: 'consignesLocation',                label: 'Consignee Location' },
-            { key: 'consignee',                        label: 'Consignee' },
-            { key: 'indentType',                       label: 'Indent Type' },
-            { key: 'materialCategoryType',             label: 'Material Category' },
-            { key: 'purpose',                          label: 'Purpose' },
-            { key: 'justification',                    label: 'Justification' },
-            { key: 'quarter',                          label: 'Quarter' },
-            { key: 'budgetCode',                       label: 'Budget Code' },
-            { key: 'procurementType',                  label: 'Procurement Type' },
-            { key: 'isPreBidMeetingRequired',          label: 'Pre-Bid Meeting Required' },
-            { key: 'preBidMeetingDate',                label: 'Pre-Bid Meeting Date' },
-            { key: 'preBidMeetingVenue',               label: 'Pre-Bid Meeting Venue' },
-            { key: 'isItARateContractIndent',          label: 'Rate Contract Indent' },
-            { key: 'estimatedRate',                    label: 'Estimated Rate' },
-            { key: 'periodOfContract',                 label: 'Period of Contract' },
-            { key: 'rateContractJobCodes',             label: 'Rate Contract Job Codes' },
-            { key: 'brandPac',                         label: 'Brand PAC' },
-            { key: 'brandAndModel',                    label: 'Brand & Model' },
-            { key: 'proprietaryJustification',         label: 'Proprietary Justification' },
-            { key: 'proprietaryAndLimitedDeclaration', label: 'Proprietary Declaration' },
-            { key: 'reason',                           label: 'Reason' },
-            { key: 'buyBack',                          label: 'Buy Back' },
-            { key: 'buyBackAmount',                    label: 'Buy Back Amount' },
-            { key: 'serialNumber',                     label: 'Serial Number' },
-            { key: 'modelNumber',                      label: 'Model Number' },
-            { key: 'technicalSpecificationsFileName',  label: 'Technical Specs File' },
-            { key: 'uploadingPriorApprovalsFileName',  label: 'Prior Approvals File' },
-            { key: 'draftEOIOrRFPFileName',            label: 'Draft EOI/RFP File' },
-            { key: 'uploadPACOrBrandPACFileName',      label: 'PAC/Brand PAC File' },
-            { key: 'uploadBuyBackFileNames',           label: 'Buy Back File' },
-          ].filter(f => curr[f.key] !== undefined || (prev && prev[f.key] !== undefined));
-
-          const MAT_FIELDS = [
-            { key: 'materialCode',        label: 'Material Code' },
-            { key: 'materialDescription', label: 'Description' },
-            { key: 'quantity',            label: 'Qty' },
-            { key: 'unitPrice',           label: 'Unit Price' },
-            { key: 'totalPrice',          label: 'Total Price' },
-            { key: 'uom',                 label: 'UOM' },
-            { key: 'budgetCode',          label: 'Budget Code' },
-            { key: 'currency',            label: 'Currency' },
-            { key: 'conversionRate',      label: 'Conversion Rate' },
-            { key: 'modeOfProcurement',   label: 'Mode of Procurement' },
-            { key: 'materialCategory',    label: 'Category' },
-            { key: 'materialSubCategory', label: 'Sub-Category' },
-          ];
-          const JOB_FIELDS = [
-            { key: 'jobCode',           label: 'Job Code' },
-            { key: 'jobDescription',    label: 'Description' },
-            { key: 'briefDescription',  label: 'Brief Description' },
-            { key: 'quantity',          label: 'Qty' },
-            { key: 'estimatedPrice',    label: 'Est. Price' },
-            { key: 'totalPrice',        label: 'Total Price' },
-            { key: 'uom',               label: 'UOM' },
-            { key: 'budgetCode',        label: 'Budget Code' },
-            { key: 'currency',          label: 'Currency' },
-            { key: 'category',          label: 'Category' },
-            { key: 'subCategory',       label: 'Sub-Category' },
-            { key: 'origin',            label: 'Origin' },
-            { key: 'modeOfProcurement', label: 'Mode of Procurement' },
-          ];
-
-          const isJob = (curr.indentType || '').toLowerCase() === 'job';
-          const lineLabel = isJob ? 'Job' : 'Item';
-          const lineFields = isJob ? JOB_FIELDS : MAT_FIELDS;
-          const descKey = isJob ? 'jobDescription' : 'materialDescription';
-
-          // Determine line items key based on workflow
-          let currLines = [];
-          let prevLines = [];
-          if ([1].includes(wId)) {
-            currLines = isJob ? (curr.jobDetails || []) : (curr.materialDetails || []);
-            prevLines = prev ? (isJob ? (prev.jobDetails || []) : (prev.materialDetails || [])) : [];
-          } else if ([3].includes(wId)) {
-            currLines = curr.purchaseOrderDetails || curr.poItems || [];
-            prevLines = prev ? (prev.purchaseOrderDetails || prev.poItems || []) : [];
-          } else if ([4, 7].includes(wId)) {
-            currLines = curr.tenderItems || curr.items || [];
-            prevLines = prev ? (prev.tenderItems || prev.items || []) : [];
-          } else if ([5].includes(wId)) {
-            currLines = curr.serviceOrderDetails || curr.items || [];
-            prevLines = prev ? (prev.serviceOrderDetails || prev.items || []) : [];
-          } else if ([2].includes(wId)) {
-            currLines = curr.contingencyItems || curr.items || [];
-            prevLines = prev ? (prev.contingencyItems || prev.items || []) : [];
-          }
-
-          // Compute header diffs
-          const headerDiffs = prev
-            ? HEADER_FIELDS
-                .filter(f => String(prev[f.key] ?? '') !== String(curr[f.key] ?? ''))
-                .map(f => ({ ...f, oldVal: prev[f.key], newVal: curr[f.key] }))
-            : [];
-
-          // Compute line item diffs
-          const lineDiffs = [];
-          const maxLen = Math.max(prevLines.length, currLines.length);
-          for (let i = 0; i < maxLen; i++) {
-            const p = prevLines[i];
-            const c = currLines[i];
-            if (!p) {
-              lineDiffs.push({ idx: i, type: 'added', item: c });
-            } else if (!c) {
-              lineDiffs.push({ idx: i, type: 'removed', item: p });
-            } else {
-              const changed = lineFields
-                .filter(f => String(p[f.key] ?? '') !== String(c[f.key] ?? ''))
-                .map(f => ({ ...f, oldVal: p[f.key], newVal: c[f.key] }));
-              if (changed.length)
-                lineDiffs.push({ idx: i, type: 'modified', changes: changed, label: c[descKey] || `Item ${i + 1}` });
-            }
-          }
-
-          const prevTotal = prev != null ? Number(prev.totalAmount || prev.totalPriceOfAllMaterials || 0) : null;
-          const currTotal = Number(curr.totalAmount || curr.totalPriceOfAllMaterials || 0);
-          const totalChanged = prev && prevTotal !== currTotal;
-          const totalChanges = headerDiffs.length + lineDiffs.length + (totalChanged ? 1 : 0);
-
-          const fmtCurrency = val =>
-            val != null ? `₹ ${Number(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : '—';
-          const fmtVal = val => (val == null || val === '') ? '—' : String(val);
-
-          return (
-            <div style={{ display: 'flex', minHeight: '450px' }}>
-
-              {/* Left: version selector */}
-              <div style={{ width: '200px', flexShrink: 0, borderRight: '1px solid #f0f0f0' }}>
-                <div style={{
-                  padding: '8px 12px',
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  color: '#aaa',
-                  letterSpacing: '1px',
-                  borderBottom: '1px solid #f0f0f0',
-                }}>
-                  VERSIONS
-                </div>
-                {sorted.map((v, idx) => {
-                  const isSel = idx === selIdx;
-                  return (
-                    <div
-                      key={v.id || v.indentId || v.tenderId || v.poId || v.soId || idx}
-                      onClick={() => setSelectedVersionIdx(idx)}
-                      style={{
-                        padding: '10px 14px',
-                        cursor: 'pointer',
-                        borderLeft: isSel ? '3px solid #1890ff' : '3px solid transparent',
-                        background: isSel ? '#e6f7ff' : 'transparent',
-                        borderBottom: '1px solid #f5f5f5',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 600, fontSize: '14px' }}>V{v.version}</span>
-                        {v.isActive
-                          ? <Tag color="green" style={{ fontSize: '10px', margin: 0 }}>Active</Tag>
-                          : <Tag color="default" style={{ fontSize: '10px', margin: 0 }}>Old</Tag>
-                        }
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#999', marginTop: '3px' }}>
-                        {v.updatedBy || v.createdBy || '—'}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#bbb', marginTop: '1px' }}>
-                        {v.updatedDate
-                          ? new Date(v.updatedDate).toLocaleDateString('en-IN')
-                          : v.createdDate
-                          ? new Date(v.createdDate).toLocaleDateString('en-IN')
-                          : '—'}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Right: diff panel */}
-              <div style={{ flex: 1, padding: '0 16px', overflowY: 'auto', maxHeight: '540px' }}>
-
-                {/* Comparison heading */}
-                <div style={{
-                  padding: '12px 0',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  flexWrap: 'wrap',
-                }}>
-                  {prev ? (
-                    <>
-                      <span style={{ fontWeight: 600, color: '#888' }}>V{prev.version}</span>
-                      <span style={{ color: '#ccc' }}>→</span>
-                      <span style={{ fontWeight: 600, color: '#1890ff' }}>V{curr.version}</span>
-                      {totalChanges === 0
-                        ? <Tag>No changes</Tag>
-                        : <Tag color="blue">{totalChanges} change{totalChanges !== 1 ? 's' : ''}</Tag>
-                      }
-                    </>
-                  ) : (
-                    <span style={{ fontWeight: 600, color: '#52c41a' }}>V{curr.version} — Initial Version</span>
-                  )}
-                </div>
-
-                {/* Initial version */}
-                {!prev && (
-                  <div style={{ padding: '16px 0', color: '#888', fontSize: '13px' }}>
-                    This is the first version. No previous version to compare against.
-                    <div style={{ marginTop: '12px' }}>
-                      {HEADER_FIELDS.filter(f => curr[f.key]).map(f => (
-                        <div key={f.key} style={{ display: 'flex', padding: '6px 0', borderBottom: '1px solid #fafafa' }}>
-                          <span style={{ width: '180px', color: '#aaa', fontSize: '12px' }}>{f.label}</span>
-                          <span style={{ fontSize: '13px' }}>{fmtVal(curr[f.key])}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* No changes */}
-                {prev && totalChanges === 0 && (
-                  <div style={{ padding: '24px 0', color: '#888', fontSize: '13px' }}>
-                    No field-level changes detected compared to V{prev.version}.
-                  </div>
-                )}
-
-                {/* Diff sections */}
-                {prev && totalChanges > 0 && (
-                  <>
-                    {/* Total value change */}
-                    {totalChanged && (
-                      <div style={{ marginTop: '16px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
-                          TOTAL VALUE
-                        </div>
-                        <div style={{
-                          display: 'flex', alignItems: 'center', gap: '10px',
-                          padding: '10px 14px', background: '#fffbe6',
-                          border: '1px solid #ffe58f', borderRadius: '6px',
-                        }}>
-                          <span style={{ fontSize: '12px', color: '#888', flex: 1 }}>Total Value</span>
-                          <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>
-                            {fmtCurrency(prevTotal)}
-                          </span>
-                          <span style={{ color: '#bbb' }}>→</span>
-                          <span style={{ color: '#389e0d', fontWeight: 600, fontSize: '13px' }}>
-                            {fmtCurrency(currTotal)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Header field changes */}
-                    {headerDiffs.length > 0 && (
-                      <div style={{ marginTop: '16px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
-                          GENERAL FIELDS
-                        </div>
-                        {headerDiffs.map(f => (
-                          <div key={f.key} style={{
-                            display: 'flex', alignItems: 'flex-start', gap: '10px',
-                            padding: '9px 14px', marginBottom: '4px',
-                            background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '4px',
-                          }}>
-                            <span style={{ width: '160px', flexShrink: 0, fontSize: '12px', color: '#888', paddingTop: '2px' }}>
-                              {f.label}
-                            </span>
-                            <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>
-                              {fmtVal(f.oldVal)}
-                            </span>
-                            <span style={{ color: '#bbb' }}>→</span>
-                            <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>
-                              {fmtVal(f.newVal)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Line item changes */}
-                    {lineDiffs.length > 0 && (
-                      <div style={{ marginTop: '16px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '11px', color: '#aaa', letterSpacing: '1px', marginBottom: '8px' }}>
-                          {lineLabel.toUpperCase()} DETAILS
-                        </div>
-                        {lineDiffs.map((diff, i) => {
-                          const borderColor = diff.type === 'added' ? '#b7eb8f' : diff.type === 'removed' ? '#ffa39e' : '#ffe58f';
-                          const headerBg   = diff.type === 'added' ? '#f6ffed' : diff.type === 'removed' ? '#fff1f0' : '#fffbe6';
-                          const headerColor = diff.type === 'added' ? '#389e0d' : diff.type === 'removed' ? '#cf1322' : '#d48806';
-                          const prefix = diff.type === 'added' ? '+ ' : diff.type === 'removed' ? '− ' : '✎ ';
-                          return (
-                            <div key={i} style={{ marginBottom: '8px', borderRadius: '6px', overflow: 'hidden', border: `1px solid ${borderColor}` }}>
-                              <div style={{ padding: '7px 12px', fontSize: '12px', fontWeight: 600, background: headerBg, color: headerColor }}>
-                                {prefix}{lineLabel} {diff.idx + 1}
-                                {diff.type === 'modified' && diff.label ? ` — ${diff.label}` : ''}
-                                {diff.type !== 'modified' && diff.item?.[descKey] ? ` — ${diff.item[descKey]}` : ''}
-                              </div>
-                              <div style={{ padding: '8px 12px', background: '#fff' }}>
-                                {diff.type === 'modified'
-                                  ? diff.changes.map(c => (
-                                      <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
-                                        <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{c.label}</span>
-                                        <span style={{ color: '#cf1322', textDecoration: 'line-through', fontSize: '13px' }}>{fmtVal(c.oldVal)}</span>
-                                        <span style={{ color: '#bbb' }}>→</span>
-                                        <span style={{ color: '#389e0d', fontWeight: 500, fontSize: '13px' }}>{fmtVal(c.newVal)}</span>
-                                      </div>
-                                    ))
-                                  : lineFields.map(f => (
-                                      <div key={f.key} style={{ display: 'flex', padding: '5px 0', borderBottom: '1px solid #f5f5f5' }}>
-                                        <span style={{ width: '120px', flexShrink: 0, fontSize: '12px', color: '#aaa' }}>{f.label}</span>
-                                        <span style={{ fontSize: '13px' }}>{fmtVal(diff.item?.[f.key])}</span>
-                                      </div>
-                                    ))
-                                }
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })()}
-      </Modal>
       {auth.role === "Purchase Head" && (
         <Modal
           title="Active Assignments"
@@ -2900,3 +2525,23 @@ const columnsToRender =
 };
 
 export default QueueRequest;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

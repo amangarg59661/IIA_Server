@@ -20,4 +20,9 @@ public interface ServiceOrderService {
 
     public List<PendingSoReportDto> getPendingSoReport(String startDate, String endDate , Integer userId, String roleName);
 
+    ServiceOrderResponseDTO saveSoDraft(ServiceOrderRequestDTO dto);
+    ServiceOrderResponseDTO updateSoDraft(String soId, ServiceOrderRequestDTO dto);
+    ServiceOrderResponseDTO submitSoDraft(String soId, ServiceOrderRequestDTO dto);
+    List<ServiceOrderResponseDTO> getUserSoDrafts(Integer userId);
+
 }

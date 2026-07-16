@@ -3,6 +3,7 @@ package com.astro.entity;
 import lombok.Data;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.Date;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -30,4 +31,7 @@ public class WorkflowMaster {
 
     @Column(name = "CREATEDDATE")
     private Date createdDate;
+
+    @Column(name = "Workflow_limit")
+    private BigDecimal limit;
 }

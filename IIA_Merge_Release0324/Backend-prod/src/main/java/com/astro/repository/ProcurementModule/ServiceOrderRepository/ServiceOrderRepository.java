@@ -272,5 +272,7 @@ List<ServiceOrder> findAllVersionsByBaseId(@Param("baseId") String baseId);
 @Query("SELECT s FROM ServiceOrder s WHERE (s.soId = :baseId OR s.soId LIKE CONCAT(:baseId, '/%')) AND s.isActive = true")
 Optional<ServiceOrder> findActiveVersionByBaseId(@Param("baseId") String baseId);
 
+    List<ServiceOrder> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
+
     //ServiceOrder getSoId(String soId);
 }

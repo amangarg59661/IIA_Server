@@ -30,6 +30,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -256,6 +257,7 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         dto.setPaymentTo(contigencyPurchase.getPaymentTo());
         dto.setPaymentToVendor(contigencyPurchase.getPaymentToVendor());
         dto.setPaymentToEmployee(contigencyPurchase.getPaymentToEmployee());
+        dto.setCurrentStatus(contigencyPurchase.getCurrentStatus());
        // WorkflowTransition wt = workflowTransitionRepository.findTopByRequestIdOrderByWorkflowSequenceDesc(contigencyPurchase.getContigencyId());
       //  dto.setStatus(wt.getStatus());
     //    dto.setProcessStage(wt.getNextRole());
@@ -298,6 +300,173 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
             fileSetter.accept(null);  // Handle gracefully if no file is uploaded
         }
     }
+
+    // ── DRAFT LIFECYCLE ──────────────────────────────────────────────
+
+    @Override
+    public ContigencyPurchaseResponseDto saveCpDraft(ContigencyPurchaseRequestDto dto) {
+        Integer maxNumber = CPrepo.findMaxCpNumber();
+        int nextNumber = (maxNumber == null) ? 1001 : maxNumber + 1;
+        String cpId = "CP" + nextNumber;
+
+        ModelMapper mapper = new ModelMapper();
+        ContigencyPurchase cp = mapper.map(dto, ContigencyPurchase.class);
+        cp.setContigencyId(cpId);
+        cp.setCpNumber(nextNumber);
+        cp.setCurrentStatus("DRAFT");
+        cp.setVendorsName(dto.getVendorName());
+        cp.setVendorsInvoiceNo(dto.getVendorInvoiceNo());
+        cp.setPredifinedPurchaseStatement(dto.getPredifinedPurchaseStatement());
+        cp.setRemarksForPurchase(dto.getRemarksForPurchase());
+
+        String date = dto.getDate();
+        cp.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
+
+        List<CpMaterials> materials = dto.getCpMaterials() == null
+                ? Collections.emptyList()
+                : dto.getCpMaterials().stream().map(materialDto -> {
+                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                    material.setContigencyPurchase(cp);
+                    material.setGst(materialDto.getGst());
+                    return material;
+                }).collect(Collectors.toList());
+
+        cp.setCpMaterials(materials);
+        BigDecimal totalMaterialPrice = materials.stream()
+                .map(CpMaterials::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        cp.setTotalCpValue(totalMaterialPrice);
+
+        CPrepo.save(cp);
+        return mapToResponseDTO(cp);
+    }
+
+    @Override
+    public ContigencyPurchaseResponseDto updateCpDraft(String cpId, ContigencyPurchaseRequestDto dto) {
+        ContigencyPurchase existing = CPrepo.findById(cpId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Contingency Purchase not found: " + cpId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT CPs can be updated via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        if (!existing.getCreatedBy().equals(dto.getCreatedBy()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Only the original creator can update this draft."));
+
+        existing.setVendorsName(dto.getVendorName());
+        existing.setVendorsInvoiceNo(dto.getVendorInvoiceNo());
+        existing.setPredifinedPurchaseStatement(dto.getPredifinedPurchaseStatement());
+        existing.setRemarksForPurchase(dto.getRemarksForPurchase());
+        existing.setProjectDetail(dto.getProjectDetail());
+        existing.setProjectName(dto.getProjectName());
+        existing.setPaymentTo(dto.getPaymentTo());
+        existing.setPaymentToVendor(dto.getPaymentToVendor());
+        existing.setPaymentToEmployee(dto.getPaymentToEmployee());
+        existing.setPurpose(dto.getPurpose());
+        existing.setDeclarationOne(dto.getDeclarationOne());
+        existing.setDeclarationTwo(dto.getDeclarationTwo());
+        existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
+        existing.setFileType(dto.getFileType());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String date = dto.getDate();
+        existing.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
+
+        existing.getCpMaterials().clear();
+        ModelMapper mapper = new ModelMapper();
+        List<CpMaterials> newMaterials = dto.getCpMaterials() == null
+                ? Collections.emptyList()
+                : dto.getCpMaterials().stream().map(materialDto -> {
+                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                    material.setContigencyPurchase(existing);
+                    material.setGst(materialDto.getGst());
+                    return material;
+                }).collect(Collectors.toList());
+
+        existing.getCpMaterials().addAll(newMaterials);
+        BigDecimal totalMaterialPrice = newMaterials.stream()
+                .map(CpMaterials::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        existing.setTotalCpValue(totalMaterialPrice);
+
+        CPrepo.save(existing);
+        return mapToResponseDTO(existing);
+    }
+
+    @Override
+    public ContigencyPurchaseResponseDto submitCpDraft(String cpId, ContigencyPurchaseRequestDto dto) {
+        ContigencyPurchase existing = CPrepo.findById(cpId)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                        AppConstant.ERROR_TYPE_VALIDATION, "Draft Contingency Purchase not found: " + cpId)));
+
+        if (!"DRAFT".equals(existing.getCurrentStatus()))
+            throw new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                    AppConstant.ERROR_TYPE_VALIDATION,
+                    "Only DRAFT CPs can be submitted via this endpoint. Current status: " + existing.getCurrentStatus()));
+
+        existing.setVendorsName(dto.getVendorName());
+        existing.setVendorsInvoiceNo(dto.getVendorInvoiceNo());
+        existing.setPredifinedPurchaseStatement(dto.getPredifinedPurchaseStatement());
+        existing.setRemarksForPurchase(dto.getRemarksForPurchase());
+        existing.setProjectDetail(dto.getProjectDetail());
+        existing.setProjectName(dto.getProjectName());
+        existing.setPaymentTo(dto.getPaymentTo());
+        existing.setPaymentToVendor(dto.getPaymentToVendor());
+        existing.setPaymentToEmployee(dto.getPaymentToEmployee());
+        existing.setPurpose(dto.getPurpose());
+        existing.setDeclarationOne(dto.getDeclarationOne());
+        existing.setDeclarationTwo(dto.getDeclarationTwo());
+        existing.setUploadCopyOfInvoice(null);
+        existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
+        existing.setFileType(dto.getFileType());
+        existing.setUpdatedBy(dto.getUpdatedBy());
+
+        String date = dto.getDate();
+        existing.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
+
+        existing.getCpMaterials().clear();
+        ModelMapper mapper = new ModelMapper();
+        List<CpMaterials> finalMaterials = dto.getCpMaterials() == null
+                ? Collections.emptyList()
+                : dto.getCpMaterials().stream().map(materialDto -> {
+                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                    material.setContigencyPurchase(existing);
+                    material.setGst(materialDto.getGst());
+                    return material;
+                }).collect(Collectors.toList());
+
+        existing.getCpMaterials().addAll(finalMaterials);
+        BigDecimal totalMaterialPrice = finalMaterials.stream()
+                .map(CpMaterials::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        existing.setTotalCpValue(totalMaterialPrice);
+
+        existing.setCurrentStatus(null);
+        CPrepo.save(existing);
+
+        return mapToResponseDTO(existing);
+    }
+
+    @Override
+    public List<ContigencyPurchaseResponseDto> getUserCpDrafts(Integer userId) {
+        return CPrepo.findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT")
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────
 
     public List<SearchCpIdDto> searchContigencyIds(String type, String value) {
         List<String> result;

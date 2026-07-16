@@ -145,4 +145,6 @@ public interface ContigencyPurchaseRepository extends JpaRepository<ContigencyPu
     @Query("SELECT c.contigencyId FROM ContigencyPurchase c WHERE LOWER(c.paymentToVendor) LIKE LOWER(CONCAT('%', :vendorName, '%'))")
     List<String> findCpIdByPaymentToVendorContainingIgnoreCase(@Param("vendorName") String vendorName);
 
+    List<ContigencyPurchase> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
+
 }

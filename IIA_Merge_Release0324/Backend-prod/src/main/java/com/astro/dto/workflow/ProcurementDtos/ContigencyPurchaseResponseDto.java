@@ -37,6 +37,7 @@ public class ContigencyPurchaseResponseDto {
 
     private LocalDateTime updatedDate;
     private List<CpMaterialResponseDto> cpMaterials;
+    private String currentStatus;
 
 
 }

@@ -11,9 +11,12 @@ public class ServiceOrderResponseDTO {
 
     private String soId;
     private String tenderId;
+    private String indentId;
+    private String warranty;
     private String consignesAddress;
     private String billingAddress;
     private BigDecimal jobCompletionPeriod;
+    private String deliveryPeriod;
     private Boolean ifLdClauseApplicable;
     private String incoTerms;
     private String paymentTerms;
@@ -22,8 +25,8 @@ public class ServiceOrderResponseDTO {
     private String applicablePBGToBeSubmitted;
     private String vendorId;
     private Boolean isActive;
-private Integer soVersion;
-private String parentSoId;
+    private Integer soVersion;
+    private String parentSoId;
     private String vendorsAccountNo;
     private String vendorsZRSCCode;
     private String vendorSwiftCode;
@@ -32,10 +35,25 @@ private String parentSoId;
     private BigDecimal totalValue;
     private String projectName;
     private BigDecimal projectLimit;
+    private String deliveryDate;
+    private String comparativeStatementFileName;
+    private List<String> gemContractFileName;
+    private String quotationNumber;
+    private String quotationDate;
+    private String additionalTermsAndConditions;
+    private BigDecimal buyBackAmount;
+    private String transporterAndFreightForWarderDetails;
+    private String typeOfSecurity;
+    private String securityNumber;
+    private String securityDate;
+    private String expiryDate;
+    private String startDateAmc;
+    private String endDateAmc;
     private LocalDateTime createdDate;
     private LocalDateTime updatedDate;
     private List<ServiceOrderMaterialResponseDTO> materials;
     private String createdBy;
     private String updatedBy;
+    private String currentStatus;
 
 }

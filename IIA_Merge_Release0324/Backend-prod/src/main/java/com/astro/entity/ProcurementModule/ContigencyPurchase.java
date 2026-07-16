@@ -71,6 +71,7 @@ public class ContigencyPurchase {
     private String purpose;
     private Boolean declarationOne;
     private Boolean declarationTwo;
+    @Column(name = "total_cp_value")
     private BigDecimal totalCpValue;
     @OneToMany(mappedBy = "contigencyPurchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CpMaterials> cpMaterials;

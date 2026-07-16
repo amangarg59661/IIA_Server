@@ -78,6 +78,37 @@ public class ServiceOrderController {
         serviceOrder.deleteServiceOrder(soId);
         return ResponseEntity.ok("Service Order deleted successfully. Id:"+" " +soId);
     }
+    // ── DRAFT ENDPOINTS ──────────────────────────────────────────────
+
+    @PostMapping("/draft")
+    public ResponseEntity<Object> saveSoDraft(@RequestBody ServiceOrderRequestDTO dto) {
+        ServiceOrderResponseDTO response = serviceOrder.saveSoDraft(dto);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @PutMapping("/draft")
+    public ResponseEntity<Object> updateSoDraft(
+            @RequestParam String soId,
+            @RequestBody ServiceOrderRequestDTO dto) {
+        ServiceOrderResponseDTO response = serviceOrder.updateSoDraft(soId, dto);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @PostMapping("/draft/submit")
+    public ResponseEntity<Object> submitSoDraft(
+            @RequestParam String soId,
+            @RequestBody ServiceOrderRequestDTO dto) {
+        ServiceOrderResponseDTO response = serviceOrder.submitSoDraft(soId, dto);
+        workflowService.initiateWorkflow(response.getSoId(), "SO Workflow", dto.getCreatedBy());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @GetMapping("/drafts")
+    public ResponseEntity<Object> getUserSoDrafts(@RequestParam Integer userId) {
+        List<ServiceOrderResponseDTO> drafts = serviceOrder.getUserSoDrafts(userId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(drafts), HttpStatus.OK);
+    }
+
     @GetMapping("/version-history")
 public ResponseEntity<Object> getSoVersionHistory(@RequestParam String soId) {
     List<ServiceOrderResponseDTO> history = serviceOrder.getSoVersionHistory(soId);

@@ -3,6 +3,8 @@ package com.astro.controller;
 import com.astro.dto.workflow.ApprovedIndentsDto;
 import com.astro.dto.workflow.ApprovedPoIdsDto;
 import com.astro.dto.workflow.TransitionActionReqDto;
+import com.astro.entity.WorkflowMaster;
+import com.astro.repository.WorkflowMasterRepository;
 import com.astro.service.WorkflowService;
 import com.astro.util.ResponseBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
@@ -17,6 +20,9 @@ public class WorkflowController {
 
     @Autowired
     WorkflowService workflowService;
+
+    @Autowired
+    WorkflowMasterRepository workflowMasterRepository;
 
     @GetMapping("/getWorkflowByName")
     public ResponseEntity<Object> getWorkflowByName(@RequestParam String workflowName) {
@@ -177,6 +183,22 @@ public class WorkflowController {
     @PostMapping("/performAllTransitionAction")
     public ResponseEntity<Object> performAllTransitionAction(@RequestBody List<TransitionActionReqDto> transitionActionReqDto) {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(workflowService.performAllTransitionAction(transitionActionReqDto)), HttpStatus.OK);
+    }
+
+    @GetMapping("/getWorkflowLimit")
+    public ResponseEntity<Object> getWorkflowLimit(@RequestParam Integer workflowId) {
+        WorkflowMaster wf = workflowMasterRepository.findById(workflowId).orElse(null);
+        BigDecimal limit = wf != null ? wf.getLimit() : null;
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(limit), HttpStatus.OK);
+    }
+
+    @PutMapping("/updateWorkflowLimit")
+    public ResponseEntity<Object> updateWorkflowLimit(@RequestParam Integer workflowId, @RequestParam BigDecimal limit) {
+        WorkflowMaster wf = workflowMasterRepository.findById(workflowId)
+                .orElseThrow(() -> new RuntimeException("Workflow not found for id: " + workflowId));
+        wf.setLimit(limit);
+        workflowMasterRepository.save(wf);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(limit), HttpStatus.OK);
     }
 
     /* @Autowired

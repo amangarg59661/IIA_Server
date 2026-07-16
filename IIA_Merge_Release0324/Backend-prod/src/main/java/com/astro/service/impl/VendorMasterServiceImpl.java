@@ -312,16 +312,16 @@ public class VendorMasterServiceImpl implements VendorMasterService {
         responseDto.setUpdatedBy(vendorMaster.getUpdatedBy());
         responseDto.setCreatedDate(vendorMaster.getCreatedDate());
         responseDto.setUpdatedDate(vendorMaster.getUpdatedDate());
-        vendorMaster.setSwiftCode(vendorMaster.getSwiftCode());
-        vendorMaster.setAlternateEmailOrPhoneNumber(vendorMaster.getAlternateEmailOrPhoneNumber());
-        vendorMaster.setBicCode(vendorMaster.getBicCode());
-        vendorMaster.setIbanAbaNumber(vendorMaster.getIbanAbaNumber());
-        vendorMaster.setSortCode(vendorMaster.getSortCode());
-        vendorMaster.setBankRoutingNumber(vendorMaster.getBankRoutingNumber());
-        vendorMaster.setBankAddress(vendorMaster.getBankAddress());
-        vendorMaster.setCountry(vendorMaster.getCountry());
-        vendorMaster.setState(vendorMaster.getState());
-        vendorMaster.setPlace(vendorMaster.getPlace());
+        responseDto.setSwiftCode(vendorMaster.getSwiftCode());
+        responseDto.setAlternateEmailOrPhoneNumber(vendorMaster.getAlternateEmailOrPhoneNumber());
+        responseDto.setBicCode(vendorMaster.getBicCode());
+        responseDto.setIbanAbaNumber(vendorMaster.getIbanAbaNumber());
+        responseDto.setSortCode(vendorMaster.getSortCode());
+        responseDto.setBankRoutingNumber(vendorMaster.getBankRoutingNumber());
+        responseDto.setBankAddress(vendorMaster.getBankAddress());
+        responseDto.setCountry(vendorMaster.getCountry());
+        responseDto.setState(vendorMaster.getState());
+        responseDto.setPlace(vendorMaster.getPlace());
 
 
         return responseDto;

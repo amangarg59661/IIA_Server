@@ -6,6 +6,7 @@ import com.astro.dto.workflow.ProcurementDtos.TenderWithIndentResponseDTO;
 import com.astro.entity.AdminPanel.ApproverMaster;
 import com.astro.entity.AdminPanel.DepartmentApproverMapping;
 import com.astro.entity.AdminPanel.FieldStationApproverMaster;
+import com.astro.entity.ProcurementModule.ContigencyPurchase;
 import com.astro.entity.AdminPanel.WorkflowBranchMaster;
 import com.astro.entity.ProcurementModule.IndentCreation; // added by abhinav
 import com.astro.entity.ProcurementModule.IndentId; // added by abhinav
@@ -15,6 +16,7 @@ import com.astro.entity.ProjectMaster;
 import com.astro.repository.AdminPanel.ApproverMasterRepository;
 import com.astro.repository.AdminPanel.DepartmentApproverMappingRepository;
 import com.astro.repository.AdminPanel.FieldStationApproverMasterRepository;
+import com.astro.repository.ProcurementModule.ContigencyPurchaseRepository;
 import com.astro.repository.AdminPanel.WorkflowBranchMasterRepository;
 import com.astro.repository.ProcurementModule.TenderRequestRepository;
 import com.astro.repository.ProjectMasterRepository;
@@ -53,6 +55,9 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
 
     @Autowired
     private PaymentVoucherReposiotry paymentVoucherReposiotry;
+
+    @Autowired
+    private ContigencyPurchaseRepository contigencyPurchaseRepository;
 
 // End
 
@@ -651,6 +656,29 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
     }
 
      //  added by Aman 
+     @Override 
+     public Map<String, Object> buildContingencyConditions(String requestId) {
+        Map<String, Object> conditions = new HashMap<>();
+
+        try {
+            ContigencyPurchase contigency = contigencyPurchaseRepository.findById(requestId).orElse(null);
+            if (contigency != null) {
+                conditions.put("totalAmount", contigency.getTotalCpValue());
+                conditions.put("projectName", contigency.getProjectName());
+                // conditions.put("location", contigency.getConsignesLocation());
+                //  conditions.put("category", indent.getMaterialCategoryType());
+            // Also put materialCategory as alias (frontend branch config may use either key)
+            // conditions.put("materialCategory", indent.getMaterialCategoryType());
+
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error building Contingency conditions: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return conditions;
+    }
+
     @Override
     public Map<String,Object> buildPaymentConditions(String requestId)
     {

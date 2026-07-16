@@ -69,6 +69,56 @@ private String parentSoId;
     @Column(name = "current_status")
     private String currentStatus;
 
+    @Column(name = "indent_id")
+    private String indentId;
+
+    @Column(name = "warranty")
+    private String warranty;
+
+    @Column(name = "delivery_period")
+    private String deliveryPeriod;
+
+    @Column(name = "delivery_date")
+    private LocalDate deliveryDate;
+
+    @Column(name = "quotation_number")
+    private String quotationNumber;
+
+    @Column(name = "quotation_date")
+    private LocalDate quotationDate;
+
+    @Column(name = "additional_terms_and_conditions")
+    private String additionalTermsAndConditions;
+
+    @Column(name = "buy_back_amount")
+    private BigDecimal buyBackAmount;
+
+    @Column(name = "transporter_and_freight_for_warder_details")
+    private String transporterAndFreightForWarderDetails;
+
+    private String comparativeStatementFileName;
+
+    @Column(name = "gem_contract_file_name")
+    private String gemContractUpload;
+
+    @Column(name = "type_of_security")
+    private String typeOfSecurity;
+
+    @Column(name = "security_number")
+    private String securityNumber;
+
+    @Column(name = "security_date")
+    private LocalDate securityDate;
+
+    @Column(name = "expiry_date")
+    private LocalDate expiryDate;
+
+    @Column(name = "is_cancelled")
+    private Boolean isCancelled = false;
+
+    @Column(name = "is_locked")
+    private Boolean isLocked = false;
+
     @Column(name = "start_date_amc")
     private LocalDate startDateAmc;
     @Column(name = "end_date_amc")

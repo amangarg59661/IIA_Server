@@ -45,6 +45,9 @@ public class ServiceOrderMaterial {
     private BigDecimal duties;
     @Column(name = "budget_code")
     private String budgetCode;
+    @Column(name = "received_quantity")
+    private BigDecimal receivedQuantity;
+    private BigDecimal totalSoMaterialPriceInInr;
 
    // @ManyToOne
     //@JoinColumn(name = "service_order_id")

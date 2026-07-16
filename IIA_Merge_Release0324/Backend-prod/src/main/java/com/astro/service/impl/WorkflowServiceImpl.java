@@ -315,7 +315,7 @@ private BudgetService budgetService;
             List<WorkflowTransition> existingList
                     = workflowTransitionRepository.findByWorkflowIdAndCreatedByAndRequestId(
                             workflowDto.getWorkflowId(), createdBy, requestId);
-
+                    System.out.println("Workflow ID: " + workflowDto.getWorkflowId());
             WorkflowTransition existing = existingList.isEmpty() ? null : existingList.get(0);
 
             if (existing != null) {
@@ -809,6 +809,9 @@ private BudgetService budgetService;
             return branchWorkflowService.buildSOConditions(requestId);
         } else if (workflowNameUpper.contains("Payment")){
             return branchWorkflowService.buildPaymentConditions(requestId);
+        }
+        else if (workflowNameUpper.contains("CONTINGENCY")) {
+            return branchWorkflowService.buildContingencyConditions(requestId);
         }
 
         System.out.println("❌ No matching workflow found for: " + workflowName);

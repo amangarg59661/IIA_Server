@@ -106,7 +106,11 @@ public interface BranchWorkflowService {
      * @return Map of conditions extracted from PO
      */
     Map<String, Object> buildSOConditions(String requestId);
-
+ /** 
+ @param requestId SO ID
+     * @return Map of conditions extracted from PO
+     */
+    Map<String, Object> buildContingencyConditions(String requestId);
 /**
      * Build conditions map for PO workflow
      *

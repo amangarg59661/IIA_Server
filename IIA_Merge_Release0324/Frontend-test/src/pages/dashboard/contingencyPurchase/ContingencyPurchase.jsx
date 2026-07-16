@@ -872,6 +872,7 @@ const ContingencyPurchase = () => {
   const [generatedCpId, setGeneratedCpId] = useState('');
   const [isPrintEnabled, setIsPrintEnabled] = useState(false);
 
+  const [draftBtnLoading, setDraftBtnLoading] = useState(false);
   const [employees, setEmployees] = useState([]);
 
   // Redux selectors
@@ -890,6 +891,8 @@ const ContingencyPurchase = () => {
 
   // Form data state
   const [formData, setFormData] = useState({ materialDetails: [{}] });
+
+  const [cpLimit, setCpLimit] = useState(50000);
 
   // ✅ Fetch dropdown values from LOV system (Form ID: 2 - ContingencyPurchase)
   const { lovValues: gstPercentageLOV, loading: loadingGst } = useLOVValues(2, 'gstPercentage');
@@ -1119,9 +1122,8 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
 
   const total = calculateTotalPrice(quantity, unitPrice, gst);
 
-  // ⚠️ Warn if total exceeds 50,000
-  if (total > 50000) {
-    message.warning('Total price including GST cannot exceed ₹50,000');
+  if (total > cpLimit) {
+    message.warning(`Total price including GST cannot exceed ₹${cpLimit.toLocaleString('en-IN')}`);
     return prev;
   }
 
@@ -1161,6 +1163,65 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
   };*/
   
 
+  const buildCpPayload = () => {
+    const cpMaterials = (formData.materialDetails || []).map(material => ({
+      materialCode: material.materialCode,
+      materialDescription: material.materialDescription,
+      quantity: material.quantity,
+      unitPrice: material.unitPrice,
+      uom: material.uom,
+      totalPrice: material.totalPrice,
+      budgetCode: material.budgetCode,
+      materialCategory: material.materialCategory,
+      materialSubCategory: material.materialSubCategory,
+      currency: material.currency,
+      gst: material.gst,
+      countryOfOrigin: material.countryOfOrigin,
+    }));
+    const payload = {
+      ...formData,
+      createdBy: actionPerformer,
+      fileType: "CP",
+      cpMaterials
+    };
+    delete payload.materialDetails;
+    return payload;
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      setDraftBtnLoading(true);
+      const payload = buildCpPayload();
+      let response;
+
+      if (formData?.cpId && formData?.currentStatus === "DRAFT") {
+        response = await axios.put(`/api/contigency-purchase/draft`, payload, {
+          params: { cpId: formData.cpId },
+        });
+        message.success("Draft updated successfully.");
+      } else if (!formData?.cpId) {
+        response = await axios.post(`/api/contigency-purchase/draft`, payload);
+        message.success("Draft saved successfully.");
+      } else {
+        message.warning("This Contingency Purchase has already been submitted and cannot be saved as a draft.");
+        return;
+      }
+
+      const savedData = response?.data?.responseData;
+      setFormData((prev) => ({
+        ...prev,
+        cpId: savedData?.contigencyId,
+        currentStatus: "DRAFT",
+      }));
+    } catch (error) {
+      message.error(
+        error?.response?.data?.responseStatus?.message || "Error saving draft."
+      );
+    } finally {
+      setDraftBtnLoading(false);
+    }
+  };
+
   const onFinish = async () => {
   // Add validation before submission
   if (!formData.materialDetails || formData.materialDetails.length === 0) {
@@ -1175,8 +1236,8 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
     return sum + (material.totalPrice || 0);
   }, 0);
 
-  if (grandTotal > 50000) {
-    message.error("Total value of all materials (including GST) must not exceed ₹50,000.");
+  if (grandTotal > cpLimit) {
+    message.error(`Total value of all materials (including GST) must not exceed ₹${cpLimit.toLocaleString('en-IN')}.`);
     return;
   }
   const hasChinaOrigin = formData.materialDetails.some(
@@ -1188,29 +1249,35 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
     return;
   }
 
+  if (formData?.cpId && formData?.currentStatus === "DRAFT") {
+    try {
+      setSubmitBtnLoading(true);
+      const payload = buildCpPayload();
+      const response = await axios.post(
+        `/api/contigency-purchase/draft/submit`,
+        payload,
+        { params: { cpId: formData.cpId } }
+      );
+      const submittedCpId = response.data?.responseData?.contigencyId;
+      setFormData((prev) => ({
+        ...prev,
+        cpId: submittedCpId,
+        currentStatus: null,
+      }));
+      message.success("Contingency Purchase submitted successfully.");
+      setModalOpen(true);
+      return;
+    } catch (error) {
+      message.error(
+        error?.response?.data?.responseStatus?.message || "Failed to submit draft."
+      );
+      return;
+    } finally {
+      setSubmitBtnLoading(false);
+    }
+  }
 
-  const cpMaterials = formData.materialDetails.map(material => ({
-    materialCode: material.materialCode,
-    materialDescription: material.materialDescription,
-    quantity: material.quantity,
-    unitPrice: material.unitPrice,
-    uom: material.uom,
-    totalPrice: material.totalPrice,
-    budgetCode: material.budgetCode,
-    materialCategory: material.materialCategory,
-    materialSubCategory: material.materialSubCategory,
-    currency: material.currency,
-    gst: material.gst,
-    countryOfOrigin: material.countryOfOrigin,
-  }));
-
-  const payload = {
-    ...formData,   
-    createdBy: actionPerformer,
-    fileType: "CP",
-    cpMaterials
-  };
-  delete payload.materialDetails;
+  const payload = buildCpPayload();
   try {
     setSubmitBtnLoading(true);
     const { data } = await axios.post("/api/contigency-purchase", payload);
@@ -1220,14 +1287,12 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
       cpId: data?.responseData?.contigencyId
     }));
 
-    localStorage.removeItem("cpDraft");
     setModalOpen(true);
   } catch (error) {
     message.error(
       error?.response?.data?.responseStatus?.message ||
       "Failed to submit purchase."
     );
-    ;
   } finally {
     setSubmitBtnLoading(false);
   }
@@ -1239,35 +1304,41 @@ const handleSearch = async (value) => {
       `/api/contigency-purchase/${value || formData.cpId}`
     );
 
-   /* setFormData({
-      ...data?.responseData,
-      materialDetails: data?.responseData?.cpMaterials || [],
-    });*/
        setFormData((prev) => ({
       ...prev,
       ...data?.responseData,
       materialDetails: data?.responseData?.cpMaterials || [],
     }));
   } catch (error) {
-    ;
     message.error(
       error?.response?.data?.responseStatus?.message || "Error fetching CP details."
     );
   }
 };
 
-  // --- Draft Handling ---
+  // --- Draft Handling (server-side) ---
   useEffect(() => {
-    const draft = localStorage.getItem('cpDraft');
-    if (draft) {
-      setFormData(JSON.parse(draft));
-      message.success('Loaded draft data');
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('cpDraft', JSON.stringify(formData));
-  }, [formData]);
+    const loadUserDrafts = async () => {
+      try {
+        const { data } = await axios.get(`/api/contigency-purchase/drafts`, {
+          params: { userId: actionPerformer },
+        });
+        const drafts = data?.responseData || [];
+        if (drafts.length > 0) {
+          const latest = drafts[0];
+          setFormData((prev) => ({
+            ...prev,
+            ...latest,
+            cpId: latest.contigencyId,
+            materialDetails: latest.cpMaterials || [],
+            currentStatus: "DRAFT",
+          }));
+          message.info("Draft loaded from server.");
+        }
+      } catch (_) {}
+    };
+    if (actionPerformer) loadUserDrafts();
+  }, [actionPerformer]);
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -1346,6 +1417,12 @@ const handleSearch = async (value) => {
     populateDropdowns();
     fetchAllBudgetCodes();
     fetchAllCountries();
+    axios.get('/getWorkflowLimit?workflowId=2')
+      .then(res => {
+        const limit = res.data?.responseData;
+        if (limit != null) setCpLimit(Number(limit));
+      })
+      .catch(err => console.error('Error fetching CP limit:', err));
   },[formData.paymentTo]);
 /*
 const hydratedCpDetails = useMemo(() => {
@@ -1543,6 +1620,15 @@ const hydratedCpDetails = useMemo(() => {
   return (
     <Card className="a4-container" ref={printRef}>
       <Heading title="Contingency Purchase" />
+      {formData.currentStatus === "DRAFT" && formData.cpId && (
+        <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 16px', borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>📝</span>
+          <span>
+            <strong>Saved Draft</strong> — This Contingency Purchase ({formData.cpId}) is a saved draft and has <strong>not</strong> been submitted for approval.
+            Click <strong>Submit</strong> when ready to send it through the workflow.
+          </span>
+        </div>
+      )}
       <CustomForm formData={formData} onFinish={onFinish}>
         {renderFormFields(
           hydratedCpDetails,
@@ -1554,13 +1640,13 @@ const hydratedCpDetails = useMemo(() => {
           handleSearch,
           {
             addMaterialSection: addMaterialRow,
-          //  materialDeselect: materialDeselectRow 
           }
         )}
         <ButtonContainer
           onFinish={onFinish}
           formData={formData}
-          draftDataName="cpDraft"
+          onDraft={handleSaveDraft}
+          draftBtnLoading={draftBtnLoading}
           submitBtnLoading={submitBtnLoading}
           submitBtnEnabled
           printBtnEnabled

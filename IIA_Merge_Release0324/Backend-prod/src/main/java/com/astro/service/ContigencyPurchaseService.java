@@ -25,4 +25,9 @@ public interface ContigencyPurchaseService {
 
     public List<SearchCpIdDto> searchContigencyIds(String type, String value);
 
+    ContigencyPurchaseResponseDto saveCpDraft(ContigencyPurchaseRequestDto dto);
+    ContigencyPurchaseResponseDto updateCpDraft(String cpId, ContigencyPurchaseRequestDto dto);
+    ContigencyPurchaseResponseDto submitCpDraft(String cpId, ContigencyPurchaseRequestDto dto);
+    List<ContigencyPurchaseResponseDto> getUserCpDrafts(Integer userId);
+
 }

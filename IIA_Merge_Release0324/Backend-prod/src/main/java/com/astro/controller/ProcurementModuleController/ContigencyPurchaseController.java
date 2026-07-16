@@ -116,6 +116,37 @@ public class ContigencyPurchaseController {
         return ResponseEntity.ok("Contigency Purchase deleted successfully. Id:"+" " +contigencyId);
     }
 
+    // ── DRAFT ENDPOINTS ──────────────────────────────────────────────
+
+    @PostMapping("/draft")
+    public ResponseEntity<Object> saveCpDraft(@RequestBody ContigencyPurchaseRequestDto dto) {
+        ContigencyPurchaseResponseDto response = CPservice.saveCpDraft(dto);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @PutMapping("/draft")
+    public ResponseEntity<Object> updateCpDraft(
+            @RequestParam String cpId,
+            @RequestBody ContigencyPurchaseRequestDto dto) {
+        ContigencyPurchaseResponseDto response = CPservice.updateCpDraft(cpId, dto);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @PostMapping("/draft/submit")
+    public ResponseEntity<Object> submitCpDraft(
+            @RequestParam String cpId,
+            @RequestBody ContigencyPurchaseRequestDto dto) {
+        ContigencyPurchaseResponseDto response = CPservice.submitCpDraft(cpId, dto);
+        workflowService.initiateWorkflow(response.getContigencyId(), "Contingency Purchase Workflow", dto.getCreatedBy());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @GetMapping("/drafts")
+    public ResponseEntity<Object> getUserCpDrafts(@RequestParam Integer userId) {
+        List<ContigencyPurchaseResponseDto> drafts = CPservice.getUserCpDrafts(userId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(drafts), HttpStatus.OK);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<Object> searchCPIds(
             @RequestParam String type,
