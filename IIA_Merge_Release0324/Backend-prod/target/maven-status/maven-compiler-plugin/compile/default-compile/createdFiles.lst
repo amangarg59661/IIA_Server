@@ -379,6 +379,7 @@ com\astro\service\PaymentVoucherService.class
 com\astro\dto\workflow\userRequestDto.class
 com\astro\constant\AppConstant.class
 com\astro\service\MaterialMasterService.class
+com\astro\scheduler\ApprovalLimitReverseSyncService.class
 com\astro\repository\VendorIdTrackerRepository.class
 com\astro\entity\InventoryModule\OhqMasterConsumableEntity.class
 com\astro\dto\workflow\TechnoFinancialCommitteeDto.class

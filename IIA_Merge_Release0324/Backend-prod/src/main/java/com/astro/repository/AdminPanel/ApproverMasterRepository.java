@@ -31,6 +31,8 @@ public interface ApproverMasterRepository extends JpaRepository<ApproverMaster, 
             String status
     );
 
+        List<ApproverMaster> findByWorkflowIdAndStatus(Integer workflowId, String status);
+
     // Get max approval level for a branch
     @Query("SELECT COALESCE(MAX(a.approvalLevel), 0) FROM ApproverMaster a WHERE a.workflowId = :workflowId AND a.branchId = :branchId")
     Integer findMaxApprovalLevel(@Param("workflowId") Integer workflowId, @Param("branchId") Long branchId);
@@ -50,4 +52,8 @@ public interface ApproverMasterRepository extends JpaRepository<ApproverMaster, 
     int incrementApprovalLevels(@Param("workflowId") Integer workflowId,
             @Param("branchId") Long branchId,
             @Param("fromLevel") Integer fromLevel);
+
+
+            @Query("SELECT DISTINCT a.workflowId FROM ApproverMaster a WHERE a.status = :status")
+List<Integer> findDistinctWorkflowIdByStatus(@Param("status") String status);
 }

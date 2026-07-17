@@ -16,7 +16,8 @@ const FULL_CONFIG_URL = '/api/admin/approvers';
 
 export const ApprovalLimitsService = {
   // Get all approval limits
-  getAll: () => axios.get(APPROVAL_LIMITS_URL),
+  getAll: (workflowId) => axios.get(APPROVAL_LIMITS_URL , {
+  params: { workflowId }}),
 
   // Get approval limit by ID
   getById: (limitId) => axios.get(`${APPROVAL_LIMITS_URL}/${limitId}`),

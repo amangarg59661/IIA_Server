@@ -18,7 +18,13 @@ public interface ApprovalLimitService {
 
     ApprovalLimitDTO getById(Long limitId);
 
-    List<ApprovalLimitDTO> getAll();
+    List<ApprovalLimitDTO> getAll(Integer workflowId);
+    /**
+ * Alias for getAll(null) — backward compatible for callers that don't scope by workflow
+ */
+default List<ApprovalLimitDTO> getAll() {
+    return getAll(null);
+}
 
     List<ApprovalLimitDTO> getByRole(String roleName);
 

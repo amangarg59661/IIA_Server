@@ -7,6 +7,18 @@ import com.astro.repository.AdminPanel.ApprovalLimitMasterRepository;
 import com.astro.service.AdminPanel.ApprovalLimitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.astro.entity.AdminPanel.ApproverMaster;
+import com.astro.entity.AdminPanel.WorkflowBranchMaster;
+import com.astro.repository.AdminPanel.ApproverMasterRepository;
+import com.astro.repository.AdminPanel.WorkflowBranchMasterRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.Optional;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,6 +30,12 @@ public class ApprovalLimitServiceImpl implements ApprovalLimitService {
     @Autowired
     private ApprovalLimitMasterRepository repository;
 
+    @Autowired
+    private ApproverMasterRepository approverMasterRepository;
+
+    @Autowired
+    private WorkflowBranchMasterRepository workflowBranchMasterRepository;
+
     @Override
     public ApprovalLimitDTO create(ApprovalLimitDTO dto) {
         ApprovalLimitMaster entity = toEntity(dto);
@@ -25,27 +43,101 @@ public class ApprovalLimitServiceImpl implements ApprovalLimitService {
         return toDTO(entity);
     }
 
-    @Override
-    public ApprovalLimitDTO update(Long limitId, ApprovalLimitDTO dto) {
-        ApprovalLimitMaster entity = repository.findById(limitId)
-                .orElseThrow(() -> new RuntimeException("Approval limit not found: " + limitId));
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-        entity.setRoleId(dto.getRoleId());
-        entity.setRoleName(dto.getRoleName());
-        entity.setCategory(dto.getCategory());
-        entity.setDepartmentName(dto.getDepartmentName());
-        entity.setLocation(dto.getLocation());
-        entity.setMinAmount(dto.getMinAmount());
-        entity.setMaxAmount(dto.getMaxAmount());
-        entity.setEscalationRoleId(dto.getEscalationRoleId());
-        entity.setEscalationRoleName(dto.getEscalationRoleName());
-        entity.setIsActive(dto.getIsActive());
-        entity.setPriority(dto.getPriority());
-        entity.setUpdatedBy(dto.getUpdatedBy());
+    // @Override
+    // public ApprovalLimitDTO update(Long limitId, ApprovalLimitDTO dto) {
+    //     ApprovalLimitMaster entity = repository.findById(limitId)
+    //             .orElseThrow(() -> new RuntimeException("Approval limit not found: " + limitId));
 
-        entity = repository.save(entity);
-        return toDTO(entity);
+    //     entity.setRoleId(dto.getRoleId());
+    //     entity.setRoleName(dto.getRoleName());
+    //     entity.setCategory(dto.getCategory());
+    //     entity.setDepartmentName(dto.getDepartmentName());
+    //     entity.setLocation(dto.getLocation());
+    //     entity.setMinAmount(dto.getMinAmount());
+    //     entity.setMaxAmount(dto.getMaxAmount());
+    //     entity.setEscalationRoleId(dto.getEscalationRoleId());
+    //     entity.setEscalationRoleName(dto.getEscalationRoleName());
+    //     entity.setIsActive(dto.getIsActive());
+    //     entity.setPriority(dto.getPriority());
+    //     entity.setUpdatedBy(dto.getUpdatedBy());
+
+    //     entity = repository.save(entity);
+    //     return toDTO(entity);
+    // }
+
+
+@Override
+@Transactional(rollbackFor = Exception.class)
+public ApprovalLimitDTO update(Long limitId, ApprovalLimitDTO dto) {
+    ApprovalLimitMaster entity = repository.findById(limitId)
+            .orElseThrow(() -> new RuntimeException("Approval limit not found: " + limitId));
+
+    entity.setRoleId(dto.getRoleId());
+    entity.setRoleName(dto.getRoleName());
+    entity.setCategory(dto.getCategory());
+    entity.setDepartmentName(dto.getDepartmentName());
+    entity.setLocation(dto.getLocation());
+    entity.setMinAmount(dto.getMinAmount());
+    entity.setMaxAmount(dto.getMaxAmount());
+    entity.setEscalationRoleId(dto.getEscalationRoleId());
+    entity.setEscalationRoleName(dto.getEscalationRoleName());
+    entity.setIsActive(dto.getIsActive());
+    entity.setPriority(dto.getPriority());
+    entity.setWorkflowId(dto.getWorkflowId());
+    entity.setUpdatedBy(dto.getUpdatedBy());
+
+    entity = repository.save(entity);
+
+    syncBranchConditionConfig(entity.getWorkflowId(), entity.getRoleId(),
+            entity.getMinAmount(), entity.getMaxAmount());
+
+    return toDTO(entity);
+}
+
+private void syncBranchConditionConfig(Integer workflowId, Integer roleId,
+        BigDecimal minAmount, BigDecimal maxAmount) {
+
+    if (workflowId == null || roleId == null) {
+        throw new RuntimeException("workflowId/roleId missing — cannot sync branch condition config");
     }
+
+    List<ApproverMaster> approvers = approverMasterRepository
+            .findByWorkflowIdAndStatus(workflowId, "Active");
+
+    Map<Long, Optional<ApproverMaster>> topApproverByBranch = approvers.stream()
+            .collect(Collectors.groupingBy(ApproverMaster::getBranchId,
+                    Collectors.maxBy(Comparator.comparingInt(ApproverMaster::getApprovalLevel))));
+
+    List<Long> matchedBranchIds = topApproverByBranch.entrySet().stream()
+            .filter(e -> e.getValue().isPresent()
+                    && roleId.equals(e.getValue().get().getRoleId()))
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toList());
+
+    if (matchedBranchIds.isEmpty()) {
+        return; // this role isn't top approver on any branch in this workflow — nothing to sync
+    }
+
+    List<WorkflowBranchMaster> branches = workflowBranchMasterRepository
+            .findByWorkflowIdAndIsActiveTrueAndBranchIdIn(workflowId, matchedBranchIds);
+
+    for (WorkflowBranchMaster branch : branches) {
+        try {
+            JsonNode node = objectMapper.readTree(
+                    branch.getConditionConfig() != null ? branch.getConditionConfig() : "{}");
+            ObjectNode objectNode = (ObjectNode) node;
+            objectNode.put("minAmount", minAmount);
+            objectNode.put("maxAmount", maxAmount);
+            branch.setConditionConfig(objectMapper.writeValueAsString(objectNode));
+            workflowBranchMasterRepository.save(branch);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(
+                    "Failed to sync condition config for branch " + branch.getBranchId(), e);
+        }
+    }
+}
 
     @Override
     public void delete(Long limitId) {
@@ -63,8 +155,8 @@ public class ApprovalLimitServiceImpl implements ApprovalLimitService {
     }
 
     @Override
-    public List<ApprovalLimitDTO> getAll() {
-        return repository.findAllActiveOrderByRoleAndPriority()
+    public List<ApprovalLimitDTO> getAll(Integer workflowId) {
+        return repository.findAllActiveOrderByRoleAndPriority(workflowId)
                 .stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
@@ -166,6 +258,7 @@ public class ApprovalLimitServiceImpl implements ApprovalLimitService {
         dto.setLimitId(entity.getLimitId());
         dto.setRoleId(entity.getRoleId());
         dto.setRoleName(entity.getRoleName());
+        dto.setWorkflowId(entity.getWorkflowId());
         dto.setCategory(entity.getCategory());
         dto.setDepartmentName(entity.getDepartmentName());
         dto.setLocation(entity.getLocation());

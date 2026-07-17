@@ -63,6 +63,9 @@ public class ApprovalLimitMaster {
     @CreatedDate
     private LocalDateTime createdDate;
 
+    @Column(name = "workflow_id")
+    private Integer workflowId;
+
     @Column(name = "updated_by", length = 100)
     @LastModifiedBy
     private String updatedBy;

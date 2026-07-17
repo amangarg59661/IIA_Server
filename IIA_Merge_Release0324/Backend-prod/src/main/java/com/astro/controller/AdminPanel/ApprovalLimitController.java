@@ -35,8 +35,8 @@ public class ApprovalLimitController {
      * Get all approval limits
      */
     @GetMapping
-    public ResponseEntity<Object> getAllApprovalLimits() {
-        List<ApprovalLimitDTO> limits = approvalLimitService.getAll();
+    public ResponseEntity<Object> getAllApprovalLimits(@RequestParam Integer workflowId) {
+        List<ApprovalLimitDTO> limits = approvalLimitService.getAll(workflowId);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(limits), HttpStatus.OK);
     }
 

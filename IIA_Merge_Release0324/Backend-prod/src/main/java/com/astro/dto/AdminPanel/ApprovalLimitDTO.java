@@ -17,6 +17,7 @@ public class ApprovalLimitDTO {
     private BigDecimal maxAmount;
     private Integer escalationRoleId;
     private String escalationRoleName;
+    private Integer workflowId;
     private Boolean isActive;
     private Integer priority;
     private String createdBy;

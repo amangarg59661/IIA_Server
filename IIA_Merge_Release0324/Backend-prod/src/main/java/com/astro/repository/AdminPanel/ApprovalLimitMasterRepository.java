@@ -57,10 +57,13 @@ public interface ApprovalLimitMasterRepository extends JpaRepository<ApprovalLim
     /**
      * Find all active limits ordered by role name and priority
      */
-    @Query("SELECT a FROM ApprovalLimitMaster a WHERE a.isActive = true " +
-           "ORDER BY a.roleName ASC, a.priority ASC")
-    List<ApprovalLimitMaster> findAllActiveOrderByRoleAndPriority();
-
+//     @Query("SELECT a FROM ApprovalLimitMaster a WHERE a.isActive = true " +
+//            "ORDER BY a.roleName ASC, a.priority ASC")
+//     List<ApprovalLimitMaster> findAllActiveOrderByRoleAndPriority();
+@Query("SELECT a FROM ApprovalLimitMaster a WHERE a.isActive = true " +
+       "AND (:workflowId IS NULL OR a.workflowId = :workflowId) " +
+       "ORDER BY a.roleName ASC, a.priority ASC")
+List<ApprovalLimitMaster> findAllActiveOrderByRoleAndPriority(@Param("workflowId") Integer workflowId);
     /**
      * Find all distinct role names with configured limits
      */
@@ -72,4 +75,7 @@ public interface ApprovalLimitMasterRepository extends JpaRepository<ApprovalLim
      */
     @Query("SELECT DISTINCT a.category FROM ApprovalLimitMaster a WHERE a.isActive = true AND a.category IS NOT NULL ORDER BY a.category")
     List<String> findDistinctCategories();
+
+    List<ApprovalLimitMaster> findByWorkflowIdAndIsActiveTrue(Integer workflowId);
+List<ApprovalLimitMaster> findByWorkflowIdAndIsActiveFalse(Integer workflowId);
 }

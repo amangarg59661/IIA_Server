@@ -197,20 +197,31 @@ public class TechnoFinancialCommitteeServiceImpl implements TechnoFinancialCommi
                         "Only the ad-hoc Chairman (" + eval.getAdHocChairmanName()
                         + ") can nominate members for ABOVE_1_CRORE tenders."));
             }
-        } else {
-            String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
+            } else {
+    if (eval.getAdHocChairmanUserId() == null) {
+        throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                "No Chairman has been selected for this tender yet."));
+    }
+    if (!eval.getAdHocChairmanUserId().equals(dto.getNominatedBy())) {
+        throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+                "Only the selected Chairman (" + eval.getAdHocChairmanName()
+                + ") can nominate members."));
+    }
+}
+        // } else {
+        //     String committeeType = "ABOVE_10_LAKH_UPTO_50_LAKH".equals(amtCat) ? "STEC_I" : "STEC_II";
 
-            TechnoFinancialCommittee chairman = committeeRepository
-                    .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
-                    .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
-                            "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
+        //     TechnoFinancialCommittee chairman = committeeRepository
+        //             .findByRoleAndCommitteeTypeAndIsActiveTrue("CHAIRMAN", committeeType)
+        //             .orElseThrow(() -> new BusinessException(new ErrorDetails(400, 1,
+        //                     "CONFIGURATION_ERROR", "No active Chairman configured for " + committeeType)));
 
-            if (!chairman.getUserId().equals(dto.getNominatedBy())) {
-                throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
-                        "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
-                        + ") can nominate members."));
-            }
-        }
+        //     if (!chairman.getUserId().equals(dto.getNominatedBy())) {
+        //         throw new BusinessException(new ErrorDetails(403, 1, "FORBIDDEN",
+        //                 "Only the " + committeeType + " Chairman (" + chairman.getMemberName()
+        //                 + ") can nominate members."));
+        //     }
+        // }
 
         // 3. Block self-nomination
         if (dto.getUserId().equals(dto.getNominatedBy())) {
