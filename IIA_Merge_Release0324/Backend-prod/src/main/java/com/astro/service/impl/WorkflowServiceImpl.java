@@ -1936,34 +1936,34 @@ private BudgetService budgetService;
             System.out.println("Next Approver: " + nextApprover.getRoleName());
         }
 
-        // Check if escalation is required based on current approver's limits
-        if (nextApprover != null) {
-            com.astro.dto.workflow.EscalationCheckResultDTO escalationResult
-                    = branchWorkflowService.checkEscalationRequired(
-                            nextApprover.getRoleName(),
-                            indentValue,
-                            category,
-                            departmentName,
-                            location
-                    );
+        // // Check if escalation is required based on current approver's limits
+        // if (nextApprover != null) {
+        //     com.astro.dto.workflow.EscalationCheckResultDTO escalationResult
+        //             = branchWorkflowService.checkEscalationRequired(
+        //                     nextApprover.getRoleName(),
+        //                     indentValue,
+        //                     category,
+        //                     departmentName,
+        //                     location
+        //             );
 
-            if (escalationResult != null && escalationResult.isEscalationRequired()) {
-                // Escalate to Director
-                System.out.println("ESCALATION REQUIRED: " + escalationResult.getReason());
-                System.out.println("   Escalating to: " + escalationResult.getEscalateTo());
+        //     if (escalationResult != null && escalationResult.isEscalationRequired()) {
+        //         // Escalate to Director
+        //         System.out.println("ESCALATION REQUIRED: " + escalationResult.getReason());
+        //         System.out.println("   Escalating to: " + escalationResult.getEscalateTo());
 
-                // Update indent with escalation info
-                if (indent != null) {
-                    indent.setEscalatedToDirector(true);
-                    indent.setEscalationReason(escalationResult.getReason());
-                    indentCreationRepository.save(indent);
-                }
+        //         // Update indent with escalation info
+        //         if (indent != null) {
+        //             indent.setEscalatedToDirector(true);
+        //             indent.setEscalationReason(escalationResult.getReason());
+        //             indentCreationRepository.save(indent);
+        //         }
 
-                // Create escalation transition
-                return createEscalationTransition(currentWorkflowTransition, transitionActionReqDto,
-                        escalationResult.getEscalateTo(), escalationResult.getReason());
-            }
-        }
+        //         // Create escalation transition
+        //         return createEscalationTransition(currentWorkflowTransition, transitionActionReqDto,
+        //                 escalationResult.getEscalateTo(), escalationResult.getReason());
+        //     }
+        // }
 
         // Create new workflow transition
         WorkflowTransition nextWorkflowTransition = new WorkflowTransition();
@@ -2089,38 +2089,38 @@ private BudgetService budgetService;
     /**
      * Create an escalation transition to Director
      */
-    private WorkflowTransition createEscalationTransition(
-            WorkflowTransition currentWorkflowTransition,
-            TransitionActionReqDto transitionActionReqDto,
-            String escalateTo,
-            String escalationReason
-    ) {
-        WorkflowTransition escalationTransition = new WorkflowTransition();
-        escalationTransition.setWorkflowId(currentWorkflowTransition.getWorkflowId());
-        escalationTransition.setWorkflowName(currentWorkflowTransition.getWorkflowName());
-        escalationTransition.setRequestId(currentWorkflowTransition.getRequestId());
-        escalationTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
-        escalationTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
-        escalationTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
-        escalationTransition.setModificationDate(new Date());
-        escalationTransition.setAction("Escalated");
-        escalationTransition.setRemarks("ESCALATION: " + escalationReason);
-        escalationTransition.setCurrentRole(currentWorkflowTransition.getNextRole());
-        escalationTransition.setNextRole(escalateTo);
-        escalationTransition.setWorkflowSequence(currentWorkflowTransition.getWorkflowSequence() + 1);
-        escalationTransition.setBranchId(currentWorkflowTransition.getBranchId());
-        escalationTransition.setTransitionOrder(currentWorkflowTransition.getTransitionOrder() + 1);
-        escalationTransition.setTransitionSubOrder(1);
-        escalationTransition.setStatus(AppConstant.IN_PROGRESS_TYPE);
-        escalationTransition.setNextAction(AppConstant.PENDING_TYPE);
+    // private WorkflowTransition createEscalationTransition(
+    //         WorkflowTransition currentWorkflowTransition,
+    //         TransitionActionReqDto transitionActionReqDto,
+    //         String escalateTo,
+    //         String escalationReason
+    // ) {
+    //     WorkflowTransition escalationTransition = new WorkflowTransition();
+    //     escalationTransition.setWorkflowId(currentWorkflowTransition.getWorkflowId());
+    //     escalationTransition.setWorkflowName(currentWorkflowTransition.getWorkflowName());
+    //     escalationTransition.setRequestId(currentWorkflowTransition.getRequestId());
+    //     escalationTransition.setCreatedDate(currentWorkflowTransition.getCreatedDate());
+    //     escalationTransition.setCreatedBy(currentWorkflowTransition.getCreatedBy());
+    //     escalationTransition.setUpdatedBy(String.valueOf(transitionActionReqDto.getActionBy()));
+    //     escalationTransition.setModificationDate(new Date());
+    //     escalationTransition.setAction("Escalated");
+    //     escalationTransition.setRemarks("ESCALATION: " + escalationReason);
+    //     escalationTransition.setCurrentRole(currentWorkflowTransition.getNextRole());
+    //     escalationTransition.setNextRole(escalateTo);
+    //     escalationTransition.setWorkflowSequence(currentWorkflowTransition.getWorkflowSequence() + 1);
+    //     escalationTransition.setBranchId(currentWorkflowTransition.getBranchId());
+    //     escalationTransition.setTransitionOrder(currentWorkflowTransition.getTransitionOrder() + 1);
+    //     escalationTransition.setTransitionSubOrder(1);
+    //     escalationTransition.setStatus(AppConstant.IN_PROGRESS_TYPE);
+    //     escalationTransition.setNextAction(AppConstant.PENDING_TYPE);
 
-        System.out.println("⚠️ ESCALATION: " + currentWorkflowTransition.getNextRole()
-                + " → " + escalateTo
-                + " | Reason: " + escalationReason);
+    //     System.out.println("⚠️ ESCALATION: " + currentWorkflowTransition.getNextRole()
+    //             + " → " + escalateTo
+    //             + " | Reason: " + escalationReason);
 
-        workflowTransitionRepository.save(escalationTransition);
-        return escalationTransition;
-    }
+    //     workflowTransitionRepository.save(escalationTransition);
+    //     return escalationTransition;
+    // }
 
     @Override
     @Transactional
@@ -2159,33 +2159,33 @@ private BudgetService budgetService;
                 location
         );
 
-        if (nextApprover != null) {
-            com.astro.dto.workflow.EscalationCheckResultDTO escalationResult
-                    = branchWorkflowService.checkEscalationRequired(
-                            nextApprover.getRoleName(),
-                            indentValue,
-                            category,
-                            departmentName,
-                            location
-                    );
+        // if (nextApprover != null) {
+        //     com.astro.dto.workflow.EscalationCheckResultDTO escalationResult
+        //             = branchWorkflowService.checkEscalationRequired(
+        //                     nextApprover.getRoleName(),
+        //                     indentValue,
+        //                     category,
+        //                     departmentName,
+        //                     location
+        //             );
 
-            if (escalationResult != null && escalationResult.isEscalationRequired()) {
-                if (indent != null) {
-                    indent.setEscalatedToDirector(true);
-                    indent.setEscalationReason(escalationResult.getReason());
-                    indentCreationRepository.save(indent);
-                }
+        //     if (escalationResult != null && escalationResult.isEscalationRequired()) {
+        //         if (indent != null) {
+        //             indent.setEscalatedToDirector(true);
+        //             indent.setEscalationReason(escalationResult.getReason());
+        //             indentCreationRepository.save(indent);
+        //         }
 
-                TransitionActionReqDto autoActionDto = new TransitionActionReqDto();
-                autoActionDto.setAction("Auto-Approved");
-                autoActionDto.setRemarks("AUTO-APPROVED: " + pendingTransition.getNextRole() + " did not act within " + autoApproveHours + " hours");
-                autoActionDto.setActionBy(null);
+        //         TransitionActionReqDto autoActionDto = new TransitionActionReqDto();
+        //         autoActionDto.setAction("Auto-Approved");
+        //         autoActionDto.setRemarks("AUTO-APPROVED: " + pendingTransition.getNextRole() + " did not act within " + autoApproveHours + " hours");
+        //         autoActionDto.setActionBy(null);
 
-                WorkflowTransition escalated = createEscalationTransition(pendingTransition, autoActionDto,
-                        escalationResult.getEscalateTo(), escalationResult.getReason());
-                return mapToWorkflowTransitionDto(escalated);
-            }
-        }
+        //         WorkflowTransition escalated = createEscalationTransition(pendingTransition, autoActionDto,
+        //                 escalationResult.getEscalateTo(), escalationResult.getReason());
+        //         return mapToWorkflowTransitionDto(escalated);
+        //     }
+        // }
 
         WorkflowTransition nextWorkflowTransition = new WorkflowTransition();
         nextWorkflowTransition.setWorkflowId(pendingTransition.getWorkflowId());

@@ -13,6 +13,7 @@
     import com.astro.entity.TenderCommitteeDecision;
     import com.astro.entity.TenderCommitteeVendorDecision;
     import com.astro.entity.VendorLoginDetails;
+    import java.util.stream.Stream;
     import com.astro.entity.VendorMaster;
     import com.astro.entity.ProcurementModule.IndentCreation;
     import com.astro.entity.ProcurementModule.IndentId;
@@ -1019,13 +1020,49 @@
                             committeeVendorDecisionRepository.save(row);
                         }
                     }
-                } else {
-                    eval.setEvaluationStatus("APPROVED");
-                    // Check all approved vendors for portal registration
-                    List<VendorQuotationAgainstTender> dirCompletedVendors =
-                            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
-                                    .filter(q -> "Completed".equals(q.getStatus()))
+                // } else {
+                //     eval.setEvaluationStatus("APPROVED");
+                //     // Check all approved vendors for portal registration
+                //     List<VendorQuotationAgainstTender> dirCompletedVendors =
+                //             quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                //                     .filter(q -> "Completed".equals(q.getStatus()))
+                //                     .collect(Collectors.toList());
+                //     if (!dirCompletedVendors.isEmpty()) {
+                //         boolean allRegistered = dirCompletedVendors.stream()
+                //                 .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
+                //         eval.setVendorPortalRegistered(allRegistered);
+                //     } else if (eval.getApprovedVendorId() != null) {
+                //         boolean registered = checkAndRegisterVendorOnPortal(eval.getApprovedVendorId());
+                //         eval.setVendorPortalRegistered(registered);
+                //         markApprovedVendorCompleted(tenderId, eval.getApprovedVendorId());
+                //     }
+                // }
+                               } else {
+                   eval.setEvaluationStatus("APPROVED");
+
+                   // Derive director-accepted vendors (same rule getApprovedVendorsForPO uses)
+                    // and promote THEM to Completed — mirrors the SPO forEach at line ~576-590.
+                   Set<String> directorAcceptedVendorIds =
+                            getDirectorAcceptedVendorIds(tenderId, dirPhase);
+
+                   List<VendorQuotationAgainstTender> dirCompletedVendors =
+                           quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
+                                   .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId())
+                                            && "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                                    .peek(q -> {
+                                        q.setStatus("Completed");
+                                        q.setAcceptanceStatus("ACCEPTED");
+                                    })
                                     .collect(Collectors.toList());
+                    quotationRepository.saveAll(dirCompletedVendors);
+
+                    if (eval.getApprovedVendorId() == null) {
+                        dirCompletedVendors.stream().findFirst().ifPresent(q -> {
+                            eval.setApprovedVendorId(q.getVendorId());
+                            vendorMasterRepository.findById(q.getVendorId())
+                                    .ifPresent(vm -> eval.setApprovedVendorName(vm.getVendorName()));
+                        });
+                    }
                     if (!dirCompletedVendors.isEmpty()) {
                         boolean allRegistered = dirCompletedVendors.stream()
                                 .allMatch(q -> checkAndRegisterVendorOnPortal(q.getVendorId()));
@@ -2311,41 +2348,106 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
         @Transactional(readOnly = true)
         @Override
         public List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId) {
-            TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
-                    .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
-                            "No tender evaluation found for tender: " + tenderId
-                            + ". Evaluation must be completed before PO can be created.")));
+    TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
+            .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+                    "No tender evaluation found for tender: " + tenderId
+                    + ". Evaluation must be completed before PO can be created.")));
 
-            if (!"APPROVED".equals(eval.getEvaluationStatus())) {
-                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
-                        "Tender Evaluation is not yet completed for tender: " + tenderId
-                        + ". Current status: " + eval.getEvaluationStatus()
-                        + ". PO can only be created after Tender Evaluation is Completed."));
-            }
+    if (!"APPROVED".equals(eval.getEvaluationStatus())) {
+        throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                "Tender Evaluation is not yet completed for tender: " + tenderId
+                + ". Current status: " + eval.getEvaluationStatus()
+                + ". PO can only be created after Tender Evaluation is Completed."));
+    }
 
-            List<VendorQuotationAgainstTender> quotations =
-                    quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+    List<VendorQuotationAgainstTender> quotations =
+            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
 
-            boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
+    boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
+    boolean under10L = "UNDER_10_LAKH".equals(eval.getAmountCategory());
 
-            return quotations.stream()
-                    .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
-                    .filter(q -> !isDoubleBid || "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus()))
-                    .map(q -> {
-                        TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
-                                new TenderEvaluationStatusDto.VendorQuotationEvalDto();
-                        dto.setVendorId(q.getVendorId());
-                        dto.setSpoStatus(q.getSpoStatus());
-                        dto.setStatus(q.getStatus());
-                        dto.setRank(q.getRank());
-                        vendorMasterRepository.findById(q.getVendorId())
-                                .ifPresent(vm -> {
-                                    dto.setVendorName(vm.getVendorName());
-                                });
-                        return dto;
-                    })
-                    .collect(Collectors.toList());
-        }
+    Stream<VendorQuotationAgainstTender> approved;
+
+    if (under10L) {
+        // SPO-driven path — unchanged
+        approved = quotations.stream()
+                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+                .filter(q -> !isDoubleBid || "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus()));
+    // } else {
+    //     // Above 10L — no SPO. Use Director's per-vendor decision instead.
+    //     String finalPhase = isDoubleBid ? "FINANCIAL" : "TECHNICAL";
+    //     Set<String> directorAcceptedVendorIds = committeeVendorDecisionRepository
+    //             .findByTenderIdAndPhaseAndVoterRole(tenderId, finalPhase, "DIRECTOR")
+    //             .stream()
+    //             .filter(v -> "ACCEPTED".equalsIgnoreCase(v.getDecision()))
+    //             .map(TenderCommitteeVendorDecision::getVendorId)
+    //             .collect(Collectors.toSet());
+
+    //     approved = quotations.stream()
+    //             .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId()))
+    //             .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()));
+    // }
+    } else {
+        // Above 10L — no SPO. Use Director's per-vendor decision instead.
+        String finalPhase = isDoubleBid ? "FINANCIAL" : "TECHNICAL";
+        Set<String> directorAcceptedVendorIds =
+                getDirectorAcceptedVendorIds(tenderId, finalPhase);
+
+        approved = quotations.stream()
+                .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId()))
+                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()));
+    }
+
+    return approved
+            .map(q -> {
+                TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
+                        new TenderEvaluationStatusDto.VendorQuotationEvalDto();
+                dto.setVendorId(q.getVendorId());
+                dto.setSpoStatus(q.getSpoStatus());
+                dto.setStatus(q.getStatus());
+                dto.setRank(q.getRank());
+                vendorMasterRepository.findById(q.getVendorId())
+                        .ifPresent(vm -> dto.setVendorName(vm.getVendorName()));
+                return dto;
+            })
+            .collect(Collectors.toList());
+}
+        // public List<TenderEvaluationStatusDto.VendorQuotationEvalDto> getApprovedVendorsForPO(String tenderId) {
+        //     TenderEvaluation eval = tenderEvaluationRepository.findById(tenderId)
+        //             .orElseThrow(() -> new BusinessException(new ErrorDetails(404, 1, "NOT_FOUND",
+        //                     "No tender evaluation found for tender: " + tenderId
+        //                     + ". Evaluation must be completed before PO can be created.")));
+
+        //     if (!"APPROVED".equals(eval.getEvaluationStatus())) {
+        //         throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+        //                 "Tender Evaluation is not yet completed for tender: " + tenderId
+        //                 + ". Current status: " + eval.getEvaluationStatus()
+        //                 + ". PO can only be created after Tender Evaluation is Completed."));
+        //     }
+
+        //     List<VendorQuotationAgainstTender> quotations =
+        //             quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+
+        //     boolean isDoubleBid = "DOUBLE_BID".equalsIgnoreCase(eval.getBidType());
+
+        //     return quotations.stream()
+        //             .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getSpoStatus()))
+        //             .filter(q -> !isDoubleBid || "ACCEPTED".equalsIgnoreCase(q.getFinancialSpoStatus()))
+        //             .map(q -> {
+        //                 TenderEvaluationStatusDto.VendorQuotationEvalDto dto =
+        //                         new TenderEvaluationStatusDto.VendorQuotationEvalDto();
+        //                 dto.setVendorId(q.getVendorId());
+        //                 dto.setSpoStatus(q.getSpoStatus());
+        //                 dto.setStatus(q.getStatus());
+        //                 dto.setRank(q.getRank());
+        //                 vendorMasterRepository.findById(q.getVendorId())
+        //                         .ifPresent(vm -> {
+        //                             dto.setVendorName(vm.getVendorName());
+        //                         });
+        //                 return dto;
+        //             })
+        //             .collect(Collectors.toList());
+        // }
 
         // ─────────────────────────────────────────────────────────────────
         // 18. SAVE VENDOR INDENTOR DECISION (per-vendor, saved immediately)
@@ -2901,6 +3003,15 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                         q.setAcceptanceStatus("ACCEPTED");
                         quotationRepository.save(q);
                     });
+        }
+
+        private Set<String> getDirectorAcceptedVendorIds(String tenderId, String phase) {
+            return committeeVendorDecisionRepository
+                    .findByTenderIdAndPhaseAndVoterRole(tenderId, phase, "DIRECTOR")
+                    .stream()
+                    .filter(v -> "ACCEPTED".equalsIgnoreCase(v.getDecision()))
+                    .map(TenderCommitteeVendorDecision::getVendorId)
+                    .collect(Collectors.toSet());
         }
 
         private TenderEvaluation requireEval(String tenderId) {
