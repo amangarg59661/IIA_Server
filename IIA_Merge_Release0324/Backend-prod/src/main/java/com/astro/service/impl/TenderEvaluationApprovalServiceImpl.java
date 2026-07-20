@@ -1067,7 +1067,8 @@
                    List<VendorQuotationAgainstTender> dirCompletedVendors =
                            quotationRepository.findByTenderIdAndIsLatestTrue(tenderId).stream()
                                    .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId())
-                                            && "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()))
+                                            // && "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus())
+                                            )
                                     .peek(q -> {
                                         q.setStatus("Completed");
                                         q.setAcceptanceStatus("ACCEPTED");
@@ -2419,8 +2420,8 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
                 getDirectorAcceptedVendorIds(tenderId, finalPhase);
 
         approved = quotations.stream()
-                .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId()))
-                .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()));
+                .filter(q -> directorAcceptedVendorIds.contains(q.getVendorId()));
+                // .filter(q -> "ACCEPTED".equalsIgnoreCase(q.getIndentorStatus()));
     }
 
     return approved

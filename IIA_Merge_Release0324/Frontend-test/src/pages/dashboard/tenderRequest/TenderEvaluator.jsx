@@ -5076,7 +5076,7 @@ useEffect(() => {
             )}
 
             {/* ── Above 10L: Director Voting ── */}
-            {isAbove10L && isDirector && (evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
+            {/* {isAbove10L && isDirector && (evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
               (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
                evalStatus?.clarificationRequestedByRole === 'DIRECTOR')) && (
               <Card title={`Director Final Approval${isFinancialPhase ? ' — Financial Phase' : ''}`} size="small" style={{ marginTop: 16 }}>
@@ -5101,13 +5101,7 @@ useEffect(() => {
                     onClick={() => { setApprovalType('director'); setApprovalDecision('REJECTED'); setApprovalModal(true); }}>
                     Reject
                   </Button> */}
-                  <Button style={{ color: '#1890ff', borderColor: '#1890ff' }}
-                    onClick={() => openClarificationModal('DIRECTOR')}>
-                    Seek Clarification
-                  </Button>
-                </Space>
-              </Card>
-            )}
+                  {/* 
             {isAbove10L && !isDirector && (evalStatus?.evaluationStatus === 'PENDING_DIRECTOR_APPROVAL' ||
               (['PENDING_VENDOR_CLARIFICATION', 'PENDING_INDENTOR_CLARIFICATION'].includes(evalStatus?.evaluationStatus) &&
                evalStatus?.clarificationRequestedByRole === 'DIRECTOR')) && (
