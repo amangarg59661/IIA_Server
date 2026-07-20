@@ -330,7 +330,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
 */
         private List<String> getEmailsForRole(String role) {
             // Send all reminders to this single email
-            return Arrays.asList("udaychowdhary743@gmail.com");
+            return Arrays.asList("");
         }
 
     private void sendRemainderMail(List<String> toEmails, String subject, String body) throws MessagingException {
@@ -622,7 +622,7 @@ private void sendMail(List<String> toEmails, String subject, String htmlContent)
 
             String body = templateEngine.process("auto-approval-email-template", context);
 
-            List<String> recipients = Arrays.asList("udaychowdhary743@gmail.com");
+            List<String> recipients = Arrays.asList("");
 
             sendMail(recipients,
                     "Auto-Approved: Request " + wt.getRequestId() + " - " + approverRole + " did not act within " + autoApproveHours + " hours",

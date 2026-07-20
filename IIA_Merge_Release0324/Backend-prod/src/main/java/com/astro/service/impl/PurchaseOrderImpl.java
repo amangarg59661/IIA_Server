@@ -1680,7 +1680,7 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
                     //  dto.setVendorAddress();
                     //  dto.setGstin(vendor.getGstNo());
                     //   dto.setContactNumber(vendor.getContactNo());
-                    dto.setEmail("kudaykiran.9949@gmail.com");  //send to purchase dept mail
+                    // dto.setEmail("kudaykiran.9949@gmail.com");  //send to purchase dept mail
                 }
                 // use vq details
             } else {

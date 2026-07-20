@@ -8,6 +8,8 @@ import { logout } from './store/slice/authSlice';
 import { message } from 'antd';
 
 export const baseURL = "http://localhost:8081/astro-service";
+// export const baseURL = "/astro-service";
+// axios.defaults.baseURL = baseURL;
 axios.defaults.baseURL = baseURL;
 
 // Re-entry guard: prevent multiple 401s from triggering multiple logouts

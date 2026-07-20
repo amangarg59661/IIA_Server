@@ -124,8 +124,8 @@ public class GtServiceImpl implements GtService {
         UserMaster umR = userMasterRepository.findByUserId(gtMasterEntity.getReceiverCustodianId());
         List<String> recipients = List.of(
                 um.getEmail(),
-                "udaychowdhary743@gmail.com",   //replace mail store preson and store purchase officer
-                "kudaykiran.9949@gmail.com"
+                // "udaychowdhary743@gmail.com",   //replace mail store preson and store purchase officer
+                // "kudaykiran.9949@gmail.com"
         );
         Context context = new Context();
         context.setVariable("gtId", gtId);

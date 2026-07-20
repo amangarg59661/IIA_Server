@@ -118,7 +118,7 @@ public void sendExpiringAMCNotifications() throws MessagingException {
                 recipients.add(purchaseDept.getEmail());
             }*/
 
-            recipients.add("udaychowdhary743@gmail.com");
+            // recipients.add("udaychowdhary743@gmail.com");
 
             if (!recipients.isEmpty()) {
                 emailService.sendAMCNotification(so, recipients);
