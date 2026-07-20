@@ -877,7 +877,7 @@ const materialInFields = [
                 label: "UOM",
                 type: "text",
                 span: 1,
-                required: true
+                // required: true
             },
             {
                 name: "locatorId",
