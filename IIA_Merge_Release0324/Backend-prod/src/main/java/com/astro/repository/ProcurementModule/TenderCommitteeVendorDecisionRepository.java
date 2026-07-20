@@ -23,6 +23,9 @@ public interface TenderCommitteeVendorDecisionRepository
     Optional<TenderCommitteeVendorDecision> findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(
             String tenderId, String vendorId, Integer committeeUserId, String phase);
 
+            Optional<TenderCommitteeVendorDecision> findByTenderIdAndVendorIdAndCommitteeUserIdAndPhaseAndVoterRole(
+        String tenderId, String vendorId, Integer committeeUserId, String phase, String voterRole);
+
     void deleteByTenderIdAndPhase(String tenderId, String phase);
 
     List<TenderCommitteeVendorDecision> findByTenderIdAndPhaseAndVoterRole(

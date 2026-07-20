@@ -136,24 +136,24 @@ const adminMenuItems = [
         label: "Approval Limits",
         path: "/admin/approval-limits",
       },
-      {
-        key: "admin-dept-approvers",
-        icon: <TeamOutlined />,
-        label: "Department Approvers",
-        path: "/admin/department-approvers",
-      },
-      {
-        key: "admin-field-station",
-        icon: <EnvironmentOutlined />,
-        label: "Field Station In-Charges",
-        path: "/admin/field-station-approvers",
-      },
-      {
-        key: "admin-workflow-config",
-        icon: <EyeOutlined />,
-        label: "Full Workflow Config",
-        path: "/admin/workflow-config",
-      },
+      // {
+      //   key: "admin-dept-approvers",
+      //   icon: <TeamOutlined />,
+      //   label: "Department Approvers",
+      //   path: "/admin/department-approvers",
+      // },
+      // {
+      //   key: "admin-field-station",
+      //   icon: <EnvironmentOutlined />,
+      //   label: "Field Station In-Charges",
+      //   path: "/admin/field-station-approvers",
+      // },
+      // {
+      //   key: "admin-workflow-config",
+      //   icon: <EyeOutlined />,
+      //   label: "Full Workflow Config",
+      //   path: "/admin/workflow-config",
+      // },
       {
         key: "admin-projects",
         icon: <ApartmentOutlined />,

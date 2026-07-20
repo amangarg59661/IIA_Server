@@ -283,9 +283,9 @@ const adminRoutes = (
     <Route path="/admin/lov" element={<ListOfValues />} />
     <Route path="/admin/approvers" element={<ApprovalWorkflow />} />
     <Route path="/admin/approval-limits" element={<ApprovalLimitsConfig />} />
-    <Route path="/admin/department-approvers" element={<DepartmentApproverMapping />} />
-    <Route path="/admin/field-station-approvers" element={<FieldStationApproverConfig />} />
-    <Route path="/admin/workflow-config" element={<FullWorkflowConfig />} />
+    {/* <Route path="/admin/department-approvers" element={<DepartmentApproverMapping />} /> */}
+    {/* <Route path="/admin/field-station-approvers" element={<FieldStationApproverConfig />} /> */}
+    {/* <Route path="/admin/workflow-config" element={<FullWorkflowConfig />} /> */}
     <Route path="/admin/projects" element={<ProjectManagement />} />
     <Route path="/admin/budget" element={<BudgetManagement />} />
     <Route path="/admin/employee" element={<EmployeeRegistration />} />

@@ -330,10 +330,13 @@
                         row.setCommitteeUserId(member.getUserId());
                         row.setMemberName(member.getMemberName());
                         row.setPhase("TECHNICAL");
+                        row.setVoterRole("MEMBER");
                         row.setCreatedDate(LocalDateTime.now());
                         committeeVendorDecisionRepository.save(row);
                     }
                 }
+                // ADD: chairman never had a row pre-created — same gap fix1 patched for votes, needed here for rebuild too
+ 
             }
 
             // Pre-create per-vendor committee decision rows for above-10L SINGLE_BID
@@ -743,11 +746,12 @@
             String phase = Boolean.TRUE.equals(eval.getFinancialBidPhase()) ? "FINANCIAL" : "TECHNICAL";
 
             TenderCommitteeVendorDecision voteRow = committeeVendorDecisionRepository
-                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, committeeUserId, phase)
+                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhaseAndVoterRole(tenderId, vendorId, committeeUserId, phase, "MEMBER")
                     .orElseGet(() -> {
                         TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
                         r.setTenderId(tenderId);
                         r.setVendorId(vendorId);
+                        r.setVoterRole("MEMBER");
                         r.setCommitteeUserId(committeeUserId);
                         r.setPhase(phase);
                         r.setCreatedDate(LocalDateTime.now());
@@ -836,12 +840,13 @@
 
             // Audit: record chairman resolution
             TenderCommitteeVendorDecision chairVoteRow = committeeVendorDecisionRepository
-                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, chairmanUserId, phase)
+                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhaseAndVoterRole(tenderId, vendorId, chairmanUserId, phase, "CHAIRMAN")
                     .orElseGet(() -> {
                         TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
                         r.setTenderId(tenderId);
                         r.setVendorId(vendorId);
                         r.setCommitteeUserId(chairmanUserId);
+                        r.setVoterRole("CHAIRMAN");
                         r.setPhase(phase);
                         r.setCreatedDate(LocalDateTime.now());
                         return r;
@@ -1020,6 +1025,20 @@
                             committeeVendorDecisionRepository.save(row);
                         }
                     }
+                    Integer chairId = resolveChairmanUserId(eval);
+ if (chairId != null) {
+     UserMaster chairUser = userMasterRepository.findByUserId(chairId);
+     for (VendorQuotationAgainstTender vendor : approvedVendors) {
+         TenderCommitteeVendorDecision row = new TenderCommitteeVendorDecision();
+         row.setTenderId(tenderId);
+         row.setVendorId(vendor.getVendorId());
+         row.setCommitteeUserId(chairId);
+         row.setMemberName(chairUser != null ? chairUser.getUserName() : String.valueOf(chairId));
+         row.setPhase("FINANCIAL");
+         row.setVoterRole("CHAIRMAN");
+         row.setCreatedDate(LocalDateTime.now());
+         committeeVendorDecisionRepository.save(row);
+     }}
                 // } else {
                 //     eval.setEvaluationStatus("APPROVED");
                 //     // Check all approved vendors for portal registration
@@ -2165,6 +2184,12 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             // Create vote rows for each ad-hoc member + auto-assign role
             if (dto.getMembers() != null) {
                 for (DirectorFormCommitteeDto.AdHocMemberDto member : dto.getMembers()) {
+                    boolean isChairman   = member.getUserId().equals(dto.getChairmanUserId());
+        boolean isCoChairman = dto.getCoChairmanUserId() != null
+                && member.getUserId().equals(dto.getCoChairmanUserId());
+        if (isChairman || isCoChairman) {
+            continue;
+        }
                     boolean alreadyExists = committeeDecisionRepository
                             .findByTenderIdAndCommitteeUserId(tenderId, member.getUserId()).isPresent();
                     if (!alreadyExists) {
@@ -3521,7 +3546,7 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             String normalizedDecision = decision.toUpperCase();
 
             TenderCommitteeVendorDecision voteRow = committeeVendorDecisionRepository
-                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, chairmanUserId, phase)
+                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhaseAndVoterRole(tenderId, vendorId, chairmanUserId, phase, "CHAIRMAN")
                     .orElseGet(() -> {
                         TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
                         r.setTenderId(tenderId);
@@ -3579,7 +3604,7 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             String normalizedDecision = decision.toUpperCase();
 
             TenderCommitteeVendorDecision voteRow = committeeVendorDecisionRepository
-                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhase(tenderId, vendorId, directorUserId, phase)
+                    .findByTenderIdAndVendorIdAndCommitteeUserIdAndPhaseAndVoterRole(tenderId, vendorId, directorUserId, phase, "DIRECTOR")
                     .orElseGet(() -> {
                         TenderCommitteeVendorDecision r = new TenderCommitteeVendorDecision();
                         r.setTenderId(tenderId);
@@ -4020,13 +4045,14 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             }
 
             // Create committee decision row
+            if (!"CHAIRMAN".equals(assignedRole)) {
             TenderCommitteeDecision row = new TenderCommitteeDecision();
             row.setTenderId(tenderId);
             row.setCommitteeUserId(userId);
             row.setCommitteeMemberName(user.getUserName());
             row.setCreatedDate(LocalDateTime.now());
             row.setUpdatedDate(LocalDateTime.now());
-            committeeDecisionRepository.save(row);
+            committeeDecisionRepository.save(row);}
 
             // Auto-assign role based on committee position
             boolean roleAssigned;
