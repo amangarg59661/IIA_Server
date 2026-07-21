@@ -13,8 +13,8 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "tender_committee_vendor_decision",
        uniqueConstraints = @UniqueConstraint(
-           name = "uk_tender_vendor_member_phase",
-           columnNames = {"tender_id", "vendor_id", "committee_user_id", "phase"}))
+           name = "uk_tender_vendor_member_phase_role",
+           columnNames = {"tender_id", "vendor_id", "committee_user_id", "phase", "voter_role"}))
 @EntityListeners(AuditingEntityListener.class)
 public class TenderCommitteeVendorDecision {
 
