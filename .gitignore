@@ -1,0 +1,6 @@
+*.class
+node_modules/
+.impeccable/
+*.md
+Dump20260329/
+build/
