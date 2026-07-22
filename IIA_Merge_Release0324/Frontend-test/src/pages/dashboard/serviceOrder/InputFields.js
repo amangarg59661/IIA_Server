@@ -169,6 +169,8 @@ export const SoDetails = [
           name: "exchangeRate",
           label: "Exchange Rate",
           type: "text",
+           shouldShow: (formData, childIndex) =>
+    (formData?.jobDtlList?.[childIndex]?.currency || "").toString().toUpperCase() !== "INR",
         },
         {
           name: "gst",

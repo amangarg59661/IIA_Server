@@ -274,7 +274,7 @@ const showSpoFinActions = isDoubleBidEval && isFinancialPhase &&
 
   useEffect(() => {
     if (showRegisteredVendorColumn && allRegisteredVendors.length === 0) {
-      axios.get(`${baseURL}/api/vendor-master`)
+      axios.get(`/api/vendor-master`)
         .then(res => {
           const vendors = res.data?.responseData || res.data || [];
           setAllRegisteredVendors(vendors);
@@ -290,7 +290,7 @@ const showSpoFinActions = isDoubleBidEval && isFinancialPhase &&
       return;
     }
     try {
-      await axios.put(`${baseURL}/api/tender-evaluation/vendor/map-registered`, null, {
+      await axios.put(`/api/tender-evaluation/vendor/map-registered`, null, {
         params: { tenderId, vendorId, registeredVendorId }
       });
       message.success('Registered vendor mapped successfully');

@@ -34,8 +34,8 @@ public interface UserMasterRepository extends JpaRepository<UserMaster, Integer>
                    "u.created_by, u.created_date, u.is_active " +
                    "FROM user_master u " +
                    "LEFT JOIN employee_department_master e ON u.employee_id = e.employee_id " +
-                   "LEFT JOIN USER_ROLE_MASTER urm ON u.user_id = urm.USERID " +
-                   "LEFT JOIN ROLE_MASTER rm ON urm.ROLEID = rm.ROLEID " +
+                   "LEFT JOIN user_role_master urm ON u.user_id = urm.USERID " +
+                   "LEFT JOIN role_master rm ON urm.ROLEID = rm.ROLEID " +
                    "WHERE (LOWER(u.user_name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                    "   OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
                    "   OR LOWER(u.mobile_number) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -55,8 +55,8 @@ public interface UserMasterRepository extends JpaRepository<UserMaster, Integer>
                    "u.created_by, u.created_date, u.is_active " +
                    "FROM user_master u " +
                    "LEFT JOIN employee_department_master e ON u.employee_id = e.employee_id " +
-                   "LEFT JOIN USER_ROLE_MASTER urm ON u.user_id = urm.USERID " +
-                   "LEFT JOIN ROLE_MASTER rm ON urm.ROLEID = rm.ROLEID " +
+                   "LEFT JOIN user_role_master urm ON u.user_id = urm.USERID " +
+                   "LEFT JOIN role_master rm ON urm.ROLEID = rm.ROLEID " +
                    "GROUP BY u.user_id, u.user_name, u.email, u.mobile_number, u.employee_id, " +
                    "e.employee_name, u.created_by, u.created_date, u.is_active " +
                    "ORDER BY u.user_id DESC",
@@ -76,8 +76,8 @@ public interface UserMasterRepository extends JpaRepository<UserMaster, Integer>
     // Find user by role name and employee location (for location-based workflow routing).
     // Prefers exact location match; falls back to employees with location = 'ALL'.
     @Query(value = "SELECT u.* FROM user_master u " +
-                   "JOIN USER_ROLE_MASTER urm ON u.user_id = urm.USERID " +
-                   "JOIN ROLE_MASTER rm ON urm.ROLEID = rm.ROLEID " +
+                   "JOIN user_role_master urm ON u.user_id = urm.USERID " +
+                   "JOIN role_master rm ON urm.ROLEID = rm.ROLEID " +
                    "JOIN employee_department_master e ON u.employee_id = e.employee_id " +
                    "WHERE LOWER(TRIM(rm.ROLENAME)) = LOWER(TRIM(:roleName)) " +
                    "AND (LOWER(TRIM(e.location)) = LOWER(TRIM(:location)) OR UPPER(TRIM(e.location)) = 'ALL') " +

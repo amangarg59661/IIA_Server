@@ -11,7 +11,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 @Entity
-@Table(name = "USER_ROLE_MASTER")
+@Table(name = "user_role_master")
 @Data
 @EntityListeners(AuditingEntityListener.class)
 public class UserRoleMaster {

@@ -771,7 +771,7 @@ export const CpDetails =(formData = {}, lovData = {}) => [
       name: "unitPrice",
       label: "Unit Price",
       type: "text",
-      disabled: true,
+      // disabled: true,
     },
     {
       name: "currency",
@@ -952,7 +952,7 @@ export const CpDetails =(formData = {}, lovData = {}) => [
       label: "Upload Copy of Invoice",
       type: "uploadFiles", //should be a multiple file upload field (.png, .jpeg, .pdf, .doc, etc. )
       fileType: "CP",
-     // required: true,
+     required: true,
     },
   ],
 },
