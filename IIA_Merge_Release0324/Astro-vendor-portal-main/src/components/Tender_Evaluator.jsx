@@ -21,6 +21,7 @@ const TenderEvaluator = ({ tenderId, actionStatus, onSubmitSuccess }) => {
 
   //const { userId } = useSelector(state => state.auth);
   const vendorId = useSelector((state) => state.auth.vendorId);
+  const token = useSelector((state) => state.auth.token);
   console.log("Vendor ID from Redux:", vendorId);
   
   const navigate = useNavigate();
@@ -375,11 +376,24 @@ const handleFileChange = (docName, fileData) => {
     }
   };
 
-  const handleOpenTenderFormat = () => {
-  const url = `${baseURL}/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
-  window.open(url, "_blank");
+//   const handleOpenTenderFormat = () => {
+//   const url = `${baseURL}/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
+//   window.open(url, "_blank");
+// };
+const handleOpenTenderFormat = async () => {
+  try {
+    const response = await axios.get(`${baseURL}/data/tender-format`, {
+      params: { tenderId: tenderNumber, version: tenderVersion, vendorId },
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob',
+    });
+    const fileURL = URL.createObjectURL(response.data);
+    window.open(fileURL, "_blank");
+  } catch (err) {
+    console.error("Failed to open tender format:", err);
+    message.error("Could not load tender format");
+  }
 };
-
   
 
   return (
@@ -411,7 +425,7 @@ const handleFileChange = (docName, fileData) => {
         setSelectedRecord({ requestId: tenderId, workflowId: 4 });
 
         try {
-          const response = await axios.get(`/api/tender-requests/byid`,{params: {tenderId: tenderNumber, version: tenderVersion}});
+          const response = await axios.get(`/api/tender-requests/byId`,{params: {tenderId: tenderNumber, version: tenderVersion}});
           setDetailsData(response.data.responseData);
         } catch (err) {
           console.error("Failed to fetch tender details:", err);
