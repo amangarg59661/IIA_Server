@@ -672,7 +672,7 @@
 
 
 
-export const CpDetails =(formData = {}, lovData = {}) => [
+export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
    {
             heading: "Search Indent",
             colCnt: 2,
@@ -729,7 +729,268 @@ export const CpDetails =(formData = {}, lovData = {}) => [
     },
   ],
 },
-{
+// {
+//   heading: "Material Details",
+//   name: "materialDetails",
+//   addButton: true,
+//   colCnt: 8,
+//   children: [
+//     // Update materialCode field options to be populated dynamically
+//     {
+//       name: "materialCode",
+//       label: "Material Code",
+//       type: "select",
+//       span: 2,
+//       required: true,
+//       showSearch: true,   // local filtering as user types — options are pre-loaded on mount
+//       options: [],        // populated via hydratedCpDetails → materialOptions state
+//     },
+
+//     {
+//       name: "materialDescription",
+//       label: "Description",
+//       type: "text",       // read-only, auto-filled when materialCode is selected
+//       span: 2,
+//       required: true,
+//       disabled: true,
+//     },
+//     {
+//       name: "uom",
+//       label: "UOM",
+//       type: "text",
+//       required: true,
+//       disabled: true,
+//     },
+//     {
+//       name: "quantity",
+//       label: "Quantity",
+//       type: "text",
+//       required: true,
+//     },
+//     {
+//       name: "unitPrice",
+//       label: "Unit Price",
+//       type: "text",
+//       // disabled: true,
+//     },
+//     {
+//       name: "currency",
+//       label: "Currency",
+//       type: "text",
+//       required: true,
+//       span: 1,
+//       disabled: true,
+//     },
+//     {
+//       name: "gst",
+//       label: "GST (%)",
+//       type: "select",
+//       required: true,
+//       span: 2,
+//       options: (lovData.gstPercentageLOV || []).map(lov => ({
+//         label: lov.lovDisplayValue,
+//         value: lov.lovValue
+//       }))
+//     },
+//     {
+//       name: "budgetCode",
+//       label: "Budget Code",
+//       type: "select",
+//       required: true,
+//       span: 2,
+//       options: lovData.budgetCodeLOV?.length > 0
+//         ? lovData.budgetCodeLOV.map(lov => ({
+//             label: lov.lovDisplayValue,
+//             value: lov.lovValue
+//           }))
+//         : [
+//           { value: "Capital", label: "Capital" },
+//           { value: "Consumable", label: "Consumable" },
+//           { value: "Instrument and Accessories", label: "Instrument and Accessories" },
+//         ],
+//     },
+//     {
+//       name: "materialCategory",
+//       label: "Material Category",
+//       type: "select",
+//       span: 2,
+//       options: (lovData.materialCategoryLOV || []).map(lov => ({
+//         label: lov.lovDisplayValue,
+//         value: lov.lovValue
+//       }))
+//     },
+//     {
+//       name: "materialSubCategory",
+//       label: "Material Sub Category",
+//       type: "select",
+//       span: 2,
+//       options: (lovData.materialSubCategoryLOV || []).map(lov => ({
+//         label: lov.lovDisplayValue,
+//         value: lov.lovValue
+//       }))
+//     },
+//    /* {
+//       name: "modeOfProcurement",
+//       label: "Mode of Procurement",
+//       type: "select",
+//       span: 3,
+//       options: [
+//         {
+//           value: "GEM",
+//           label: "GEM",
+//         },
+//         {
+//           value: "Brand PAC",
+//           label: "Brand PAC",
+//         },
+//         {
+//           value: "Proprietary/Single Tender",
+//           label: "Proprietary/Single Tender",
+//         },
+//         {
+//           value: "Open Tender",
+//           label: "Open Tender",
+//         },
+//         {
+//           value: "Global Tender",
+//           label: "Global Tender",
+//         },
+//       ],
+//     },*/
+    
+//     {
+//       name: "totalPrice",
+//       label: "Total Price",
+//       type: "text",
+//       span: 2,
+//       disabled: true,
+//     },
+//     {
+//       name: "countryOfOrigin",
+//       label: "Country of Origin",
+//       type: "select",
+//       required: true,
+//       span: 2,
+//       options: (lovData.countryOfOriginLOV || []).map(lov => ({
+//         label: lov.lovDisplayValue,
+//         value: lov.lovValue
+//       })),
+//     }
+//   ],
+// },
+...(cpType === "job" ? [{
+  heading: "Job Details",
+  name: "jobDetails",
+  addButton: true,
+  colCnt: 8,
+  children: [
+    {
+      name: "jobCode",
+      label: "Job Code",
+      type: "text",
+      span: 2,
+      required: true,
+    },
+    {
+      name: "jobDescription",
+      label: "Job Description",
+      type: "text",
+      span: 2,
+      required: true,
+    },
+    {
+      name: "uom",
+      label: "UOM",
+      type: "text",
+      required: true,
+    },
+    {
+      name: "quantity",
+      label: "Quantity",
+      type: "text",
+      required: true,
+    },
+    {
+      name: "estimatedPrice",
+      label: "Estimated Price",
+      type: "text",
+    },
+    {
+      name: "currency",
+      label: "Currency",
+      type: "text",
+      required: true,
+      span: 1,
+      disabled: true,
+    },
+    {
+      name: "gst",
+      label: "GST (%)",
+      type: "select",
+      required: true,
+      span: 2,
+      options: (lovData.gstPercentageLOV || []).map(lov => ({
+        label: lov.lovDisplayValue,
+        value: lov.lovValue
+      }))
+    },
+    {
+      name: "budgetCode",
+      label: "Budget Code",
+      type: "select",
+      required: true,
+      span: 2,
+      options: lovData.budgetCodeLOV?.length > 0
+        ? lovData.budgetCodeLOV.map(lov => ({
+            label: lov.lovDisplayValue,
+            value: lov.lovValue
+          }))
+        : [
+          { value: "Capital", label: "Capital" },
+          { value: "Consumable", label: "Consumable" },
+          { value: "Instrument and Accessories", label: "Instrument and Accessories" },
+        ],
+    },
+    {
+      name: "jobCategory",
+      label: "Job Category",
+      type: "select",
+      span: 2,
+      options: (lovData.materialCategoryLOV || []).map(lov => ({
+        label: lov.lovDisplayValue,
+        value: lov.lovValue
+      }))
+    },
+    {
+      name: "jobSubCategory",
+      label: "Job Sub Category",
+      type: "select",
+      span: 2,
+      options: (lovData.materialSubCategoryLOV || []).map(lov => ({
+        label: lov.lovDisplayValue,
+        value: lov.lovValue
+      }))
+    },
+    {
+      name: "totalPrice",
+      label: "Total Price",
+      type: "text",
+      span: 2,
+      disabled: true,
+    },
+    {
+      name: "countryOfOrigin",
+      label: "Country of Origin",
+      type: "select",
+      required: true,
+      span: 2,
+      options: (lovData.countryOfOriginLOV || []).map(lov => ({
+        label: lov.lovDisplayValue,
+        value: lov.lovValue
+      })),
+    }
+  ],
+}] : [{
   heading: "Material Details",
   name: "materialDetails",
   addButton: true,
@@ -829,35 +1090,6 @@ export const CpDetails =(formData = {}, lovData = {}) => [
         value: lov.lovValue
       }))
     },
-   /* {
-      name: "modeOfProcurement",
-      label: "Mode of Procurement",
-      type: "select",
-      span: 3,
-      options: [
-        {
-          value: "GEM",
-          label: "GEM",
-        },
-        {
-          value: "Brand PAC",
-          label: "Brand PAC",
-        },
-        {
-          value: "Proprietary/Single Tender",
-          label: "Proprietary/Single Tender",
-        },
-        {
-          value: "Open Tender",
-          label: "Open Tender",
-        },
-        {
-          value: "Global Tender",
-          label: "Global Tender",
-        },
-      ],
-    },*/
-    
     {
       name: "totalPrice",
       label: "Total Price",
@@ -877,7 +1109,7 @@ export const CpDetails =(formData = {}, lovData = {}) => [
       })),
     }
   ],
-},
+}]),
 {
   heading: "Vendor Details",
   colCnt: 4,
@@ -989,7 +1221,8 @@ export const CpDetails =(formData = {}, lovData = {}) => [
     {
       name: "declarationOne",
       type: "checkboxWithLabelText",
-      label: `I, hereby declare that the proposed procurement of ${formData.materialDetails?.[0]?.materialDescription || '[Description of Goods/Services/Works]'} complies with the Government of India's Order (Public Procurement No. 1), dated July 23, 2020. The goods/services originate from ${formData.materialDetails?.[0]?.countryOfOrigin || '[Country of Origin]'}, and the supplier ${formData.vendorName || '[Supplier Name]'} is registered with the DPIIT's Competent Authority for supplying goods/services from ${formData.materialDetails?.[0]?.countryOfOrigin || '[Country]'}, if applicable. I confirm that all necessary due diligence has been conducted to ensure compliance with the said order.`,
+      // label: `I, hereby declare that the proposed procurement of ${formData.materialDetails?.[0]?.materialDescription || '[Description of Goods/Services/Works]'} complies with the Government of India's Order (Public Procurement No. 1), dated July 23, 2020. The goods/services originate from ${formData.materialDetails?.[0]?.countryOfOrigin || '[Country of Origin]'}, and the supplier ${formData.vendorName || '[Supplier Name]'} is registered with the DPIIT's Competent Authority for supplying goods/services from ${formData.materialDetails?.[0]?.countryOfOrigin || '[Country]'}, if applicable. I confirm that all necessary due diligence has been conducted to ensure compliance with the said order.`,
+      label: `I, hereby declare that the proposed procurement of ${(cpType === "job" ? formData.jobDetails?.[0]?.jobDescription : formData.materialDetails?.[0]?.materialDescription) || '[Description of Goods/Services/Works]'} complies with the Government of India's Order (Public Procurement No. 1), dated July 23, 2020. The goods/services originate from ${(cpType === "job" ? formData.jobDetails?.[0]?.countryOfOrigin : formData.materialDetails?.[0]?.countryOfOrigin) || '[Country of Origin]'}, and the supplier ${formData.vendorName || '[Supplier Name]'} is registered with the DPIIT's Competent Authority for supplying goods/services from ${(cpType === "job" ? formData.jobDetails?.[0]?.countryOfOrigin : formData.materialDetails?.[0]?.countryOfOrigin) || '[Country]'}, if applicable. I confirm that all necessary due diligence has been conducted to ensure compliance with the said order.`,
       span: 2,
       required: true
     },

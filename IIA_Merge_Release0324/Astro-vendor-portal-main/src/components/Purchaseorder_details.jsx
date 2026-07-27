@@ -11,25 +11,48 @@ const PurchaseOrderDetails = ({ tenderId }) => {
   const [orderData, setOrderData] = useState(null);
   const [loading, setLoading] = useState(true);
  const vendorId = useSelector((state) => state.auth.vendorId);
-  useEffect(() => {
-    const fetchPurchaseOrderDetails = async () => {
-      try {
-        const res = await axios.get(`/api/vendor-master/approvedVendorData`,{params: {tenderID:tenderId}});
-        if (res.data.responseStatus.statusCode === 0) {
-          setOrderData(res.data.responseData);
-        } else {
-          message.error('Failed to fetch purchase order details');
-        }
-      } catch (error) {
-        console.error('Error fetching purchase order details:', error);
-        message.error('An error occurred while fetching purchase order details');
-      } finally {
-        setLoading(false);
-      }
-    };
+   const token = useSelector((state) => state.auth.token);
+  // useEffect(() => {
+  //   const fetchPurchaseOrderDetails = async () => {
+  //     try {
+  //       const res = await axios.get(`/api/vendor-master/approvedVendorData`,{params: {tenderID:tenderId}});
+  //       if (res.data.responseStatus.statusCode === 0) {
+  //         setOrderData(res.data.responseData);
+  //       } else {
+  //         message.error('Failed to fetch purchase order details');
+  //       }
+  //     } catch (error) {
+  //       console.error('Error fetching purchase order details:', error);
+  //       message.error('An error occurred while fetching purchase order details');
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    fetchPurchaseOrderDetails();
-  }, [tenderId]);
+  //   fetchPurchaseOrderDetails();
+  // }, [tenderId]);
+  useEffect(() => {
+  const fetchPurchaseOrderDetails = async () => {
+    try {
+      const res = await axios.get(`/api/vendor-master/approvedVendorData`, {
+        params: { tenderID: tenderId },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.responseStatus.statusCode === 0) {
+        setOrderData(res.data.responseData);
+      } else {
+        message.error('Failed to fetch purchase order details');
+      }
+    } catch (error) {
+      console.error('Error fetching purchase order details:', error);
+      message.error('An error occurred while fetching purchase order details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchPurchaseOrderDetails();
+}, [tenderId]);
 
   if (loading) return <Spin tip="Loading Purchase Order..." />;
 
@@ -41,15 +64,48 @@ const PurchaseOrderDetails = ({ tenderId }) => {
       </FormContainer>
     );
   }
-  const handleOpenTenderFormat = () => {
-  const url = `${baseURL}/data/tender-format?tenderId=${tenderId}&vendorId=${vendorId}`;
-  window.open(url, '_blank');
+//   const handleOpenTenderFormat = () => {
+//   const url = `${baseURL}/data/tender-format?tenderId=${tenderId}&vendorId=${vendorId}`;
+//   window.open(url, '_blank');
+// };
+
+
+// const handleOpenPoFormat = () => {
+//    const poId = 'PO' + tenderId.substring(1);
+//   const url = `${baseURL}/data/po-format?poId=${poId}`;
+//   window.open(url, '_blank');
+// };
+const handleOpenTenderFormat = async () => {
+  try {
+    const response = await axios.get(`${baseURL}/data/tender-format`, {
+      params: { tenderId, vendorId }, // dropped bogus tenderVersion
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob',
+    });
+    const fileURL = URL.createObjectURL(response.data);
+    window.open(fileURL, "_blank");
+  } catch (err) {
+    console.error("Failed to open tender format:", err);
+    message.error("Could not load tender format");
+  }
 };
-const handleOpenPoFormat = () => {
-   const poId = 'PO' + tenderId.substring(1);
-  const url = `${baseURL}/data/po-format?poId=${poId}`;
-  window.open(url, '_blank');
+
+const handleOpenPoFormat = async () => {
+  try {
+    const poId = 'PO' + tenderId.substring(1);
+    const response = await axios.get(`${baseURL}/data/po-format`, {
+      params: { poId }, // single source of query param now
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: 'blob',
+    });
+    const fileURL = URL.createObjectURL(response.data);
+    window.open(fileURL, "_blank");
+  } catch (err) {
+    console.error("Failed to open po format:", err);
+    message.error("Could not load po format");
+  }
 };
+   
 
   const {
     tenderNumber,

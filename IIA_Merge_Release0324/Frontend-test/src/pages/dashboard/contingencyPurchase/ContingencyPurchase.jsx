@@ -891,7 +891,7 @@ const ContingencyPurchase = () => {
 
   // Form data state
   const [formData, setFormData] = useState({ materialDetails: [{}] });
-
+const [cpType, setCpType] = useState('material');
   const [cpLimit, setCpLimit] = useState(50000);
 
   // ✅ Fetch dropdown values from LOV system (Form ID: 2 - ContingencyPurchase)
@@ -1056,7 +1056,15 @@ const calculateTotalPrice = (quantity, unitPrice, gst = 0) => {
 };
 
 
- 
+ const handleCpTypeChange = (value) => {
+    setCpType(value);
+    setFormData(prev => ({
+      ...prev,
+      cpType: value,
+      materialDetails: value === 'material' ? [{}] : [],
+      jobDetails: value === 'job' ? [{}] : [],
+    }));
+  };
   
 
   const handleChange = (name, value) => {
@@ -1147,6 +1155,39 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
           return { ...prev, materialDetails: updatedMaterials };
         });
       }
+        if (section === 'jobDetails') {
+        setFormData(prev => {
+          const updatedJobs = [...(prev.jobDetails || [])];
+          const currentJob = updatedJobs[index] || {};
+
+          if (field === 'quantity' || field === 'estimatedPrice' || field === 'gst') {
+            const quantity = field === 'quantity' ? value : currentJob.quantity || 0;
+            const estimatedPrice = field === 'estimatedPrice' ? value : currentJob.estimatedPrice || 0;
+            const gst = field === 'gst' ? value : currentJob.gst || 0;
+
+            const total = calculateTotalPrice(quantity, estimatedPrice, gst);
+
+            if (total > cpLimit) {
+              message.warning(`Total price including GST cannot exceed ₹${cpLimit.toLocaleString('en-IN')}`);
+              return prev;
+            }
+
+            updatedJobs[index] = {
+              ...currentJob,
+              [field]: value,
+              totalPrice: total,
+              gst: gst,
+            };
+          } else {
+            updatedJobs[index] = {
+              ...currentJob,
+              [field]: value,
+            };
+          }
+
+          return { ...prev, jobDetails: updatedJobs };
+        });
+      }
     } else {
       // Intercept projectName — fetch project-specific budget codes and reset budgetCode
       if (name === 'projectName') {
@@ -1161,8 +1202,6 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
  /* const calculateTotalPrice = (quantity, unitPrice) => {
     return (quantity || 0) * (unitPrice || 0);
   };*/
-  
-
   const buildCpPayload = () => {
     const cpMaterials = (formData.materialDetails || []).map(material => ({
       materialCode: material.materialCode,
@@ -1178,15 +1217,57 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
       gst: material.gst,
       countryOfOrigin: material.countryOfOrigin,
     }));
+    const cpJobDetails = (formData.jobDetails || []).map(job => ({
+      jobCode: job.jobCode,
+      jobDescription: job.jobDescription,
+      quantity: job.quantity,
+      estimatedPrice: job.estimatedPrice,
+      uom: job.uom,
+      totalPrice: job.totalPrice,
+      budgetCode: job.budgetCode,
+      jobCategory: job.jobCategory,
+      jobSubCategory: job.jobSubCategory,
+      currency: job.currency,
+      gst: job.gst,
+      countryOfOrigin: job.countryOfOrigin,
+    }));
     const payload = {
       ...formData,
       createdBy: actionPerformer,
       fileType: "CP",
-      cpMaterials
+      cpType,
+      cpMaterials: cpType === 'job' ? [] : cpMaterials,
+      cpJobDetails: cpType === 'job' ? cpJobDetails : [],
     };
     delete payload.materialDetails;
+    delete payload.jobDetails;
     return payload;
   };
+
+  // const buildCpPayload = () => {
+  //   const cpMaterials = (formData.materialDetails || []).map(material => ({
+  //     materialCode: material.materialCode,
+  //     materialDescription: material.materialDescription,
+  //     quantity: material.quantity,
+  //     unitPrice: material.unitPrice,
+  //     uom: material.uom,
+  //     totalPrice: material.totalPrice,
+  //     budgetCode: material.budgetCode,
+  //     materialCategory: material.materialCategory,
+  //     materialSubCategory: material.materialSubCategory,
+  //     currency: material.currency,
+  //     gst: material.gst,
+  //     countryOfOrigin: material.countryOfOrigin,
+  //   }));
+  //   const payload = {
+  //     ...formData,
+  //     createdBy: actionPerformer,
+  //     fileType: "CP",
+  //     cpMaterials
+  //   };
+  //   delete payload.materialDetails;
+  //   return payload;
+  // };
 
   const handleSaveDraft = async () => {
     try {
@@ -1222,26 +1303,54 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
     }
   };
 
+  // const onFinish = async () => {
+  // // Add validation before submission
+  // if (!formData.materialDetails || formData.materialDetails.length === 0) {
+  //   message.error("Please add at least one material detail.");
+  //   return;
+  // }
+  //  if (!formData.declarationOne || !formData.declarationTwo) {
+  //   message.error("Please accept both declarations to submit.");
+  //   return;
+  // }
+  // const grandTotal = formData.materialDetails.reduce((sum, material) => {
+  //   return sum + (material.totalPrice || 0);
+  // }, 0);
+
+  // if (grandTotal > cpLimit) {
+  //   message.error(`Total value of all materials (including GST) must not exceed ₹${cpLimit.toLocaleString('en-IN')}.`);
+  //   return;
+  // }
+  // const hasChinaOrigin = formData.materialDetails.some(
+  //   (material) => material.countryOfOrigin?.toLowerCase() === "china"
+  // );
+
+  // if (hasChinaOrigin) {
+  //   message.error("Procurement from China is not allowed.");
+  //   return;
+  // }
   const onFinish = async () => {
-  // Add validation before submission
-  if (!formData.materialDetails || formData.materialDetails.length === 0) {
-    message.error("Please add at least one material detail.");
+  // Add validation before submission — branches on cpType
+  const activeLineItems = cpType === 'job' ? (formData.jobDetails || []) : (formData.materialDetails || []);
+
+  if (activeLineItems.length === 0) {
+    message.error(cpType === 'job' ? "Please add at least one job detail." : "Please add at least one material detail.");
     return;
   }
    if (!formData.declarationOne || !formData.declarationTwo) {
     message.error("Please accept both declarations to submit.");
     return;
   }
-  const grandTotal = formData.materialDetails.reduce((sum, material) => {
-    return sum + (material.totalPrice || 0);
+  const grandTotal = activeLineItems.reduce((sum, item) => {
+    return sum + (item.totalPrice || 0);
   }, 0);
 
   if (grandTotal > cpLimit) {
-    message.error(`Total value of all materials (including GST) must not exceed ₹${cpLimit.toLocaleString('en-IN')}.`);
+    message.error(`Total value (including GST) must not exceed ₹${cpLimit.toLocaleString('en-IN')}.`);
     return;
   }
-  const hasChinaOrigin = formData.materialDetails.some(
-    (material) => material.countryOfOrigin?.toLowerCase() === "china"
+  const hasChinaOrigin = activeLineItems.some(
+    (item) => item.countryOfOrigin?.toLowerCase() === "china"
   );
 
   if (hasChinaOrigin) {
@@ -1298,16 +1407,38 @@ else if (field === 'quantity' || field === 'unitPrice' || field === 'gst') {
   }
 };
 
+// const handleSearch = async (value) => {
+//   try {
+//     const { data } = await axios.get(
+//       `/api/contigency-purchase/${value || formData.cpId}`
+//     );
+
+//        setFormData((prev) => ({
+//       ...prev,
+//       ...data?.responseData,
+//       materialDetails: data?.responseData?.cpMaterials || [],
+//     }));
+//   } catch (error) {
+//     message.error(
+//       error?.response?.data?.responseStatus?.message || "Error fetching CP details."
+//     );
+//   }
+// };
+
 const handleSearch = async (value) => {
   try {
     const { data } = await axios.get(
       `/api/contigency-purchase/${value || formData.cpId}`
     );
 
+    const fetchedCpType = data?.responseData?.cpType || 'material';
+    setCpType(fetchedCpType);
        setFormData((prev) => ({
       ...prev,
       ...data?.responseData,
+      cpType: fetchedCpType,
       materialDetails: data?.responseData?.cpMaterials || [],
+      jobDetails: data?.responseData?.cpJobDetails || [],
     }));
   } catch (error) {
     message.error(
@@ -1324,13 +1455,28 @@ const handleSearch = async (value) => {
           params: { userId: actionPerformer },
         });
         const drafts = data?.responseData || [];
+        // if (drafts.length > 0) {
+        //   const latest = drafts[0];
+        //   setFormData((prev) => ({
+        //     ...prev,
+        //     ...latest,
+        //     cpId: latest.contigencyId,
+        //     materialDetails: latest.cpMaterials || [],
+        //     currentStatus: "DRAFT",
+        //   }));
+        //   message.info("Draft loaded from server.");
+        // }
         if (drafts.length > 0) {
           const latest = drafts[0];
+          const latestCpType = latest.cpType || 'material';
+          setCpType(latestCpType);
           setFormData((prev) => ({
             ...prev,
             ...latest,
             cpId: latest.contigencyId,
+            cpType: latestCpType,
             materialDetails: latest.cpMaterials || [],
+            jobDetails: latest.cpJobDetails || [],
             currentStatus: "DRAFT",
           }));
           message.info("Draft loaded from server.");
@@ -1344,9 +1490,136 @@ const handleSearch = async (value) => {
     content: () => printRef.current,
   });
 
-  const addMaterialRow = () => {
-    ;
+  // const addMaterialRow = () => {
+  //   ;
   
+  //   const currentMaterialDetails = formData.materialDetails || [];
+  
+  //   // If materialDetails is empty, allow adding the first row
+  //   if (currentMaterialDetails.length === 0) {
+  //     setFormData({
+  //       ...formData,
+  //       materialDetails: [
+  //         {
+  //           materialCode: '',
+  //           materialDescription: '',
+  //           materialCategory: '',
+  //           materialSubCategory: '',
+  //           uom: '',
+  //           unitPrice: '',
+  //           quantity: '',
+  //           currency: '',
+  //           totalPrice: '',
+  //           gst: '',
+  //           countryOfOrigin:'',
+  //         },
+  //       ],
+  //     });
+  //     return;
+  //   }
+  
+  //   const lastMaterial = currentMaterialDetails[currentMaterialDetails.length - 1];
+  
+  //   // Validate the last row is fully filled
+  //   if (
+  //     !lastMaterial.materialCode ||
+  //     !lastMaterial.materialCategory ||
+  //     !lastMaterial.materialSubCategory ||
+  //     !lastMaterial.uom ||
+  //     !lastMaterial.unitPrice ||
+  //     !lastMaterial.currency ||
+  //     !lastMaterial.totalPrice ||
+  //     !lastMaterial.countryOfOrigin
+  //   ) {
+  //     message.error("Please fill all the fields of the last row before adding a new row");
+  //     return;
+  //   }
+  
+  //   // Append a new empty row
+  //   setFormData(prev => ({
+  //     ...prev,
+  //     materialDetails: [
+  //       ...prev.materialDetails,
+  //       {
+  //         materialCode: '',
+  //         materialDescription: '',
+  //         materialCategory: '',
+  //         materialSubCategory: '',
+  //         uom: '',
+  //         unitPrice: '',
+  //         quantity: '',
+  //         currency: '',
+  //         totalPrice: '',
+  //         gst: '',
+  //         countryOfOrigin:'',
+  //       },
+  //     ],
+  //   }));
+  // };
+  
+  const addMaterialRow = () => {
+    if (cpType === 'job') {
+      const currentJobDetails = formData.jobDetails || [];
+
+      if (currentJobDetails.length === 0) {
+        setFormData({
+          ...formData,
+          jobDetails: [
+            {
+              jobCode: '',
+              jobDescription: '',
+              jobCategory: '',
+              jobSubCategory: '',
+              uom: '',
+              estimatedPrice: '',
+              quantity: '',
+              currency: '',
+              totalPrice: '',
+              gst: '',
+              countryOfOrigin: '',
+            },
+          ],
+        });
+        return;
+      }
+
+      const lastJob = currentJobDetails[currentJobDetails.length - 1];
+
+      if (
+        !lastJob.jobCode ||
+        !lastJob.jobDescription ||
+        !lastJob.uom ||
+        !lastJob.estimatedPrice ||
+        !lastJob.currency ||
+        !lastJob.totalPrice ||
+        !lastJob.countryOfOrigin
+      ) {
+        message.error("Please fill all the fields of the last row before adding a new row");
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        jobDetails: [
+          ...prev.jobDetails,
+          {
+            jobCode: '',
+            jobDescription: '',
+            jobCategory: '',
+            jobSubCategory: '',
+            uom: '',
+            estimatedPrice: '',
+            quantity: '',
+            currency: '',
+            totalPrice: '',
+            gst: '',
+            countryOfOrigin: '',
+          },
+        ],
+      }));
+      return;
+    }
+
     const currentMaterialDetails = formData.materialDetails || [];
   
     // If materialDetails is empty, allow adding the first row
@@ -1411,7 +1684,6 @@ const handleSearch = async (value) => {
     }));
   };
   
-  
 
   useEffect(()=>{
     populateDropdowns();
@@ -1467,21 +1739,41 @@ const hydratedCpDetails = useMemo(() => {
 
   // Resolve country code → label for declaration text only
   // formData itself is NOT mutated — API calls still use the code (e.g. "IN")
-  const firstMaterial = formData.materialDetails?.[0] || {};
+  // const firstMaterial = formData.materialDetails?.[0] || {};
+  // const resolvedCountryName =
+  //   allCountries.find(c => c.value === firstMaterial.countryOfOrigin)?.label
+  //   || firstMaterial.countryOfOrigin
+  //   || '';
+
+  // const formDataForDeclaration = {
+  //   ...formData,
+  //   materialDetails: [
+  //     { ...firstMaterial, countryOfOrigin: resolvedCountryName },
+  //     ...(formData.materialDetails || []).slice(1),
+  //   ],
+  // };
+
+   // Resolve country code → label for declaration text only
+  // formData itself is NOT mutated — API calls still use the code (e.g. "IN")
+  const firstLineItem = (cpType === 'job' ? formData.jobDetails?.[0] : formData.materialDetails?.[0]) || {};
   const resolvedCountryName =
-    allCountries.find(c => c.value === firstMaterial.countryOfOrigin)?.label
-    || firstMaterial.countryOfOrigin
+    allCountries.find(c => c.value === firstLineItem.countryOfOrigin)?.label
+    || firstLineItem.countryOfOrigin
     || '';
 
   const formDataForDeclaration = {
     ...formData,
-    materialDetails: [
-      { ...firstMaterial, countryOfOrigin: resolvedCountryName },
+    materialDetails: cpType === 'job' ? formData.materialDetails : [
+      { ...firstLineItem, countryOfOrigin: resolvedCountryName },
       ...(formData.materialDetails || []).slice(1),
     ],
+    jobDetails: cpType === 'job' ? [
+      { ...firstLineItem, countryOfOrigin: resolvedCountryName },
+      ...(formData.jobDetails || []).slice(1),
+    ] : formData.jobDetails,
   };
 
-  return CpDetails(formDataForDeclaration, lovData).map(section => {
+  return CpDetails(formDataForDeclaration, lovData, cpType).map(section => {
     if (section.fieldList) {
       return {
         ...section,
@@ -1540,7 +1832,7 @@ const hydratedCpDetails = useMemo(() => {
 
     return section;
   });
-}, [formData, projects, vendors, materialOptions, employees, cpIdDropdown, allBudgetCodes, projectBudgetCodes, allCountries, gstPercentageLOV, paymentToLOV, materialCategoryLOV, materialSubCategoryLOV]);
+}, [formData, projects, vendors, materialOptions, employees, cpIdDropdown, allBudgetCodes, projectBudgetCodes, allCountries, gstPercentageLOV, paymentToLOV, materialCategoryLOV, materialSubCategoryLOV,cpType]);
 // const hydratedCpDetails = useMemo(() => {
 //   // ✅ Pass LOV values to CpDetails
 //   const lovData = {
@@ -1629,6 +1921,18 @@ const hydratedCpDetails = useMemo(() => {
           </span>
         </div>
       )}
+      <div style={{ marginBottom: 16, maxWidth: 240 }}>
+        <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>Contingency Type</label>
+        <Select
+          value={cpType}
+          onChange={handleCpTypeChange}
+          disabled={!!formData.cpId}
+          style={{ width: '100%' }}
+        >
+          <Option value="material">Material</Option>
+          <Option value="job">Job</Option>
+        </Select>
+      </div>
       <CustomForm formData={formData} onFinish={onFinish}>
         {renderFormFields(
           hydratedCpDetails,
