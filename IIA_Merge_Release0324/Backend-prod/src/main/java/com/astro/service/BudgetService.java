@@ -4,6 +4,8 @@ import com.astro.entity.ProcurementModule.JobDetails;
 import com.astro.entity.ProcurementModule.MaterialDetails;
 import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.ProcurementModule.PurchaseOrderAttributes;
+import com.astro.entity.ProcurementModule.CpMaterials;
+import com.astro.entity.ProcurementModule.CpJobDetails;
 import java.util.List;
 
 public interface BudgetService {
@@ -45,4 +47,6 @@ void finalizeSOAsSpent(String soId, String tenderId, List<ServiceOrderMaterial> 
 
 // Called on SO rejection — release spent (if finalized), restore indent holds
 void releaseSOSpent(String soId, String tenderId);
+
+void finalizeCpAsSpent(String cpId, List<CpMaterials> materials, List<CpJobDetails> jobs);
 }

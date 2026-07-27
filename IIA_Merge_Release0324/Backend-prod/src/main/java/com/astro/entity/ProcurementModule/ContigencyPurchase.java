@@ -59,6 +59,9 @@ public class ContigencyPurchase {
     @Column(name="current_status")
     private String currentStatus;
 
+     @Column(name = "cp_type")
+    private String cpType;
+
     private String paymentTo;
     private String paymentToVendor;
     private String paymentToEmployee;
@@ -75,6 +78,8 @@ public class ContigencyPurchase {
     private BigDecimal totalCpValue;
     @OneToMany(mappedBy = "contigencyPurchase", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CpMaterials> cpMaterials;
+    @OneToMany(mappedBy = "contigencyPurchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CpJobDetails> cpJobDetails;
 
     @CreatedDate
     private LocalDateTime createdDate;

@@ -4,7 +4,7 @@ import com.astro.constant.AppConstant;
 import com.astro.dto.workflow.ProcurementDtos.*;
 
 import com.astro.entity.ProcurementModule.ContigencyPurchase;
-
+import com.astro.entity.ProcurementModule.CpJobDetails;
 import com.astro.entity.ProcurementModule.CpMaterials;
 import com.astro.entity.WorkflowTransition;
 import com.astro.exception.BusinessException;
@@ -77,21 +77,55 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
             cp.setDate(null);
         }
 
-        List<CpMaterials> materials = contigencyPurchaseDto.getCpMaterials().stream().map(materialDto -> {
-            CpMaterials material = mapper.map(materialDto, CpMaterials.class);
-            // material.setContigencyId(cpId);
-            material.setContigencyPurchase(cp);
-            material.setGst(materialDto.getGst());
-            return material;
-        }).collect(Collectors.toList());
+        cp.setCpType(contigencyPurchaseDto.getCpType());
 
-        cp.setCpMaterials(materials);
-        BigDecimal totalMaterialPrice = materials.stream()
-                .map(CpMaterials::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        cp.setTotalCpValue(totalMaterialPrice);
+        if ("JOB".equalsIgnoreCase(contigencyPurchaseDto.getCpType())) {
+            List<CpJobDetails> jobs = contigencyPurchaseDto.getCpJobDetails().stream().map(jobDto -> {
+                CpJobDetails job = mapper.map(jobDto, CpJobDetails.class);
+                job.setContigencyPurchase(cp);
+                job.setGst(jobDto.getGst());
+                return job;
+            }).collect(Collectors.toList());
+
+            cp.setCpJobDetails(jobs);
+            BigDecimal totalJobPrice = jobs.stream()
+                    .map(CpJobDetails::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            cp.setTotalCpValue(totalJobPrice);
+        } else {
+            List<CpMaterials> materials = contigencyPurchaseDto.getCpMaterials().stream().map(materialDto -> {
+                CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                // material.setContigencyId(cpId);
+                material.setContigencyPurchase(cp);
+                material.setGst(materialDto.getGst());
+                return material;
+            }).collect(Collectors.toList());
+
+            cp.setCpMaterials(materials);
+            BigDecimal totalMaterialPrice = materials.stream()
+                    .map(CpMaterials::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            cp.setTotalCpValue(totalMaterialPrice);
+        }
         CPrepo.save(cp);
+
+        // List<CpMaterials> materials = contigencyPurchaseDto.getCpMaterials().stream().map(materialDto -> {
+        //     CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+        //     // material.setContigencyId(cpId);
+        //     material.setContigencyPurchase(cp);
+        //     material.setGst(materialDto.getGst());
+        //     return material;
+        // }).collect(Collectors.toList());
+
+        // cp.setCpMaterials(materials);
+        // BigDecimal totalMaterialPrice = materials.stream()
+        //         .map(CpMaterials::getTotalPrice)
+        //         .filter(Objects::nonNull)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // cp.setTotalCpValue(totalMaterialPrice);
+        // CPrepo.save(cp);
 
 
 
@@ -258,12 +292,35 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         dto.setPaymentToVendor(contigencyPurchase.getPaymentToVendor());
         dto.setPaymentToEmployee(contigencyPurchase.getPaymentToEmployee());
         dto.setCurrentStatus(contigencyPurchase.getCurrentStatus());
+          dto.setCpType(contigencyPurchase.getCpType());
        // WorkflowTransition wt = workflowTransitionRepository.findTopByRequestIdOrderByWorkflowSequenceDesc(contigencyPurchase.getContigencyId());
       //  dto.setStatus(wt.getStatus());
     //    dto.setProcessStage(wt.getNextRole());
 
+        // // Map list of CpMaterials to CpMaterialsResponseDto
+        // List<CpMaterialResponseDto> materialsDtoList = contigencyPurchase.getCpMaterials().stream()
+        //         .map(material -> {
+        //             CpMaterialResponseDto mDto = new CpMaterialResponseDto();
+        //             mDto.setMaterialCode(material.getMaterialCode());
+        //             mDto.setMaterialDescription(material.getMaterialDescription());
+        //             mDto.setQuantity(material.getQuantity());
+        //             mDto.setUnitPrice(material.getUnitPrice());
+        //             mDto.setUom(material.getUom());
+        //             mDto.setTotalPrice(material.getTotalPrice());
+        //             mDto.setBudgetCode(material.getBudgetCode());
+        //             mDto.setMaterialCategory(material.getMaterialCategory());
+        //             mDto.setMaterialSubCategory(material.getMaterialSubCategory());
+        //             mDto.setCurrency(material.getCurrency());
+        //             mDto.setGst(material.getGst());
+        //             mDto.setCountryOfOrigin(material.getCountryOfOrigin());
+        //             return mDto;
+        //         }).collect(Collectors.toList());
+
+        // dto.setCpMaterials(materialsDtoList);
+
         // Map list of CpMaterials to CpMaterialsResponseDto
-        List<CpMaterialResponseDto> materialsDtoList = contigencyPurchase.getCpMaterials().stream()
+        List<CpMaterialResponseDto> materialsDtoList = (contigencyPurchase.getCpMaterials() == null
+                ? new ArrayList<CpMaterials>() : contigencyPurchase.getCpMaterials()).stream()
                 .map(material -> {
                     CpMaterialResponseDto mDto = new CpMaterialResponseDto();
                     mDto.setMaterialCode(material.getMaterialCode());
@@ -282,6 +339,28 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
                 }).collect(Collectors.toList());
 
         dto.setCpMaterials(materialsDtoList);
+
+        // Map list of CpJobDetails to CpJobResponseDto
+        List<CpJobResponseDto> jobDtoList = (contigencyPurchase.getCpJobDetails() == null
+                ? new ArrayList<CpJobDetails>() : contigencyPurchase.getCpJobDetails()).stream()
+                .map(job -> {
+                    CpJobResponseDto jDto = new CpJobResponseDto();
+                    jDto.setJobCode(job.getJobCode());
+                    jDto.setJobDescription(job.getJobDescription());
+                    jDto.setQuantity(job.getQuantity());
+                    jDto.setEstimatedPrice(job.getEstimatedPrice());
+                    jDto.setUom(job.getUom());
+                    jDto.setTotalPrice(job.getTotalPrice());
+                    jDto.setBudgetCode(job.getBudgetCode());
+                    jDto.setJobCategory(job.getJobCategory());
+                    jDto.setJobSubCategory(job.getJobSubCategory());
+                    jDto.setCurrency(job.getCurrency());
+                    jDto.setGst(job.getGst());
+                    jDto.setCountryOfOrigin(job.getCountryOfOrigin());
+                    return jDto;
+                }).collect(Collectors.toList());
+
+        dto.setCpJobDetails(jobDtoList);
 
         return dto;
 
@@ -322,22 +401,56 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         String date = dto.getDate();
         cp.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
 
-        List<CpMaterials> materials = dto.getCpMaterials() == null
-                ? Collections.emptyList()
-                : dto.getCpMaterials().stream().map(materialDto -> {
-                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
-                    material.setContigencyPurchase(cp);
-                    material.setGst(materialDto.getGst());
-                    return material;
-                }).collect(Collectors.toList());
+        // List<CpMaterials> materials = dto.getCpMaterials() == null
+        //         ? Collections.emptyList()
+        //         : dto.getCpMaterials().stream().map(materialDto -> {
+        //             CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+        //             material.setContigencyPurchase(cp);
+        //             material.setGst(materialDto.getGst());
+        //             return material;
+        //         }).collect(Collectors.toList());
 
-        cp.setCpMaterials(materials);
-        BigDecimal totalMaterialPrice = materials.stream()
-                .map(CpMaterials::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        cp.setTotalCpValue(totalMaterialPrice);
+        // cp.setCpMaterials(materials);
+        // BigDecimal totalMaterialPrice = materials.stream()
+        //         .map(CpMaterials::getTotalPrice)
+        //         .filter(Objects::nonNull)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // cp.setTotalCpValue(totalMaterialPrice);
+cp.setCpType(dto.getCpType());
 
+        if ("JOB".equalsIgnoreCase(dto.getCpType())) {
+            List<CpJobDetails> jobs = dto.getCpJobDetails() == null
+                    ? Collections.emptyList()
+                    : dto.getCpJobDetails().stream().map(jobDto -> {
+                        CpJobDetails job = mapper.map(jobDto, CpJobDetails.class);
+                        job.setContigencyPurchase(cp);
+                        job.setGst(jobDto.getGst());
+                        return job;
+                    }).collect(Collectors.toList());
+
+            cp.setCpJobDetails(jobs);
+            BigDecimal totalJobPrice = jobs.stream()
+                    .map(CpJobDetails::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            cp.setTotalCpValue(totalJobPrice);
+        } else {
+            List<CpMaterials> materials = dto.getCpMaterials() == null
+                    ? Collections.emptyList()
+                    : dto.getCpMaterials().stream().map(materialDto -> {
+                        CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                        material.setContigencyPurchase(cp);
+                        material.setGst(materialDto.getGst());
+                        return material;
+                    }).collect(Collectors.toList());
+
+            cp.setCpMaterials(materials);
+            BigDecimal totalMaterialPrice = materials.stream()
+                    .map(CpMaterials::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            cp.setTotalCpValue(totalMaterialPrice);
+        }
         CPrepo.save(cp);
         return mapToResponseDTO(cp);
     }
@@ -378,24 +491,65 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
 
         String date = dto.getDate();
         existing.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
-
-        existing.getCpMaterials().clear();
+        existing.setCpType(dto.getCpType());
         ModelMapper mapper = new ModelMapper();
-        List<CpMaterials> newMaterials = dto.getCpMaterials() == null
-                ? Collections.emptyList()
-                : dto.getCpMaterials().stream().map(materialDto -> {
-                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
-                    material.setContigencyPurchase(existing);
-                    material.setGst(materialDto.getGst());
-                    return material;
-                }).collect(Collectors.toList());
 
-        existing.getCpMaterials().addAll(newMaterials);
-        BigDecimal totalMaterialPrice = newMaterials.stream()
-                .map(CpMaterials::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        existing.setTotalCpValue(totalMaterialPrice);
+        if (existing.getCpMaterials() == null) existing.setCpMaterials(new ArrayList<>());
+        if (existing.getCpJobDetails() == null) existing.setCpJobDetails(new ArrayList<>());
+        existing.getCpMaterials().clear();
+        existing.getCpJobDetails().clear();
+
+        if ("JOB".equalsIgnoreCase(dto.getCpType())) {
+            List<CpJobDetails> newJobs = dto.getCpJobDetails() == null
+                    ? Collections.emptyList()
+                    : dto.getCpJobDetails().stream().map(jobDto -> {
+                        CpJobDetails job = mapper.map(jobDto, CpJobDetails.class);
+                        job.setContigencyPurchase(existing);
+                        job.setGst(jobDto.getGst());
+                        return job;
+                    }).collect(Collectors.toList());
+
+            existing.getCpJobDetails().addAll(newJobs);
+            BigDecimal totalJobPrice = newJobs.stream()
+                    .map(CpJobDetails::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            existing.setTotalCpValue(totalJobPrice);
+        } else {
+            List<CpMaterials> newMaterials = dto.getCpMaterials() == null
+                    ? Collections.emptyList()
+                    : dto.getCpMaterials().stream().map(materialDto -> {
+                        CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                        material.setContigencyPurchase(existing);
+                        material.setGst(materialDto.getGst());
+                        return material;
+                    }).collect(Collectors.toList());
+
+            existing.getCpMaterials().addAll(newMaterials);
+            BigDecimal totalMaterialPrice = newMaterials.stream()
+                    .map(CpMaterials::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            existing.setTotalCpValue(totalMaterialPrice);
+        }
+
+        // existing.getCpMaterials().clear();
+        // ModelMapper mapper = new ModelMapper();
+        // List<CpMaterials> newMaterials = dto.getCpMaterials() == null
+        //         ? Collections.emptyList()
+        //         : dto.getCpMaterials().stream().map(materialDto -> {
+        //             CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+        //             material.setContigencyPurchase(existing);
+        //             material.setGst(materialDto.getGst());
+        //             return material;
+        //         }).collect(Collectors.toList());
+
+        // existing.getCpMaterials().addAll(newMaterials);
+        // BigDecimal totalMaterialPrice = newMaterials.stream()
+        //         .map(CpMaterials::getTotalPrice)
+        //         .filter(Objects::nonNull)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // existing.setTotalCpValue(totalMaterialPrice);
 
         CPrepo.save(existing);
         return mapToResponseDTO(existing);
@@ -434,23 +588,65 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         String date = dto.getDate();
         existing.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
 
-        existing.getCpMaterials().clear();
+        existing.setCpType(dto.getCpType());
         ModelMapper mapper = new ModelMapper();
-        List<CpMaterials> finalMaterials = dto.getCpMaterials() == null
-                ? Collections.emptyList()
-                : dto.getCpMaterials().stream().map(materialDto -> {
-                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
-                    material.setContigencyPurchase(existing);
-                    material.setGst(materialDto.getGst());
-                    return material;
-                }).collect(Collectors.toList());
 
-        existing.getCpMaterials().addAll(finalMaterials);
-        BigDecimal totalMaterialPrice = finalMaterials.stream()
-                .map(CpMaterials::getTotalPrice)
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        existing.setTotalCpValue(totalMaterialPrice);
+        if (existing.getCpMaterials() == null) existing.setCpMaterials(new ArrayList<>());
+        if (existing.getCpJobDetails() == null) existing.setCpJobDetails(new ArrayList<>());
+        existing.getCpMaterials().clear();
+        existing.getCpJobDetails().clear();
+
+        if ("JOB".equalsIgnoreCase(dto.getCpType())) {
+            List<CpJobDetails> finalJobs = dto.getCpJobDetails() == null
+                    ? Collections.emptyList()
+                    : dto.getCpJobDetails().stream().map(jobDto -> {
+                        CpJobDetails job = mapper.map(jobDto, CpJobDetails.class);
+                        job.setContigencyPurchase(existing);
+                        job.setGst(jobDto.getGst());
+                        return job;
+                    }).collect(Collectors.toList());
+
+            existing.getCpJobDetails().addAll(finalJobs);
+            BigDecimal totalJobPrice = finalJobs.stream()
+                    .map(CpJobDetails::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            existing.setTotalCpValue(totalJobPrice);
+        } else {
+            List<CpMaterials> finalMaterials = dto.getCpMaterials() == null
+                    ? Collections.emptyList()
+                    : dto.getCpMaterials().stream().map(materialDto -> {
+                        CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                        material.setContigencyPurchase(existing);
+                        material.setGst(materialDto.getGst());
+                        return material;
+                    }).collect(Collectors.toList());
+
+            existing.getCpMaterials().addAll(finalMaterials);
+            BigDecimal totalMaterialPrice = finalMaterials.stream()
+                    .map(CpMaterials::getTotalPrice)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            existing.setTotalCpValue(totalMaterialPrice);
+        }
+
+        // existing.getCpMaterials().clear();
+        // ModelMapper mapper = new ModelMapper();
+        // List<CpMaterials> finalMaterials = dto.getCpMaterials() == null
+        //         ? Collections.emptyList()
+        //         : dto.getCpMaterials().stream().map(materialDto -> {
+        //             CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+        //             material.setContigencyPurchase(existing);
+        //             material.setGst(materialDto.getGst());
+        //             return material;
+        //         }).collect(Collectors.toList());
+
+        // existing.getCpMaterials().addAll(finalMaterials);
+        // BigDecimal totalMaterialPrice = finalMaterials.stream()
+        //         .map(CpMaterials::getTotalPrice)
+        //         .filter(Objects::nonNull)
+        //         .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // existing.setTotalCpValue(totalMaterialPrice);
 
         existing.setCurrentStatus(null);
         CPrepo.save(existing);

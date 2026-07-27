@@ -42,6 +42,9 @@ public class OhqMasterConsumableEntity {
     @Column(name = "quantity")
     private BigDecimal quantity;
 
+    @Column(name = "cp_id")
+    private String cpId;
+
     @CreatedBy
     @Column(name = "created_by", length = 50)
     private String createdBy;

@@ -44,6 +44,9 @@ public class OhqMasterEntity {
 
     private String assetCode;
 
+     @Column(name = "cp_id")
+    private String cpId;
+
     @CreatedBy
     @Column(name = "created_by", length = 50)
     private String createdBy;

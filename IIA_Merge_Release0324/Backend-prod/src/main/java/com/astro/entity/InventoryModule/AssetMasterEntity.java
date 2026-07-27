@@ -79,6 +79,9 @@ public class AssetMasterEntity {
     
     @Column(name="grn_no")
     private String grnNumber;
+
+    @Column(name = "cp_id")
+    private String cpId;
     
     @LastModifiedBy
     private String updatedBy;

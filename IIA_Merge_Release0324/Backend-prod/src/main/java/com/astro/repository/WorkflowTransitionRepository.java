@@ -17,6 +17,10 @@ import java.util.Optional;
 @Repository
 public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTransition, Integer> {
     List<WorkflowTransition> findByWorkflowId(Integer workflowId);
+
+    @Query("SELECT wt FROM WorkflowTransition wt WHERE wt.requestId = :baseId OR wt.requestId LIKE CONCAT(:baseId, '/%')")
+    List<WorkflowTransition> findAllVersionsByRequestId(@Param("baseId") String baseId);
+
     WorkflowTransition findByWorkflowIdAndTransitionOrder(Integer workflowId, Integer order);
     List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestIdOrTransitionId(Integer workflowId, String createdBy, Integer requestId, Integer nextTransitionId);
     List<WorkflowTransition> findByWorkflowIdAndCreatedByAndRequestId(

@@ -7,6 +7,7 @@ com\astro\entity\InventoryModule\GrnMaterialMasterEntity.class
 com\astro\dto\workflow\ProcurementDtos\IndentDto\IndentDataResponseDto.class
 com\astro\entity\TenderCommitteeDecision.class
 com\astro\dto\workflow\InventoryModule\isn\IsnReportDto.class
+com\astro\repository\ProcurementModule\CpJobDetailsRepository.class
 com\astro\service\InventoryModule\GprnService.class
 com\astro\dto\workflow\InventoryModule\GatepassResponseDTO.class
 com\astro\service\InventoryModule\DiService.class
@@ -284,6 +285,7 @@ com\astro\dto\workflow\ProcurementDtos\IndentDto\JobDetailsResponseDTO.class
 com\astro\dto\workflow\MaterialMasterResponseDto.class
 com\astro\exception\UnauthorizedException.class
 com\astro\controller\UserController.class
+com\astro\service\impl\InventoryServiceImpl.class
 com\astro\service\impl\WorkOrderImpl.class
 com\astro\dto\workflow\UserRoleDto.class
 com\astro\dto\workflow\ProcurementDtos\CpMaterialRequestDto.class
@@ -360,6 +362,7 @@ com\astro\entity\VendorIdTracker.class
 com\astro\entity\InventoryModule\AssetSerialEntity.class
 com\astro\repository\AdminPanel\DepartmentApproverMappingRepository.class
 com\astro\dto\workflow\CommitteeVendorVoteDto.class
+com\astro\dto\workflow\ProcurementDtos\CpJobResponseDto.class
 com\astro\dto\workflow\InventoryModule\GoodsTransfer\GtDtl.class
 com\astro\repository\DesignationMasterRepository.class
 com\astro\dto\workflow\InventoryModule\igp\IgpMaterialDtlDto.class
@@ -455,6 +458,7 @@ com\astro\controller\ProcurementModuleController\ContigencyPurchaseController.cl
 com\astro\entity\InventoryModule\GoodsReturn.class
 com\astro\service\GoodsTransferService.class
 com\astro\service\impl\ProcessServiceImpl$2.class
+com\astro\entity\ProcurementModule\CpJobDetails.class
 com\astro\entity\InventoryModule\GtMasterEntity.class
 com\astro\dto\workflow\IndentWorkflowStatusDTO$CurrentApproverInfo.class
 com\astro\dto\AdminPanel\DropdownResponseDto.class
@@ -648,6 +652,7 @@ com\astro\dto\workflow\InventoryModule\igp\IgpCombinedDetailDto.class
 com\astro\dto\workflow\InventoryModule\GtDtlDto.class
 com\astro\service\impl\MaterialCreationServiceImpl.class
 com\astro\entity\InventoryModule\AssetMasterEntity.class
+com\astro\dto\workflow\ProcurementDtos\CpJobRequestDto.class
 com\astro\dto\workflow\InventoryModule\ogp\OgpReportDto.class
 com\astro\entity\PaymentVoucherMaterials.class
 com\astro\dto\workflow\InventoryModule\isn\IsnReportDetailDto.class
@@ -680,6 +685,7 @@ com\astro\repository\AuditTrailRepository.class
 com\astro\dto\workflow\InventoryModule\igp\IgpMaterialInDetailReportDto.class
 com\astro\repository\InventoryModule\igp\IgpDetailRepository.class
 com\astro\dto\workflow\AssetDataForGtDto.class
+com\astro\service\InventoryService.class
 com\astro\dto\workflow\MaterialPurchaseHistoryDTO.class
 com\astro\config\DataInitializer.class
 com\astro\dto\workflow\ProcurementDtos\purchaseOrder\MonthlyProcurementReportDto.class

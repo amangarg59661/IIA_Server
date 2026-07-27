@@ -30,5 +30,7 @@ public class ContigencyPurchaseRequestDto {
     private Boolean declarationTwo;
     private String updatedBy;
     private String createdBy;
+    private String cpType;
     private List<CpMaterialRequestDto> cpMaterials;
+    private List<CpJobRequestDto> cpJobDetails;
 }

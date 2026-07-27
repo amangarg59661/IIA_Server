@@ -8,6 +8,8 @@ import com.astro.repository.InventoryModule.grn.GrnConsumableDtlRepository;
 import com.astro.entity.ProcurementModule.JobDetails;
 import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.ProcurementModule.MaterialDetails;
+import com.astro.entity.ProcurementModule.CpMaterials;
+import com.astro.entity.ProcurementModule.CpJobDetails;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
 import com.astro.entity.ProjectMaster;
@@ -1039,6 +1041,87 @@ public void finalizeSOAsSpent(String soId, String tenderId,
 
         System.out.println("✅ [SO FINAL APPROVAL] Budget " + budgetCode
                 + " → Spent↑ by " + amount + " (SO: " + soId + ")");
+    }
+}
+// ─── CP: totals helpers — CP line items already carry a precomputed totalPrice (GST included client-side) ──
+
+private Map<String, BigDecimal> computeCpMaterialTotals(List<CpMaterials> materials) {
+    Map<String, BigDecimal> totals = new HashMap<>();
+    if (materials == null) return totals;
+    for (CpMaterials m : materials) {
+        if (m.getBudgetCode() == null || m.getTotalPrice() == null) continue;
+        totals.merge(m.getBudgetCode(), m.getTotalPrice(), BigDecimal::add);
+    }
+    return totals;
+}
+
+private Map<String, BigDecimal> computeCpJobTotals(List<CpJobDetails> jobs) {
+    Map<String, BigDecimal> totals = new HashMap<>();
+    if (jobs == null) return totals;
+    for (CpJobDetails j : jobs) {
+        if (j.getBudgetCode() == null || j.getTotalPrice() == null) continue;
+        totals.merge(j.getBudgetCode(), j.getTotalPrice(), BigDecimal::add);
+    }
+    return totals;
+}
+
+// ─── CP: FINAL APPROVAL — straight to Spent, no prior hold, no tender link ───
+
+@Override
+@Transactional
+public void finalizeCpAsSpent(String cpId, List<CpMaterials> materials, List<CpJobDetails> jobs) {
+
+    Map<String, BigDecimal> totals = new HashMap<>();
+    computeCpMaterialTotals(materials).forEach((k, v) -> totals.merge(k, v, BigDecimal::add));
+    computeCpJobTotals(jobs).forEach((k, v) -> totals.merge(k, v, BigDecimal::add));
+
+    // ── VALIDATION PASS ──
+    for (Map.Entry<String, BigDecimal> entry : totals.entrySet()) {
+        String budgetCode = entry.getKey();
+        BigDecimal amount = entry.getValue();
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+        BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        400, 4, "Budget Not Found",
+                        "Budget not found for code: " + budgetCode)));
+
+        if (budget.getRemainingAmount().compareTo(amount) < 0) {
+            throw new BusinessException(new ErrorDetails(
+                    400, 4, "Insufficient Budget",
+                    "Cannot finalize CP approval. Insufficient budget for code: " + budgetCode
+                    + ". CP requires: " + amount
+                    + ", Available: " + budget.getRemainingAmount()));
+        }
+    }
+
+    // ── APPLY PASS — straight to Spent, no hold step ──
+    for (Map.Entry<String, BigDecimal> entry : totals.entrySet()) {
+        String budgetCode = entry.getKey();
+        BigDecimal amount = entry.getValue();
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+        BudgetMaster budget = budgetMasterRepository.findByBudgetCode(budgetCode)
+                .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                        400, 4, "Budget Not Found",
+                        "Budget not found for code: " + budgetCode)));
+
+        budget.setSpentAmount(
+                (budget.getSpentAmount() != null ? budget.getSpentAmount() : BigDecimal.ZERO)
+                .add(amount));
+        budgetMasterRepository.save(budget);
+
+        BudgetLedger ledger = new BudgetLedger();
+        ledger.setBudgetCode(budgetCode);
+        ledger.setReferenceId(cpId);
+        ledger.setReferenceType("CP");
+        ledger.setHoldAmount(BigDecimal.ZERO);
+        ledger.setSpentAmount(amount);
+        ledger.setStatus("CONVERTED_TO_SPEND");
+        budgetLedgerRepository.save(ledger);
+
+        System.out.println("✅ [CP FINAL APPROVAL] Budget " + budgetCode
+                + " → Spent↑ by " + amount + " (CP: " + cpId + ")");
     }
 }
 

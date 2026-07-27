@@ -59,7 +59,10 @@ public class WorkflowServiceImpl implements WorkflowService {
     WorkflowTransitionRepository workflowTransitionRepository;
 
     @Autowired
-private BudgetService budgetService;
+    private BudgetService budgetService;
+
+    @Autowired
+    private InventoryService inventoryService;
 
     @Autowired
     WorkflowMasterRepository workflowMasterRepository;
@@ -830,9 +833,12 @@ private BudgetService budgetService;
 
         List<WorkflowTransitionDto> workflowTransitionDtoList = new ArrayList<>();
         List<WorkflowTransition> workflowTransitionList = null;
-        workflowTransitionList = workflowTransitionRepository.findByRequestId(requestId);
+        String baseId = requestId.contains("/") ? requestId.substring(0, requestId.indexOf("/")) : requestId;
+        workflowTransitionList = workflowTransitionRepository.findAllVersionsByRequestId(baseId);
+        // workflowTransitionList = workflowTransitionRepository.findByRequestId(requestId);
         if (Objects.nonNull(workflowTransitionList) && !workflowTransitionList.isEmpty()) {
-            workflowTransitionDtoList = workflowTransitionList.stream().sorted(Comparator.comparing(WorkflowTransition::getWorkflowSequence).reversed()).map(e -> {
+            // workflowTransitionDtoList = workflowTransitionList.stream().sorted(Comparator.comparing(WorkflowTransition::getWorkflowSequence).reversed()).map(e -> {
+            workflowTransitionDtoList = workflowTransitionList.stream().sorted(Comparator.comparing(WorkflowTransition::getWorkflowTransitionId).reversed()).map(e -> {
                 return mapWorkflowTransitionDto(e);
             }).collect(Collectors.toList());
         }
@@ -2077,6 +2083,26 @@ private BudgetService budgetService;
                     });
                 } catch (Exception e) {
                     System.err.println("❌ [SO FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+                    throw e; // Block approval if budget insufficient
+                }
+            }
+             if (reqId != null && reqId.startsWith("CP")) {
+                try {
+                    contigencyPurchaseRepository.findById(reqId).ifPresent(cp -> {
+                        budgetService.finalizeCpAsSpent(
+                                cp.getContigencyId(),
+                                cp.getCpMaterials(),
+                                cp.getCpJobDetails());
+                        System.out.println("✅ [CP FINAL APPROVAL] Budget spent for CP: " + reqId);
+                          if ("MATERIAL".equalsIgnoreCase(cp.getCpType())) {
+                            inventoryService.updateInventoryForCp(cp);
+                            System.out.println("✅ [CP FINAL APPROVAL] Inventory updated for CP: " + reqId);
+                        } else {
+                            System.out.println("ℹ️ [CP FINAL APPROVAL] Job type — inventory update skipped for CP: " + reqId);
+                        }
+                    });
+                } catch (Exception e) {
+                    System.err.println("❌ [CP FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
                     throw e; // Block approval if budget insufficient
                 }
             }
