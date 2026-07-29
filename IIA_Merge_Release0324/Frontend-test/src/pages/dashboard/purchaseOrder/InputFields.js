@@ -27,7 +27,27 @@ const warrantyOptions = [
   })
 ];
 
+// Fallback options used until Form 9 (Tender Request) LOV values load in PO.jsx
+const incoTermsOptionsDefault = [
+  { label: "DAP", value: "DAP" },
+  { label: "EXWORKS", value: "EXWORKS" },
+  { label: "DDP", value: "DDP" },
+  { label: "FCA", value: "FCA" },
+  { label: "FOB", value: "FOB" },
+  { label: "CIF", value: "CIF" },
+  { label: "CIP", value: "CIP" },
+  { label: "DPU", value: "DPU" },
+  { label: "FAS", value: "FAS" },
+  { label: "CFR", value: "CFR" },
+  { label: "FOR", value: "FOR" },
+  { label: "CPT", value: "CPT" },
+  { label: "NA", value: "NA" }
+];
 
+const paymentTermsOptionsDefault = [
+  { label: "100% payment within 30 days from the date of acceptance.", value: "100% payment within 30 days from the date of acceptance." },
+  { label: "Quarterly in advance on submission of invoice (in case of AMCs)", value: "Quarterly in advance on submission of invoice (in case of AMCs)" }
+];
 
 const typeOfSecurityOptions = [
     { label: "Bank Guarantee", value: "Bank Guarantee" },
@@ -240,12 +260,16 @@ export const PoDetails = [
         {
           name: "incoTerms",
           label: "Inco Terms",
-          type: "text",  
+          // type: "text",  
+          type: "select",
+          options: incoTermsOptionsDefault,
         },
         {
           name: "paymentTerms",
           label: "Payment Terms",
-          type: "text",
+          // type: "text",
+          type: "select",
+          options: paymentTermsOptionsDefault,
         },
         {
           name: "applicablePbgToBeSubmitted",
@@ -397,6 +421,23 @@ export const PoDetails = [
             type: "text",
             required: true,
             disabled: true,
+        }
+      ]
+    },
+    {
+      heading: "Additional Info",
+      colCnt: 2,
+      fieldList: [
+        {
+          name: "gemVendorName",
+          label: "Gem Vendor Name",
+          type: "text",
+        },
+        {
+          name: "gemContractDocuments",
+          label: "Gem Contract Documents",
+          type: "multiImage",
+          accept: ".jpg,.jpeg,.png,.gif,.webp,.pdf,.xlsx,.xls,.doc,.docx",
         }
       ]
     }

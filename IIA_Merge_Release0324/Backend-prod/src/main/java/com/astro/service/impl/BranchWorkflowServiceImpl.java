@@ -478,7 +478,10 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
             conditions.put("category", indent.getMaterialCategoryType());
             // Also put materialCategory as alias (frontend branch config may use either key)
             conditions.put("materialCategory", indent.getMaterialCategoryType());
-            conditions.put("location", indent.getConsignesLocation());
+            // conditions.put("location", indent.getConsignesLocation());
+            conditions.put("location", indent.getIndentorLocation() != null
+                    ? indent.getIndentorLocation()
+                    : indent.getConsignesLocation());
             conditions.put("projectName", indent.getProjectName());
 
             // Derive isUnderProject: if explicitly set to true use that,

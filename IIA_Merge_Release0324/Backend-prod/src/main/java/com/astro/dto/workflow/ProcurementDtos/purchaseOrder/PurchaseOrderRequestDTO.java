@@ -52,6 +52,7 @@ public class PurchaseOrderRequestDTO{
         private String quotationDate;
         private String additionalTermsAndConditions;
 
-
+  private String gemVendorName;
+        private List<String> gemContractDocuments;
 
 }

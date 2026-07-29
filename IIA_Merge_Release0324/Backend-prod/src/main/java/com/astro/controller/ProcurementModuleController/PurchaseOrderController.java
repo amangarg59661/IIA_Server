@@ -84,6 +84,14 @@ public ResponseEntity<Object> getUserPoDrafts(@RequestParam Integer userId) {
     List<PurchaseOrderResponseDTO> drafts = poService.getUserPoDrafts(userId);
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(drafts), HttpStatus.OK);
 }
+// [MISC] Gem Vendor Name / Gem Contract Documents — no versioning, no workflow re-init
+@PutMapping("/misc-fields")
+public ResponseEntity<Object> updateMiscFields(
+        @RequestParam String poId,
+        @RequestBody PurchaseOrderRequestDTO dto) {
+    PurchaseOrderResponseDTO response = poService.updateMiscFields(poId, dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
     @PutMapping
     public ResponseEntity<Object> updatePurchaseOrder(
             @RequestParam String poId,

@@ -250,6 +250,7 @@ private String extractBaseIndentId(String indentId) {
                     employeeDepartmentMasterRepository.findByEmployeeId(creatingUser.getEmployeeId())
                             .ifPresent(emp -> {
                                 indentCreation.setIndentorDepartment(emp.getDepartmentName());
+                                 indentCreation.setIndentorLocation(normalizeIndentorLocation(emp.getLocation()));
                                 System.out.println("✅ indentorDepartment set from employee: "
                                         + emp.getDepartmentName() + " (empId=" + emp.getEmployeeId() + ")");
                             });
@@ -512,7 +513,7 @@ public IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto) {
             UserMaster user = userMasterRepository.findByUserId(Integer.valueOf(dto.getCreatedBy()));
             if (user != null && user.getEmployeeId() != null) {
                 employeeDepartmentMasterRepository.findByEmployeeId(user.getEmployeeId())
-                    .ifPresent(emp -> indent.setIndentorDepartment(emp.getDepartmentName()));
+                    .ifPresent(emp -> {indent.setIndentorDepartment(emp.getDepartmentName());  indent.setIndentorLocation(normalizeIndentorLocation(emp.getLocation()));});
             }
         } catch (Exception e) {
             System.err.println("Could not resolve indentorDepartment: " + e.getMessage());
@@ -1006,7 +1007,8 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
             UserMaster creatingUser = userMasterRepository.findByUserId(Integer.valueOf(old.getCreatedBy()));
             if (creatingUser != null && creatingUser.getEmployeeId() != null) {
                 employeeDepartmentMasterRepository.findByEmployeeId(creatingUser.getEmployeeId())
-                        .ifPresent(emp -> newIndent.setIndentorDepartment(emp.getDepartmentName()));
+                        .ifPresent(emp -> {newIndent.setIndentorDepartment(emp.getDepartmentName());
+                         newIndent.setIndentorLocation(normalizeIndentorLocation(emp.getLocation()));});
             }
         } catch (Exception e) {
             System.err.println("Could not resolve indentorDepartment: " + e.getMessage());
@@ -1399,6 +1401,10 @@ public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) 
         ));
         return mapToResponseDTO(indentCreation);
     }
+    // "ALL" is a placeholder value on some employee records — treat as Bangalore for routing.
+private String normalizeIndentorLocation(String rawLocation) {
+    return "ALL".equalsIgnoreCase(rawLocation) ? "Bangalore" : rawLocation;
+}
 
     @Override
     public IndentDataResponseDto getIndentDataById(String indentId) throws IOException {
@@ -1817,6 +1823,7 @@ jobResponse.setVendorNames(vendorNamesList);
 
         // Set consigne location directly from entity - DO NOT MODIFY
         response.setConsignesLocation(indentCreation.getConsignesLocation());
+        response.setIndentorLocation(indentCreation.getIndentorLocation());
 
         BigDecimal totalPriceOfAllMaterials = BigDecimal.ZERO;
 

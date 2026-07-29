@@ -136,6 +136,7 @@
                     indentorMobileNo: '',
                     indentorEmailAddress: '',
                     indentorDepartment: '',
+                    indentorLocation: '',
                     projectName: "",
                     consignesLocation: "",
                     materialDetails: [{}],
@@ -154,6 +155,7 @@
                 indentorMobileNo: '', // ✅ Will be auto-filled from employee table via API
                 indentorEmailAddress: '', // ✅ Will be auto-filled from employee table via API
                 indentorDepartment: '', // ✅ Will be auto-filled from employee table via API
+                indentorLocation: '', // ✅ Will be auto-filled from employee table via API
                 projectName: "",
                 projectCode: "", // NEW: Project code for workflow routing
                 consignesLocation: "",
@@ -310,6 +312,7 @@
         fileType: "Indent",
         createdBy: userId,
         employeeDepartment: formData.indentorDepartment,
+        employeeLocation: formData.indentorLocation,
         materialDetails: indentType === "material" ? formData.materialDetails : null,
         jobDetails: indentType === "job" ? formData.jobDetails : null,
         modeOfProcurement: selectedModeOfProcurement || formData.modeOfProcurement,
@@ -439,7 +442,8 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                     setFormData({
                         ...formData,
                         indentorName: indentorName,
-                        indentorDepartment: ''
+                        indentorDepartment: '',
+                        indentorLocation: '',
                     });
                     setDepartmentPriceLimit(null);
                     return;
@@ -450,7 +454,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                 setFormData({
                     ...formData,
                     indentorName: indentorName,
-                    indentorDepartment: department
+                    indentorDepartment: department,
                 });
     
                 if (!department) {
@@ -1188,6 +1192,13 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             label: "Department",
                             type: "text",
                             required: true,
+                            disabled: true, // ✅ Auto-filled from employee table, read-only
+                        },
+                        {
+                            name: "indentorLocation",
+                            label: "Indentor Location",
+                            type: "text",
+                            // required: true,
                             disabled: true, // ✅ Auto-filled from employee table, read-only
                         }
                     ]

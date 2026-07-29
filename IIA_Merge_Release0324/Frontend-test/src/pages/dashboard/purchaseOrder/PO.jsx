@@ -20,6 +20,8 @@ const PO = () => {
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
   // [DRAFT] loading state for the Save Draft button
   const [draftBtnLoading, setDraftBtnLoading] = useState(false);
+  // [MISC] loading state for the Gem Vendor/Contract mini-save button
+  const [miscBtnLoading, setMiscBtnLoading] = useState(false);
   const [generatedPOId, setGeneratedPOId] = useState("");
   const [poIdDropdown, setPoIdDropdown] = useState([]);
   const [searchDone, setSearchDone] = useState(false);
@@ -53,7 +55,9 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   const { lovValues: deliveryPeriodLOV, loading: loadingDeliveryPeriod } = useLOVValues(8, 'deliveryPeriod');
   const { lovValues: warrantyLOV, loading: loadingWarranty } = useLOVValues(8, 'warranty');
   const { lovValues: pbgLOV, loading: loadingPbg } = useLOVValues(8, 'applicablePbgToBeSubmitted'); 
-
+// ✅ Inco Terms / Payment Terms reuse the Tender Request LOV list (Form ID: 9)
+  const { lovValues: incoTermsLOV, loading: loadingIncoTerms } = useLOVValues(9, 'incoTerms');
+  const { lovValues: paymentTermsLOV, loading: loadingPaymentTerms } = useLOVValues(9, 'paymentTerms');
   // Fetch initial data
   const populateDropdowns = async () => {
     try {
@@ -318,6 +322,23 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
                 : field.options
             };
           }
+          if (field.name === "incoTerms") {
+            return {
+              ...field,
+              options: incoTermsLOV.length > 0
+                ? incoTermsLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
+                : field.options
+            };
+          }
+
+          if (field.name === "paymentTerms") {
+            return {
+              ...field,
+              options: paymentTermsLOV.length > 0
+                ? paymentTermsLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
+                : field.options
+            };
+          }
 
           return field;
         }),
@@ -501,6 +522,45 @@ updated[index].estimatedItemTotal = (
       );
     } finally {
       setDraftBtnLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────
+
+  /**
+   * [MISC] Save Gem Vendor Name + Gem Contract Documents only.
+   * Updates DB in-place — does NOT bump poVersion, does NOT touch
+   * history/workflow. Independent of the main Submit/Update button.
+   */
+  const handleSaveMiscFields = async () => {
+    if (!formData?.poId) {
+      message.warning("Save or submit the PO first before adding Gem details.");
+      return;
+    }
+    try {
+      setMiscBtnLoading(true);
+      const payload = {
+        gemVendorName: formData.gemVendorName,
+        gemContractDocuments: formData.gemContractDocuments,
+        createdBy: actionPerformer,
+        updatedBy: actionPerformer,
+      };
+      const response = await axios.put(`/api/purchase-orders/misc-fields`, payload, {
+        params: { poId: formData.poId },
+      });
+      const saved = response?.data?.responseData;
+      setFormData((prev) => ({
+        ...prev,
+        gemVendorName: saved?.gemVendorName,
+        gemContractDocuments: saved?.gemContractDocuments,
+      }));
+      message.success("Gem details saved.");
+    } catch (error) {
+      message.error(
+        error?.response?.data?.responseStatus?.message || "Error saving Gem details."
+      );
+    } finally {
+      setMiscBtnLoading(false);
     }
   };
 
@@ -756,6 +816,15 @@ updated[index].estimatedItemTotal = (
           null,
           setFormData,
           handleSearch
+        )}
+
+        {/* [MISC] Gem Vendor Name / Gem Contract Documents — saves in place, no version bump */}
+        {formData?.poId && (
+          <div style={{ margin: "8px 0 16px", textAlign: "right" }}>
+            <Button type="default" loading={miscBtnLoading} onClick={handleSaveMiscFields}>
+              Save Gem Details
+            </Button>
+          </div>
         )}
         
         {/* [DRAFT] onDraft + draftBtnLoading replace the old draftDataName="poDraft" */}

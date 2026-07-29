@@ -266,59 +266,106 @@ return "INV" + gme.getProcessId() + "/" + gme.getSubProcessId();
         return pendingGprnList;
     }
     @Override
-    public List<PendingGprnPoDto> getPendingGprnDetails() {
+public List<PendingGprnPoDto> getPendingGprnDetails() {
 
-        List<Object[]> rows = gmr.findPendingGprnDetailedRows();
-        Map<String, PendingGprnPoDto> poMap = new HashMap<>();
+    List<Object[]> materialRows = gmr.findPendingGprnMaterialRows();
+    Map<String, PendingGprnPoDto> poMap = new HashMap<>();
 
-        for (Object[] r : rows) {
+    for (Object[] r : materialRows) {
+        String poId = (String) r[0];
+        PendingGprnPoDto dto = poMap.getOrDefault(poId, new PendingGprnPoDto());
 
-            String poId = (String) r[0];
-            PendingGprnPoDto dto = poMap.getOrDefault(poId, new PendingGprnPoDto());
+        dto.setPoId(poId);
+        dto.setVendorName((String) r[1]);
+        dto.setProjectName((String) r[2]);
 
-            dto.setPoId(poId);
-            dto.setVendorName((String) r[1]);
-            dto.setProjectName((String) r[2]);
-
-            // Created Date
-            Object createdDateObj = r[3];
-            if (createdDateObj instanceof Timestamp) {
-                dto.setCreatedDate(((Timestamp) createdDateObj).toLocalDateTime());
-            } else if (createdDateObj instanceof LocalDateTime) {
-                dto.setCreatedDate((LocalDateTime) createdDateObj);
-            }
-
-            // Indent IDs
-            if (dto.getIndentIds() == null) dto.setIndentIds(new ArrayList<>());
-            String indentId = (String) r[4];
-
-            if (indentId != null && !dto.getIndentIds().contains(indentId)) {
-                dto.getIndentIds().add(indentId);
-            }
-
-            // Materials
-            if (dto.getMaterials() == null) dto.setMaterials(new ArrayList<>());
-
-            MaterialDto material = new MaterialDto();
-            material.setMaterialCode((String) r[5]);
-            material.setMaterialDesc((String) r[6]);
-
-            // Safely convert all quantities using BigDecimal
-            BigDecimal orderQty   = toBigDecimal(r[7]);
-            BigDecimal receivedQty = toBigDecimal(r[8]);
-            BigDecimal pendingQty  = toBigDecimal(r[9]);
-
-            material.setOrderQty(orderQty);
-            material.setReceivedQty(receivedQty);
-            material.setPendingQty(pendingQty);
-
-            dto.getMaterials().add(material);
-
-            poMap.put(poId, dto);
+        Object createdDateObj = r[3];
+        if (createdDateObj instanceof Timestamp) {
+            dto.setCreatedDate(((Timestamp) createdDateObj).toLocalDateTime());
+        } else if (createdDateObj instanceof LocalDateTime) {
+            dto.setCreatedDate((LocalDateTime) createdDateObj);
         }
 
-        return new ArrayList<>(poMap.values());
+        if (dto.getIndentIds() == null) dto.setIndentIds(new ArrayList<>());
+        if (dto.getMaterials() == null) dto.setMaterials(new ArrayList<>());
+
+        MaterialDto material = new MaterialDto();
+        material.setMaterialCode((String) r[4]);
+        material.setMaterialDesc((String) r[5]);
+        material.setOrderQty(toBigDecimal(r[6]));
+        material.setReceivedQty(toBigDecimal(r[7]));
+        material.setPendingQty(toBigDecimal(r[8]));
+        dto.getMaterials().add(material);
+
+        poMap.put(poId, dto);
     }
+
+    // Merge in real indent IDs, keyed by PO — only for POs already in the map
+    for (Object[] r : gmr.findPendingGprnIndentIdRows()) {
+        String poId = (String) r[0];
+        String indentId = (String) r[1];
+        PendingGprnPoDto dto = poMap.get(poId);
+        if (dto != null && indentId != null && !dto.getIndentIds().contains(indentId)) {
+            dto.getIndentIds().add(indentId);
+        }
+    }
+
+    return new ArrayList<>(poMap.values());
+}
+    // @Override
+    // public List<PendingGprnPoDto> getPendingGprnDetails() {
+
+    //     List<Object[]> rows = gmr.findPendingGprnDetailedRows();
+    //     Map<String, PendingGprnPoDto> poMap = new HashMap<>();
+
+    //     for (Object[] r : rows) {
+
+    //         String poId = (String) r[0];
+    //         PendingGprnPoDto dto = poMap.getOrDefault(poId, new PendingGprnPoDto());
+
+    //         dto.setPoId(poId);
+    //         dto.setVendorName((String) r[1]);
+    //         dto.setProjectName((String) r[2]);
+
+    //         // Created Date
+    //         Object createdDateObj = r[3];
+    //         if (createdDateObj instanceof Timestamp) {
+    //             dto.setCreatedDate(((Timestamp) createdDateObj).toLocalDateTime());
+    //         } else if (createdDateObj instanceof LocalDateTime) {
+    //             dto.setCreatedDate((LocalDateTime) createdDateObj);
+    //         }
+
+    //         // Indent IDs
+    //         if (dto.getIndentIds() == null) dto.setIndentIds(new ArrayList<>());
+    //         String indentId = (String) r[4];
+
+    //         if (indentId != null && !dto.getIndentIds().contains(indentId)) {
+    //             dto.getIndentIds().add(indentId);
+    //         }
+
+    //         // Materials
+    //         if (dto.getMaterials() == null) dto.setMaterials(new ArrayList<>());
+
+    //         MaterialDto material = new MaterialDto();
+    //         material.setMaterialCode((String) r[5]);
+    //         material.setMaterialDesc((String) r[6]);
+
+    //         // Safely convert all quantities using BigDecimal
+    //         BigDecimal orderQty   = toBigDecimal(r[7]);
+    //         BigDecimal receivedQty = toBigDecimal(r[8]);
+    //         BigDecimal pendingQty  = toBigDecimal(r[9]);
+
+    //         material.setOrderQty(orderQty);
+    //         material.setReceivedQty(receivedQty);
+    //         material.setPendingQty(pendingQty);
+
+    //         dto.getMaterials().add(material);
+
+    //         poMap.put(poId, dto);
+    //     }
+
+    //     return new ArrayList<>(poMap.values());
+    // }
 
     /** --- Utility method to safely convert Object → BigDecimal --- */
     private BigDecimal toBigDecimal(Object obj) {

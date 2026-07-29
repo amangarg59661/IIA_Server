@@ -442,7 +442,7 @@ System.out.println("inspection ID " + inspectionId) ;
         List<GiMaterialDtlDto> materialDtlListRes = gicdeList.stream()
                 .map(gicde -> {
                     GiMaterialDtlDto gmdd = mapper.map(gicde, GiMaterialDtlDto.class);
-                    // gmdd.setAssetFlag(false);
+                    gmdd.setAssetFlag(false);
 
                     try {
                         String imageBase64 = CommonUtils.convertImageToBase64(gicde.getInstallationReportFilename(),
@@ -458,7 +458,7 @@ System.out.println("inspection ID " + inspectionId) ;
         List<GiMaterialDtlDto> materialDtlListRes1 = gimdeList.stream()
                 .map(gimde -> {
                     GiMaterialDtlDto gmdd = mapper.map(gimde, GiMaterialDtlDto.class);
-                    // gmdd.setAssetFlag(true);
+                    gmdd.setAssetFlag(true);
                     gmdd.setAssetId(gimde.getAssetId());
                     gmdd.setRejectReason(gimde.getRejectReason());
 

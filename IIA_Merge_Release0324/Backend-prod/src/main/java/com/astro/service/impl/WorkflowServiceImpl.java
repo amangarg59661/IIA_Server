@@ -593,11 +593,19 @@ public class WorkflowServiceImpl implements WorkflowService {
                     "Cannot resolve " + roleName + ": Indent not found for requestId=" + requestId));
         }
 
-        String location = indent.getConsignesLocation();
+        // String location = indent.getConsignesLocation();
+        // if (location == null || location.trim().isEmpty()) {
+        //     throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
+        //             AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
+        //             "Cannot resolve " + roleName + ": Indent " + requestId + " has no consignee location set."));
+        // }
+         String location = indent.getIndentorLocation() != null
+                ? indent.getIndentorLocation()
+                : indent.getConsignesLocation();
         if (location == null || location.trim().isEmpty()) {
             throw new BusinessException(new ErrorDetails(AppConstant.USER_INVALID_INPUT,
                     AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_VALIDATION,
-                    "Cannot resolve " + roleName + ": Indent " + requestId + " has no consignee location set."));
+                    "Cannot resolve " + roleName + ": Indent " + requestId + " has no location set."));
         }
 
         // Step 2: Find user with the given role whose employee is at the same location
@@ -2548,8 +2556,13 @@ public class WorkflowServiceImpl implements WorkflowService {
                             } else if (conditionKey.equalsIgnoreCase("MaterialCategory")) {
                                 dataValue = indentCreationResponseDTO.getMaterialCategory();
                                 conditionCheckFlag = ((String) dataValue).equalsIgnoreCase(conditionValue);
+                            // } else if (conditionKey.equalsIgnoreCase("ConsignesLocation")) {
+                            //     dataValue = indentCreationResponseDTO.getConsignesLocation();
+                            //     conditionCheckFlag = ((String) dataValue).equalsIgnoreCase(conditionValue);
                             } else if (conditionKey.equalsIgnoreCase("ConsignesLocation")) {
-                                dataValue = indentCreationResponseDTO.getConsignesLocation();
+                                dataValue = indentCreationResponseDTO.getIndentorLocation() != null
+                                        ? indentCreationResponseDTO.getIndentorLocation()
+                                        : indentCreationResponseDTO.getConsignesLocation();
                                 conditionCheckFlag = ((String) dataValue).equalsIgnoreCase(conditionValue);
                             } else if (conditionKey.equalsIgnoreCase("TotalPriceOfAllMaterials")) {
                                 dataValue = indentCreationResponseDTO.getTotalPriceOfAllMaterials();
@@ -2561,9 +2574,14 @@ public class WorkflowServiceImpl implements WorkflowService {
                                 dataValue = indentCreationResponseDTO.getTotalPriceOfAllMaterials();
                                 BigDecimal projectLimit = indentCreationResponseDTO.getProjectLimit();
                                 conditionCheckFlag = ((BigDecimal) dataValue).doubleValue() <= ((BigDecimal) projectLimit).doubleValue();
+                            // } else if (conditionKey.equalsIgnoreCase("materialCategoryAndconsignesLocation")) {
+                            //     String category = indentCreationResponseDTO.getMaterialCategory();
+                            //     String location = indentCreationResponseDTO.getConsignesLocation();
                             } else if (conditionKey.equalsIgnoreCase("materialCategoryAndconsignesLocation")) {
                                 String category = indentCreationResponseDTO.getMaterialCategory();
-                                String location = indentCreationResponseDTO.getConsignesLocation();
+                                String location = indentCreationResponseDTO.getIndentorLocation() != null
+                                        ? indentCreationResponseDTO.getIndentorLocation()
+                                        : indentCreationResponseDTO.getConsignesLocation();
 
                                 if (category != null && location != null) {
                                     String combinedValue = category + "+" + location;

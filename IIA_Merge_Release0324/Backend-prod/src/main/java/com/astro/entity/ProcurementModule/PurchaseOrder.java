@@ -92,6 +92,12 @@ public class PurchaseOrder {
     private LocalDate quotationDate;
     private String additionalTermsAndConditions;
     private BigDecimal buyBackAmount;
+
+     @Column(name = "gem_vendor_name")
+    private String gemVendorName;
+    @Column(name = "gem_contract_documents")
+    private String gemContractDocuments;
+    
     // added by abhinav for workflow and versioning
     @Column(name = "is_active")
     private Boolean isActive = true;

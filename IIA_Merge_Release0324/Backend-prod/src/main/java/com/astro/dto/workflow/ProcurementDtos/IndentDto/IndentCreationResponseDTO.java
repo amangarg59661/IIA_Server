@@ -93,4 +93,7 @@ public class IndentCreationResponseDTO {
     private String statusMessage;  // User-friendly status message
     private Integer totalApprovalLevels;  // Total number of approval levels for this indent
     private Boolean isFullyApproved;  // True if all approvals are complete
+    private String indentorLocation;
+public String getIndentorLocation() { return indentorLocation; }
+public void setIndentorLocation(String indentorLocation) { this.indentorLocation = indentorLocation; }
 }

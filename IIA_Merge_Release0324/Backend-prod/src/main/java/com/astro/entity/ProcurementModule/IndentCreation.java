@@ -67,6 +67,9 @@ public class IndentCreation {
     @Column(name = "is_it_a_rate_contract_indent")
     private Boolean isItARateContractIndent;
 
+    @Column(name = "indentor_location")
+private String indentorLocation;
+
     @Column(name = "estimated_rate")
     private BigDecimal estimatedRate;
 

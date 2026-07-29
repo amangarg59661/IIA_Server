@@ -63,6 +63,9 @@ private String vendorType;
 private Boolean isActive;
 private Integer poVersion;
 
+private String gemVendorName;
+private List<String> gemContractDocuments;
+
 public String getCurrentStatus() { return currentStatus; }
 public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
 public Boolean getIsActive() { return isActive; }

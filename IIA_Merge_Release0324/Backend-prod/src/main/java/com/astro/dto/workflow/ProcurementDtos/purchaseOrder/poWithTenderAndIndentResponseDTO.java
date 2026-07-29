@@ -45,6 +45,7 @@ private String vendorSwiftCode;
 private String vendorType;
  private TenderWithIndentResponseDTO tenderDetails;
 
-
+ private String gemVendorName;
+ private List<String> gemContractDocuments;
 
 }

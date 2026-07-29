@@ -4,6 +4,7 @@ import {
   Typography,
   Row,
   Col,
+  message,
   Tag,
   Spin,
   Collapse,
@@ -33,6 +34,8 @@ import { baseURL } from '../../../App';
 import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
 // Add after: import ProjectBudgetDisplay from '../../../components/ProjectBudgetDisplay';
 import PrintFormate from '../../../utils/PrintFormate';
+import PoFormat from '../../../utils/Po-Format';
+import TenderPrintFormat from '../../../utils/TenderPrintFormat';
 import { useReactToPrint } from 'react-to-print';
 
 
@@ -57,11 +60,27 @@ const QueueModal = ({
   setSelectedVersionIdx,
   versionHistoryWorkflowId,
 }) => {
- const printComponentRef = useRef();
+  const printComponentRef = useRef();
+  const workflowId = parseInt(selectedRecord?.workflowId, 10);
+  const printFormatAvailable = [1, 3, 4, 7].includes(workflowId);
+
   const handlePrint = useReactToPrint({
     content: () => printComponentRef.current,
     documentTitle: `Indent - ${detailsData?.indentId || selectedRecord?.requestId || "Draft"}`,
   });
+
+  const onPrintClick = () => {
+    if (!printFormatAvailable) {
+      message.warning("Print format not available. Share the format so it can be configured.");
+      return;
+    }
+    handlePrint();
+  };
+//  const printComponentRef = useRef();
+//   const handlePrint = useReactToPrint({
+//     content: () => printComponentRef.current,
+//     documentTitle: `Indent - ${detailsData?.indentId || selectedRecord?.requestId || "Draft"}`,
+//   });
   return (
     <>
     <Modal
@@ -83,7 +102,8 @@ const QueueModal = ({
 <Button
             type="link"
             icon={<FilePdfOutlined />}
-            onClick={handlePrint}
+            // onClick={handlePrint}
+            onClick={onPrintClick}
             disabled={!detailsData}
           >
             Print
@@ -1787,8 +1807,13 @@ const QueueModal = ({
         onCancel={() => setMaterialHistoryVisible(false)}
         historyType={detailsData?.indentType === 'job' ? 'job' : 'material'}
       />
- <div style={{ display: "none" }}>
+ {/* <div style={{ display: "none" }}>
         <PrintFormate ref={printComponentRef} data={detailsData} />
+      </div> */}
+       <div style={{ display: "none" }}>
+        {workflowId === 1 && <PrintFormate ref={printComponentRef} data={detailsData} />}
+        {workflowId === 3 && <PoFormat ref={printComponentRef} po={detailsData} />}
+        {[4, 7].includes(workflowId) && <TenderPrintFormat ref={printComponentRef} data={detailsData} />}
       </div>
     {/* </Modal> */}
 
