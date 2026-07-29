@@ -128,7 +128,7 @@ LEFT JOIN (
     ON po.po_id = gprn.po_id 
    AND poa.material_code = gprn.material_code
 
-WHERE gprn.total_received IS NULL OR gprn.total_received < poa.quantity
+WHERE gprn.total_received IS NULL OR gprn.total_received < poa.quantity and po.is_active = 1
 ORDER BY po.po_id;""", nativeQuery = true)
 List<Object[]> findPendingGprnMaterialRows();
 
