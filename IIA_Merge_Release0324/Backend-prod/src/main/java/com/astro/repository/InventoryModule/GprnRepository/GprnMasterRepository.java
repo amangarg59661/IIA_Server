@@ -94,9 +94,9 @@ public interface GprnMasterRepository extends JpaRepository<GprnMasterEntity,Int
        AND poa.material_code = gprn.material_code
 
     WHERE 
-        gprn.total_received IS NULL 
-        OR gprn.total_received < poa.quantity
-
+        (gprn.total_received IS NULL 
+        OR gprn.total_received < poa.quantity)
+        And po.is_active = true
     ORDER BY po.po_id;
     """, nativeQuery = true)
     List<Object[]> findPendingGprnDetailedRows();
@@ -128,7 +128,7 @@ LEFT JOIN (
     ON po.po_id = gprn.po_id 
    AND poa.material_code = gprn.material_code
 
-WHERE gprn.total_received IS NULL OR gprn.total_received < poa.quantity and po.is_active = 1
+WHERE (gprn.total_received IS NULL OR gprn.total_received < poa.quantity) and po.is_active = true
 ORDER BY po.po_id;""", nativeQuery = true)
 List<Object[]> findPendingGprnMaterialRows();
 
