@@ -152,6 +152,8 @@ public class TenderRequest {
     @Column(name ="current_status")
     private String currentStatus;
 
+    @Column(name = "special_terms_conditions", columnDefinition = "TEXT")
+private String specialTermsConditions;
     // ADD these two fields
 @Column(name = "is_active")
 private Boolean isActive = true;

@@ -21,4 +21,6 @@ public interface GprnMaterialDtlRepository extends JpaRepository<GprnMaterialDtl
 
     @Query("SELECT m.materialDesc FROM GprnMaterialDtlEntity m WHERE m.subProcessId = :subProcessId")
     List<String> findMaterialDescriptionsBySubProcessId(@Param("subProcessId") Integer subProcessId);
+
+    boolean existsByPoId(String poId);
 }

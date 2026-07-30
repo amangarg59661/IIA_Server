@@ -30,6 +30,7 @@ public class TenderResponseDto {
     private Boolean mllStatusDeclaration;
     private String singleAndMultipleVendors;
     private String uploadTenderDocuments;
+    private String specialTermsConditions;
     private String uploadGeneralTermsAndConditions;
     private String uploadSpecificTermsAndConditions;
     private String fileType;

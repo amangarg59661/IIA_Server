@@ -237,6 +237,7 @@ private JobDetailsRepository jobDetailsRepository;
         }
 
         tenderRequest.setBidType(tenderRequestDto.getBidType());
+        tenderRequest.setSpecialTermsConditions(tenderRequestDto.getSpecialTermsConditions());
         String LastDateOfSubmission = tenderRequestDto.getLastDateOfSubmission();
         tenderRequest.setLastDateOfSubmission(CommonUtils.convertStringToDateObject(LastDateOfSubmission));
         tenderRequest.setApplicableTaxes(tenderRequestDto.getApplicableTaxes());
@@ -557,6 +558,7 @@ tenderRequest.setParentTenderId(null);  // ADD
         t.setClosingDate((cd != null && !cd.trim().isEmpty()) ? CommonUtils.convertStringToDateObject(cd) : null);
         t.setIndentMaterials(dto.getIndentMaterials());
         t.setBidType(dto.getBidType());
+        t.setSpecialTermsConditions(dto.getSpecialTermsConditions());
         String ld = dto.getLastDateOfSubmission();
         t.setLastDateOfSubmission((ld != null && !ld.trim().isEmpty()) ? CommonUtils.convertStringToDateObject(ld) : null);
         t.setApplicableTaxes(dto.getApplicableTaxes());
@@ -767,6 +769,7 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
     newTR.setIndentMaterials(tenderRequestDto.getIndentMaterials());
     newTR.setModeOfProcurement(tenderRequestDto.getModeOfProcurement());
     newTR.setBidType(tenderRequestDto.getBidType());
+    newTR.setSpecialTermsConditions(tenderRequestDto.getSpecialTermsConditions());
 
     String lastDate = tenderRequestDto.getLastDateOfSubmission();
     newTR.setLastDateOfSubmission(lastDate != null ? CommonUtils.convertStringToDateObject(lastDate) : null);
@@ -1328,6 +1331,7 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
         responseDTO.setIndentMaterials(tenderRequest.getIndentMaterials());
         responseDTO.setModeOfProcurement(tenderRequest.getModeOfProcurement());
         responseDTO.setBidType(tenderRequest.getBidType());
+        responseDTO.setSpecialTermsConditions(tenderRequest.getSpecialTermsConditions());
         LocalDate LastDateOfSubmission = tenderRequest.getLastDateOfSubmission();
         responseDTO.setLastDateOfSubmission(CommonUtils.convertDateToString(LastDateOfSubmission));
         responseDTO.setApplicableTaxes(tenderRequest.getApplicableTaxes());
@@ -1415,6 +1419,7 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
         tenderResponseDto.setIndentMaterials(tenderRequest.getIndentMaterials());
         tenderResponseDto.setModeOfProcurement(tenderRequest.getModeOfProcurement());
         tenderResponseDto.setBidType(tenderRequest.getBidType());
+        tenderResponseDto.setSpecialTermsConditions(tenderRequest.getSpecialTermsConditions());
         LocalDate LastDateOfSubmission = tenderRequest.getLastDateOfSubmission();
         tenderResponseDto.setLastDateOfSubmission(CommonUtils.convertDateToString(LastDateOfSubmission));
         tenderResponseDto.setApplicableTaxes(tenderRequest.getApplicableTaxes());
@@ -1574,6 +1579,7 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
         tenderResponseDto.setIndentMaterials(tenderRequest.getIndentMaterials());
         tenderResponseDto.setModeOfProcurement(tenderRequest.getModeOfProcurement());
         tenderResponseDto.setBidType(tenderRequest.getBidType());
+        tenderResponseDto.setSpecialTermsConditions(tenderRequest.getSpecialTermsConditions());
         LocalDate LastDateOfSubmission = tenderRequest.getLastDateOfSubmission();
         tenderResponseDto.setLastDateOfSubmission(CommonUtils.convertDateToString(LastDateOfSubmission));
         tenderResponseDto.setApplicableTaxes(tenderRequest.getApplicableTaxes());

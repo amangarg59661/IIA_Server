@@ -314,6 +314,7 @@ public class MaterialMasterUtilServiceImpl implements MaterialMasterUtilService 
         materialMaster.setStatusOfMaterialActiveOrDeactive("Active");
         materialMaster.setCreatedBy(String.valueOf(actionBy));
         materialMaster.setUpdatedBy(material.getUpdatedBy());
+        materialMaster.setCreatedDate(material.getCreatedDate());
         // Added by Aman 
         materialMaster.setAssetFlag(material.getAssetFlag());
         // End

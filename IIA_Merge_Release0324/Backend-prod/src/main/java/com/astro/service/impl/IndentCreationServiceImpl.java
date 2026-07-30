@@ -217,6 +217,7 @@ private String extractBaseIndentId(String indentId) {
         indentCreation.setBrandAndModel(indentRequestDTO.getBrandAndModel());
         indentCreation.setPurpose(indentRequestDTO.getPurpose());
         indentCreation.setQuarter(indentRequestDTO.getQuarter());
+        indentCreation.setFinancialYear(indentRequestDTO.getFinancialYear());
         indentCreation.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
         indentCreation.setBuyBack(indentRequestDTO.getBuyBack());
 
@@ -482,6 +483,7 @@ public IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto) {
     indent.setBrandAndModel(dto.getBrandAndModel());
     indent.setPurpose(dto.getPurpose());
     indent.setQuarter(dto.getQuarter());
+    indent.setFinancialYear(dto.getFinancialYear());
     indent.setProprietaryJustification(dto.getProprietaryJustification());
     indent.setBuyBack(dto.getBuyBack());
     indent.setSerialNumber(dto.getSerialNumber());
@@ -654,6 +656,7 @@ public IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreati
     existing.setBrandAndModel(dto.getBrandAndModel());
     existing.setPurpose(dto.getPurpose());
     existing.setQuarter(dto.getQuarter());
+    existing.setFinancialYear(dto.getFinancialYear());
     existing.setProprietaryJustification(dto.getProprietaryJustification());
     existing.setBuyBack(dto.getBuyBack());
     existing.setSerialNumber(dto.getSerialNumber());
@@ -971,6 +974,7 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
     newIndent.setJustification(indentRequestDTO.getJustification());
     newIndent.setBrandAndModel(indentRequestDTO.getBrandAndModel());
     newIndent.setQuarter(indentRequestDTO.getQuarter());
+    newIndent.setFinancialYear(indentRequestDTO.getFinancialYear());
     newIndent.setPurpose(indentRequestDTO.getPurpose());
     newIndent.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
     newIndent.setReason(indentRequestDTO.getReason());
@@ -1471,6 +1475,7 @@ private String normalizeIndentorLocation(String rawLocation) {
         response.setBrandAndModel(indentCreation.getBrandAndModel());
         response.setPurpose(indentCreation.getPurpose());
         response.setQuarter(indentCreation.getQuarter());
+        response.setFinancialYear(indentCreation.getFinancialYear());
         response.setProprietaryJustification(indentCreation.getProprietaryJustification());
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());
@@ -1787,6 +1792,7 @@ jobResponse.setVendorNames(vendorNamesList);
         response.setBrandAndModel(indentCreation.getBrandAndModel());
         response.setPurpose(indentCreation.getPurpose());
         response.setQuarter(indentCreation.getQuarter());
+        response.setFinancialYear(indentCreation.getFinancialYear());
         response.setProprietaryJustification(indentCreation.getProprietaryJustification());
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());
@@ -1991,6 +1997,7 @@ jobResponse.setVendorNames(vendorNamesList);
         response.setBrandAndModel(indentCreation.getBrandAndModel());
         response.setPurpose(indentCreation.getPurpose());
         response.setQuarter(indentCreation.getQuarter());
+        response.setFinancialYear(indentCreation.getFinancialYear());
         response.setProprietaryJustification(indentCreation.getProprietaryJustification());
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());

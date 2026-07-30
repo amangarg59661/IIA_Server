@@ -119,6 +119,15 @@ public class PurchaseOrder {
 
     @Column(name = "po_version")
     private Integer poVersion = 1;
+
+    @Column(name = "cancelled_by")
+private String cancelledBy;
+
+@Column(name = "cancelled_date")
+private LocalDateTime cancelledDate;
+
+@Column(name = "cancellation_reason")
+private String cancellationReason;
     // added by abhinav end here
    // @OneToMany(cascade = CascadeType.ALL)
    // @JoinColumn(name = "purchase_order_id")

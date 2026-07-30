@@ -124,6 +124,14 @@ public ResponseEntity<Object> updateMiscFields(
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(po), HttpStatus.OK);
     }
 
+    @PostMapping("/cancel")
+public ResponseEntity<Object> cancelPurchaseOrder(
+        @RequestParam String poId,
+        @RequestBody PoCancellationRequestDTO dto) {
+    PurchaseOrderResponseDTO response = poService.cancelPurchaseOrder(poId, dto);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+}
+
     @GetMapping("/base64Files")
     public ResponseEntity<Object> getPurchaseOrderByIdWithBase64Files(@RequestParam String poId) throws IOException {
         PoWithTenderAndIndentBase64FilesDto po = poService.getPurchaseOrderBase64FilesById(poId);

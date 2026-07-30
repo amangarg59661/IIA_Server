@@ -20,6 +20,7 @@ public class AppConstant {
     public static final int ERROR_TYPE_CODE_INTERNAL = 3;
     public static final int ERROR_CODE_RESOURCE = 5;
     public static final int ERROR_TYPE_CODE_INVALID = 6;
+    public static final int WORKFLOW_BRANCH_NOT_CONFIGURED = 1014;
 
     // Error Type
     public static final String ERROR_TYPE_ERROR = "error";

@@ -329,17 +329,26 @@ public class WorkflowServiceImpl implements WorkflowService {
             // ===== BRANCH-BASED WORKFLOW ROUTING =====
             WorkflowTransition workflowTransition = initiateBranchBasedWorkflow(requestId, workflowDto, createdBy);
 
+            // if (workflowTransition == null) {
+            //     // Fallback to old TransitionMaster system if no branch found
+            //     System.err.println("⚠️⚠️⚠️ NO BRANCH MATCHED - Falling back to old TransitionMaster system for " + requestId);
+            //     System.err.println("⚠️ Check: 1) Active branches exist, 2) Conditions match request data, 3) Data types match");
+            //     TransitionDto transitionDto = transitionsByWorkflowIdAndOrder(workflowDto.getWorkflowId(), 1, 1);
+            //     if (Objects.isNull(transitionDto)) {
+            //         throw new InvalidInputException(new ErrorDetails(AppConstant.TRANSITION_NOT_FOUND, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+            //                 AppConstant.ERROR_TYPE_VALIDATION, "Transition not found."));
+            //     }
+            //     workflowTransition = createWorkflowTransition(requestId, workflowDto, transitionDto, createdBy);
+            // } else {
             if (workflowTransition == null) {
-                // Fallback to old TransitionMaster system if no branch found
-                System.err.println("⚠️⚠️⚠️ NO BRANCH MATCHED - Falling back to old TransitionMaster system for " + requestId);
-                System.err.println("⚠️ Check: 1) Active branches exist, 2) Conditions match request data, 3) Data types match");
-                TransitionDto transitionDto = transitionsByWorkflowIdAndOrder(workflowDto.getWorkflowId(), 1, 1);
-                if (Objects.isNull(transitionDto)) {
-                    throw new InvalidInputException(new ErrorDetails(AppConstant.TRANSITION_NOT_FOUND, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                            AppConstant.ERROR_TYPE_VALIDATION, "Transition not found."));
-                }
-                workflowTransition = createWorkflowTransition(requestId, workflowDto, transitionDto, createdBy);
-            } else {
+    System.err.println("⚠️⚠️⚠️ NO BRANCH MATCHED - Workflow not configured for " + requestId
+            + " (workflow: " + workflowName + ")");
+    throw new BusinessException(new ErrorDetails(
+            AppConstant.WORKFLOW_BRANCH_NOT_CONFIGURED,   // <-- see note below
+            AppConstant.ERROR_TYPE_CODE_VALIDATION,
+            AppConstant.ERROR_TYPE_VALIDATION,
+            "Workflow is not Configured for this case. Please contact Admin to get it configured."));
+}else {
                 System.out.println("BRANCH-BASED WORKFLOW - Branch ID: " + workflowTransition.getBranchId()
                         + ", Next: " + workflowTransition.getNextRole());
             }

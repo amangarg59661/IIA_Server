@@ -1580,6 +1580,7 @@ const priceBidColumn = {
         href={`${baseURL}/file/view/Tender/${fileName}`}
         target="_blank"
         rel="noopener noreferrer"
+        style={{ color: '#1890ff' }}
       >
         View
       </a>
@@ -1598,6 +1599,8 @@ const priceBidColumnForSingleBid = {
         href={`${baseURL}/file/view/Tender/${fileName}`}
         target="_blank"
         rel="noopener noreferrer"
+        style={{ color: '#1890ff' }}
+        
       >
         View
       </a>
@@ -1645,6 +1648,7 @@ const baseColumns = [
           href={`${baseURL}/file/view/Tender/${record.quotationFileName}`}
           target="_blank"
           rel="noopener noreferrer"
+          style={{ color: '#1890ff' }}
         >
           View
         </a>
@@ -1672,7 +1676,7 @@ const baseColumns = [
       .sort((a, b) => b.roundNumber - a.roundNumber)[0];
     // only show if latest round itself has a file — no fallback to older rounds
     return latest?.responseFileName ? (
-      <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">
+      <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
         View
       </a>
     ) : null;
@@ -2575,6 +2579,7 @@ const doubleBidTechColumns = [
           href={`${baseURL}/file/view/Tender/${record.quotationFileName}`}
           target="_blank"
           rel="noopener noreferrer"
+          style={{ color: '#1890ff' }}
         >
           View
         </a>
@@ -2597,7 +2602,7 @@ const doubleBidTechColumns = [
             .filter(h => h.targetVendorId === record.vendorId)
             .sort((a, b) => b.roundNumber - a.roundNumber)[0];
           return latest?.responseFileName ? (
-            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>View</a>
           ) : null;
         },
       }]
@@ -2984,7 +2989,9 @@ const doubleBidFinColumns = [
     width: 130,
     render: (fileName) =>
       fileName ? (
-        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
+        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
+          View
+        </a>
       ) : 'No File',
   },
   ...(showVendorResponse
@@ -3004,7 +3011,7 @@ const doubleBidFinColumns = [
             .filter(h => h.targetVendorId === record.vendorId)
             .sort((a, b) => b.roundNumber - a.roundNumber)[0];
           return latest?.responseFileName ? (
-            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>View</a>
           ) : null;
         },
       }]
@@ -3363,7 +3370,7 @@ const spoTechColumns = [
     width: 130,
     render: (_, record) =>
       record.quotationFileName ? (
-        <a href={`${baseURL}/file/view/Tender/${record.quotationFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+        <a href={`${baseURL}/file/view/Tender/${record.quotationFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>View</a>
       ) : 'No File',
   },
   {
@@ -3606,7 +3613,9 @@ const spoFinColumns = [
     width: 130,
     render: (fileName) =>
       fileName ? (
-        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer">View</a>
+        <a href={`${baseURL}/file/view/Tender/${fileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
+          View
+        </a>
       ) : 'No File',
   },
   ...(showVendorResponse
@@ -3626,7 +3635,7 @@ const spoFinColumns = [
             .filter(h => h.targetVendorId === record.vendorId)
             .sort((a, b) => b.roundNumber - a.roundNumber)[0];
           return latest?.responseFileName ? (
-            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer">View</a>
+            <a href={`${baseURL}/file/view/Tender/${latest.responseFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>View</a>
           ) : null;
         },
       }]
@@ -4363,7 +4372,7 @@ useEffect(() => {
   <strong>Response ({h.respondedByRole?.replace(/_/g, ' ')}):</strong> {h.responseText}
 </p>
                             {h.responseFileName && (
-                              <p><strong>File:</strong> <a href={`${baseURL}/file/view/Tender/${h.responseFileName}`} target="_blank" rel="noopener noreferrer">{h.responseFileName}</a></p>
+                              <p><strong>File:</strong> <a href={`${baseURL}/file/view/Tender/${h.responseFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>{h.responseFileName}</a></p>
                             )}
                             <p style={{ color: '#888', fontSize: 12 }}>{h.respondedAt ? new Date(h.respondedAt).toLocaleString() : ''}</p>
                           </>
@@ -4392,6 +4401,7 @@ useEffect(() => {
                     href={`${baseURL}/file/view/Tender/${evalStatus.comparisonSheetFileName}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    style={{ color: '#1890ff' }}
                   >
                     View Document
                   </a>
@@ -4463,6 +4473,7 @@ useEffect(() => {
                     href={`${baseURL}/file/view/Tender/${evalStatus.financialComparisonSheetFileName}`}
                     target="_blank"
                     rel="noopener noreferrer"
+                    style={{ color: '#1890ff' }}
                   >
                     View Document
                   </a>
@@ -4710,7 +4721,7 @@ useEffect(() => {
                           } />
                         {targetVendor?.quotationFileName && (
                           <div style={{ marginBottom: 8 }}>
-                            <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer">
+                            <a href={`${baseURL}/file/view/Tender/${targetVendor.quotationFileName}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1890ff' }}>
                               View Vendor Quotation
                             </a>
                           </div>
@@ -4776,7 +4787,7 @@ useEffect(() => {
                         ? <span style={{ color: '#fa8c16' }}>Waiting for response...</span>
                         : <span style={{ color: '#52c41a' }}>{q.vendorResponse || 'Response submitted'}</span>}
                       {q.clarificationFileName && (
-                        <a href={`${baseURL}/file/view/Tender/${q.clarificationFileName}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8 }}>
+                        <a href={`${baseURL}/file/view/Tender/${q.clarificationFileName}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 8, color: '#1890ff' }}>
                           View File
                         </a>
                       )}

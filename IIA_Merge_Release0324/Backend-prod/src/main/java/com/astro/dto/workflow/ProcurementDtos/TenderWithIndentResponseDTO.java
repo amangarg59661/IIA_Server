@@ -36,6 +36,7 @@ public class TenderWithIndentResponseDTO {
     private String singleAndMultipleVendors;
     private String uploadGeneralTermsAndConditions;
     private String uploadSpecificTermsAndConditions;
+    private String specialTermsConditions;
     private String preBidDisscussions;
     private String fileType;
     private String billinngAddress;

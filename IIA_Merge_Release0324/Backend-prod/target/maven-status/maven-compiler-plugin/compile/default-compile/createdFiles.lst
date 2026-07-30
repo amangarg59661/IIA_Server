@@ -705,6 +705,7 @@ com\astro\repository\ProcurementModule\IndentCreation\JobDetailsRepository.class
 com\astro\entity\VendorMaster.class
 com\astro\dto\workflow\UserDto.class
 com\astro\dto\workflow\InventoryModule\igp\IgpMaterialInReportDto.class
+com\astro\dto\workflow\ProcurementDtos\purchaseOrder\PoCancellationRequestDTO.class
 com\astro\entity\LocationMaster.class
 com\astro\repository\InventoryModule\grn\GrnWorkflowStatusRepository.class
 com\astro\dto\workflow\ProcurementDtos\purchaseOrder\PurchaseOrderAttributesDTO.class

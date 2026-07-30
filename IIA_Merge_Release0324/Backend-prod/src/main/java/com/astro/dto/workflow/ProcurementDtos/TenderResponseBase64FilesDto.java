@@ -30,6 +30,7 @@ public class TenderResponseBase64FilesDto {
     private List<String> uploadTenderDocuments;
     private List<String> uploadGeneralTermsAndConditions;
     private List<String> uploadSpecificTermsAndConditions;
+    private String specialTermsConditions;
     private String fileType;
     private List<String> bidSecurityDeclarationFileName;
     private List<String> mllStatusDeclarationFileName;

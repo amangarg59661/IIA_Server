@@ -556,6 +556,44 @@ List<PurchaseOrderAttributes> newAttributes = new ArrayList<>(clubbedAttrs.value
 
     return mapToResponseDTO(newPO);
 }
+
+@Override
+public PurchaseOrderResponseDTO cancelPurchaseOrder(String poId, PoCancellationRequestDTO dto) {
+
+    PurchaseOrder existing = purchaseOrderRepository.findById(poId)
+            .orElseThrow(() -> new BusinessException(
+                    new ErrorDetails(
+                            AppConstant.ERROR_CODE_RESOURCE,
+                            AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                            AppConstant.ERROR_TYPE_RESOURCE,
+                            "Purchase order not found for the provided ID."
+                    )
+            ));
+
+    if (Boolean.TRUE.equals(existing.getIsCancelled())) {
+        throw new BusinessException(new ErrorDetails(
+                400, 1, AppConstant.ERROR_TYPE_VALIDATION,
+                "Purchase Order " + poId + " is already cancelled."));
+    }
+
+    if (gprnMaterialDtlRepository.existsByPoId(poId)) {
+        throw new BusinessException(new ErrorDetails(
+                400, 1, AppConstant.ERROR_TYPE_VALIDATION,
+                "Purchase Order " + poId + " cannot be cancelled. Goods have already been received (GPRN exists) against this PO."));
+    }
+
+    existing.setIsCancelled(true);
+    existing.setCurrentStatus("CANCELLED");
+    existing.setIsLocked(true);
+    existing.setCancelledBy(dto.getCancelledBy());
+    existing.setCancelledDate(LocalDateTime.now());
+    existing.setCancellationReason(dto.getCancellationReason());
+    existing.setUpdatedBy(dto.getCancelledBy());
+
+    purchaseOrderRepository.save(existing);
+
+    return mapToResponseDTO(existing);
+}
 /**
  * [MISC] Update Gem Vendor Name + Gem Contract Documents ONLY, in place.
  * Same poId, same poVersion, same row — no history snapshot, no isActive

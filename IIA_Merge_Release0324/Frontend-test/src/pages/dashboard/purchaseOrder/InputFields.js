@@ -115,15 +115,24 @@ export const PoDetails = [
           required: true
         },
         {
+          name:"indentorName",
+          label:"Indentor Name",
+          type:"text",
+          disabled:true,
+          span: 2
+        },
+        {
           name: "consignesAddress",
           label: "Consignee Address",
           type: "text",
+          disabled: true,
         },
         {
           name: "billingAddress",
           label: "Billing Address",
           type: "text",
           required: true,
+          disabled: true, 
           span: 2
         },
        {
@@ -143,7 +152,8 @@ export const PoDetails = [
           label:"Delivery Date",
           type:"date",
           required:true
-        }
+        },
+        
       ]
     },
     {
@@ -161,9 +171,18 @@ export const PoDetails = [
         },
         {
           name: "materialDescription",
-          label: "Material Description",
+          label: "Material Description as per indent",
           type: "text",
           disabled: true,
+          required: true,
+          span: 2
+        },
+
+        {
+          name: "materialDescriptionQuotation",
+          label: "Material Description as per Offer / quotation",
+          type: "text",
+          // disabled: true,
           required: true,
           span: 2
         },
@@ -180,6 +199,28 @@ export const PoDetails = [
           label: "Quantity",
           type: "text",
           required: true
+        },
+        {
+          name:"modeOfProcurement",
+          label:"Mode of Procurement",
+          type:"text" ,
+          disabled: true,
+          span: 2
+        },
+        {
+          name: "projectName",
+          label: "Project Name",
+          type: "text",
+          disabled: true,
+          span: 2
+        },
+        {
+          name: "budgetCode",
+          label: "Budget Code",
+          type: "select",
+          // disabled: true,
+          required: true,
+          span: 2
         },
         {
           name: "currency",
@@ -201,6 +242,12 @@ export const PoDetails = [
             span: 1
         },
         {
+          name:"buyBackAmount",
+          label:"Buy Back Amount",
+          type:"text",
+          // required:true
+        },
+        {
             name: "gst",
             label: "GST (%)",
             type: "select",
@@ -214,8 +261,16 @@ export const PoDetails = [
             ]
         },
         {
+          name: "gstAmount",
+          label: "GST Amount",
+          type: "text",
+          // disabled: true
+          required: true,
+        },
+
+        {
             name: "duties",
-            label: "Duties (%)",
+            label: "Duties",
             type: "text",
         },
         {

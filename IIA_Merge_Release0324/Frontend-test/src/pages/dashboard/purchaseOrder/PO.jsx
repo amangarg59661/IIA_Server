@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Card, Form, message , Tag, Modal} from "antd";
+import { Button, Card, Form, message ,Input , Tag, Modal} from "antd";
 import { HistoryOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
@@ -28,7 +28,9 @@ const PO = () => {
   const [completedVendors, setCompletedVendors] = useState([]);
   const [completedVendorIds, setCompletedVendorIds] = useState([]);
   const [completedVendorNames, setCompletedVendorNames] = useState([]);
-
+const [cancelModalOpen, setCancelModalOpen] = useState(false);
+const [cancelReason, setCancelReason] = useState("");
+const [cancelBtnLoading, setCancelBtnLoading] = useState(false);
 
   // Redux selectors
   const auth = useSelector((state) => state.auth);
@@ -436,8 +438,8 @@ const baseRate   = item.currency && item.currency !== "INR"
 const baseAmount = baseRate * parseFloat(item.quantity || 0);
 updated[index].estimatedItemTotal = (
   baseAmount
-  + baseAmount * parseFloat(item.gst    || 0) / 100
-  + baseAmount * parseFloat(item.duties || 0) / 100
+  + parseFloat(item.gstAmount || 0) 
+  + parseFloat(item.duties || 0) 
   + parseFloat(item.freightCharge || 0)
 ).toFixed(2);
 
@@ -476,6 +478,7 @@ updated[index].estimatedItemTotal = (
       gst: Number(m.gst) || 0,
       materialCode: m.materialCode || "",
       materialDescription: m.materialDescription || "",
+      materialDescriptionQuotation: m.materialDescriptionQuotation || "",
       quantity: Number(m.quantity) || 0,
       rate: Number(m.rate) || 0,
     })),
@@ -563,7 +566,44 @@ updated[index].estimatedItemTotal = (
       setMiscBtnLoading(false);
     }
   };
+const canCancelPo =
+    formData?.poId &&
+    formData.isActive !== false &&
+    formData.currentStatus !== "DRAFT" &&
+    formData.currentStatus !== "CANCELLED";
 
+  const handleCancelPo = async () => {
+    if (!formData?.poId) return;
+    try {
+      setCancelBtnLoading(true);
+      const payload = {
+        cancelledBy: actionPerformer,
+        cancellationReason: cancelReason,
+      };
+      const response = await axios.post(`/api/purchase-orders/cancel`, payload, {
+        params: { poId: formData.poId },
+      });
+      const updated = response?.data?.responseData;
+      setFormData((prev) => ({
+        ...prev,
+        currentStatus: updated?.currentStatus || "CANCELLED",
+        isCancelled: true,
+        isLocked: true,
+        cancelledBy: updated?.cancelledBy,
+        cancelledDate: updated?.cancelledDate,
+        cancellationReason: updated?.cancellationReason,
+      }));
+      message.success(`Purchase Order ${formData.poId} cancelled successfully.`);
+      setCancelModalOpen(false);
+      setCancelReason("");
+    } catch (error) {
+      message.error(
+        error?.response?.data?.responseStatus?.message || "Error cancelling Purchase Order."
+      );
+    } finally {
+      setCancelBtnLoading(false);
+    }
+  };  
   // ─────────────────────────────────────────────────────────────────
 
   const onFinish = async () => {
@@ -793,7 +833,7 @@ updated[index].estimatedItemTotal = (
       </div>
     )}
     {/* [DRAFT] banner — shown whenever the loaded PO is still in DRAFT status */}
-    {formData.currentStatus === "DRAFT" && (
+    {/* {formData.currentStatus === "DRAFT" && (
       <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 16px', borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span>📝</span>
         <span>
@@ -805,6 +845,38 @@ updated[index].estimatedItemTotal = (
     <Button icon={<HistoryOutlined />} onClick={() => fetchPoVersionHistory(formData.poId)}>
       View Version History
     </Button>
+  </div>
+)} */}
+{/* [DRAFT] banner — shown whenever the loaded PO is still in DRAFT status */}
+    {formData.currentStatus === "DRAFT" && (
+      <div style={{ background: '#fffbe6', border: '1px solid #ffe58f', padding: '8px 16px', borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>📝</span>
+        <span>
+          <strong>Saved Draft</strong> — This Purchase Order ({formData.poId}) is a saved draft and has <strong>not</strong> been submitted for approval.
+          Click <strong>Submit</strong> when ready to send it through the workflow.
+        </span>
+      </div>
+    )}
+    {/* [CANCEL] banner — shown whenever this PO has been cancelled */}
+    {formData.currentStatus === "CANCELLED" && (
+      <div style={{ background: '#fff1f0', border: '1px solid #ffa39e', padding: '8px 16px', borderRadius: 4, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>🚫</span>
+        <span>
+          <strong>Cancelled</strong> — This Purchase Order ({formData.poId}) has been cancelled
+          {formData.cancelledBy ? ` by ${formData.cancelledBy}` : ""}
+          {formData.cancelledDate ? ` on ${new Date(formData.cancelledDate).toLocaleDateString('en-IN')}` : ""}.
+          {formData.cancellationReason ? ` Reason: ${formData.cancellationReason}` : ""}
+        </span>
+      </div>
+    )}
+    <Button icon={<HistoryOutlined />} onClick={() => fetchPoVersionHistory(formData.poId)}>
+      View Version History
+    </Button>
+    {canCancelPo && (
+      <Button danger onClick={() => setCancelModalOpen(true)} style={{ marginLeft: 8 }}>
+        Cancel PO
+      </Button>
+    )}
   </div>
 )}
       <CustomForm formData={formData} onFinish={onFinish}>
@@ -819,16 +891,24 @@ updated[index].estimatedItemTotal = (
         )}
 
         {/* [MISC] Gem Vendor Name / Gem Contract Documents — saves in place, no version bump */}
-        {formData?.poId && (
+        {/* {formData?.poId && (
+          <div style={{ margin: "8px 0 16px", textAlign: "right" }}>
+            <Button type="default" loading={miscBtnLoading} onClick={handleSaveMiscFields}>
+              Save Gem Details
+            </Button>
+          </div>
+        )} */}
+        
+        {/* [MISC] Gem Vendor Name / Gem Contract Documents — saves in place, no version bump */}
+        {formData?.poId && formData.currentStatus !== "CANCELLED" && (
           <div style={{ margin: "8px 0 16px", textAlign: "right" }}>
             <Button type="default" loading={miscBtnLoading} onClick={handleSaveMiscFields}>
               Save Gem Details
             </Button>
           </div>
         )}
-        
         {/* [DRAFT] onDraft + draftBtnLoading replace the old draftDataName="poDraft" */}
-        <ButtonContainer
+        {/* <ButtonContainer
           onFinish={onFinish}
           formData={formData}
           onDraft={handleSaveDraft}
@@ -837,6 +917,17 @@ updated[index].estimatedItemTotal = (
           submitBtnEnabled
           printBtnEnabled
           draftBtnEnabled
+          handlePrint={handlePrint}
+        /> */}
+        <ButtonContainer
+          onFinish={onFinish}
+          formData={formData}
+          onDraft={handleSaveDraft}
+          draftBtnLoading={draftBtnLoading}
+          submitBtnLoading={submitBtnLoading}
+          submitBtnEnabled={formData.currentStatus !== "CANCELLED"}
+          printBtnEnabled
+          draftBtnEnabled={formData.currentStatus !== "CANCELLED"}
           handlePrint={handlePrint}
         />
       </CustomForm>
@@ -900,6 +991,7 @@ updated[index].estimatedItemTotal = (
         const LINE_FIELDS = [
             { key: 'materialCode',        label: 'Material Code' },
             { key: 'materialDescription', label: 'Description' },
+            { key: 'materialDescriptionQuotation', label: 'Description (Quotation)' },
             { key: 'quantity',            label: 'Quantity' },
             { key: 'rate',                label: 'Rate' },
             { key: 'currency',            label: 'Currency' },
@@ -1092,6 +1184,24 @@ updated[index].estimatedItemTotal = (
             </div>
         );
     })()}
+
+</Modal>
+
+<Modal
+    open={cancelModalOpen}
+    onCancel={() => setCancelModalOpen(false)}
+    onOk={handleCancelPo}
+    okText="Confirm Cancellation"
+    okButtonProps={{ danger: true, loading: cancelBtnLoading }}
+    title={`Cancel Purchase Order ${formData?.poId || ""}`}
+>
+    <p>This will cancel this Purchase Order and lock it from further edits. This cannot be undone. If goods have already been received (GPRN) against it, cancellation will be blocked automatically.</p>
+    <Input.TextArea
+        rows={3}
+        placeholder="Reason for cancellation (optional)"
+        value={cancelReason}
+        onChange={(e) => setCancelReason(e.target.value)}
+    />
 </Modal>
        <div style={{ display: "none" }}>
                 <PoFormat ref={printComponentRef} po={formData} />

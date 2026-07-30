@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag } from "antd";
+import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag , TextArea} from "antd";
 import { HistoryOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
@@ -968,6 +968,12 @@ useEffect(() => {
           label: "Specific Terms & Conditions",
           //type: "image", //should be a multiple file upload field (.png, .jpeg, .pdf, .doc, etc. )
           type: "multiImage",
+          span: 1
+        },
+        {
+          name: "SpecialTermsAndConditions",
+          label: "Special Terms & Conditions",
+          type: "text",
           span: 1
         }
       ]

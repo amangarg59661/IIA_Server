@@ -40,6 +40,7 @@ public class IndentDataResponseDto {
     private String justification;
     private Boolean brandPac;
     private String quarter;
+    private String financialYear;
     private String purpose;
     private String reason;
     private String modelNumber;

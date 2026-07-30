@@ -112,6 +112,7 @@ private String indentorLocation;
     private Boolean brandPac;
 
     private String quarter;
+    private String financialYear;
     private String purpose;
     private String reason;
     private String proprietaryJustification;

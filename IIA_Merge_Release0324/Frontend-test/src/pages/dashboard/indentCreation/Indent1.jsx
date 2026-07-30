@@ -1,4 +1,4 @@
-        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal } from 'antd'
+        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal, Tooltip,  Collapse, Checkbox } from 'antd'
         import React, { useEffect, useRef, useState } from 'react'
         import { useSelector, useDispatch } from 'react-redux'
         import { fetchMasters } from '../../../store/slice/masterSlice'
@@ -22,7 +22,16 @@
         // File upload configuration
         const MAX_FILE_SIZE_MB = 50;
         const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
-        const proprietaryLimitedDeclarationLabel = "The budgetary quote was obtained informing the vendor about:  (i) IIA's Payment Terms - 100% payment within 30 days from acceptance (ii). Applicability of providing performance & warranty security. (iii) Applicability of LD Clause."
+        // const proprietaryLimitedDeclarationLabel = "The budgetary quote was obtained informing the vendor about:  (i) IIA's Payment Terms - 100% payment within 30 days from acceptance (ii). Applicability of providing performance & warranty security. (iii) Applicability of LD Clause."
+
+        const proprietaryLimitedDeclarationLabel = "The budgetary quotation was obtained after informing the vendor of the following conditions";
+
+const proprietaryLimitedDeclarationPoints = [
+    "1.IIA's Payment terms: 100% Payment within 30 days after successful supply of items and satisfactory acceptance.",
+    "2. Performance and warranty security: Submission of Bank Guarantee / FDR / DD, etc., for 3% of the total contract value within 14 days from the date of issue of the Purchase Order towards Performance & Warranty Security. The validity of the security shall be for a period extending up to 2 months beyond the contract and warranty period. The security shall be released after successful completion of the warranty period, subject to satisfactory performance and fulfillment of all contractual obligations. (Applicable for INDENT VALUE MORE THAN 5 LAKHS)",
+    "3. LD Clause: Liquidated Damages at the rate of 0.5% per week to a maximum of 10% of the contract value shall be applicable for delay in delivery and completion of ITC, as per norms.",
+    "4. Bidders shall submit the Bid Security Declaration (Applicable for INDENT VALUE MORE THAN 5 LAKHS)"
+];
     
         // Mode of Procurement options — 6 allowed values per backend validation
         const modeOfProcurementOptions = [
@@ -43,7 +52,7 @@
     
         const reasonDropdown = [
             {
-                label: "It is in the knowledge of the user department that only a particular firm is the manufacturer of the required goods",
+                label: "",
                 value: "It is in the knowledge of the user department that only a particular firm is the manufacturer of the required goods",
             },
             {
@@ -206,6 +215,28 @@
     
             // ✅ Fetch consignee location values from LOV system (Form ID: 3 = IndentCreation, Designator: consigneeLocation)
             const { lovValues: consigneeLocationLOV, loading: loadingLocations } = useLOVValues(3, 'consigneeLocation');
+
+            // ✅ Fetch financial year values from LOV system (Form ID: 3 = IndentCreation, Designator: financialYear)
+const { lovValues: financialYearLOV, loading: loadingFinancialYear } = useLOVValues(3, 'financialYear');
+
+// ✅ Fetch reason values from LOV system (Form ID: 3 = IndentCreation, Designator: reason)
+const { lovValues: reasonLOV, loading: loadingReason } = useLOVValues(3, 'reason');
+
+
+
+const financialYearDropdown = financialYearLOV
+    .filter(item => item.isActive === true)
+    .map((item) => ({
+        label: item.lovDisplayValue,
+        value: item.lovValue
+    }))
+
+const reasonDropdownLOV = reasonLOV
+    .filter(item => item.isActive === true)
+    .map((item) => ({
+        label: item.lovDisplayValue,
+        value: item.lovValue
+    }))
     
             // ✅ Use LOV values with correct mapping: display lovDisplayValue, send lovValue to backend
             // ✅ TC_13: Filter out inactive items for regular form dropdowns
@@ -243,6 +274,8 @@
     
             // Cancellation Request Modal State
             const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+             // Track if user actually expanded/read the proprietary declaration
+    const [declarationRead, setDeclarationRead] = useState(false);
     
             // Handle opening purchase history modal
             const handleOpenPurchaseHistory = (materialCode, materialDescription) => {
@@ -561,8 +594,12 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                         // Call the new API to get employee details by userId
                         const { data } = await axios.get(`/api/employee-department-master/by-user/${userId}`);
                         const employeeData = data?.responseData;
-    
+                            
                         if (employeeData) {
+                            const indentorLocation =
+    employeeData?.location === 'ALL'
+        ? 'BANGLORE'
+        : (employeeData?.location || '');
                             // Auto-fill all employee-related fields from employee table
                             setFormData(prev => ({
                                 ...prev,
@@ -570,6 +607,8 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 indentorDepartment: employeeData.departmentName || '',
                                 indentorMobileNo: employeeData.phoneNumber || '',
                                 indentorEmailAddress: employeeData.emailAddress || '',
+                                indentorLocation: indentorLocation || '', // Keep existing location if already set
+                                
                             }));
     
                             // Fetch price limit for the department (for computer items validation)
@@ -818,7 +857,15 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                         },
                         {
             name: "budgetCode",
-            label: "Budget Code",
+            // label: "Budget Code",
+            label: (
+        <span>
+            Budget Code
+            <Tooltip title="If the required Budget Code is not available. Please contact the Accounts Section to allocate Budget Code">
+                <span style={{ marginLeft: 6, color: '#1890ff', cursor: 'pointer' }}>ⓘ</span>
+            </Tooltip>
+        </span>
+    ),
             type: "select",
             required: true,
             value: formData.budgetCode ?? undefined,
@@ -1301,6 +1348,14 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 { label: "Q4", value: "Q4" }
                             ]
                         },
+                            {
+                                name: "financialYear",
+                                label: "Financial Year",
+                                type: "select",
+                                disabled: !formData.isEditable,
+                                span:1,
+                                options: financialYearDropdown
+                            },
                         {
                             name: "purpose",
                             label: "Purpose",
@@ -1315,7 +1370,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 label: "Reason",
                                 type: "select",
                                 span: 2,
-                                options: reasonDropdown,
+                                options: reasonDropdownLOV,
                                 required: true
                             },
                             {
@@ -1326,13 +1381,52 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 required: true
                             }
                         ] : []),
+                        // ...(["PROPRIETARY", "LIMITED_TENDER", "Proprietary/Single Tender"].includes(selectedModeOfProcurement) ? [
+                        //     {
+                        //         name: "proprietaryAndLimitedDeclaration",
+                        //         label: proprietaryLimitedDeclarationLabel,
+                        //         type: "checkbox",
+                        //         span: 2,
+                        //         required: true
+                        //     }
+                        // ] : []),
                         ...(["PROPRIETARY", "LIMITED_TENDER", "Proprietary/Single Tender"].includes(selectedModeOfProcurement) ? [
                             {
                                 name: "proprietaryAndLimitedDeclaration",
-                                label: proprietaryLimitedDeclarationLabel,
-                                type: "checkbox",
+                                label: " ",
+                                type: "custom",
                                 span: 2,
-                                required: true
+                                required: true,
+                                render: () => (
+                                    <div style={{ marginTop: '8px' }}>
+                                        <Collapse
+                                            onChange={(keys) => {
+                                                if (keys.length > 0) setDeclarationRead(true);
+                                            }}
+                                        >
+                                            <Collapse.Panel header={proprietaryLimitedDeclarationLabel} key="1">
+                                                <ol style={{ paddingLeft: '20px', margin: 0 }}>
+                                                    {proprietaryLimitedDeclarationPoints.map((point, idx) => (
+                                                        <li key={idx} style={{ marginBottom: '8px' }}>{point}</li>
+                                                    ))}
+                                                </ol>
+                                            </Collapse.Panel>
+                                        </Collapse>
+                                        <Checkbox
+                                            checked={!!formData.proprietaryAndLimitedDeclaration}
+                                            disabled={!declarationRead || !formData.isEditable}
+                                            onChange={(e) => handleChange("proprietaryAndLimitedDeclaration", e.target.checked)}
+                                            style={{ marginTop: '10px' }}
+                                        >
+                                            I have read and agree to the above declaration
+                                        </Checkbox>
+                                        {!declarationRead && (
+                                            <div style={{ fontSize: '12px', color: '#faad14', marginTop: '4px' }}>
+                                                Please expand and read the declaration above to enable this checkbox.
+                                            </div>
+                                        )}
+                                    </div>
+                                )
                             }
                         ] : []),
                         {
@@ -2363,6 +2457,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
             { key: 'purpose',                         label: 'Purpose' },
             { key: 'justification',                   label: 'Justification' },
             { key: 'quarter',                         label: 'Quarter' },
+            { key: 'financialYear',                    label: 'Financial Year' },
             { key: 'isPreBidMeetingRequired',         label: 'Pre-Bid Meeting Required' },
             { key: 'preBidMeetingDate',               label: 'Pre-Bid Meeting Date' },
             { key: 'preBidMeetingVenue',              label: 'Pre-Bid Meeting Venue' },
@@ -2384,6 +2479,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
             { key: 'draftEOIOrRFPFileName',           label: 'Draft EOI/RFP File' },
             { key: 'uploadPACOrBrandPACFileName',     label: 'PAC/Brand PAC File' },
             { key: 'uploadBuyBackFileNames',          label: 'Buy Back File' },
+            { key: 'financialYear',                    label: 'Financial Year' },
         ];
 
         // Fields to diff — material line items

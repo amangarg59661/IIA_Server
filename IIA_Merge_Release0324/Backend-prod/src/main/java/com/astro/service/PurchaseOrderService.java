@@ -52,6 +52,6 @@ PurchaseOrderResponseDTO submitPoDraft(String poId, PurchaseOrderRequestDTO dto)
 List<PurchaseOrderResponseDTO> getUserPoDrafts(Integer userId);
 
 PurchaseOrderResponseDTO updateMiscFields(String poId, PurchaseOrderRequestDTO dto);
-
+PurchaseOrderResponseDTO cancelPurchaseOrder(String poId, PoCancellationRequestDTO dto);
 
 }

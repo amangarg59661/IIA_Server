@@ -44,7 +44,7 @@ public class TenderRequestDto {
     private List<String> mllStatusDeclarationFileName;
 
     //   private MultipartFile uploadGeneralTermsAndConditions;
-
+    private String specialTermsConditions;
     private List<String> uploadSpecificTermsAndConditions;
     private String preBidDisscussions;
     private String updatedBy;

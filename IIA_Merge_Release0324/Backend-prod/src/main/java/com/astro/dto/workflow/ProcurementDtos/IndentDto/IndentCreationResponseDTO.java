@@ -88,7 +88,7 @@ public class IndentCreationResponseDTO {
     private String currentStatus;
     private String currentStage;
     private Integer approvalLevel;
-
+    private String financialYear;
     // New fields for better status display
     private String statusMessage;  // User-friendly status message
     private Integer totalApprovalLevels;  // Total number of approval levels for this indent

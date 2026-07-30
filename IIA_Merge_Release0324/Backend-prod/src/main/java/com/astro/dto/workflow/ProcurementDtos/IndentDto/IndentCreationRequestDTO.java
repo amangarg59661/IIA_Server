@@ -50,7 +50,7 @@ public class IndentCreationRequestDTO {
     private Boolean proprietaryAndLimitedDeclaration;
     private List<String> uploadBuyBackFileNames;
     private List<MaterialDetailsRequestDTO> materialDetails;
-
+    private String financialYear;
     private String updatedBy;
     private String createdBy;
 
