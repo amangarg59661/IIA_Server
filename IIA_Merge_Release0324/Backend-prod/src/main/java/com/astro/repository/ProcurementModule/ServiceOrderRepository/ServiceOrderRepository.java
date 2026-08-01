@@ -275,4 +275,12 @@ Optional<ServiceOrder> findActiveVersionByBaseId(@Param("baseId") String baseId)
     List<ServiceOrder> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
     //ServiceOrder getSoId(String soId);
+    // ── MULTI-FACTOR SEARCH (mirrors PO search) ─────────────────────
+    List<ServiceOrder> findBySoIdContainingIgnoreCase(String soId);
+
+    List<ServiceOrder> findByVendorNameContainingIgnoreCase(String vendorName);
+
+    List<ServiceOrder> findByTenderIdContainingIgnoreCase(String tenderId);
+
+    List<ServiceOrder> findByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
 }

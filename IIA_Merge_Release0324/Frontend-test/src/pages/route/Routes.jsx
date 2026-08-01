@@ -11,6 +11,7 @@ import QueueTable from "../dashboard/queue/QueueTable";
 import Form4a from "../dashboard/tenderRequest/Form4a";
 import ReportsMain from "../reports/ReportsMain";
 import CpReport from "../reports/CpReport";
+import ServiceInspection from "../dashboard/ServiceInspection/ServiceInspection";
 import IndentReport from "../reports/IndentReport";
 import TechnoMom from "../reports/TechnoMom";
 import VendorContract from "../reports/VendorContractReport";
@@ -171,6 +172,7 @@ const indentCreatorRoutes = (
     <Route path="/inventory/materialDisposal" element={<AssetDisposal />} />
     <Route path="/procurement/purchaseOrder" element={<PO />} />
     <Route path="/procurement/serviceOrder" element={<SO />} />
+    <Route path="/inventory/ServiceInspection" element={<ServiceInspection />} />
   </>
 );
 
@@ -211,7 +213,7 @@ const storePersonRoutes = (
     <Route path="/inventory/ForDisposalAssets" element={<ForDisposalAssets />} />
     <Route path="/inventory/outward" element={<Ogp />} />
     <Route path="/inventory/inward" element={<Igp />} />
-   
+    <Route path="/inventory/ServiceInspection" element={<ServiceInspection />} />
 
   </>
 );

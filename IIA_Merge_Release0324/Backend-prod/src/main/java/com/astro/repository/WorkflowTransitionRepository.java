@@ -320,6 +320,12 @@ ORDER BY wt.requestId, wt.createdDate
     List<String> findApprovedSoIds();
 
     @Query("SELECT wt.requestId FROM WorkflowTransition wt " +
+            "WHERE wt.workflowName = 'Service Inspection Workflow' " +
+            "AND wt.status = 'Completed' " +
+            "AND wt.nextAction IS NULL")
+    List<String> findApprovedServiceInspectionIds();
+
+    @Query("SELECT wt.requestId FROM WorkflowTransition wt " +
             "WHERE wt.workflowName = 'Contingency Purchase Workflow' " +
             "AND wt.status = 'Completed' " +
             "AND wt.nextAction IS NULL")

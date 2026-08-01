@@ -763,6 +763,7 @@ const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
 const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 const [searchDone, setSearchDone] = useState(false);
+const [soIdDropdown, setSoIdDropdown] = useState([]);
   // Redux selectors
   const auth = useSelector((state) => state.auth);
   const actionPerformer = auth.userId;
@@ -816,6 +817,35 @@ const [searchDone, setSearchDone] = useState(false);
       message.error("Failed to load dropdown data");
     }
   };
+
+  const handleSearchSoIds = async () => {
+  const { searchType, searchValue } = formData;
+
+  if (!searchValue || !searchType) {
+    message.warning("Please select search type and enter value.");
+    return;
+  }
+
+  try {
+    const { data } = await axios.get(`/api/service-orders/search`, {
+      params: { type: searchType, value: searchValue }
+    });
+    const soList = data?.responseData || [];
+    const dropdownOptions = soList.map((item) => ({
+      label: item.soId,
+      value: item.soId
+    }));
+    setSoIdDropdown(dropdownOptions);
+    if (dropdownOptions.length === 0) {
+      message.warning("No SO IDs found.");
+    } else {
+      message.success(`${dropdownOptions.length} Please Select SO Id in SO Id Drop Down.`);
+    }
+  } catch (error) {
+    message.error("Error fetching SO IDs.");
+  }
+};
+
 
   const handleTenderSelect = async (tenderId) => {
     try {
@@ -938,10 +968,45 @@ const [searchDone, setSearchDone] = useState(false);
               shouldShow: () => !formData.vendorType || formData.vendorType?.toLowerCase() === "domestic",
             };
           }
+          // if (field.name === "vendorSwiftCode") {
+          //   return {
+          //     ...field,
+          //     shouldShow: () => formData.vendorType?.toLowerCase() === "international",
+          //   };
+          // }
+          // return field;
           if (field.name === "vendorSwiftCode") {
             return {
               ...field,
               shouldShow: () => formData.vendorType?.toLowerCase() === "international",
+            };
+          }
+          if (field.name === "searchType") {
+            return {
+              ...field,
+              options: [
+                { label: "SO ID", value: "SO ID" },
+                { label: "Vendor Name", value: "Vendor Name" },
+                { label: "Tender ID", value: "Tender ID" },
+                { label: "Date", value: "Date" },
+              ],
+            };
+          }
+          if (field.name === "searchValue") {
+            return {
+              ...field,
+              onSearch: handleSearchSoIds,
+            };
+          }
+          if (field.name === "soId") {
+            return {
+              ...field,
+              type: "select",
+              options: soIdDropdown,
+              props: {
+                showSearch: true,
+                onChange: (value) => handleSearch(value),
+              },
             };
           }
           return field;

@@ -34,4 +34,11 @@ public class WorkflowMaster {
 
     @Column(name = "Workflow_limit")
     private BigDecimal limit;
+
+
+    @Column(name = "OVERRIDE_ROLE_NAME")
+    private String overrideRoleName;
+
+    @Column(name = "OVERRIDE_ACTIVE")
+    private Boolean overrideActive;
 }

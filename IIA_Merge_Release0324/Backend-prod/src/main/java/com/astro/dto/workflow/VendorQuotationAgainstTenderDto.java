@@ -1,5 +1,5 @@
 package com.astro.dto.workflow;
-
+import java.math.BigDecimal;
 import lombok.Data;
 
 @Data
@@ -35,5 +35,8 @@ public class VendorQuotationAgainstTenderDto {
     private String registeredVendorName;
 
     private String ppDocUploadRemarks;
+    private BigDecimal enteredAmount;
+    // Boolean (not primitive) so Jackson serializes the getter as "isL1Vendor"
+    private Boolean isL1Vendor;
 
 }

@@ -47,16 +47,43 @@ export const SoDetails = [
     }
         ]
     },
+
     {
-      heading: "SO Search",
-      colCnt: 4,
-      fieldList: [{
-        name: "soId",
-        label: "SO ID",
-        type: "search",
-        span: 1
-      }]
+  heading: "SO Search",
+  colCnt: 4,
+  fieldList: [
+    {
+      name: "searchType",
+      label: "Search By",
+      type: "select",
+      options: [],
+      span: 1
     },
+    {
+      name: "searchValue",
+      label: "Search Value",
+      type: "search",
+      span: 1
+    },
+    {
+      name: "soId",
+      label: "SO ID",
+      type: "select",
+      options: [],
+      span: 1
+    }
+  ]
+},
+    // {
+    //   heading: "SO Search",
+    //   colCnt: 4,
+    //   fieldList: [{
+    //     name: "soId",
+    //     label: "SO ID",
+    //     type: "search",
+    //     span: 1
+    //   }]
+    // },
     {
       heading: "Tender Details",
       colCnt: 4,

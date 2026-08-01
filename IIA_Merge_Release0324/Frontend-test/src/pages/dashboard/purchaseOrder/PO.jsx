@@ -31,6 +31,8 @@ const PO = () => {
 const [cancelModalOpen, setCancelModalOpen] = useState(false);
 const [cancelReason, setCancelReason] = useState("");
 const [cancelBtnLoading, setCancelBtnLoading] = useState(false);
+const [projectBudgetCodes, setProjectBudgetCodes] = useState([]);
+const [allBudgetCodes, setAllBudgetCodes] = useState([]);
 
   // Redux selectors
   const auth = useSelector((state) => state.auth);
@@ -61,6 +63,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   const { lovValues: incoTermsLOV, loading: loadingIncoTerms } = useLOVValues(9, 'incoTerms');
   const { lovValues: paymentTermsLOV, loading: loadingPaymentTerms } = useLOVValues(9, 'paymentTerms');
   // Fetch initial data
+  
   const populateDropdowns = async () => {
     try {
       const [vendorResponse, approvedTendersResponse] = await Promise.all([
@@ -96,6 +99,48 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
 
     } catch (error) {
       message.error("Failed to load dropdown data");
+    }
+  };
+  // Fetch full budget code list (used when material has no project)
+  const fetchAllBudgetCodes = async () => {
+    try {
+      const { data } = await axios.get('/api/admin/budget');
+      const budgetData = data?.responseData || [];
+      const budgetOptions = budgetData.map((budget) => ({
+        label: budget.budgetName,
+        value: budget.budgetCode,
+      }));
+      setAllBudgetCodes(budgetOptions);
+    } catch (error) {
+      console.error('Error fetching all budget codes:', error);
+      setAllBudgetCodes([]);
+    }
+  };
+
+  // Fetch budget codes scoped to a project (used when material has a project)
+  const fetchBudgetCodesByProject = async (projectCode) => {
+    if (!projectCode) {
+      setProjectBudgetCodes([]);
+      return;
+    }
+    try {
+      const { data } = await axios.get(`/api/admin/budget/project/${projectCode}/dropdown`);
+      let budgetData = [];
+      if (data?.responseData) {
+        budgetData = data.responseData;
+      } else if (data?.data) {
+        budgetData = data.data;
+      } else if (Array.isArray(data)) {
+        budgetData = data;
+      }
+      const budgetOptions = budgetData.map((budget) => ({
+        label: budget.budgetName || budget.budgetCode,
+        value: budget.budgetCode,
+      }));
+      setProjectBudgetCodes(budgetOptions);
+    } catch (error) {
+      console.error('Error fetching budget codes for project:', error);
+      setProjectBudgetCodes([]);
     }
   };
    const handleSearchPoIds = async () => {
@@ -154,6 +199,9 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
       currency: material.currency || "INR",
       gst: material.gst || "",
       duties: material.duties || "",
+      projectName: indent.projectName || "",
+      buyBack: indent.buyBack === true,
+      buyBackAmount: indent.buyBack === true ? (indent.buyBackAmount || "") : "",
     }))
 );
 
@@ -200,13 +248,21 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
 
     // Auto-fill vendor details from vendorId
     const selectedVendor = vendors.find((v) => v.id === tenderDto.vendorId);
-
+  const primaryIndent = tenderDto.indentResponseDTO?.[0];
+    if (primaryIndent?.projectName) {
+      fetchBudgetCodesByProject(primaryIndent?.projectCode || primaryIndent.projectName);
+    } else {
+      setProjectBudgetCodes([]);
+    }
       setFormData((prev) => ({
         ...prev,
         tenderId,
         materialDtlList: allMaterials,
         incoTerms: tenderDto.incoTerms,
         paymentTerms: tenderDto.paymentTerms,
+         indentorName: tenderDto.indentResponseDTO?.[0]?.indentorName || "",
+  buyBack: tenderDto.buyBack === true,
+  buyBackAmount: tenderDto.buyBack === true ? (tenderDto.buyBackAmount || "") : "",
         vendorId: tenderDto.vendorId,
         vendorName: selectedVendor?.value || "",
         vendorAddress: selectedVendor?.address || "",
@@ -441,6 +497,7 @@ updated[index].estimatedItemTotal = (
   + parseFloat(item.gstAmount || 0) 
   + parseFloat(item.duties || 0) 
   + parseFloat(item.freightCharge || 0)
+  - parseFloat(item.buyBackAmount || 0)
 ).toFixed(2);
 
      
@@ -681,14 +738,27 @@ const canCancelPo =
         { params: { poId: value || formData.poId } }
       );
       const responseData = data?.responseData || {};
-
-      setFormData({
+// Budget code: project-specific list if the loaded PO carries a project, else full list
+      const poProjectName =
+        responseData?.projectName ||
+        (Array.isArray(responseData?.purchaseOrderAttributes)
+          ? responseData.purchaseOrderAttributes[0]?.projectName
+          : null);
+      if (poProjectName) {
+        fetchBudgetCodesByProject(responseData?.projectCode || poProjectName);
+      } else {
+        setProjectBudgetCodes([]);
+      }
+      setFormData((prev) => ({
         ...responseData,
+         indentorName: responseData?.indentorName || prev.indentorName || "",
+  buyBack: responseData?.buyBack === true,
+  buyBackAmount: responseData?.buyBack === true ? (responseData?.buyBackAmount || "") : "",
         materialDtlList: responseData?.purchaseOrderAttributes || [],
         comparativeStatementFileName: Array.isArray(responseData?.comparativeStatementFileNameList)
           ? responseData.comparativeStatementFileNameList
           : [],
-      });
+      }));
       console.log(formData);
       setSearchDone(true);
       if (responseData.isActive === false) {
@@ -719,6 +789,32 @@ const canCancelPo =
               ),
           };
         }
+        if (child.name === "buyBackAmount") {
+  return {
+    ...child,
+    shouldShow: () =>
+      (formData?.materialDtlList || []).some((m) => m.buyBack === true),
+  };
+}
+if (child.name === "budgetCode") {
+          const hasProject = (formData?.materialDtlList || []).some((m) => m.projectName);
+          return {
+            ...child,
+            options: hasProject
+              ? (projectBudgetCodes.length > 0 ? projectBudgetCodes : [])
+              : allBudgetCodes,
+            placeholder: hasProject && projectBudgetCodes.length === 0
+              ? "Loading project budget codes..."
+              : "Select budget code",
+          };
+        }
+         if (child.name === "projectName") {
+          return {
+            ...child,
+            shouldShow: () =>
+              (formData?.materialDtlList || []).some((m) => m.projectName != null),
+          };
+        }
 
         if (child.name === "inrEquivalent") {
           return {
@@ -728,6 +824,7 @@ const canCancelPo =
                 (m) => m.currency && m.currency !== "INR"
               ),
           };
+          
         }
 
         return child;
@@ -745,6 +842,12 @@ const canCancelPo =
             shouldShow: () => searchDone,
           };
         }
+if (field.name === "buyBackAmount") {
+  return {
+    ...field,
+    shouldShow: () => formData?.buyBack === true
+  };
+}
 
         if (field.name === "gemContractFileName") {
           return {
@@ -754,10 +857,10 @@ const canCancelPo =
               formData.tenderDetails?.modeOfProcurement === "GEM",
           };
       }
-     if (field.name === "buyBackAmount") {
+    if (field.name === "buyBackAmount") {
   return {
     ...field,
-    shouldShow: () => formData?.indentResponseDTO?.buyBack === "true"
+    shouldShow: () => formData?.buyBack === true
   };
 }
 
@@ -795,7 +898,9 @@ const canCancelPo =
 
   // Load initial data
   useEffect(() => {
+    
     populateDropdowns();
+    fetchAllBudgetCodes();
   }, []);
 
   // --- Printing Function ---
@@ -991,7 +1096,7 @@ const canCancelPo =
         const LINE_FIELDS = [
             { key: 'materialCode',        label: 'Material Code' },
             { key: 'materialDescription', label: 'Description' },
-            { key: 'materialDescriptionQuotation', label: 'Description (Quotation)' },
+            { key: 'materialDescriptionQuotation', label: 'Description As Quotation' },
             { key: 'quantity',            label: 'Quantity' },
             { key: 'rate',                label: 'Rate' },
             { key: 'currency',            label: 'Currency' },

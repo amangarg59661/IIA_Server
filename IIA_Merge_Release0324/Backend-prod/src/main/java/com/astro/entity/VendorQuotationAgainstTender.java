@@ -5,6 +5,7 @@ import lombok.Data;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.math.BigDecimal;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -128,6 +129,8 @@ public class VendorQuotationAgainstTender {
     /** Rank assigned after financial evaluation (L1, L2, L3...) */
     @Column(name = "`rank`")
     private Integer rank;
+      @Column(name = "entered_amount", precision = 18, scale = 2)
+    private BigDecimal enteredAmount;
 
    public enum WorkflowActorRole {
       VENDOR,

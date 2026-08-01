@@ -66,6 +66,11 @@ public class ServiceOrderController {
         List<ServiceOrderResponseDTO> responseDTOList = serviceOrder.getAllServiceOrders();
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTOList), HttpStatus.OK);
     }
+     @GetMapping("/search")
+    public ResponseEntity<Object> searchServiceOrders(@RequestParam String type, @RequestParam String value) {
+        List<ServiceOrderResponseDTO> results = serviceOrder.searchServiceOrders(type, value);
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(results), HttpStatus.OK);
+    }
 
     @GetMapping("/byId")
     public ResponseEntity<Object> getServiceOrderById(@RequestParam String soId) {

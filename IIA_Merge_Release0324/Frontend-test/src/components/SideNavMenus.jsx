@@ -262,6 +262,12 @@ export const sidebarMenus = {
           label: "Material Disposal",
           path: "/inventory/materialDisposal",
         },
+        {
+          key: "5.5",
+          icon: <CiPassport1 />,
+          label: "Service Inspection",
+          path: "/inventory/ServiceInspection",
+        }
       ],
     },
     {
@@ -396,6 +402,12 @@ export const sidebarMenus = {
           icon: <ReconciliationOutlined />,
           label: "Goods Receipt and Inspection",
           path: "/inventory/goodsReceipt",
+        },
+        {
+          key: "4.5",
+          icon: <CiPassport1 />,
+          label: "Service Inspection",
+          path: "/inventory/ServiceInspection",
         },
           // {
           //   key: "4.5",

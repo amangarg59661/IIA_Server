@@ -106,6 +106,14 @@ public interface BranchWorkflowService {
      * @return Map of conditions extracted from PO
      */
     Map<String, Object> buildSOConditions(String requestId);
+
+    /**
+     * Build conditions map for Service Inspection workflow
+     *
+     * @param requestId Service Inspection ID
+     * @return Map of conditions extracted from Service Inspection
+     */
+    Map<String, Object> buildServiceInspectionConditions(String requestId);
  /** 
  @param requestId SO ID
      * @return Map of conditions extracted from PO

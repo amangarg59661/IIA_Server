@@ -28,6 +28,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.astro.repository.InventoryModule.ServiceInspectionMaterialDtlRepository;
 
 // Added by aman 
 import com.astro.repository.ProcurementModule.ServiceOrderRepository.ServiceOrderRepository; 
@@ -49,6 +50,8 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
     @Autowired
     private ApproverMasterRepository approverRepository;
     // Added by aman 
+    @Autowired
+    private ServiceInspectionMaterialDtlRepository serviceInspectionMaterialDtlRepository;
 
     @Autowired
     private ServiceOrderRepository serviceOrderRepository;
@@ -732,7 +735,40 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
         return conditions;
     }
     // End
+@Override
+    public Map<String, Object> buildServiceInspectionConditions(String requestId) {
 
+        Map<String, Object> conditions = new HashMap<>();
+
+        try {
+            List<com.astro.entity.InventoryModule.ServiceInspectionMaterialDtl> lines =
+                    serviceInspectionMaterialDtlRepository.findByInspectionProcessId(requestId);
+
+            // Routes on THIS CYCLE's accepted value, not the SO's full contract value —
+            // so a small AMC installment doesn't force Director-level sign-off just
+            // because the annual SO total is large.
+            BigDecimal totalAmount = lines.stream()
+                    .map(l -> {
+                        BigDecimal qty = l.getAcceptedQty() != null ? l.getAcceptedQty() : BigDecimal.ZERO;
+                        BigDecimal rate = l.getRate() != null ? l.getRate() : BigDecimal.ZERO;
+                        BigDecimal amount = qty.multiply(rate);
+                        BigDecimal gst = l.getGst() != null ? l.getGst() : BigDecimal.ZERO;
+                        BigDecimal duties = l.getDuties() != null ? l.getDuties() : BigDecimal.ZERO;
+                        BigDecimal gstAmount = amount.multiply(gst).divide(BigDecimal.valueOf(100));
+                        return amount.add(gstAmount).add(duties);
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            conditions.put("totalAmount", totalAmount);
+            System.out.println("📋 Service Inspection Conditions Built: " + conditions);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error building Service Inspection conditions: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return conditions;
+    }
     // ==================== NEW DYNAMIC WORKFLOW METHODS ====================
     @Override
     public ApproverMaster getNextApproverWithLimitCheck(

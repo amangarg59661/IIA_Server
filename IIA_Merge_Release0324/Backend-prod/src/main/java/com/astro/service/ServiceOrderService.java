@@ -10,6 +10,7 @@ public interface ServiceOrderService {
 
     public ServiceOrderResponseDTO createServiceOrder(ServiceOrderRequestDTO serviceOrderRequestDTO);
 
+     List<ServiceOrderResponseDTO> searchServiceOrders(String type, String value);
 
     public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderRequestDTO serviceOrderRequestDTO);
     public List<ServiceOrderResponseDTO> getAllServiceOrders();

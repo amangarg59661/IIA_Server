@@ -661,11 +661,7 @@ public class ProcessController {
         List<PoGrnInfoDto> res=   grns.getDistinctGrnProcessIdsForGIAndApproved();
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
-    @GetMapping("/approvedSoIds")
-    public ResponseEntity<Object> getApprovedSoIds() {
-        List<String> res=   grns.getApprovedSoIds();
-        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
-    }
+    
     @GetMapping("/approvedCpIds")
     public ResponseEntity<Object> getApprovedCpIds() {
         List<String> res = grns.getApprovedCpIds();
@@ -693,12 +689,7 @@ public class ProcessController {
 
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
-    @GetMapping("/paymentVoucherSOData")
-    public ResponseEntity<Object> getPaymentVoucherSoDetails( @RequestParam("processNo") String processNo) {
-        paymentVoucherDto res=   grns.getPaymentVoucherDtoBySoId(processNo);
-
-        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
-    }
+     
 
     @PostMapping("/savePaymentVoucher")
     public ResponseEntity<Object> createPaymentVoucher(@RequestBody paymentVoucherRequestDto dto) {

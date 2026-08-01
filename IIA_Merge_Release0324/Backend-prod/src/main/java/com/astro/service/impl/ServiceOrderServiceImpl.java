@@ -10,6 +10,7 @@ import com.astro.dto.workflow.ProcurementDtos.purchaseOrder.PurchaseOrderAttribu
 import com.astro.dto.workflow.ProcurementDtos.purchaseOrder.pendingPoReportDto;
 import com.astro.entity.ProcurementModule.*;
 import com.astro.entity.ProjectMaster;
+import java.time.LocalDateTime;
 import com.astro.exception.BusinessException;
 import com.astro.exception.ErrorDetails;
 import com.astro.repository.ProcurementModule.IndentIdRepository;
@@ -399,6 +400,49 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
 
     //     return mapToResponseDTO(existingServiceOrder);
     // }
+
+    // ── MULTI-FACTOR SEARCH (mirrors PO search) ─────────────────────
+    public List<ServiceOrderResponseDTO> searchServiceOrders(String type, String value) {
+        List<ServiceOrder> results;
+        if (type == null || value == null) {
+            return Collections.emptyList();
+        }
+        switch (type.trim().toUpperCase()) {
+            case "SO ID":
+            case "SO_ID":
+                results = serviceOrderRepository.findBySoIdContainingIgnoreCase(value);
+                break;
+            case "VENDOR NAME":
+            case "VENDOR":
+                results = serviceOrderRepository.findByVendorNameContainingIgnoreCase(value);
+                break;
+            case "TENDER ID":
+            case "TENDER_ID":
+                results = serviceOrderRepository.findByTenderIdContainingIgnoreCase(value);
+                break;
+            case "DATE":
+                try {
+                    LocalDate date = LocalDate.parse(value.trim());
+                    results = serviceOrderRepository.findByCreatedDateBetween(
+                            date.atStartOfDay(), date.plusDays(1).atStartOfDay());
+                } catch (Exception e) {
+                    throw new BusinessException(
+                            new ErrorDetails(
+                                    AppConstant.ERROR_CODE_RESOURCE,
+                                    AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                                    AppConstant.ERROR_TYPE_RESOURCE,
+                                    "Invalid date format. Expected yyyy-MM-dd."));
+                }
+                break;
+            default:
+                results = Collections.emptyList();
+        }
+        return results.stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
+   
 
     public List<ServiceOrderResponseDTO> getAllServiceOrders() {
         List<ServiceOrder> serviceOrders = serviceOrderRepository.findAll();

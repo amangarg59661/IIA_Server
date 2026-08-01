@@ -34,6 +34,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import com.astro.service.InventoryModule.ServiceInspectionService;      
 
 import com.astro.dto.workflow.InventoryModule.GiDto.SaveGiDto;
 
@@ -55,6 +56,9 @@ public class ProcessServiceImpl implements ProcessService {
     
     @Autowired
     private GrvService grvService;
+
+    @Autowired
+    private ServiceInspectionService serviceInspectionService;  
     
     @Autowired
     private GrnService grnService;
@@ -145,6 +149,8 @@ public class ProcessServiceImpl implements ProcessService {
                 return ogpService.getOgpDtls(processNo);
             case "GT":
                 return gtService.getGtDtls(processNo);
+            case "SI":
+                return serviceInspectionService.getServiceInspectionDtls(processNo);
             default:
                 throw new BusinessException(
                     new ErrorDetails(AppConstant.ERROR_TYPE_CODE_DB,

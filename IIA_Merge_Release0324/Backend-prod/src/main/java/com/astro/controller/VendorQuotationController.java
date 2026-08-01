@@ -102,6 +102,18 @@ public class VendorQuotationController {
 
     }
 
+    // added
+    @PutMapping("/entered-amounts")
+    public ResponseEntity<Object> saveEnteredAmounts(@RequestBody VendorAmountUpdateRequestDto request) {
+        boolean result = vqService.saveEnteredAmounts(request);
+        Map<String, Boolean> responseData = new HashMap<>();
+        responseData.put("status", result);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse(responseData),
+                HttpStatus.OK
+        );
+    }
+
     @PutMapping("/quotations/accept")
     public ResponseEntity<Object> acceptVendorQuotation(@RequestParam String tenderId,
                                                         @RequestParam String vendorId, @RequestParam Integer userId) {

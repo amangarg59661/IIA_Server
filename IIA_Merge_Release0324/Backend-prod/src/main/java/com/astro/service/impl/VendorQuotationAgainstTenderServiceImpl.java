@@ -239,7 +239,8 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
 
        List<VendorQuotationAgainstTender> allLatest = vendorQuotationAgainstTenderRepository.findLatestVersionsForTender(tenderId);
 
-       return allLatest.stream()
+    //    return allLatest.stream()
+    List<VendorQuotationAgainstTenderDto> dtos = allLatest.stream()
                .map(vq -> {
                    VendorQuotationAgainstTenderDto dto = new VendorQuotationAgainstTenderDto();
                    dto.setTenderId(vq.getTenderId());
@@ -287,13 +288,20 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                    dto.setRegisteredVendorId(vq.getRegisteredVendorId());
                    dto.setRegisteredVendorName(vq.getRegisteredVendorName());
                    dto.setPpDocUploadRemarks(vq.getPpDocUploadRemarks());
-
+                    dto.setEnteredAmount(vq.getEnteredAmount());
                    dto.setCanIndentorAct(canIndentorAct(vq, loggedInRole));
                    dto.setCanSpoAct(canSpoAct(vq, loggedInRole));
 
                    return dto;
                })
                .collect(Collectors.toList());
+                // L1 / lowest bidder: computed on read from whichever vendor has the lowest enteredAmount
+       dtos.stream()
+               .filter(d -> d.getEnteredAmount() != null)
+               .min(Comparator.comparing(VendorQuotationAgainstTenderDto::getEnteredAmount))
+               .ifPresent(l1 -> l1.setIsL1Vendor(true));
+
+       return dtos;
    }
 
 private boolean canIndentorAct(VendorQuotationAgainstTender vq, String role) {
@@ -458,6 +466,25 @@ public VendorStatusDto getVendorStatus(String vendorId) {
         quotation.setCreatedBy(dto.getCreatedBy());
         return quotation;
     }
+
+    // added
+   @Override
+   @Transactional
+   public boolean saveEnteredAmounts(VendorAmountUpdateRequestDto request) {
+       if (request == null || request.getVendorAmounts() == null || request.getVendorAmounts().isEmpty()) {
+           return false;
+       }
+       for (VendorAmountUpdateRequestDto.VendorAmountEntry entry : request.getVendorAmounts()) {
+           vendorQuotationAgainstTenderRepository
+                   .findByTenderIdAndVendorIdAndIsLatestTrue(request.getTenderId(), entry.getVendorId())
+                   .ifPresent(q -> {
+                       q.setEnteredAmount(entry.getEnteredAmount());
+                       q.setUpdatedDate(LocalDateTime.now());
+                       vendorQuotationAgainstTenderRepository.save(q);
+                   });
+       }
+       return true;
+   }
 
 
    public boolean updateStatusAndRemarks(VendorQuotationUpdateRequestDto request) {

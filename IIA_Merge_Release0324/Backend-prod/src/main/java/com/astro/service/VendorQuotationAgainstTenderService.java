@@ -27,6 +27,7 @@ public interface VendorQuotationAgainstTenderService {
     public boolean updateStatusAndRemarks(VendorQuotationUpdateRequestDto request);
 
     boolean markQuotationForChangeRequest(VendorQuotationChangeRequestDto request);
+    boolean saveEnteredAmounts(VendorAmountUpdateRequestDto request);
 
     List<QuotationViewHistoryDto> getVendorHistory(String tenderId, String vendorId);
     

@@ -346,12 +346,6 @@ export const PoDetails = [
           required: true,
          // options: [],
         },
-       {
-                    name: "buyBackAmount",
-                    label: "Buy Back Amount",
-                    type: "text",
-                    required: true,
-                },
          {
           name: "quotationDate",
           label: "Quotation Date",
