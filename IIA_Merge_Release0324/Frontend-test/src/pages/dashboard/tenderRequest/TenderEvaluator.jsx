@@ -7088,6 +7088,30 @@ const handleResetAllVotes = () => {
   });
 };
 
+// ── Start Over: wipe all evaluation progress, revert to pre-initiate state ──
+const handleResetEvaluation = () => {
+  Modal.confirm({
+    title: 'Start Over — Delete All Evaluation Progress?',
+    content: 'This permanently deletes all committee decisions, votes, and clarification history for this tender, and reverts it to the state before evaluation was initiated. This cannot be undone.',
+    okText: 'Yes, Start Over',
+    okButtonProps: { danger: true },
+    onOk: async () => {
+      try {
+        await axios.delete('/api/tender-evaluation/reset', {
+          params: { tenderId, userId }
+        });
+        message.success('Evaluation progress deleted. You can initiate evaluation again.');
+        setEvalStatus(null);
+        await fetchQuotationsAndPending(tenderId);
+        await fetchClarificationHistory(tenderId);
+        await fetchIndentorOpenQuestions(tenderId);
+      } catch (e) {
+        message.error(e?.response?.data?.responseStatus?.message || 'Failed to reset evaluation.');
+      }
+    },
+  });
+};
+
 // ── Chairman: resolve selected member clarifications (per-history-record) ──
 const handleForwardSelectedClarifs = async () => {
   if (!chairmanClarifForwardRemarks.trim()) return message.warning('Please enter your question for the vendor.');
@@ -7649,12 +7673,19 @@ const enteredAmountColumn = {
   },
 };
 
+// const l1BidderColumn = {
+//   title: 'L1 / Lowest Bidder',
+//   key: 'isL1Vendor',
+//   dataIndex: 'isL1Vendor',
+//   width: 130,
+//   render: (isL1Vendor) => isL1Vendor ? <Tag color="gold">L1</Tag> : '-',
+// };
 const l1BidderColumn = {
   title: 'L1 / Lowest Bidder',
-  key: 'isL1Vendor',
-  dataIndex: 'isL1Vendor',
+  key: 'rank',
+  dataIndex: 'rank',
   width: 130,
-  render: (isL1Vendor) => isL1Vendor ? <Tag color="gold">L1</Tag> : '-',
+  render: (rank) => rank != null ? <Tag color={rank === 1 ? 'gold' : 'default'}>{`L${rank}`}</Tag> : '-',
 };
 
 const baseColumns = [
@@ -10143,6 +10174,12 @@ useEffect(() => {
                 )} */}
                 {evalStatus.vendorPortalRegistered && (
                   <Tag color="green">Vendor Portal: Registered</Tag>
+                )}
+                {/* {isPurchasePersonnelRole && ( */}
+                {isSpoRole && (
+                  <Button danger size="small" onClick={handleResetEvaluation}>
+                    Start Over
+                  </Button>
                 )}
               </>
             ) : !evalLoading && isPurchasePersonnelRole && (

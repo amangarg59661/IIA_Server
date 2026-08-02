@@ -1,5 +1,6 @@
 package com.astro.service.impl;
 
+import java.math.BigDecimal;
 import com.astro.constant.AppConstant;
 import com.astro.dto.workflow.*;
 import com.astro.dto.workflow.ProcurementDtos.AllVendorStatus;
@@ -289,17 +290,14 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
                    dto.setRegisteredVendorName(vq.getRegisteredVendorName());
                    dto.setPpDocUploadRemarks(vq.getPpDocUploadRemarks());
                     dto.setEnteredAmount(vq.getEnteredAmount());
+                    dto.setRank(vq.getRank());
                    dto.setCanIndentorAct(canIndentorAct(vq, loggedInRole));
                    dto.setCanSpoAct(canSpoAct(vq, loggedInRole));
 
                    return dto;
                })
                .collect(Collectors.toList());
-                // L1 / lowest bidder: computed on read from whichever vendor has the lowest enteredAmount
-       dtos.stream()
-               .filter(d -> d.getEnteredAmount() != null)
-               .min(Comparator.comparing(VendorQuotationAgainstTenderDto::getEnteredAmount))
-               .ifPresent(l1 -> l1.setIsL1Vendor(true));
+                
 
        return dtos;
    }
@@ -483,9 +481,37 @@ public VendorStatusDto getVendorStatus(String vendorId) {
                        vendorQuotationAgainstTenderRepository.save(q);
                    });
        }
+       recomputeRanks(request.getTenderId());
        return true;
    }
+// added
+   private void recomputeRanks(String tenderId) {
+       List<VendorQuotationAgainstTender> latest =
+               vendorQuotationAgainstTenderRepository.findByTenderIdAndIsLatestTrue(tenderId);
 
+       List<BigDecimal> sortedDistinctAmounts = new ArrayList<>();
+       latest.stream()
+               .map(VendorQuotationAgainstTender::getEnteredAmount)
+               .filter(Objects::nonNull)
+               .sorted()
+               .forEach(amt -> {
+                   if (sortedDistinctAmounts.isEmpty()
+                           || sortedDistinctAmounts.get(sortedDistinctAmounts.size() - 1).compareTo(amt) != 0) {
+                       sortedDistinctAmounts.add(amt);
+                   }
+               });
+
+       for (VendorQuotationAgainstTender q : latest) {
+           if (q.getEnteredAmount() == null) { q.setRank(null); continue; }
+           for (int i = 0; i < sortedDistinctAmounts.size(); i++) {
+               if (sortedDistinctAmounts.get(i).compareTo(q.getEnteredAmount()) == 0) {
+                   q.setRank(i + 1);
+                   break;
+               }
+           }
+       }
+       vendorQuotationAgainstTenderRepository.saveAll(latest);
+   }
 
    public boolean updateStatusAndRemarks(VendorQuotationUpdateRequestDto request) {
        List<VendorQuotationAgainstTender> quotations = vendorQuotationAgainstTenderRepository.findByTenderIdAndVendorId(
@@ -501,6 +527,7 @@ public VendorStatusDto getVendorStatus(String vendorId) {
             //   quotation.setIndentorRemarks("Accepted by indentor");
                vendorQuotationAgainstTenderRepository.save(record);
            }
+        //    recomputeRanks(request.getTenderId());
            return true;
        } else {
            return false;

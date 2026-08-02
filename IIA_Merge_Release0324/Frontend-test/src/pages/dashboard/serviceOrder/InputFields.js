@@ -186,12 +186,27 @@ export const SoDetails = [
           required: true
         },
         {
-          name: "budgetCode",
-          label: "Budget Code",
-          type: "text",
-          span: 2,
-          required: true
-        },
+  name: "projectName",
+  label: "Project Name",
+  type: "text",
+  disabled: true,
+  span: 2
+},
+{
+  name: "budgetCode",
+  label: "Budget Code",
+  type: "select",
+  options: [],
+  span: 2,
+  required: true
+},
+        // {
+        //   name: "budgetCode",
+        //   label: "Budget Code",
+        //   type: "text",
+        //   span: 2,
+        //   required: true
+        // },
         {
           name: "exchangeRate",
           label: "Exchange Rate",

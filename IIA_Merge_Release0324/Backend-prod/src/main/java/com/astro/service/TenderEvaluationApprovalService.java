@@ -39,6 +39,8 @@ public interface TenderEvaluationApprovalService {
      */
     TenderEvaluationStatusDto getEvaluationStatus(String tenderId, Integer requestingUserId, String requestingRole);
 
+    void resetEvaluation(String tenderId, Integer userId);
+
     /**
      * Purchase Person / Indentor evaluates technical bid for a specific vendor.
      * Only for DOUBLE_BID tenders.

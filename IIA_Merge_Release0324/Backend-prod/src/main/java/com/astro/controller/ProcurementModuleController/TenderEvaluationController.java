@@ -496,6 +496,17 @@ public class TenderEvaluationController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(status), HttpStatus.OK);
     }
 
+    @DeleteMapping("/reset")
+    public ResponseEntity<Object> resetEvaluation(
+            @RequestParam String tenderId,
+            @RequestParam Integer userId) {
+        log.info("Reset evaluation tenderId={} userId={}", tenderId, userId);
+        approvalService.resetEvaluation(tenderId, userId);
+        return new ResponseEntity<>(
+                ResponseBuilder.getSuccessResponse("Evaluation reset successfully. tenderId: " + tenderId),
+                HttpStatus.OK);
+    }
+
     @PutMapping("/vendor/map-registered")
     public ResponseEntity<Object> mapRegisteredVendor(
             @RequestParam String tenderId,

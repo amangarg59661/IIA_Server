@@ -37,6 +37,7 @@ public class VendorQuotationAgainstTenderDto {
     private String ppDocUploadRemarks;
     private BigDecimal enteredAmount;
     // Boolean (not primitive) so Jackson serializes the getter as "isL1Vendor"
-    private Boolean isL1Vendor;
+    // private Boolean isL1Vendor;
+     private Integer rank;
 
 }

@@ -640,13 +640,14 @@ public List<ApprovedTenderIdDtos> getApprovedTenderIdsForTenderEvaluationByRole(
     switch (normalized) {
         case "purchase personnel":
         case "purchase person":
+        case "store purchase officer":
             return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSO();
 
         case "indent creator":
             return TRrepo.findApprovedTenderIdsAndTitlesForPOANDSOByCreator(String.valueOf(userId));
 
-        case "store purchase officer":
-            return TRrepo.findApprovedTendersUnder10Lakh();
+        // case "store purchase officer":
+        //     return TRrepo.findApprovedTendersUnder10Lakh();
 
         case "director":
             return TRrepo.findApprovedTendersAbove10Lakh();

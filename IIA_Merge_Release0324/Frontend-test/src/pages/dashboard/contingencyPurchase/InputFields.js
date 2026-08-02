@@ -1179,13 +1179,20 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
       label: "Purchase Statement",
       type: "text",
     },
+    // {
+    //   name: "uploadCopyOfInvoice",
+    //   label: "Upload Copy of Invoice",
+    //   type: "uploadFiles", //should be a multiple file upload field (.png, .jpeg, .pdf, .doc, etc. )
+    //   fileType: "CP",
+    //  required: true,
+    // },
     {
-      name: "uploadCopyOfInvoice",
-      label: "Upload Copy of Invoice",
-      type: "uploadFiles", //should be a multiple file upload field (.png, .jpeg, .pdf, .doc, etc. )
-      fileType: "CP",
-     required: true,
-    },
+  name: "uploadCopyOfInvoice",
+  label: "Upload Copy of Invoice",
+  type: "files",
+  accept: ".png,.jpg,.jpeg,.pdf,.doc,.docx",
+  required: true,
+},
   ],
 },
 {

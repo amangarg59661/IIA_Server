@@ -2864,6 +2864,93 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
             return buildStatusDto(eval, tender, tenderId);
         }
 
+
+        // ─────────────────────────────────────────────────────────────────
+        // 22. RESET EVALUATION (hard reset — no history kept)
+        //     Wipes every table the evaluation workflow writes to and
+        //     deletes the TenderEvaluation row, so getEvaluationStatus()
+        //     reports evaluationStatus = null again — i.e. reverts the
+        //     tender to exactly the state it was in before "Initiate
+        //     Evaluation" (beginEvaluation) was ever called, regardless
+        //     of how far the workflow had progressed. Blocked once PO/SO
+        //     has been generated for the tender.
+        // ─────────────────────────────────────────────────────────────────
+        @Transactional
+        @Override
+        public void resetEvaluation(String tenderId, Integer userId) {
+            TenderEvaluation eval = requireEval(tenderId);
+            TenderRequest tender = requireTender(tenderId);
+
+            if (tender.getLockedForPO() != null) {
+                throw new BusinessException(new ErrorDetails(400, 1, "VALIDATION",
+                        "Cannot reset evaluation — PO/SO has already been generated for tender "
+                        + tenderId + "."));
+            }
+
+            List<TenderCommitteeDecision> decisions = committeeDecisionRepository.findByTenderId(tenderId);
+            for (TenderCommitteeDecision d : decisions) {
+                Integer memberId = d.getCommitteeUserId();
+                if (memberId == null) continue;
+                if (memberId.equals(eval.getAdHocChairmanUserId())) {
+                    removeCommitteeChairmanRoleIfSafe(memberId, tenderId);
+                } else {
+                    removeCommitteeMemberRoleIfSafe(memberId, tenderId);
+                }
+            }
+            if (eval.getAdHocChairmanUserId() != null) {
+                removeCommitteeChairmanRoleIfSafe(eval.getAdHocChairmanUserId(), tenderId);
+            }
+
+            if (!decisions.isEmpty()) {
+                committeeDecisionRepository.deleteAll(decisions);
+            }
+
+            committeeVendorDecisionRepository.deleteByTenderIdAndPhase(tenderId, "TECHNICAL");
+            committeeVendorDecisionRepository.deleteByTenderIdAndPhase(tenderId, "FINANCIAL");
+
+            List<TenderClarificationHistory> clarifications =
+                    clarificationHistoryRepository.findByTenderIdOrderByRequestedAtDesc(tenderId);
+            if (!clarifications.isEmpty()) {
+                clarificationHistoryRepository.deleteAll(clarifications);
+            }
+
+            List<VendorQuotationAgainstTender> quotations =
+                    quotationRepository.findByTenderIdAndIsLatestTrue(tenderId);
+            for (VendorQuotationAgainstTender q : quotations) {
+                q.setTechnicalStatus(null);
+                q.setTechnicalRemarks(null);
+                q.setTechnicalEvaluatedBy(null);
+                q.setTechnicalEvaluatedDate(null);
+                q.setFinancialBidVisible(false);
+                q.setFinancialIndentorStatus(null);
+                q.setFinancialIndentorRemarks(null);
+                q.setFinancialSpoStatus(null);
+                q.setFinancialSpoRemarks(null);
+                q.setIndentorStatus(null);
+                q.setIndentorRemarks(null);
+                q.setSpoStatus(null);
+                q.setSpoRemarks(null);
+                q.setAcceptanceStatus(null);
+                q.setCurrentRole(null);
+                q.setNextRole(null);
+                q.setStatus(null);
+                q.setRemarks(null);
+                q.setVendorResponse(null);
+                q.setClarificationFileName(null);
+                q.setPpDocUploadRemarks(null);
+                q.setUpdatedBy(String.valueOf(userId));
+                q.setUpdatedDate(LocalDateTime.now());
+            }
+            if (!quotations.isEmpty()) {
+                quotationRepository.saveAll(quotations);
+            }
+
+            tenderEvaluationRepository.delete(eval);
+
+            log.info("Evaluation reset for tender {} by user {}. All progress wiped; reverted to pre-initiate state.",
+                    tenderId, userId);
+        }
+
         // ─────────────────────────────────────────────────────────────────
         // HELPERS
         // ─────────────────────────────────────────────────────────────────

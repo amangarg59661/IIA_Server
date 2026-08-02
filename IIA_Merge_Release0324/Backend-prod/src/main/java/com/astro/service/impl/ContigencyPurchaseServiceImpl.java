@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 
 @Service
 public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService {
@@ -44,6 +45,14 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
     private WorkflowTransitionRepository workflowTransitionRepository;
     @Autowired
     private ObjectMapper objectMapper;
+
+     @Value("${filePath}")
+    private String bp;
+    private final String basePath;
+
+    public ContigencyPurchaseServiceImpl(@Value("${filePath}") String bp) {
+        this.basePath = bp + "/ContingencyPurchase";
+    }
 
     @Override
     public ContigencyPurchaseResponseDto createContigencyPurchase(ContigencyPurchaseRequestDto contigencyPurchaseDto){
@@ -70,6 +79,13 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         cp.setVendorsInvoiceNo(contigencyPurchaseDto.getVendorInvoiceNo());
         cp.setPredifinedPurchaseStatement(contigencyPurchaseDto.getPredifinedPurchaseStatement());
         cp.setRemarksForPurchase(contigencyPurchaseDto.getRemarksForPurchase());
+
+        // if (contigencyPurchaseDto.getUploadCopyOfInvoice() == null || contigencyPurchaseDto.getUploadCopyOfInvoice().isEmpty()) {
+        //     cp.setUploadCopyOfInvoiceFileName(null);
+        // } else {
+        //     cp.setUploadCopyOfInvoiceFileName(CommonUtils.saveBase64Image(contigencyPurchaseDto.getUploadCopyOfInvoice(), basePath));
+        // }
+        cp.setUploadCopyOfInvoiceFileName(saveBase64File(contigencyPurchaseDto.getUploadCopyOfInvoice(), basePath));
         String Date = contigencyPurchaseDto.getDate();
         if (Date != null) {
             cp.setDate(CommonUtils.convertStringToDateObject(contigencyPurchaseDto.getDate()));
@@ -397,6 +413,12 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         cp.setVendorsInvoiceNo(dto.getVendorInvoiceNo());
         cp.setPredifinedPurchaseStatement(dto.getPredifinedPurchaseStatement());
         cp.setRemarksForPurchase(dto.getRemarksForPurchase());
+        //  if (dto.getUploadCopyOfInvoice() == null || dto.getUploadCopyOfInvoice().isEmpty()) {
+        //     cp.setUploadCopyOfInvoiceFileName(null);
+        // } else {
+        //     cp.setUploadCopyOfInvoiceFileName(CommonUtils.saveBase64Image(dto.getUploadCopyOfInvoice(), basePath));
+        // }
+        cp.setUploadCopyOfInvoiceFileName(saveBase64File(dto.getUploadCopyOfInvoice(), basePath));
 
         String date = dto.getDate();
         cp.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
@@ -485,7 +507,11 @@ cp.setCpType(dto.getCpType());
         existing.setPurpose(dto.getPurpose());
         existing.setDeclarationOne(dto.getDeclarationOne());
         existing.setDeclarationTwo(dto.getDeclarationTwo());
-        existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
+        // existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
+        // if (dto.getUploadCopyOfInvoice() != null && !dto.getUploadCopyOfInvoice().isEmpty()) {
+        //     existing.setUploadCopyOfInvoiceFileName(CommonUtils.saveBase64Image(dto.getUploadCopyOfInvoice(), basePath));
+        // }
+        existing.setUploadCopyOfInvoiceFileName(saveBase64File(dto.getUploadCopyOfInvoice(), basePath));
         existing.setFileType(dto.getFileType());
         existing.setUpdatedBy(dto.getUpdatedBy());
 
@@ -581,7 +607,11 @@ cp.setCpType(dto.getCpType());
         existing.setDeclarationOne(dto.getDeclarationOne());
         existing.setDeclarationTwo(dto.getDeclarationTwo());
         existing.setUploadCopyOfInvoice(null);
-        existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
+        // if (dto.getUploadCopyOfInvoice() != null && !dto.getUploadCopyOfInvoice().isEmpty()) {
+        //     existing.setUploadCopyOfInvoiceFileName(CommonUtils.saveBase64Image(dto.getUploadCopyOfInvoice(), basePath));
+        // }
+        existing.setUploadCopyOfInvoiceFileName(saveBase64File(dto.getUploadCopyOfInvoice(), basePath));
+        // existing.setUploadCopyOfInvoiceFileName(dto.getUploadCopyOfInvoice());
         existing.setFileType(dto.getFileType());
         existing.setUpdatedBy(dto.getUpdatedBy());
 
@@ -653,7 +683,17 @@ cp.setCpType(dto.getCpType());
 
         return mapToResponseDTO(existing);
     }
-
+private String saveBase64File(String base64File, String basePath) {
+    try {
+        return CommonUtils.saveBase64Image(base64File, basePath);
+    } catch (Exception e) {
+        throw new InvalidInputException(new ErrorDetails(
+                AppConstant.FILE_UPLOAD_ERROR,
+                AppConstant.USER_INVALID_INPUT,
+                AppConstant.ERROR_TYPE_CORRUPTED,
+                "Error while uploading files."));
+    }
+}
     @Override
     public List<ContigencyPurchaseResponseDto> getUserCpDrafts(Integer userId) {
         return CPrepo.findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT")
