@@ -699,7 +699,13 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
             .orElseThrow(() -> new BusinessException(new ErrorDetails(
                     AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
                     AppConstant.ERROR_TYPE_VALIDATION, "Tender request not found for the provided ID.")));
-
+ TenderEvaluation eval = tenderEvaluationRepository.findByTenderId(old.getTenderId());
+    if (eval != null && eval.getEvaluationStatus() != null) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "This tender is under evaluation and cannot be edited. Please reset the evaluation status before making changes."));
+    }
     // 2. Guard: locked after PO creation
     if (Boolean.TRUE.equals(old.getIsLocked())) {
         throw new BusinessException(new ErrorDetails(
@@ -707,7 +713,12 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
                 AppConstant.ERROR_TYPE_VALIDATION,
                 "Tender is locked. Cannot update after Purchase Order has been created. " + old.getLockedReason()));
     }
-
+   if (Boolean.FALSE.equals(old.getIsActive())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "This is an older version (v" + old.getTenderVersion() + ") of the tender. Please load the latest version to make edits."));
+    }
     // 3. Guard: only original creator can edit
     if (!old.getCreatedBy().equals(tenderRequestDto.getCreatedBy())) {
         throw new BusinessException(new ErrorDetails(
@@ -715,7 +726,13 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
                 AppConstant.ERROR_TYPE_VALIDATION,
                 "Only the original Tender Creator can edit this tender."));
     }
-
+ // 6. Guard: update reason is mandatory when versioning a submitted tender
+    if (tenderRequestDto.getUpdateReason() == null || tenderRequestDto.getUpdateReason().trim().isEmpty()) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Update reason is required when editing a submitted tender."));
+    }
     // 4. Deactivate old version
     old.setIsActive(false);
     TRrepo.save(old);
@@ -1508,6 +1525,14 @@ public TenderResponseDto updateTenderRequest(String tenderId, TenderRequestDto t
                 .orElse(BigDecimal.ZERO);
         tenderResponseDto.setProjectLimit(allocatedAmount);
         System.out.println("allocatedAmount: " + allocatedAmount);
+ // Expose editability info so the frontend can warn/block *before* a doomed submit,
+        // mirroring the same guards enforced in updateTenderRequest()
+        tenderResponseDto.setIsActive(tenderRequest.getIsActive());
+        tenderResponseDto.setTenderVersion(tenderRequest.getTenderVersion());
+        tenderResponseDto.setIsLocked(tenderRequest.getIsLocked());
+        tenderResponseDto.setLockedReason(tenderRequest.getLockedReason());
+        TenderEvaluation eval = tenderEvaluationRepository.findByTenderId(tenderRequest.getTenderId());
+        tenderResponseDto.setEvaluationStatus(eval != null ? eval.getEvaluationStatus() : null);
 
         return tenderResponseDto;
     }

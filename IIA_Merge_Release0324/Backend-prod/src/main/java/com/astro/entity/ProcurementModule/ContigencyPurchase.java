@@ -61,6 +61,14 @@ public class ContigencyPurchase {
 
      @Column(name = "cp_type")
     private String cpType;
+    @Column(name = "cp_version")
+private Integer cpVersion;
+
+@Column(name = "is_active")
+private Boolean isActive;
+
+@Column(name = "parent_contigency_id")
+private String parentContigencyId;
 
     private String paymentTo;
     private String paymentToVendor;

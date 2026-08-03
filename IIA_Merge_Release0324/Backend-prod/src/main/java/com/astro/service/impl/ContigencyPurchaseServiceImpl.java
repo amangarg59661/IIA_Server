@@ -75,6 +75,8 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         ContigencyPurchase cp = mapper.map(contigencyPurchaseDto, ContigencyPurchase.class);
         cp.setContigencyId(cpId);
         cp.setCpNumber(nextNumber);
+        cp.setCpVersion(1);
+cp.setIsActive(true);
         cp.setVendorsName(contigencyPurchaseDto.getVendorName());
         cp.setVendorsInvoiceNo(contigencyPurchaseDto.getVendorInvoiceNo());
         cp.setPredifinedPurchaseStatement(contigencyPurchaseDto.getPredifinedPurchaseStatement());
@@ -148,7 +150,146 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         return mapToResponseDTO(cp);
     }
 
+private String extractBaseCpId(String contigencyId) {
+    if (contigencyId == null) return null;
+    int slashIdx = contigencyId.indexOf('/');
+    return slashIdx >= 0 ? contigencyId.substring(0, slashIdx) : contigencyId;
+}
 
+@Override
+public ContigencyPurchaseResponseDto updateContigencyPurchase(String contigencyId, ContigencyPurchaseRequestDto dto) {
+
+    // 1. Load existing active CP
+    ContigencyPurchase old = CPrepo.findById(contigencyId)
+            .orElseThrow(() -> new BusinessException(new ErrorDetails(
+                    AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                    AppConstant.ERROR_TYPE_VALIDATION, "Contigency Purchase not found for the provided ID.")));
+
+    // Guard: cannot version-up an unsubmitted draft — submit it first
+    if ("DRAFT".equals(old.getCurrentStatus())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "This Contigency Purchase is a saved draft. Please submit it before making revisions."));
+    }
+
+    // Guard: only the original creator can edit
+    if (!old.getCreatedBy().equals(dto.getCreatedBy())) {
+        throw new BusinessException(new ErrorDetails(
+                AppConstant.ERROR_TYPE_CODE_VALIDATION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Only the original creator can revise this Contigency Purchase."));
+    }
+
+    int currentVersion = old.getCpVersion() != null ? old.getCpVersion() : 1;
+
+    // 2. Deactivate old version
+    old.setIsActive(false);
+    CPrepo.save(old);
+
+    // 3. Supersede old version's pending workflow transitions
+    List<WorkflowTransition> pendingTransitions =
+            workflowTransitionRepository.findPendingTransitionsByRequestId(old.getContigencyId());
+    for (WorkflowTransition wt : pendingTransitions) {
+        wt.setStatus("SUPERSEDED");
+        wt.setNextAction(null);
+        wt.setRemarks("Superseded by new version: " + extractBaseCpId(old.getContigencyId())
+                + "/" + (currentVersion + 1));
+        workflowTransitionRepository.save(wt);
+    }
+
+    // 4. Compute new CP ID e.g. CP1001 -> CP1001/2, CP1001/2 -> CP1001/3
+    String baseId = extractBaseCpId(old.getContigencyId());
+    int newVersion = currentVersion + 1;
+    String newContigencyId = baseId + "/" + newVersion;
+
+    // 5. Build new ContigencyPurchase (copy-new pattern)
+    ContigencyPurchase newCp = new ContigencyPurchase();
+    newCp.setContigencyId(newContigencyId);
+    newCp.setCpNumber(old.getCpNumber());        // same number, new suffix
+    newCp.setCpVersion(newVersion);
+    newCp.setIsActive(true);
+    newCp.setParentContigencyId(old.getContigencyId());
+    newCp.setCreatedBy(old.getCreatedBy());      // original creator always
+    newCp.setUpdatedBy(dto.getUpdatedBy());
+    newCp.setCreatedDate(old.getCreatedDate());  // preserve original submission date
+    newCp.setUpdatedDate(LocalDateTime.now());
+    newCp.setCurrentStatus(null);                // re-enters workflow, same as submitCpDraft
+
+    // 6. Copy business fields from the request
+    newCp.setVendorsName(dto.getVendorName());
+    newCp.setVendorsInvoiceNo(dto.getVendorInvoiceNo());
+    newCp.setPredifinedPurchaseStatement(dto.getPredifinedPurchaseStatement());
+    newCp.setRemarksForPurchase(dto.getRemarksForPurchase());
+    newCp.setProjectDetail(dto.getProjectDetail());
+    newCp.setProjectName(dto.getProjectName());
+    newCp.setPaymentTo(dto.getPaymentTo());
+    newCp.setPaymentToVendor(dto.getPaymentToVendor());
+    newCp.setPaymentToEmployee(dto.getPaymentToEmployee());
+    newCp.setPurpose(dto.getPurpose());
+    newCp.setDeclarationOne(dto.getDeclarationOne());
+    newCp.setDeclarationTwo(dto.getDeclarationTwo());
+    newCp.setFileType(dto.getFileType());
+    newCp.setCpType(dto.getCpType());
+
+    String date = dto.getDate();
+    newCp.setDate(date != null ? CommonUtils.convertStringToDateObject(date) : null);
+
+    // 7. File handling — only re-upload if a new file was provided, else carry the old one forward
+    if (dto.getUploadCopyOfInvoice() != null && !dto.getUploadCopyOfInvoice().isEmpty()) {
+        newCp.setUploadCopyOfInvoiceFileName(saveBase64File(dto.getUploadCopyOfInvoice(), basePath));
+    } else {
+        newCp.setUploadCopyOfInvoiceFileName(old.getUploadCopyOfInvoiceFileName());
+    }
+
+    // 8. Materials / jobs — same processing as create
+    ModelMapper mapper = new ModelMapper();
+    if ("JOB".equalsIgnoreCase(dto.getCpType())) {
+        List<CpJobDetails> jobs = dto.getCpJobDetails() == null
+                ? Collections.emptyList()
+                : dto.getCpJobDetails().stream().map(jobDto -> {
+                    CpJobDetails job = mapper.map(jobDto, CpJobDetails.class);
+                    job.setContigencyPurchase(newCp);
+                    job.setGst(jobDto.getGst());
+                    return job;
+                }).collect(Collectors.toList());
+
+        newCp.setCpJobDetails(jobs);
+        BigDecimal totalJobPrice = jobs.stream()
+                .map(CpJobDetails::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        newCp.setTotalCpValue(totalJobPrice);
+    } else {
+        List<CpMaterials> materials = dto.getCpMaterials() == null
+                ? Collections.emptyList()
+                : dto.getCpMaterials().stream().map(materialDto -> {
+                    CpMaterials material = mapper.map(materialDto, CpMaterials.class);
+                    material.setContigencyPurchase(newCp);
+                    material.setGst(materialDto.getGst());
+                    return material;
+                }).collect(Collectors.toList());
+
+        newCp.setCpMaterials(materials);
+        BigDecimal totalMaterialPrice = materials.stream()
+                .map(CpMaterials::getTotalPrice)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        newCp.setTotalCpValue(totalMaterialPrice);
+    }
+
+    CPrepo.save(newCp);
+    return mapToResponseDTO(newCp);
+}
+
+@Override
+public List<ContigencyPurchaseResponseDto> getContigencyPurchaseVersionHistory(String contigencyId) {
+    String baseId = extractBaseCpId(contigencyId);
+    return CPrepo.findAllVersionsByBaseId(baseId)
+            .stream()
+            .map(this::mapToResponseDTO)
+            .collect(Collectors.toList());
+}
 
  /*   @Override
     public ContigencyPurchaseResponseDto updateContigencyPurchase(String contigencyId, ContigencyPurchaseRequestDto contigencyPurchaseDto){
@@ -408,6 +549,8 @@ public class ContigencyPurchaseServiceImpl implements ContigencyPurchaseService 
         ContigencyPurchase cp = mapper.map(dto, ContigencyPurchase.class);
         cp.setContigencyId(cpId);
         cp.setCpNumber(nextNumber);
+        cp.setCpVersion(1);
+cp.setIsActive(true);
         cp.setCurrentStatus("DRAFT");
         cp.setVendorsName(dto.getVendorName());
         cp.setVendorsInvoiceNo(dto.getVendorInvoiceNo());

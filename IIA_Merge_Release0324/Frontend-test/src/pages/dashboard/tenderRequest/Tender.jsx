@@ -39,6 +39,8 @@ const Tender = () => {
 
   const [submitBtnLoading, setSubmitBtnLoading] = useState(false);
   const [generatedTenderId, setGeneratedTenderId] = useState("");
+  const [isStaleVersion, setIsStaleVersion] = useState(false);
+const [editBlockedReason, setEditBlockedReason] = useState("");
 
   // ✅ Fetch dropdown values from LOV system (Form ID: 9 - TenderRequest)
   const { lovValues: incoTermsLOV, loading: loadingIncoTerms } = useLOVValues(9, 'incoTerms');
@@ -69,6 +71,33 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   const { tenderId, indentIds } = location.state || {};
 
   const [draftBtnLoading, setDraftBtnLoading] = useState(false);
+  // Update-reason modal (replaces the old window.prompt())
+const [updateReasonModalOpen, setUpdateReasonModalOpen] = useState(false);
+const [updateReasonInput, setUpdateReasonInput] = useState("");
+const updateReasonResolverRef = useRef(null);
+
+const askUpdateReason = () => new Promise((resolve) => {
+  updateReasonResolverRef.current = resolve;
+  setUpdateReasonInput("");
+  setUpdateReasonModalOpen(true);
+});
+
+const handleUpdateReasonOk = () => {
+  const reason = updateReasonInput.trim();
+  if (!reason) {
+    message.warning("Update reason is required when modifying a tender.");
+    return; // keep modal open until a reason is entered
+  }
+  setUpdateReasonModalOpen(false);
+  updateReasonResolverRef.current?.(reason);
+  updateReasonResolverRef.current = null;
+};
+
+const handleUpdateReasonCancel = () => {
+  setUpdateReasonModalOpen(false);
+  updateReasonResolverRef.current?.(null);
+  updateReasonResolverRef.current = null;
+};
 
   //const [formData, setFormData] = useState({});
   const [formData, setFormData] = useState({
@@ -362,12 +391,27 @@ const filteredIndentOptions = lockType
 );
     setSearchDone(true); 
     console.log("hello");
+//     const tenderResponse = data?.responseData || {};
+// // ADD: set form read-only if this is an old version
+// if (tenderResponse.isActive === false) {
+//   message.warning("You are viewing an older version of this tender. Load the latest version to make changes.");
+// }
     const tenderResponse = data?.responseData || {};
-// ADD: set form read-only if this is an old version
-if (tenderResponse.isActive === false) {
-  message.warning("You are viewing an older version of this tender. Load the latest version to make changes.");
-}
-    
+
+    // Mirror the backend guards: superseded version, under evaluation, or locked for PO/SO
+    let blockReason = "";
+    if (tenderResponse.isActive === false) {
+      blockReason = `This is an older version (v${tenderResponse.tenderVersion ?? "?"}) of this tender. Search again and load the latest version to make edits.`;
+    } else if (tenderResponse.evaluationStatus) {
+      blockReason = "This tender is under evaluation. Reset the evaluation status before editing.";
+    } else if (tenderResponse.isLocked) {
+      blockReason = `This tender is locked. ${tenderResponse.lockedReason || "Cannot edit after Purchase Order has been created."}`;
+    }
+    setIsStaleVersion(Boolean(blockReason));
+    setEditBlockedReason(blockReason);
+    if (blockReason) {
+      message.error(blockReason);
+    }
   // console.log("Aman");
     const indentIds = Array.isArray(tenderResponse.indentIds)
       ? tenderResponse.indentIds
@@ -511,39 +555,67 @@ if (tenderResponse.isActive === false) {
     }
 
     // TC_48: Check if tender is locked
-    if (formData.isLocked && tenderId) {
-      message.error({
-        content: `This tender is locked. ${formData.lockedReason || 'Cannot update tender after Purchase Order has been created.'}`,
-        duration: 5
-      });
+//     if (formData.isLocked && tenderId) {
+//       message.error({
+//         content: `This tender is locked. ${formData.lockedReason || 'Cannot update tender after Purchase Order has been created.'}`,
+//         duration: 5
+//       });
+//       return;
+//     }
+
+//     // TC_46: Prompt for update reason when updating
+//     if (tenderId) {
+//       const updateReason = prompt("Please enter the reason for updating this tender:");
+//       if (!updateReason || updateReason.trim() === "") {
+//         message.warning("Update reason is required when modifying a tender.");
+//         return;
+//       }
+//       formData.updateReason = updateReason.trim();
+//     }
+
+//     setSubmitBtnLoading(true);
+
+//     const payload = buildPayload(currentData);
+
+//     let data;
+
+//     if (tenderId) {
+//       // Update
+//       // const response = await axios.put(`/api/tender-requests/${tenderId}`, payload, {
+//       //   headers: { Authorization: `Bearer ${token}` },
+//       // });
+//       const response = await axios.put(`/api/tender-requests`, payload, {
+//   headers: { Authorization: `Bearer ${token}` },
+//   params: { tenderId: formData.tenderId || tenderId }
+// });
+const isEditingExisting = Boolean(tenderId || formData.tenderId);
+
+    // Single gate covering: stale version, under evaluation, or locked for PO/SO —
+    // whether the tender was reached via location.state OR the Search Tender flow
+    if (isEditingExisting && isStaleVersion) {
+      message.error(editBlockedReason || "This tender cannot be edited right now.");
       return;
     }
 
-    // TC_46: Prompt for update reason when updating
-    if (tenderId) {
-      const updateReason = prompt("Please enter the reason for updating this tender:");
-      if (!updateReason || updateReason.trim() === "") {
-        message.warning("Update reason is required when modifying a tender.");
-        return;
+     if (isEditingExisting) {
+      const updateReason = await askUpdateReason();
+      if (!updateReason) {
+        return; // cancelled, or empty — handleUpdateReasonOk already warned on empty
       }
-      formData.updateReason = updateReason.trim();
+      formData.updateReason = updateReason;
     }
 
+    let data;
     setSubmitBtnLoading(true);
-
     const payload = buildPayload(currentData);
 
-    let data;
-
-    if (tenderId) {
-      // Update
-      // const response = await axios.put(`/api/tender-requests/${tenderId}`, payload, {
-      //   headers: { Authorization: `Bearer ${token}` },
-      // });
+    if (isEditingExisting) {
+      // Update — creates a new version server-side (works whether we got here via
+      // location.state navigation OR the Search Tender flow)
       const response = await axios.put(`/api/tender-requests`, payload, {
-  headers: { Authorization: `Bearer ${token}` },
-  params: { tenderId: formData.tenderId || tenderId }
-});
+        headers: { Authorization: `Bearer ${token}` },
+        params: { tenderId: formData.tenderId || tenderId }
+      });
       data = response.data;
       const newTenderId = data?.responseData?.tenderId; // e.g. T1001/2
 if (newTenderId) {
@@ -783,7 +855,7 @@ useEffect(() => {
         }
     ]
     },
-     {
+    {
         heading: "Status & Version",
         colCnt:4,
         fieldList:[
@@ -797,6 +869,18 @@ useEffect(() => {
     },
             ...(searchDone ? [
     {
+        name: "versionTag",
+        label: "Version Status",
+        type: "custom",
+        disabled: true,
+        span: 1,
+        render: () => (
+            <Tag color={formData.isActive === false ? "default" : "green"} style={{ fontSize: '12px', marginTop: '24px' }}>
+                {formData.isActive === false ? `Old (v${formData.tenderVersion})` : "Active"}
+            </Tag>
+        )
+    },
+    {
         name: "processStage",
         label: "Process Stage",
         type: "text",
@@ -806,22 +890,80 @@ useEffect(() => {
     {
         name: "status",
         label: "Status",
-        type: "text",
-        disabled: true,
-        span: 1
-    },
-    
-    {
-        name: "isLocked",
-        label: "Locked Status",
-        type: "text",
+        type: "custom",
         disabled: true,
         span: 1,
-        render: (value) => value ? "🔒 Locked" : "Unlocked"
+        render: () => {
+            const status = formData.status;
+            let color = '#8c8c8c', bg = '#f5f5f5', border = '#d9d9d9';
+            if (status === 'APPROVED') { color = '#52c41a'; bg = '#f6ffed'; border = '#b7eb8f'; }
+            else if (status === 'REJECTED') { color = '#f5222d'; bg = '#fff1f0'; border = '#ffa39e'; }
+            else if (status === 'PENDING' || status === 'IN_PROGRESS') { color = '#faad14'; bg = '#fffbe6'; border = '#ffe58f'; }
+            return (
+                <div style={{ padding: '8px 12px', backgroundColor: bg, borderRadius: '4px', border: `1px solid ${border}`, color, fontWeight: 600, marginTop: '24px' }}>
+                    {status || '—'}
+                </div>
+            );
+        }
+    },
+    {
+        name: "isLocked",
+        label: "Locked / Evaluation",
+        type: "custom",
+        disabled: true,
+        span: 1,
+        render: () => editBlockedReason ? (
+            <div style={{ padding: '8px 12px', backgroundColor: '#fff1f0', borderRadius: '4px', border: '1px solid #ffa39e', color: '#f5222d', fontWeight: 600, marginTop: '24px' }}>
+                🔒 {editBlockedReason}
+            </div>
+        ) : (
+            <div style={{ padding: '8px 12px', backgroundColor: '#f6ffed', borderRadius: '4px', border: '1px solid #b7eb8f', color: '#52c41a', fontWeight: 600, marginTop: '24px' }}>
+                Unlocked
+            </div>
+        )
     }
 ] : [])
         ]
     },
+//      {
+//         heading: "Status & Version",
+//         colCnt:4,
+//         fieldList:[
+//           {
+//         name: "tenderVersion",
+//         label: "Tender Version",
+//         type: "text",
+//         disabled: true,
+//         defaultValue: 1,
+//         span: 1
+//     },
+//             ...(searchDone ? [
+//     {
+//         name: "processStage",
+//         label: "Process Stage",
+//         type: "text",
+//         disabled: true,
+//         span: 1
+//     },
+//     {
+//         name: "status",
+//         label: "Status",
+//         type: "text",
+//         disabled: true,
+//         span: 1
+//     },
+    
+//     {
+//         name: "isLocked",
+//         label: "Locked Status",
+//         type: "text",
+//         disabled: true,
+//         span: 1,
+//         render: (value) => value ? "🔒 Locked" : "Unlocked"
+//     }
+// ] : [])
+//         ]
+//     },
     {
       heading: "Tender Basic Details",
       colCnt: 4,
@@ -1266,10 +1408,12 @@ useEffect(() => {
           formData={formData}
           draftDataName="tenderDraft"
           submitBtnLoading={submitBtnLoading}
-          submitBtnEnabled
+          // submitBtnEnabled
+          submitBtnEnabled={!isStaleVersion}
          // printBtnEnabled={isPrintEnabled}
           printBtnEnabled
-          draftBtnEnabled
+                    draftBtnEnabled={!isStaleVersion}
+          // draftBtnEnabled
           onDraft={handleSaveDraft}
           draftBtnLoading={draftBtnLoading}
           handlePrint={handlePrint}
@@ -1284,6 +1428,26 @@ useEffect(() => {
         title="Tender Submission Successful"
         processNo={generatedTenderId}
       />
+      <Modal
+  open={updateReasonModalOpen}
+  onOk={handleUpdateReasonOk}
+  onCancel={handleUpdateReasonCancel}
+  title="Reason for Update"
+  okText="Confirm"
+  cancelText="Cancel"
+  destroyOnHidden
+>
+  <p style={{ color: '#888', marginBottom: 8 }}>
+    Please enter the reason for updating this tender. This will be recorded against the new version.
+  </p>
+  <Input.TextArea
+    rows={4}
+    value={updateReasonInput}
+    onChange={(e) => setUpdateReasonInput(e.target.value)}
+    placeholder="e.g. Vendor requested revised delivery terms"
+    autoFocus
+  />
+</Modal>
       <Modal
     open={versionHistoryOpen}
     onCancel={() => setVersionHistoryOpen(false)}

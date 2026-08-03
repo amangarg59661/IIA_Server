@@ -1,6 +1,7 @@
 package com.astro.controller.InventoryModule;
 
 import com.astro.dto.workflow.InventoryModule.*;
+import java.math.BigDecimal;
 import com.astro.dto.workflow.InventoryModule.GiDto.GiApprovalDto;
 import com.astro.dto.workflow.InventoryModule.GiDto.GiWorkflowStatusDto;
 import com.astro.dto.workflow.InventoryModule.GiDto.SaveGiDto;
@@ -689,7 +690,17 @@ public class ProcessController {
 
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
-     
+      @GetMapping("/paymentVoucherPOAdvanceStatus")
+    public ResponseEntity<Object> getPaymentVoucherPOAdvanceStatus(@RequestParam("poId") String poId) {
+        Map<String, BigDecimal> res = paymentVoucherService.getAdvancePaidStatusByPoId(poId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+    }
+
+    @GetMapping("/paymentVoucherSOAdvanceStatus")
+    public ResponseEntity<Object> getPaymentVoucherSOAdvanceStatus(@RequestParam("soId") String soId) {
+        Map<String, BigDecimal> res = paymentVoucherService.getAdvancePaidStatusBySoId(soId);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+    }
 
     @PostMapping("/savePaymentVoucher")
     public ResponseEntity<Object> createPaymentVoucher(@RequestBody paymentVoucherRequestDto dto) {

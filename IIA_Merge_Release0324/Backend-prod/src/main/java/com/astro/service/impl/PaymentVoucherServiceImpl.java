@@ -2,10 +2,16 @@ package com.astro.service.impl;
 
 import com.astro.dto.workflow.PaymentVoucherMaterialDto;
 import com.astro.dto.workflow.PaymentVoucherReportDto;
+import com.astro.dto.workflow.PaymentVoucherTdsDto;
+import com.astro.dto.workflow.PaymentVoucherDeductionDto;
 import com.astro.dto.workflow.paymentVoucherMaterialRequestDto;
 import com.astro.dto.workflow.paymentVoucherRequestDto;
+import com.astro.dto.workflow.paymentVoucherTdsRequestDto;
+import com.astro.dto.workflow.paymentVoucherDeductionRequestDto;
 import com.astro.entity.PaymentVoucher;
 import com.astro.entity.PaymentVoucherMaterials;
+import com.astro.entity.PaymentVoucherTdsDetails;
+import com.astro.entity.PaymentVoucherDeductions;
 import com.astro.repository.InventoryModule.PaymentVoucherMaterialsRepository;
 import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 import com.astro.service.PaymentVoucherService;
@@ -18,7 +24,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -53,19 +62,36 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         voucher.setAdvanceAmount(dto.getAdvanceAmount());
         voucher.setSoId(dto.getServiceOrderDetails());
         voucher.setCpDetails(dto.getCpDetails());
-        voucher.setTdsAmount(dto.getTdsAmount());
+        // voucher.setTdsAmount(dto.getTdsAmount());
         voucher.setPaymentVoucherNetAmount(dto.getPaymentVoucherNetAmount());
 
         Optional<PaymentVoucher> existingVoucherOpt;
         String paymentFor = dto.getPaymentVoucherIsFor();
 
+        if ("CP".equalsIgnoreCase(paymentFor) && "Advance".equalsIgnoreCase(dto.getPaymentVoucherType())) {
+            throw new IllegalArgumentException("Advance payment is not allowed for Contingency Purchase.");
+        }
+
         if ("Service Order".equalsIgnoreCase(paymentFor)) {
             existingVoucherOpt = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(dto.getServiceOrderDetails());
         } else if ("CP".equalsIgnoreCase(paymentFor)) {
             existingVoucherOpt = paymentVoucherReposiotry.findTopByCpDetailsOrderByIdDesc(dto.getCpDetails());
+        } else if ("Purchase Order".equalsIgnoreCase(paymentFor) && "Advance".equalsIgnoreCase(dto.getPaymentVoucherType())) {
+            existingVoucherOpt = paymentVoucherReposiotry.findTopByPurchaseOrderIdOrderByIdDesc(dto.getPurchaseOrderId());
         } else {
             existingVoucherOpt = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(dto.getGrnNumber());
         }
+
+        // Optional<PaymentVoucher> existingVoucherOpt;
+        // String paymentFor = dto.getPaymentVoucherIsFor();
+
+        // if ("Service Order".equalsIgnoreCase(paymentFor)) {
+        //     existingVoucherOpt = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(dto.getServiceOrderDetails());
+        // } else if ("CP".equalsIgnoreCase(paymentFor)) {
+        //     existingVoucherOpt = paymentVoucherReposiotry.findTopByCpDetailsOrderByIdDesc(dto.getCpDetails());
+        // } else {
+        //     existingVoucherOpt = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(dto.getGrnNumber());
+        // }
 
         if (existingVoucherOpt.isPresent()) {
             PaymentVoucher existingVoucher = existingVoucherOpt.get();
@@ -110,6 +136,36 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
 
         voucher.setMaterialsList(materialsList);
 
+        List<PaymentVoucherTdsDetails> tdsList = dto.getTdsList() == null ? new ArrayList<>() :
+                dto.getTdsList().stream().map(t -> {
+                    PaymentVoucherTdsDetails tds = new PaymentVoucherTdsDetails();
+                    tds.setTdsSection(t.getTdsSection());
+                    tds.setTdsAmount(t.getTdsAmount());
+                    tds.setRemarks(t.getRemarks());
+                    tds.setPaymentVoucher(voucher);
+                    return tds;
+                }).collect(Collectors.toList());
+        voucher.setTdsList(tdsList);
+        voucher.setTdsAmount(tdsList.stream()
+                .map(PaymentVoucherTdsDetails::getTdsAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
+        List<PaymentVoucherDeductions> deductionsList = dto.getDeductions() == null ? new ArrayList<>() :
+                dto.getDeductions().stream().map(d -> {
+                    PaymentVoucherDeductions deduction = new PaymentVoucherDeductions();
+                    deduction.setDeductionName(d.getDeductionName());
+                    deduction.setDeductionAmount(d.getDeductionAmount());
+                    deduction.setRemarks(d.getRemarks());
+                    deduction.setPaymentVoucher(voucher);
+                    return deduction;
+                }).collect(Collectors.toList());
+        voucher.setDeductionsList(deductionsList);
+        voucher.setDeductionAmount(deductionsList.stream()
+                .map(PaymentVoucherDeductions::getDeductionAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add));
+
         PaymentVoucher pv = paymentVoucherReposiotry.save(voucher);
 
         if ("Service Order".equalsIgnoreCase(paymentFor)) {
@@ -152,12 +208,21 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         dto.setAdvanceAmount(entity.getAdvanceAmount());
         dto.setCreatedBy(entity.getCreatedBy());
         dto.setPaymentVoucherNetAmount(entity.getPaymentVoucherNetAmount());
-        dto.setTdsAmount(entity.getTdsAmount());
+        // dto.setTdsAmount(entity.getTdsAmount());
         dto.setCpDetails(entity.getCpDetails());
 
         // Map materials
         if (entity.getMaterialsList() != null) {
             dto.setMaterials(entity.getMaterialsList().stream().map(this::mapMaterial).collect(Collectors.toList()));
+        }
+        // Map TDS lines
+        if (entity.getTdsList() != null) {
+            dto.setTdsList(entity.getTdsList().stream().map(this::mapTds).collect(Collectors.toList()));
+        }
+
+        // Map deduction lines
+        if (entity.getDeductionsList() != null) {
+            dto.setDeductions(entity.getDeductionsList().stream().map(this::mapDeduction).collect(Collectors.toList()));
         }
 
         return dto;
@@ -174,7 +239,36 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         dto.setGst(m.getGst());
         return dto;
     }
+     private paymentVoucherTdsRequestDto mapTds(PaymentVoucherTdsDetails t) {
+        paymentVoucherTdsRequestDto dto = new paymentVoucherTdsRequestDto();
+        dto.setTdsSection(t.getTdsSection());
+        dto.setTdsAmount(t.getTdsAmount());
+        dto.setRemarks(t.getRemarks());
+        return dto;
+    }
 
+    private paymentVoucherDeductionRequestDto mapDeduction(PaymentVoucherDeductions d) {
+        paymentVoucherDeductionRequestDto dto = new paymentVoucherDeductionRequestDto();
+        dto.setDeductionName(d.getDeductionName());
+        dto.setDeductionAmount(d.getDeductionAmount());
+        dto.setRemarks(d.getRemarks());
+        return dto;
+    }
+public Map<String, BigDecimal> getAdvancePaidStatusByPoId(String poId) {
+        Optional<PaymentVoucher> existing = paymentVoucherReposiotry.findTopByPurchaseOrderIdOrderByIdDesc(poId);
+        BigDecimal paid = existing.map(PaymentVoucher::getPaidAmount).orElse(BigDecimal.ZERO);
+        Map<String, BigDecimal> res = new HashMap<>();
+        res.put("advanceAmountAlreadyPaid", paid);
+        return res;
+    }
+
+    public Map<String, BigDecimal> getAdvancePaidStatusBySoId(String soId) {
+        Optional<PaymentVoucher> existing = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(soId);
+        BigDecimal paid = existing.map(PaymentVoucher::getPaidAmount).orElse(BigDecimal.ZERO);
+        Map<String, BigDecimal> res = new HashMap<>();
+        res.put("advanceAmountAlreadyPaid", paid);
+        return res;
+    }
     @Override
     public List<PaymentVoucherReportDto> getPaymentVoucherReport(String startDate, String endDate) {
 
@@ -193,12 +287,23 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
             PaymentVoucherReportDto dto = new PaymentVoucherReportDto();
 
 
+            // String pvIsFor = voucher.getPaymentVoucherIsFor();
+            // String id;
+            // if ("Service Order".equalsIgnoreCase(pvIsFor)) {
+            //     id = voucher.getServiceOrderDetails() + "/" + voucher.getId();
+            // } else if ("CP".equalsIgnoreCase(pvIsFor)) {
+            //     id = voucher.getCpDetails() + "/" + voucher.getId();
+            // } else {
+            //     id = voucher.getGrnNumber() + "/" + voucher.getId();
+            // }
             String pvIsFor = voucher.getPaymentVoucherIsFor();
             String id;
             if ("Service Order".equalsIgnoreCase(pvIsFor)) {
                 id = voucher.getServiceOrderDetails() + "/" + voucher.getId();
             } else if ("CP".equalsIgnoreCase(pvIsFor)) {
                 id = voucher.getCpDetails() + "/" + voucher.getId();
+            } else if ("Purchase Order".equalsIgnoreCase(pvIsFor) && "Advance".equalsIgnoreCase(voucher.getPaymentVoucherType())) {
+                id = voucher.getPurchaseOrderId() + "/" + voucher.getId();
             } else {
                 id = voucher.getGrnNumber() + "/" + voucher.getId();
             }
@@ -227,6 +332,10 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
             dto.setPartialAmount(voucher.getPartialAmount());
             dto.setAdvanceAmount(voucher.getAdvanceAmount());
             dto.setPaidAmount(voucher.getPaidAmount());
+            dto.setTdsAmount(voucher.getTdsAmount());
+            dto.setDeductionAmount(voucher.getDeductionAmount());
+            dto.setPaymentVoucherNetAmount(voucher.getPaymentVoucherNetAmount());
+
 
             dto.setCreatedBy(voucher.getCreatedBy());
             dto.setCreatedDate(voucher.getCreatedDate());
@@ -246,6 +355,26 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
                     }).toList();
 
             dto.setMaterials(materialDtos);
+
+            List<PaymentVoucherTdsDto> tdsDtos = voucher.getTdsList() == null ? new ArrayList<>() :
+                    voucher.getTdsList().stream().map(t -> {
+                        PaymentVoucherTdsDto tdto = new PaymentVoucherTdsDto();
+                        tdto.setTdsSection(t.getTdsSection());
+                        tdto.setTdsAmount(t.getTdsAmount());
+                        tdto.setRemarks(t.getRemarks());
+                        return tdto;
+                    }).collect(Collectors.toList());
+            dto.setTdsList(tdsDtos);
+
+            List<PaymentVoucherDeductionDto> deductionDtos = voucher.getDeductionsList() == null ? new ArrayList<>() :
+                    voucher.getDeductionsList().stream().map(d -> {
+                        PaymentVoucherDeductionDto ddto = new PaymentVoucherDeductionDto();
+                        ddto.setDeductionName(d.getDeductionName());
+                        ddto.setDeductionAmount(d.getDeductionAmount());
+                        ddto.setRemarks(d.getRemarks());
+                        return ddto;
+                    }).collect(Collectors.toList());
+            dto.setDeductions(deductionDtos);
             reportList.add(dto);
         }
 

@@ -47,7 +47,8 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
             {value: "CP", label: "Contengency Purchase"},
         ],
       },
-     ...(formData.paymentVoucherIsFor === "Purchase Order"
+
+       ...(formData.paymentVoucherIsFor === "Purchase Order"
     ? [
         {
           name: "purchaseOrderids",
@@ -59,15 +60,40 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
   filterOption: (input, option) =>
     option.searchText.includes(input.toLowerCase()),
         },
-         {
-          name: "grnNumber",
-          label: "GRN Number",
-          type: "select",
-          required: true,
-          options: grnIds,
-        },
+        ...(formData.paymentVoucherType !== "Advance"
+          ? [
+              {
+                name: "grnNumber",
+                label: "GRN Number",
+                type: "select",
+                required: true,
+                options: grnIds,
+              },
+            ]
+          : []),
       ]
     : []),
+  //    ...(formData.paymentVoucherIsFor === "Purchase Order"
+  //   ? [
+  //       {
+  //         name: "purchaseOrderids",
+  //         label: "Purchase Order Ids",
+  //         type: "pvselect",
+  //         required: true,
+  //         options: poOptions,
+  //          showSearch: true,
+  // filterOption: (input, option) =>
+  //   option.searchText.includes(input.toLowerCase()),
+  //       },
+  //        {
+  //         name: "grnNumber",
+  //         label: "GRN Number",
+  //         type: "select",
+  //         required: true,
+  //         options: grnIds,
+  //       },
+  //     ]
+  //   : []),
      ...(formData.paymentVoucherIsFor === "Service Order"
     ? [
         {
@@ -95,32 +121,64 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
         label: "Payment Voucher Type",
         type: "select",
         required:true,
-         options: [
-            { value: "Advance", label: "Advance" },
-            { value: "Partial", label: "Partial" },
-            { value: "Full Payment", label: "Full Payment" },
-        ],
+         options: formData.paymentVoucherIsFor === "CP"
+           ? [
+               { value: "Partial", label: "Partial" },
+               { value: "Full Payment", label: "Full Payment" },
+             ]
+           : [
+               { value: "Advance", label: "Advance" },
+               { value: "Partial", label: "Partial" },
+               { value: "Full Payment", label: "Full Payment" },
+             ],
 
       },
+    // {
+    //     name: "paymentVoucherType",
+    //     label: "Payment Voucher Type",
+    //     type: "select",
+    //     required:true,
+    //      options: [
+    //         { value: "Advance", label: "Advance" },
+    //         { value: "Partial", label: "Partial" },
+    //         { value: "Full Payment", label: "Full Payment" },
+    //     ],
+
+    //   },
        {
         name: "vendorName",
         label: "Vendor Name",
         type: "text",
         disabled: true,
       },
+
       {
         name: "vendorInvoiceNumber",
         label: "Vendor Invoice Number",
         type: "text",
-        disabled: true,
+        disabled: !((formData.paymentVoucherIsFor === "Purchase Order" || formData.paymentVoucherIsFor === "Service Order") && formData.paymentVoucherType === "Advance"),
         required: true,
       },
       {
         name: "vendorInvoiceDate",
         label: "Vendor Invoice Date",
         type: "date",
-        disabled: true,
+        disabled: !((formData.paymentVoucherIsFor === "Purchase Order" || formData.paymentVoucherIsFor === "Service Order") && formData.paymentVoucherType === "Advance"),
+        required: true,
       },
+      // {
+      //   name: "vendorInvoiceNumber",
+      //   label: "Vendor Invoice Number",
+      //   type: "text",
+      //   disabled: true,
+      //   required: true,
+      // },
+      // {
+      //   name: "vendorInvoiceDate",
+      //   label: "Vendor Invoice Date",
+      //   type: "date",
+      //   disabled: true,
+      // },
       {
         name: "currency",
         label: "Currency",
@@ -229,17 +287,10 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
 
     ],
   },
-   {
+  {
     heading: "Voucher Amount Deatails",
     colCnt: 2,
     fieldList: [
-  {
-  label: "TDS Amount",
-  name: "tdsAmount",
-  type: "text",
-  value: formData.tdsAmount,
-  
-},
 {
   label: "Payment Voucher Amount",
   name: "paymentVoucherNetAmount",
@@ -248,6 +299,45 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
   value: formData.netAmount
 },
    ]},
+   {
+    heading: "TDS Details",
+    name: "tdsDtlList",
+    colCnt: 3,
+    children: [
+      { name: "tdsSection", label: "TDS Section / Type", type: "text", required: true },
+      { name: "tdsAmount", label: "Amount", type: "text", required: true },
+      { name: "remarks", label: "Remarks", type: "text" },
+    ],
+  },
+   {
+    heading: "Deductions",
+    name: "deductionDtlList",
+    colCnt: 3,
+    children: [
+      { name: "deductionName", label: "Deduction Name", type: "text", required: true },
+      { name: "deductionAmount", label: "Amount", type: "text", required: true },
+      { name: "remarks", label: "Reason / Remarks", type: "text", required: true },
+    ],
+  },
+//    {
+//     heading: "Voucher Amount Deatails",
+//     colCnt: 2,
+//     fieldList: [
+//   {
+//   label: "TDS Amount",
+//   name: "tdsAmount",
+//   type: "text",
+//   value: formData.tdsAmount,
+  
+// },
+// {
+//   label: "Payment Voucher Amount",
+//   name: "paymentVoucherNetAmount",
+//   type: "text",
+//   disabled: true, // auto-calculated
+//   value: formData.netAmount
+// },
+//    ]},
    /*  {
     heading: "Purchase Order Details",
     name: "poDtlList",

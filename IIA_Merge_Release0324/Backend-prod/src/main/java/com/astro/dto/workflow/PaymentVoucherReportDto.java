@@ -25,9 +25,14 @@ public class PaymentVoucherReportDto {
     private BigDecimal partialAmount;
     private BigDecimal advanceAmount;
     private BigDecimal paidAmount;
+    private BigDecimal tdsAmount;
+    private BigDecimal deductionAmount;
+    private BigDecimal paymentVoucherNetAmount;
     private String soId;
     private String cpDetails;
     private String createdBy;
     private LocalDateTime createdDate;
     private List<PaymentVoucherMaterialDto> materials;
+     private List<PaymentVoucherTdsDto> tdsList;
+    private List<PaymentVoucherDeductionDto> deductions;
 }

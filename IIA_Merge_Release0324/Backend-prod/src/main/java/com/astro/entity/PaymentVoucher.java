@@ -69,6 +69,7 @@ public class PaymentVoucher {
     private BigDecimal advanceAmount;
     private BigDecimal paidAmount;
     private BigDecimal tdsAmount;
+    private BigDecimal deductionAmount;
     private BigDecimal paymentVoucherNetAmount;
 
     private String soId;
@@ -81,5 +82,10 @@ public class PaymentVoucher {
 
     @OneToMany(mappedBy = "paymentVoucher", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PaymentVoucherMaterials> materialsList;
+     @OneToMany(mappedBy = "paymentVoucher", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentVoucherTdsDetails> tdsList;
+
+    @OneToMany(mappedBy = "paymentVoucher", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PaymentVoucherDeductions> deductionsList;
 
 }

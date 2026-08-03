@@ -27,7 +27,7 @@ public class paymentVoucherRequestDto {
    private BigDecimal partialAmount;
    private BigDecimal advanceAmount;
 
-   private BigDecimal tdsAmount;
+//    private BigDecimal tdsAmount;
    private BigDecimal paymentVoucherNetAmount;
 
 
@@ -35,5 +35,7 @@ public class paymentVoucherRequestDto {
    private String createdBy;
 
     private List<paymentVoucherMaterialRequestDto> materials;
+    private List<paymentVoucherTdsRequestDto> tdsList;
+    private List<paymentVoucherDeductionRequestDto> deductions;
 
 }

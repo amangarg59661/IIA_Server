@@ -833,7 +833,7 @@ public class WorkflowServiceImpl implements WorkflowService {
             return branchWorkflowService.buildSOConditions(requestId);
         } else if (workflowNameUpper.contains("SERVICE INSPECTION")) {
             return branchWorkflowService.buildServiceInspectionConditions(requestId);
-        }else if (workflowNameUpper.contains("Payment")){
+        }else if (workflowNameUpper.contains("PAYMENT")){
             return branchWorkflowService.buildPaymentConditions(requestId);
         }
         else if (workflowNameUpper.contains("CONTINGENCY")) {
@@ -1178,17 +1178,6 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
 
         // Only validate user role for legacy (non-branch) workflows
-        // if (currentTransition != null) {
-        //     if (workflowTransition.getWorkflowId() == 7 && workflowTransition.getCurrentRole().equalsIgnoreCase("Tender Evaluator") && workflowTransition.getNextRole().equalsIgnoreCase("Tender Evaluator")
-        //             || workflowTransition.getWorkflowId() == 1 && workflowTransition.getAction().equalsIgnoreCase("Change requested") && workflowTransition.getNextRole().equalsIgnoreCase("Indent Creator")
-        //             || workflowTransition.getWorkflowId() == 3 && workflowTransition.getAction().equalsIgnoreCase("Change requested") && workflowTransition.getNextRole().equalsIgnoreCase("PO Creator")
-        //             || workflowTransition.getWorkflowId() == 4 && workflowTransition.getAction().equalsIgnoreCase("Change requested") && workflowTransition.getNextRole().equalsIgnoreCase("Tender Creator")) {
-        //         validateUserRole(transitionActionReqDto.getActionBy(), currentTransition.getCurrentRoleId());
-        //     } else {
-        //         validateUserRole(transitionActionReqDto.getActionBy(), currentTransition.getNextRoleId());
-        //     }
-        // }
-
         if (currentTransition != null) {
             if (workflowTransition.getWorkflowId() == 7 && workflowTransition.getCurrentRole().equalsIgnoreCase("Tender Evaluator") && workflowTransition.getNextRole().equalsIgnoreCase("Tender Evaluator")
                     || workflowTransition.getWorkflowId() == 1 && workflowTransition.getAction().equalsIgnoreCase("Change requested") && workflowTransition.getNextRole().equalsIgnoreCase("Indent Creator")
@@ -1198,10 +1187,6 @@ public class WorkflowServiceImpl implements WorkflowService {
             } else {
                 validateUserRole(transitionActionReqDto.getActionBy(), currentTransition.getNextRoleId());
             }
-        } else {
-            // Branch-based workflows had NO server-side role check here before this —
-            // this is genuinely new enforcement, with a general opt-in override carve-out.
-            validateBranchBasedUserRole(transitionActionReqDto, workflowTransition);
         }
 
         // Block any action on a transition that is already fully completed.
@@ -1354,7 +1339,8 @@ public class WorkflowServiceImpl implements WorkflowService {
                     AppConstant.ERROR_TYPE_VALIDATION, "Workflow transition not found.With given workflow transition id and request id."));
         }
 
-        TransitionDto nextTransition = nextTransition(currentWorkflowTransition.getWorkflowId(), currentWorkflowTransition.getWorkflowName(), roleNameByUserId(actionBy), currentWorkflowTransition.getRequestId());
+        // TransitionDto nextTransition = nextTransition(currentWorkflowTransition.getWorkflowId(), currentWorkflowTransition.getWorkflowName(), roleNameByUserId(actionBy), currentWorkflowTransition.getRequestId());
+        TransitionDto nextTransition = nextTransition(currentWorkflowTransition.getWorkflowId(), currentWorkflowTransition.getWorkflowName(), currentWorkflowTransition.getNextRole(), currentWorkflowTransition.getRequestId());
         if (Objects.isNull(nextTransition)) {
             throw new InvalidInputException(new ErrorDetails(AppConstant.NEXT_TRANSITION_NOT_FOUND, AppConstant.ERROR_TYPE_CODE_VALIDATION,
                     AppConstant.ERROR_TYPE_VALIDATION, "Error occurred at approval. No next transition found."));
@@ -1546,16 +1532,12 @@ public class WorkflowServiceImpl implements WorkflowService {
             // updated by abhinav
             String assignmentRole = transitionActionReqDto.getAssignmentRole();
 
-            if ("PO Creator".equalsIgnoreCase(assignmentRole )
+            if ("PO Creator".equalsIgnoreCase(assignmentRole)
                     && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")) {
 
                 nextWorkflowTransition.setNextRole("PO Creator");
 
-            } else if ("PurchasePersonnal".equalsIgnoreCase(assignmentRole)
-                    && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")) {
-                nextWorkflowTransition.setNextRole(assignmentRole);
-
-            }else if("Request Creator".equalsIgnoreCase(assignmentRole)
+            } else if("Request Creator".equalsIgnoreCase(assignmentRole)
                     && currentWorkflowTransition.getWorkflowName().toUpperCase().contains("PO")){
                 nextWorkflowTransition.setNextRole(assignmentRole);
             } else {
@@ -2569,39 +2551,6 @@ public class WorkflowServiceImpl implements WorkflowService {
                         AppConstant.ERROR_TYPE_VALIDATION, "Unauthorized user."));
             }
         }
-    }
-
-    private void validateBranchBasedUserRole(TransitionActionReqDto transitionActionReqDto, WorkflowTransition workflowTransition) {
-        String actingRole = roleNameByUserId(transitionActionReqDto.getActionBy());
-        String expectedRole = workflowTransition.getNextRole();
-
-        if (expectedRole == null || expectedRole.equalsIgnoreCase(actingRole)) {
-            return; // normal path — acting user genuinely holds the expected role
-        }
-
-        WorkflowMaster workflowMaster = workflowMasterRepository.findById(workflowTransition.getWorkflowId()).orElse(null);
-
-        boolean isValidOverride = workflowMaster != null
-                && Boolean.TRUE.equals(workflowMaster.getOverrideActive())
-                && actingRole != null
-                && actingRole.equalsIgnoreCase(workflowMaster.getOverrideRoleName());
-
-        if (!isValidOverride) {
-            throw new InvalidInputException(new ErrorDetails(AppConstant.UNAUTHORIZED_ACTION, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION, "Unauthorized user."));
-        }
-
-        if (transitionActionReqDto.getRemarks() == null || transitionActionReqDto.getRemarks().trim().isEmpty()) {
-            throw new InvalidInputException(new ErrorDetails(AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                    AppConstant.ERROR_TYPE_VALIDATION, "A reason is required when overriding as " + actingRole + "."));
-        }
-
-        // Tag remarks so an override is visibly distinguishable from a normal approval in
-        // history — every downstream setRemarks(transitionActionReqDto.getRemarks()) call
-        // picks this up automatically, no need to touch those call sites individually.
-        transitionActionReqDto.setRemarks("OVERRIDE by " + actingRole + " — " + transitionActionReqDto.getRemarks());
-        System.out.println("⚠️ [OVERRIDE] " + actingRole + " overrode " + workflowTransition.getWorkflowName()
-                + " (expected role: " + expectedRole + ") on requestId=" + workflowTransition.getRequestId());
     }
 
     private TransitionDto nextTransitionDto(List<TransitionDto> nextTransitionDtoList, String workflowName, String requestId) {

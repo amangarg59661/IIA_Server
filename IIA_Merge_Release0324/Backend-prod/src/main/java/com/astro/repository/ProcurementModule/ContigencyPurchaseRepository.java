@@ -147,4 +147,7 @@ public interface ContigencyPurchaseRepository extends JpaRepository<ContigencyPu
 
     List<ContigencyPurchase> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 
+    @Query("SELECT c FROM ContigencyPurchase c WHERE c.contigencyId = :baseId OR c.contigencyId LIKE CONCAT(:baseId, '/%') ORDER BY c.cpVersion")
+List<ContigencyPurchase> findAllVersionsByBaseId(@Param("baseId") String baseId);
+
 }

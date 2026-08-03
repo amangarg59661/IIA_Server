@@ -30,4 +30,7 @@ public interface ContigencyPurchaseService {
     ContigencyPurchaseResponseDto submitCpDraft(String cpId, ContigencyPurchaseRequestDto dto);
     List<ContigencyPurchaseResponseDto> getUserCpDrafts(Integer userId);
 
+    ContigencyPurchaseResponseDto updateContigencyPurchase(String contigencyId, ContigencyPurchaseRequestDto contigencyPurchaseDto);
+List<ContigencyPurchaseResponseDto> getContigencyPurchaseVersionHistory(String contigencyId);
+
 }
