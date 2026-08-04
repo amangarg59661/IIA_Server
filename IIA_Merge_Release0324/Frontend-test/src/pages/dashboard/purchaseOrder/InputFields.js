@@ -264,7 +264,7 @@ export const PoDetails = [
           name: "gstAmount",
           label: "GST Amount",
           type: "text",
-          // disabled: true
+          disabled: true,
           required: true,
         },
 

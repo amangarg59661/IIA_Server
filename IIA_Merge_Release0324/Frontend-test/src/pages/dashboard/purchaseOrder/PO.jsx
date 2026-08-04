@@ -492,9 +492,13 @@ const baseRate   = item.currency && item.currency !== "INR"
   ? parseFloat(item.rate || 0) * parseFloat(item.exchangeRate || 1)
   : parseFloat(item.rate || 0);
 const baseAmount = baseRate * parseFloat(item.quantity || 0);
+
+const gstAmount = baseAmount * parseFloat(item.gst / 100 || 0);
+updated[index].gstAmount = gstAmount.toFixed(2);
+
 updated[index].estimatedItemTotal = (
   baseAmount
-  + parseFloat(item.gstAmount || 0) 
+  +gstAmount
   + parseFloat(item.duties || 0) 
   + parseFloat(item.freightCharge || 0)
   - parseFloat(item.buyBackAmount || 0)
