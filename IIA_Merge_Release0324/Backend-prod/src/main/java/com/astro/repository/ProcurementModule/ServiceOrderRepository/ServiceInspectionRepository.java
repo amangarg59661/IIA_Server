@@ -13,4 +13,5 @@ public interface ServiceInspectionRepository extends JpaRepository<ServiceInspec
     List<ServiceInspectionMaster> findBySoIdOrderBySubProcessIdDesc(String soId);
 
     List<ServiceInspectionMaster> findByCurrentStatus(String currentStatus);
+    List<ServiceInspectionMaster> findByCreatedByAndCurrentStatus(String createdBy, String currentStatus);
 }

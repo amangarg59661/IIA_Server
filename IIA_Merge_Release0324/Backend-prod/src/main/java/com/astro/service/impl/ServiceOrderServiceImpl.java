@@ -3,7 +3,8 @@ package com.astro.service.impl;
 import com.astro.constant.AppConstant;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCreationResponseDTO;
 import com.astro.dto.workflow.ProcurementDtos.SreviceOrderDto.*;
-
+import com.astro.service.WorkflowService;
+import org.springframework.transaction.annotation.Transactional;
 import com.astro.dto.workflow.ProcurementDtos.TenderWithIndentResponseDTO;
 import com.astro.dto.workflow.ProcurementDtos.purchaseOrder.ApprovedPoListReportDto;
 import com.astro.dto.workflow.ProcurementDtos.purchaseOrder.PurchaseOrderAttributesResponseDTO;
@@ -65,10 +66,12 @@ public class ServiceOrderServiceImpl implements ServiceOrderService {
     @Autowired
     private IndentIdRepository indentIdRepository;
     @Autowired
+private WorkflowService workflowService;
+    @Autowired
     private TenderRequestRepository tenderRequestRepository;
     @Autowired
     private ProjectMasterRepository projectMasterRepository;
-
+    @Transactional(rollbackFor = Exception.class)
     public ServiceOrderResponseDTO createServiceOrder(ServiceOrderRequestDTO serviceOrderRequestDTO) {
         // Check if the indentorId already exists
       /*  if (serviceOrderRepository.existsById(serviceOrderRequestDTO.getSoId())) {
@@ -175,6 +178,15 @@ serviceOrder.setParentSoId(null);
 
 
         serviceOrder.setMaterials(serviceOrderMaterials);
+        // Calculate total value of SO
+BigDecimal totalValue = serviceOrderMaterials.stream()
+        .map(m -> {
+            BigDecimal qty = m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO;
+            BigDecimal rate = m.getRate() != null ? m.getRate() : BigDecimal.ZERO;
+            return qty.multiply(rate);
+        })
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+serviceOrder.setTotalValueOfSo(totalValue);
         budgetService.checkBudgetForSo(soId, tenderId, serviceOrderMaterials);
         serviceOrderRepository.save(serviceOrder);
 
@@ -202,7 +214,7 @@ serviceOrder.setParentSoId(null);
                     "Error while uploading files."));
         }
     }
-
+@Transactional(rollbackFor = Exception.class)
 public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderRequestDTO dto) {
 
     // 1. Load existing active SO
@@ -329,7 +341,7 @@ public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderReque
  budgetService.checkBudgetForSo(newSoId, newSO.getTenderId(), newMaterials);
     // 8. Save new version
     serviceOrderRepository.save(newSO);
-
+workflowService.initiateWorkflow(newSO.getSoId(), "SO Workflow", dto.getCreatedBy());
     return mapToResponseDTO(newSO);
 }
 

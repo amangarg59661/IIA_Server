@@ -5,6 +5,8 @@ import com.astro.dto.workflow.InventoryModule.paymentVoucherMaterials;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionMaterialLineDto;
+import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
+import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.entity.InventoryModule.ServiceInspectionMaster;
 import com.astro.entity.InventoryModule.ServiceInspectionMaterialDtl;
 import com.astro.entity.PaymentVoucher;
@@ -20,10 +22,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+// import java.math.BigDecimal;
+// import java.util.Date;
+// import java.util.List;
+// import java.util.Optional;
+// import java.util.stream.Collectors;
 
 @Service
 public class ServiceInspectionServiceImpl implements ServiceInspectionService {
@@ -50,6 +62,72 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
     // must match exactly what buildConditionsForWorkflow()/updateRequestEntityOnRejection() key off.
     private static final String WORKFLOW_NAME = "Service Inspection Workflow";
 
+    // @Override
+    // public String saveServiceInspection(SaveServiceInspectionDto req) {
+    //     if (req.getSoId() == null || req.getSoId().isEmpty()) {
+    //         throw new RuntimeException("soId is required to create a Service Inspection.");
+    //     }
+
+    //     ServiceOrder so = serviceOrderRepository.findById(req.getSoId())
+    //             .orElseThrow(() -> new RuntimeException("Service Order not found: " + req.getSoId()));
+
+    //     // Determine next cycle for this SO. First inspection => new root id + cycle 1.
+    //     // Every subsequent call (recurring AMC cycle, or a fresh cycle after a rejection) => same root, cycle+1.
+    //     List<ServiceInspectionMaster> existing = serviceInspectionRepository.findBySoIdOrderBySubProcessIdDesc(req.getSoId());
+
+    //     String rootId;
+    //     int nextSubProcessId;
+    //     if (existing.isEmpty()) {
+    //         // TODO: swap for whatever sequence/ID-generator utility GprnServiceImpl uses for
+    //         // its own processNo — this count-based placeholder is NOT safe under concurrent saves.
+    //         long nextSeq = serviceInspectionRepository.count() + 1;
+    //         rootId = "SI" + String.format("%04d", nextSeq);
+    //         nextSubProcessId = 1;
+    //     } else {
+    //         String previousFullId = existing.get(0).getInspectionProcessId();
+    //         rootId = previousFullId.substring(0, previousFullId.indexOf("/"));
+    //         nextSubProcessId = existing.get(0).getSubProcessId() + 1;
+    //     }
+    //     String inspectionProcessId = rootId + "/" + nextSubProcessId;
+
+    //     ServiceInspectionMaster master = new ServiceInspectionMaster();
+    //     master.setInspectionProcessId(inspectionProcessId);
+    //     master.setSoId(req.getSoId());
+    //     master.setSubProcessId(nextSubProcessId);
+    //     master.setVendorName(req.getVendorName() != null ? req.getVendorName() : so.getVendorName());
+    //     master.setProjectName(req.getProjectName());
+    //     master.setCurrentStatus("AWAITING APPROVAL");
+    //     master.setInspectedBy(req.getInspectedBy());
+    //     master.setInspectionDate(new Date());
+    //     master.setRemarks(req.getRemarks());
+    //     master.setSupportingDocBase64(req.getSupportingDocBase64());
+    //     master.setCreatedDate(new Date());
+    //     serviceInspectionRepository.save(master);
+
+    //     List<ServiceInspectionMaterialDtl> lines = req.getMaterials().stream().map(line -> {
+    //         ServiceInspectionMaterialDtl d = new ServiceInspectionMaterialDtl();
+    //         d.setInspectionProcessId(inspectionProcessId);
+    //         d.setMaterialCode(line.getMaterialCode());
+    //         d.setMaterialDescription(line.getMaterialDescription());
+    //         d.setOrderedQty(line.getOrderedQty());
+    //         d.setAcceptedQty(line.getAcceptedQty());
+    //         d.setRejectedQty(line.getRejectedQty());
+    //         d.setRate(line.getRate());
+    //         d.setGst(line.getGst());
+    //         d.setDuties(line.getDuties());
+    //         d.setRemarks(line.getRemarks());
+    //         return d;
+    //     }).collect(Collectors.toList());
+    //     serviceInspectionMaterialDtlRepository.saveAll(lines);
+
+    //     // Hand off to the generic, frontend-configurable approval engine.
+    //     // No bespoke approve/reject/changeReq methods here — that's performTransitionAction()'s job.
+    //     workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
+
+    //     return inspectionProcessId;
+    // }
+
+    // AFTER
     @Override
     public String saveServiceInspection(SaveServiceInspectionDto req) {
         if (req.getSoId() == null || req.getSoId().isEmpty()) {
@@ -59,15 +137,203 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
         ServiceOrder so = serviceOrderRepository.findById(req.getSoId())
                 .orElseThrow(() -> new RuntimeException("Service Order not found: " + req.getSoId()));
 
-        // Determine next cycle for this SO. First inspection => new root id + cycle 1.
-        // Every subsequent call (recurring AMC cycle, or a fresh cycle after a rejection) => same root, cycle+1.
-        List<ServiceInspectionMaster> existing = serviceInspectionRepository.findBySoIdOrderBySubProcessIdDesc(req.getSoId());
+        String inspectionProcessId = generateNextInspectionProcessId(req.getSoId());
 
+        ServiceInspectionMaster master = new ServiceInspectionMaster();
+        master.setInspectionProcessId(inspectionProcessId);
+        master.setSoId(req.getSoId());
+        master.setSubProcessId(extractSubProcessId(inspectionProcessId));
+        master.setVendorName(req.getVendorName() != null ? req.getVendorName() : so.getVendorName());
+        master.setProjectName(req.getProjectName());
+        master.setCurrentStatus("AWAITING APPROVAL");
+        master.setInspectedBy(req.getInspectedBy());
+        master.setInspectionDate(new Date());
+        master.setRemarks(req.getRemarks());
+        master.setSupportingDocBase64(req.getSupportingDocBase64());
+        master.setCreatedBy(req.getCreatedBy());
+        master.setCreatedDate(new Date());
+        serviceInspectionRepository.save(master);
+
+        saveMaterialLines(inspectionProcessId, req.getMaterials());
+
+        // Hand off to the generic, frontend-configurable approval engine.
+        // No bespoke approve/reject/changeReq methods here — that's performTransitionAction()'s job.
+        workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
+
+        return inspectionProcessId;
+    }
+
+    // ── DRAFT ENDPOINTS ──────────────────────────────────────────────
+
+    @Override
+    public String saveInspectionDraft(SaveServiceInspectionDto req) {
+        if (req.getSoId() == null || req.getSoId().isEmpty()) {
+            throw new RuntimeException("soId is required to create a Service Inspection.");
+        }
+
+        ServiceOrder so = serviceOrderRepository.findById(req.getSoId())
+                .orElseThrow(() -> new RuntimeException("Service Order not found: " + req.getSoId()));
+
+        String inspectionProcessId = generateNextInspectionProcessId(req.getSoId());
+
+        ServiceInspectionMaster draft = new ServiceInspectionMaster();
+        draft.setInspectionProcessId(inspectionProcessId);
+        draft.setSoId(req.getSoId());
+        draft.setSubProcessId(extractSubProcessId(inspectionProcessId));
+        draft.setVendorName(req.getVendorName() != null ? req.getVendorName() : so.getVendorName());
+        draft.setProjectName(req.getProjectName());
+        draft.setCurrentStatus("DRAFT");
+        draft.setInspectedBy(req.getInspectedBy());
+        draft.setInspectionDate(new Date());
+        draft.setRemarks(req.getRemarks());
+        draft.setSupportingDocBase64(req.getSupportingDocBase64());
+        draft.setCreatedBy(req.getCreatedBy());
+        draft.setCreatedDate(new Date());
+        serviceInspectionRepository.save(draft);
+
+        saveMaterialLines(inspectionProcessId, req.getMaterials());
+
+        return inspectionProcessId;
+    }
+
+    @Override
+    public String updateInspectionDraft(String inspectionProcessId, SaveServiceInspectionDto req) {
+        ServiceInspectionMaster draft = serviceInspectionRepository.findById(inspectionProcessId)
+                .orElseThrow(() -> new RuntimeException("Draft Service Inspection not found: " + inspectionProcessId));
+
+        if (!"DRAFT".equals(draft.getCurrentStatus()))
+            throw new RuntimeException(
+                    "Only DRAFT inspections can be updated via this endpoint. Current status: " + draft.getCurrentStatus());
+
+        draft.setVendorName(req.getVendorName());
+        draft.setProjectName(req.getProjectName());
+        draft.setInspectedBy(req.getInspectedBy());
+        draft.setRemarks(req.getRemarks());
+        draft.setSupportingDocBase64(req.getSupportingDocBase64());
+        serviceInspectionRepository.save(draft);
+
+        replaceMaterialLines(inspectionProcessId, req.getMaterials());
+
+        return inspectionProcessId;
+    }
+
+    @Override
+    public String submitInspectionDraft(String inspectionProcessId, SaveServiceInspectionDto req) {
+        ServiceInspectionMaster draft = serviceInspectionRepository.findById(inspectionProcessId)
+                .orElseThrow(() -> new RuntimeException("Draft Service Inspection not found: " + inspectionProcessId));
+
+        if (!"DRAFT".equals(draft.getCurrentStatus()))
+            throw new RuntimeException(
+                    "Only DRAFT inspections can be submitted via this endpoint. Current status: " + draft.getCurrentStatus());
+
+        draft.setVendorName(req.getVendorName());
+        draft.setProjectName(req.getProjectName());
+        draft.setInspectedBy(req.getInspectedBy());
+        draft.setRemarks(req.getRemarks());
+        draft.setSupportingDocBase64(req.getSupportingDocBase64());
+        draft.setCurrentStatus(null); // let initiateWorkflow assign the real first-stage status, same as SO's submitSoDraft
+        serviceInspectionRepository.save(draft);
+
+        replaceMaterialLines(inspectionProcessId, req.getMaterials());
+
+        workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
+
+        return inspectionProcessId;
+    }
+
+    @Override
+    public List<ServiceInspectionDto> getUserInspectionDrafts(Integer userId) {
+        return serviceInspectionRepository.findByCreatedByAndCurrentStatus(String.valueOf(userId), "DRAFT").stream()
+                .map(master -> toDto(master,
+                        serviceInspectionMaterialDtlRepository.findByInspectionProcessId(master.getInspectionProcessId())))
+                .collect(Collectors.toList());
+    }
+
+    // ── UPDATE (post-submission, pre-approval) ──────────────────────
+
+    @Override
+    public String updateServiceInspection(String inspectionProcessId, SaveServiceInspectionDto req) {
+        ServiceInspectionMaster master = serviceInspectionRepository.findById(inspectionProcessId)
+                .orElseThrow(() -> new RuntimeException("Service Inspection not found: " + inspectionProcessId));
+
+        if ("DRAFT".equals(master.getCurrentStatus()))
+            throw new RuntimeException("This inspection is still a draft — use the draft update endpoint instead.");
+
+        // PV check deferred for now — this enforces "unless already approved" on its own.
+        if (workflowTransitionRepository.findApprovedServiceInspectionIds().contains(inspectionProcessId))
+            throw new RuntimeException("This inspection has already been approved and can no longer be updated.");
+
+        master.setVendorName(req.getVendorName());
+        master.setProjectName(req.getProjectName());
+        master.setInspectedBy(req.getInspectedBy());
+        master.setRemarks(req.getRemarks());
+        master.setSupportingDocBase64(req.getSupportingDocBase64());
+        master.setCurrentStatus(null); // re-enters approval, same pattern as draft submit
+        serviceInspectionRepository.save(master);
+
+        replaceMaterialLines(inspectionProcessId, req.getMaterials());
+
+        workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
+
+        return inspectionProcessId;
+    }
+
+    // ── SO ELIGIBILITY FOR THE DROPDOWN ─────────────────────────────
+
+    @Override
+    public List<EligibleSoDto> getEligibleSoIdsForInspection() {
+        List<String> approvedSoIds = workflowTransitionRepository.findApprovedSoIds();
+        Set<String> approvedInspectionIds = new HashSet<>(workflowTransitionRepository.findApprovedServiceInspectionIds());
+
+        List<EligibleSoDto> result = new ArrayList<>();
+
+        for (String soId : approvedSoIds) {
+            Optional<ServiceOrder> soOpt = serviceOrderRepository.findById(soId);
+            if (soOpt.isEmpty()) continue;
+            ServiceOrder so = soOpt.get();
+
+            Map<String, BigDecimal> orderedByMaterial = so.getMaterials().stream()
+                    .collect(Collectors.toMap(
+                            ServiceOrderMaterial::getMaterialCode,
+                            m -> m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO,
+                            BigDecimal::add));
+
+            List<ServiceInspectionMaster> approvedCycles = serviceInspectionRepository.findBySoId(soId).stream()
+                    .filter(c -> approvedInspectionIds.contains(c.getInspectionProcessId()))
+                    .collect(Collectors.toList());
+
+            Map<String, BigDecimal> acceptedByMaterial = new HashMap<>();
+            for (ServiceInspectionMaster cycle : approvedCycles) {
+                for (ServiceInspectionMaterialDtl line :
+                        serviceInspectionMaterialDtlRepository.findByInspectionProcessId(cycle.getInspectionProcessId())) {
+                    BigDecimal accepted = line.getAcceptedQty() != null ? line.getAcceptedQty() : BigDecimal.ZERO;
+                    acceptedByMaterial.merge(line.getMaterialCode(), accepted, BigDecimal::add);
+                }
+            }
+
+            boolean fullyReconciled = orderedByMaterial.entrySet().stream()
+                    .allMatch(e -> acceptedByMaterial.getOrDefault(e.getKey(), BigDecimal.ZERO).compareTo(e.getValue()) >= 0);
+
+            if (!fullyReconciled) {
+                EligibleSoDto dto = new EligibleSoDto();
+                dto.setSoId(soId);
+                dto.setVendorName(so.getVendorName());
+                dto.setStatus(approvedCycles.isEmpty() ? "Not Started" : "Partial");
+                result.add(dto);
+            }
+        }
+
+        return result;
+    }
+
+    // ── SHARED HELPERS ───────────────────────────────────────────────
+
+    private String generateNextInspectionProcessId(String soId) {
+        // TODO: same placeholder-ID-generation caveat as before — not safe under concurrent saves.
+        List<ServiceInspectionMaster> existing = serviceInspectionRepository.findBySoIdOrderBySubProcessIdDesc(soId);
         String rootId;
         int nextSubProcessId;
         if (existing.isEmpty()) {
-            // TODO: swap for whatever sequence/ID-generator utility GprnServiceImpl uses for
-            // its own processNo — this count-based placeholder is NOT safe under concurrent saves.
             long nextSeq = serviceInspectionRepository.count() + 1;
             rootId = "SI" + String.format("%04d", nextSeq);
             nextSubProcessId = 1;
@@ -76,23 +342,15 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
             rootId = previousFullId.substring(0, previousFullId.indexOf("/"));
             nextSubProcessId = existing.get(0).getSubProcessId() + 1;
         }
-        String inspectionProcessId = rootId + "/" + nextSubProcessId;
+        return rootId + "/" + nextSubProcessId;
+    }
 
-        ServiceInspectionMaster master = new ServiceInspectionMaster();
-        master.setInspectionProcessId(inspectionProcessId);
-        master.setSoId(req.getSoId());
-        master.setSubProcessId(nextSubProcessId);
-        master.setVendorName(req.getVendorName() != null ? req.getVendorName() : so.getVendorName());
-        master.setProjectName(req.getProjectName());
-        master.setCurrentStatus("AWAITING APPROVAL");
-        master.setInspectedBy(req.getInspectedBy());
-        master.setInspectionDate(new Date());
-        master.setRemarks(req.getRemarks());
-        master.setSupportingDocBase64(req.getSupportingDocBase64());
-        master.setCreatedDate(new Date());
-        serviceInspectionRepository.save(master);
+    private int extractSubProcessId(String inspectionProcessId) {
+        return Integer.parseInt(inspectionProcessId.substring(inspectionProcessId.indexOf("/") + 1));
+    }
 
-        List<ServiceInspectionMaterialDtl> lines = req.getMaterials().stream().map(line -> {
+    private void saveMaterialLines(String inspectionProcessId, List<ServiceInspectionMaterialLineDto> materials) {
+        List<ServiceInspectionMaterialDtl> lines = materials.stream().map(line -> {
             ServiceInspectionMaterialDtl d = new ServiceInspectionMaterialDtl();
             d.setInspectionProcessId(inspectionProcessId);
             d.setMaterialCode(line.getMaterialCode());
@@ -107,12 +365,12 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
             return d;
         }).collect(Collectors.toList());
         serviceInspectionMaterialDtlRepository.saveAll(lines);
+    }
 
-        // Hand off to the generic, frontend-configurable approval engine.
-        // No bespoke approve/reject/changeReq methods here — that's performTransitionAction()'s job.
-        workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
-
-        return inspectionProcessId;
+    private void replaceMaterialLines(String inspectionProcessId, List<ServiceInspectionMaterialLineDto> materials) {
+        serviceInspectionMaterialDtlRepository.deleteAll(
+                serviceInspectionMaterialDtlRepository.findByInspectionProcessId(inspectionProcessId));
+        saveMaterialLines(inspectionProcessId, materials);
     }
 
     @Override

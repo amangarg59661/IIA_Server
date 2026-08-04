@@ -29,38 +29,52 @@ public class ServiceOrderController {
     private WorkflowService workflowService;
     @Autowired
     private UserService userService;
-    @PostMapping
-    public ResponseEntity<Object> createServiceOrder(@RequestBody ServiceOrderRequestDTO requestDTO) {
-        ServiceOrderResponseDTO responseDTO = serviceOrder.createServiceOrder(requestDTO);
-        // Initiateing the workflow after saving the indent
-        String requestId = responseDTO.getSoId();
-        String workflowName = "SO Workflow";
-     //   String createdBy = responseDTO.getCreatedBy();
-      //  Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
-       // Integer userId = userMaster.get().getUserId();
+    // @PostMapping
+    // public ResponseEntity<Object> createServiceOrder(@RequestBody ServiceOrderRequestDTO requestDTO) {
+    //     ServiceOrderResponseDTO responseDTO = serviceOrder.createServiceOrder(requestDTO);
+    //     // Initiateing the workflow after saving the indent
+    //     String requestId = responseDTO.getSoId();
+    //     String workflowName = "SO Workflow";
+    //  //   String createdBy = responseDTO.getCreatedBy();
+    //   //  Optional<UserMaster> userMaster = userService.getUserMasterByCreatedBy(createdBy);
+    //    // Integer userId = userMaster.get().getUserId();
 
-        String userId = requestDTO.getCreatedBy();
+    //     String userId = requestDTO.getCreatedBy();
 
-        // Call initiateWorkflow API
-     //   WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
-        // Call initiateWorkflow API
-        WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
+    //     // Call initiateWorkflow API
+    //  //   WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
+    //     // Call initiateWorkflow API
+    //     WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
 
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    }
-
+    //     return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    // }
+@PostMapping
+public ResponseEntity<Object> createServiceOrder(@RequestBody ServiceOrderRequestDTO requestDTO) {
+    // Workflow initiation now happens inside serviceOrder.createServiceOrder(),
+    // in the same @Transactional boundary as the SO save — if it fails, nothing is persisted.
+    ServiceOrderResponseDTO responseDTO = serviceOrder.createServiceOrder(requestDTO);
+    return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
+    // @PutMapping
+    // public ResponseEntity<Object> updateServiceOrder(@RequestParam String soId,
+    //                                                               @RequestBody ServiceOrderRequestDTO requestDTO) {
+    //     ServiceOrderResponseDTO responseDTO = serviceOrder.updateServiceOrder(soId, requestDTO);
+    //       // Re-initiate workflow for new version
+    // workflowService.initiateWorkflow(
+    //         responseDTO.getSoId(),   // new versioned ID e.g. SO1001/2
+    //         "SO Workflow",
+    //         requestDTO.getCreatedBy()
+    // );
+    //     return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+    // }
     @PutMapping
-    public ResponseEntity<Object> updateServiceOrder(@RequestParam String soId,
-                                                                  @RequestBody ServiceOrderRequestDTO requestDTO) {
-        ServiceOrderResponseDTO responseDTO = serviceOrder.updateServiceOrder(soId, requestDTO);
-          // Re-initiate workflow for new version
-    workflowService.initiateWorkflow(
-            responseDTO.getSoId(),   // new versioned ID e.g. SO1001/2
-            "SO Workflow",
-            requestDTO.getCreatedBy()
-    );
-        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
-    }
+public ResponseEntity<Object> updateServiceOrder(@RequestParam String soId,
+                                                              @RequestBody ServiceOrderRequestDTO requestDTO) {
+    // Workflow re-initiation now happens inside serviceOrder.updateServiceOrder(),
+    // in the same @Transactional boundary as the version save — if it fails, nothing is persisted.
+    ServiceOrderResponseDTO responseDTO = serviceOrder.updateServiceOrder(soId, requestDTO);
+    return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(responseDTO), HttpStatus.OK);
+}
     @GetMapping
     public ResponseEntity<Object> getAllServiceOrders() {
         List<ServiceOrderResponseDTO> responseDTOList = serviceOrder.getAllServiceOrders();

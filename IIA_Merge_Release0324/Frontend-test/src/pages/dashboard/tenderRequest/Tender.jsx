@@ -602,7 +602,8 @@ const isEditingExisting = Boolean(tenderId || formData.tenderId);
       if (!updateReason) {
         return; // cancelled, or empty — handleUpdateReasonOk already warned on empty
       }
-      formData.updateReason = updateReason;
+      currentData.updateReason = updateReason;
+      // formData.updateReason = updateReason;
     }
 
     let data;

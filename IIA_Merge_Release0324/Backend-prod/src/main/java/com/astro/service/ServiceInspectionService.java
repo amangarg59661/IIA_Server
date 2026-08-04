@@ -2,6 +2,8 @@ package com.astro.service.InventoryModule;
 
 import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
+import com.astro.dto.workflow.InventoryModule.paymentVoucherDto;
+import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
 
 import java.util.List;
 
@@ -24,5 +26,12 @@ public interface ServiceInspectionService {
     List<String> getApprovedServiceInspectionIds();
 
     // Payment voucher built from THIS inspection's accepted qty/value — not the SO's ordered qty.
-    com.astro.dto.workflow.InventoryModule.paymentVoucherDto getPaymentVoucherDtoByInspectionId(String inspectionProcessId);
+     paymentVoucherDto getPaymentVoucherDtoByInspectionId(String inspectionProcessId);
+
+    String saveInspectionDraft(SaveServiceInspectionDto req);
+String updateInspectionDraft(String inspectionProcessId, SaveServiceInspectionDto req);
+String submitInspectionDraft(String inspectionProcessId, SaveServiceInspectionDto req);
+List<ServiceInspectionDto> getUserInspectionDrafts(Integer userId);
+String updateServiceInspection(String inspectionProcessId, SaveServiceInspectionDto req);
+List<EligibleSoDto> getEligibleSoIdsForInspection();
 }

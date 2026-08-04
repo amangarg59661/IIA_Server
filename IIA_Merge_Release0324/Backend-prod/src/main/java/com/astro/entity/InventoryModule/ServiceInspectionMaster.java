@@ -62,4 +62,6 @@ public class ServiceInspectionMaster {
 
     @Column(name = "CREATEDDATE")
     private Date createdDate;
+
+//    
 }

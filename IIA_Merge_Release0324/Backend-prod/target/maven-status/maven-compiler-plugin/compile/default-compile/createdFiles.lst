@@ -570,6 +570,7 @@ com\astro\exception\InvalidInputException.class
 com\astro\service\UomMasterService.class
 com\astro\dto\workflow\InventoryModule\GtMasterResponseDto.class
 com\astro\dto\workflow\VendorRegiEmailResponseDTO.class
+com\astro\dto\workflow\InventoryModule\EligibleSoDto.class
 com\astro\entity\ProcurementModule\JobDetails.class
 com\astro\entity\InventoryModule\IsnOhqDtlsDto.class
 com\astro\dto\workflow\InventoryModule\ohq\OhqReportDto.class
