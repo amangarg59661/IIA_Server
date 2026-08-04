@@ -20,7 +20,8 @@ const FORM_ID_TO_NAME = {
   6: 'MaterialMaster',
   7: 'VendorMaster',
   8: 'PurchaseOrder',
-  9: 'TenderRequest'
+  9: 'TenderRequest',
+  12: 'PaymentVoucher',
 };
 
 export const useLOVValues = (formId, designatorName) => {

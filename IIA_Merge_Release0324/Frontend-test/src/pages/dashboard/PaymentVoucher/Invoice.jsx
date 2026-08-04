@@ -9,7 +9,7 @@ import { useReactToPrint } from "react-to-print";
 import axios from "axios";
 import { useSelector } from "react-redux";
 import CustomModal from "../../../components/CustomModal";
-
+import { useLOVValues } from "../../../hooks/useLOVValues";
 
 const Invoice = () => {
 const printRef = useRef();
@@ -41,8 +41,15 @@ const printRef = useRef();
   // });
   const [poOptions, setPoOptions] = useState([]);
   const [soOptions, setSoOptions] = useState([]);
+    const [searchDone, setSearchDone] = useState(false);
   const [cpOptions, setCpOptions] = useState([]);
   const userId = useSelector(state => state.auth.userId);
+
+   const { lovValues: tdsSectionLOV } = useLOVValues(12, 'tdsSection');
+  const tdsSectionDropdown = tdsSectionLOV
+    .filter(item => item.isActive === true)
+    .map(item => ({ label: item.lovDisplayValue, value: item.lovValue }));
+ 
   useEffect(() => {
  /* const fetchPoIds = async () => {
     try {
@@ -349,12 +356,69 @@ const fetchPaymentVoucherData = async (grnNumber) => {
   }
 };
 
+const handleSearchVoucher = async () => {
+  const value = formData.searchValue;
+  if (!value) {
+    message.warning("Enter a Payment Voucher Number to search.");
+    return;
+  }
+  try {
+    const { data } = await axios.get(`/api/process-controller/VoucherData`, { params: { processNo: value } });
+    const res = data?.responseData;
+    if (res) {
+      setFormData(prev => ({
+        ...prev,
+        ...res,
+        purchaseOrderids: res.purchaseOrderId || "",
+        ServiceOrderDetails: res.serviceOrderDetails || "",
+        materialDtlList: res.materials?.map(mat => ({
+          materialCode: mat.materialCode,
+          materialDescription: mat.materialDescription,
+          quantity: mat.quantity,
+          rate: mat.unitPrice,
+          currency: mat.currency,
+          exchangeRate: mat.exchangeRate,
+          gst: mat.gst,
+        })) || [],
+        tdsDtlList: res.tdsList?.map(t => ({
+          tdsSection: t.tdsSection,
+          tdsAmount: t.tdsAmount,
+          remarks: t.remarks,
+        })) || [],
+        deductionDtlList: res.deductions?.map(d => ({
+          deductionName: d.deductionName,
+          deductionAmount: d.deductionAmount,
+          remarks: d.remarks,
+        })) || [],
+      }));
+      setSearchDone(true);
+    } else {
+      message.warning("No payment voucher found for that number.");
+    }
+  } catch (error) {
+    message.error("Failed to fetch payment voucher.");
+    console.error(error);
+  }
+};
+
 useEffect(() => {
   if (selectedGrnId) {
     fetchPaymentVoucherData(selectedGrnId);
   }
 }, [selectedGrnId]);
-
+const recomputeNetAmount = (data) => {
+  const tdsTotal = (data.tdsDtlList || []).reduce((sum, row) => sum + parseFloat(row.tdsAmount || 0), 0);
+  const deductionTotal = (data.deductionDtlList || []).reduce((sum, row) => sum + parseFloat(row.deductionAmount || 0), 0);
+  let baseAmount = 0;
+  if (data.paymentVoucherType === "Partial") {
+    baseAmount = parseFloat(data.partialAmount || 0);
+  } else if (data.paymentVoucherType === "Advance") {
+    baseAmount = parseFloat(data.advanceAmount || 0);
+  } else {
+    baseAmount = parseFloat(data.totalAmount || 0);
+  }
+  return baseAmount - tdsTotal - deductionTotal;
+};
 
   const handleChange = (fieldName, value) => {
     if (typeof fieldName === "string") {
@@ -379,29 +443,34 @@ useEffect(() => {
 
     //   return updated;
     // });
-    setFormData(prev => {
-      let updated = { ...prev, [fieldName]: value };
+    // setFormData(prev => {
+    //   let updated = { ...prev, [fieldName]: value };
 
      
-      const tdsTotal = (updated.tdsDtlList || []).reduce(
-        (sum, row) => sum + parseFloat(row.tdsAmount || 0), 0
-      );
-      const deductionTotal = (updated.deductionDtlList || []).reduce(
-        (sum, row) => sum + parseFloat(row.deductionAmount || 0), 0
-      );
-      let baseAmount = 0;
+    //   const tdsTotal = (updated.tdsDtlList || []).reduce(
+    //     (sum, row) => sum + parseFloat(row.tdsAmount || 0), 0
+    //   );
+    //   const deductionTotal = (updated.deductionDtlList || []).reduce(
+    //     (sum, row) => sum + parseFloat(row.deductionAmount || 0), 0
+    //   );
+    //   let baseAmount = 0;
 
-      if (updated.paymentVoucherType === "Partial") {
-        baseAmount = parseFloat(updated.partialAmount || 0);
-      } else if (updated.paymentVoucherType === "Advance") {
-        baseAmount = parseFloat(updated.advanceAmount || 0);
-      } else {
-        baseAmount = parseFloat(updated.totalAmount || 0);
-      }
+    //   if (updated.paymentVoucherType === "Partial") {
+    //     baseAmount = parseFloat(updated.partialAmount || 0);
+    //   } else if (updated.paymentVoucherType === "Advance") {
+    //     baseAmount = parseFloat(updated.advanceAmount || 0);
+    //   } else {
+    //     baseAmount = parseFloat(updated.totalAmount || 0);
+    //   }
 
-      updated.paymentVoucherNetAmount = baseAmount - tdsTotal - deductionTotal;
+    //   updated.paymentVoucherNetAmount = baseAmount - tdsTotal - deductionTotal;
       
 
+    //   return updated;
+    // });
+      setFormData(prev => {
+      let updated = { ...prev, [fieldName]: value };
+      updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
       return updated;
     });
   //      if (fieldName === "purchaseOrderids") {
@@ -676,7 +745,8 @@ const onFinish = async () => {
       <CustomForm formData={formData} onFinish={onFinish}>
         
         
-        {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions), handleChange, formData, "", null, setFormData, handleSearch)}
+        {/* {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions), handleChange, formData, "", null, setFormData, handleSearch)} */}
+        {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone), handleChange, formData, "", null, setFormData, handleSearch)}
 
         
         {/* {renderFormFields(grvFields, handleChange, formData, "", null, setFormData, handleSearch)} */}

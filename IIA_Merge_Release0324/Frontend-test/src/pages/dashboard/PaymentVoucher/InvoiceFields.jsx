@@ -1,4 +1,6 @@
 import { handleSearch } from "../../../utils/CommonFunctions";
+import { Select, Input, Button, Row, Col, Tag, Space } from "antd";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 
 export const locatorMaster = [
     {
@@ -19,8 +21,52 @@ export const locatorMaster = [
     },
 ]
 
-export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions)=> [
-     {
+export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone)=> [
+     { heading: "Search Payment Voucher",
+    colCnt: 2,
+    fieldList: [
+      {
+        name: "searchValue",
+        label: "Payment Voucher Number",
+        type: "custom",
+        disabled: true,
+        render: () => (
+          <Input.Search
+            placeholder="e.g. GRN45/12, PO123/5"
+            value={formData.searchValue || ""}
+            onChange={(e) => setFormData(prev => ({ ...prev, searchValue: e.target.value }))}
+            onSearch={() => handleSearchVoucher()}
+            enterButton="Search"
+            allowClear
+          />
+        ),
+      },
+    ],
+  },
+  ...(searchDone
+    ? [
+        {
+          heading: "Status",
+          colCnt: 4,
+          fieldList: [
+            {
+              name: "voucherStatusTags",
+              type: "custom",
+              disabled: true,
+              render: () => (
+                <Space>
+                  <Tag color={formData.status === "Approved" ? "green" : formData.status === "Rejected" ? "red" : "gold"}>
+                    {formData.status || "Draft"}
+                  </Tag>
+                  {formData.paymentVoucherType && <Tag color="blue">{formData.paymentVoucherType}</Tag>}
+                  {formData.paymentVoucherNumber && <Tag>{formData.paymentVoucherNumber}</Tag>}
+                </Space>
+              ),
+            },
+          ],
+        },
+      ]
+    : []),{
     heading: "Invoice Details",
     colCnt: 2,
     fieldList: [
@@ -301,22 +347,164 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
    ]},
    {
     heading: "TDS Details",
-    name: "tdsDtlList",
-    colCnt: 3,
-    children: [
-      { name: "tdsSection", label: "TDS Section / Type", type: "text", required: true },
-      { name: "tdsAmount", label: "Amount", type: "text", required: true },
-      { name: "remarks", label: "Remarks", type: "text" },
+    colCnt: 23,
+    fieldList: [
+      {
+        name: "tdsDtlListCustom",
+        type: "custom",
+        disabled: true,
+        render: () => (
+          <div style={{ width: "100%" }}>
+            {(formData.tdsDtlList || []).map((row, idx) => (
+               <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                <div style={{ flex: "0 0 40%", minWidth: 220  }}>
+                  <Select
+                    placeholder="TDS Section / Type"
+                    style={{ width: "100%" }}
+                    value={row.tdsSection || undefined}
+                    options={tdsSectionDropdown}
+                    onChange={(val) => {
+                      const list = [...(formData.tdsDtlList || [])];
+                      list[idx] = { ...list[idx], tdsSection: val };
+                      setFormData(prev => {
+                        const updated = { ...prev, tdsDtlList: list };
+                        updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
+                        return updated;
+                      });
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "0 0 25%", minWidth: 140}}>
+                  <Input
+                    placeholder="Amount"
+                    value={row.tdsAmount || ""}
+                    onChange={(e) => {
+                      const list = [...(formData.tdsDtlList || [])];
+                      list[idx] = { ...list[idx], tdsAmount: e.target.value };
+                      setFormData(prev => {
+                        const updated = { ...prev, tdsDtlList: list };
+                        updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
+                        return updated;
+                      });
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "1 1 auto" , minWidth: 280}}>
+                  <Input
+                    placeholder="Remarks"
+                    value={row.remarks || ""}
+                    onChange={(e) => {
+                      const list = [...(formData.tdsDtlList || [])];
+                      list[idx] = { ...list[idx], remarks: e.target.value };
+                      setFormData(prev => ({ ...prev, tdsDtlList: list }));
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "0 0 32px" }}>
+                  <Button
+                    danger
+                    type="text"
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => {
+                      const list = (formData.tdsDtlList || []).filter((_, i) => i !== idx);
+                      setFormData(prev => {
+                        const updated = { ...prev, tdsDtlList: list };
+                        updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
+                        return updated;
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => setFormData(prev => ({ ...prev, tdsDtlList: [...(prev.tdsDtlList || []), {}] }))}
+            >
+              Add TDS Line
+            </Button>
+          </div>
+        ),
+      },
     ],
   },
    {
     heading: "Deductions",
-    name: "deductionDtlList",
-    colCnt: 3,
-    children: [
-      { name: "deductionName", label: "Deduction Name", type: "text", required: true },
-      { name: "deductionAmount", label: "Amount", type: "text", required: true },
-      { name: "remarks", label: "Reason / Remarks", type: "text", required: true },
+    colCnt: 1,
+    fieldList: [
+      {
+        name: "deductionDtlListCustom",
+        type: "custom",
+        disabled: true,
+        render: () => (
+          <div style={{ width: "100%" }}>
+            {(formData.deductionDtlList || []).map((row, idx) => (
+               <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
+                <div style={{ flex: "0 0 35%", minWidth: 200 }}>
+                  <Input
+                    placeholder="Deduction Name"
+                    value={row.deductionName || ""}
+                    onChange={(e) => {
+                      const list = [...(formData.deductionDtlList || [])];
+                      list[idx] = { ...list[idx], deductionName: e.target.value };
+                      setFormData(prev => ({ ...prev, deductionDtlList: list }));
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "0 0 25%", minWidth: 140  }}>
+                  <Input
+                    placeholder="Amount"
+                    value={row.deductionAmount || ""}
+                    onChange={(e) => {
+                      const list = [...(formData.deductionDtlList || [])];
+                      list[idx] = { ...list[idx], deductionAmount: e.target.value };
+                      setFormData(prev => {
+                        const updated = { ...prev, deductionDtlList: list };
+                        updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
+                        return updated;
+                      });
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "1 1 auto" , minWidth: 280}}>
+                  <Input
+                    placeholder="Reason / Remarks"
+                    value={row.remarks || ""}
+                    onChange={(e) => {
+                      const list = [...(formData.deductionDtlList || [])];
+                      list[idx] = { ...list[idx], remarks: e.target.value };
+                      setFormData(prev => ({ ...prev, deductionDtlList: list }));
+                    }}
+                  />
+                </div>
+                <div style={{ flex: "0 0 32px" }}>
+                  <Button
+                    danger
+                    type="text"
+                    icon={<MinusCircleOutlined />}
+                    onClick={() => {
+                      const list = (formData.deductionDtlList || []).filter((_, i) => i !== idx);
+                      setFormData(prev => {
+                        const updated = { ...prev, deductionDtlList: list };
+                        updated.paymentVoucherNetAmount = recomputeNetAmount(updated);
+                        return updated;
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => setFormData(prev => ({ ...prev, deductionDtlList: [...(prev.deductionDtlList || []), {}] }))}
+            >
+              Add Deduction Line
+            </Button>
+          </div>
+        ),
+      },
     ],
   },
 //    {
