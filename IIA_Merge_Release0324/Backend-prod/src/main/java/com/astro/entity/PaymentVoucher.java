@@ -71,7 +71,7 @@ public class PaymentVoucher {
     private BigDecimal tdsAmount;
     private BigDecimal deductionAmount;
     private BigDecimal paymentVoucherNetAmount;
-
+private String inspectionProcessId;
     private String soId;
     private String cpDetails;
 

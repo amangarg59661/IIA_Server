@@ -15,6 +15,7 @@ public class paymentVoucherRequestDto {
     private String purchaseOrderId;
     private String grnNumber;
     private String serviceOrderDetails;
+     private String inspectionProcessId;
     private String paymentVoucherType;
     private String vendorName;
     private String vendorInvoiceNumber;

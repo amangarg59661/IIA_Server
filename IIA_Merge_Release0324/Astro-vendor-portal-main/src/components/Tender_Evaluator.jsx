@@ -382,7 +382,7 @@ const handleFileChange = (docName, fileData) => {
 // };
 const handleOpenTenderFormat = async () => {
   try {
-    const response = await axios.get(`${baseURL}/data/tender-format`, {
+    const response = await axios.get(`/data/tender-format`, {
       params: { tenderId: tenderNumber, version: tenderVersion, vendorId },
       headers: { Authorization: `Bearer ${token}` },
       responseType: 'blob',

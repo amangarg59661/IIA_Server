@@ -376,7 +376,7 @@ const handleFileChange = (docName, fileData) => {
   };
 
   const handleOpenTenderFormat = () => {
-  const url = `${baseURL}/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
+  const url = `/data/tender-format?tenderId=${tenderNumber}&version=${tenderVersion}&vendorId=${vendorId}`;
   window.open(url, "_blank");
 };
 

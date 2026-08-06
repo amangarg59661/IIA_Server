@@ -20,7 +20,8 @@ public interface PaymentVoucherReposiotry extends JpaRepository<PaymentVoucher, 
     boolean existsByGrnNumberAndPaymentVoucherType(String grnNumber, String paymentVoucherType);
 
     Optional<PaymentVoucher> findTopByServiceOrderDetailsOrderByIdDesc(String soId);
-
+Optional<PaymentVoucher> findTopByInspectionProcessIdOrderByIdDesc(String inspectionProcessId);
+    boolean existsByInspectionProcessIdAndPaymentVoucherType(String inspectionProcessId, String paymentVoucherType);
     Optional<PaymentVoucher> findTopByCpDetailsOrderByIdDesc(String cpDetails);
     Optional<PaymentVoucher> findTopByPurchaseOrderIdOrderByIdDesc(String purchaseOrderId);
 

@@ -341,6 +341,7 @@ const handleGISearch = async () => {
                 name: "deliveryDate",
                 label: "Delivery Date",
                 type: "date",
+                disabled:true,
                 required: true,
                 span: 1
             },

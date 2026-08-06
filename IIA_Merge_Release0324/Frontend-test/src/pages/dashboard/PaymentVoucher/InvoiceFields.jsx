@@ -20,8 +20,8 @@ export const locatorMaster = [
         label: "Locator 4"
     },
 ]
-
-export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone)=> [
+export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone, inspectionIds)=> [
+// export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone)=> [
      { heading: "Search Payment Voucher",
     colCnt: 2,
     fieldList: [
@@ -140,7 +140,8 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
   //       },
   //     ]
   //   : []),
-     ...(formData.paymentVoucherIsFor === "Service Order"
+    // 
+    ...(formData.paymentVoucherIsFor === "Service Order"
     ? [
         {
           name: "ServiceOrderDetails",
@@ -149,6 +150,17 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
           required: true,
           options: soOptions,
         },
+        ...(formData.paymentVoucherType !== "Advance"
+          ? [
+              {
+                name: "serviceInspectionId",
+                label: "Service Inspection Id",
+                type: "select",
+                required: true,
+                options: inspectionIds,
+              },
+            ]
+          : []),
       ]
     : []),
     ...(formData.paymentVoucherIsFor === "CP"

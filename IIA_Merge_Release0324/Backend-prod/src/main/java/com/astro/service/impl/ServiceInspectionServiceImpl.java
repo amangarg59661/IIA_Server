@@ -7,9 +7,11 @@ import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectio
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionMaterialLineDto;
 import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
 import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
+import com.astro.dto.workflow.InventoryModule.SoInspectionInfoDto;
 import com.astro.entity.InventoryModule.ServiceInspectionMaster;
 import com.astro.entity.InventoryModule.ServiceInspectionMaterialDtl;
 import com.astro.entity.PaymentVoucher;
+import org.springframework.transaction.annotation.Transactional;
 import com.astro.entity.ProcurementModule.ServiceOrder;
 import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 import com.astro.repository.InventoryModule.ServiceInspectionMaterialDtlRepository;
@@ -22,20 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-// import java.math.BigDecimal;
-// import java.util.Date;
-// import java.util.List;
-// import java.util.Optional;
-// import java.util.stream.Collectors;
+
 
 @Service
 public class ServiceInspectionServiceImpl implements ServiceInspectionService {
@@ -129,6 +120,7 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
 
     // AFTER
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String saveServiceInspection(SaveServiceInspectionDto req) {
         if (req.getSoId() == null || req.getSoId().isEmpty()) {
             throw new RuntimeException("soId is required to create a Service Inspection.");
@@ -218,6 +210,7 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String submitInspectionDraft(String inspectionProcessId, SaveServiceInspectionDto req) {
         ServiceInspectionMaster draft = serviceInspectionRepository.findById(inspectionProcessId)
                 .orElseThrow(() -> new RuntimeException("Draft Service Inspection not found: " + inspectionProcessId));
@@ -252,6 +245,7 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
     // ── UPDATE (post-submission, pre-approval) ──────────────────────
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String updateServiceInspection(String inspectionProcessId, SaveServiceInspectionDto req) {
         ServiceInspectionMaster master = serviceInspectionRepository.findById(inspectionProcessId)
                 .orElseThrow(() -> new RuntimeException("Service Inspection not found: " + inspectionProcessId));
@@ -406,9 +400,37 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
                 .collect(Collectors.toList());
     }
 
+    
     @Override
     public List<String> getApprovedServiceInspectionIds() {
         return workflowTransitionRepository.findApprovedServiceInspectionIds();
+    }
+
+    // ── SO IDS FOR PAYMENT VOUCHER DROPDOWN (level 1, mirrors GRN→PO pattern) ──
+
+    @Override
+    public List<SoInspectionInfoDto> getApprovedSoIdsForInspection() {
+        List<String> approvedIds = workflowTransitionRepository.findApprovedServiceInspectionIds();
+        List<ServiceInspectionMaster> masters = serviceInspectionRepository.findAllById(approvedIds);
+
+        Map<String, SoInspectionInfoDto> map = new LinkedHashMap<>();
+        for (ServiceInspectionMaster m : masters) {
+            map.computeIfAbsent(m.getSoId(), id ->
+                    new SoInspectionInfoDto(m.getSoId(), m.getVendorName(), m.getProjectName()));
+        }
+        return new ArrayList<>(map.values());
+    }
+
+    // ── INSPECTION IDS FOR PAYMENT VOUCHER DROPDOWN (level 2, mirrors GRN number pattern) ──
+
+    @Override
+    public List<String> getApprovedInspectionIdsBySoId(String soId) {
+        Set<String> approvedIds = new HashSet<>(workflowTransitionRepository.findApprovedServiceInspectionIds());
+        return serviceInspectionRepository.findBySoId(soId).stream()
+                .map(ServiceInspectionMaster::getInspectionProcessId)
+                .filter(approvedIds::contains)
+                .filter(id -> !paymentVoucherReposiotry.existsByInspectionProcessIdAndPaymentVoucherType(id, "Full Payment"))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -455,8 +477,10 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
         // recurring/AMC SO with multiple inspection cycles this may need to be scoped to
         // inspectionProcessId instead, so cycle 2 doesn't inherit cycle 1's "already paid"
         // figure. Flagging, not silently resolving — see earlier note on this same question.
+        // Optional<PaymentVoucher> existingVoucherOpt =
+        //         paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(si.getSoId());
         Optional<PaymentVoucher> existingVoucherOpt =
-                paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(si.getSoId());
+                paymentVoucherReposiotry.findTopByInspectionProcessIdOrderByIdDesc(inspectionProcessId);
 
         if (existingVoucherOpt.isPresent()) {
             PaymentVoucher existingVoucher = existingVoucherOpt.get();

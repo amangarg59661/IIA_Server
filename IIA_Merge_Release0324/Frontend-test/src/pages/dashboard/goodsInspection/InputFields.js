@@ -109,6 +109,7 @@ export const generalDtls = [
                 label: "Delivery Date",
                 type: "date",
                 required: true,
+                disabled: true,
                 span: 1
             },
             {

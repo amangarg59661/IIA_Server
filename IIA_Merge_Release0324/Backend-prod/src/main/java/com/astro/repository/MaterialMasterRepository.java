@@ -35,7 +35,7 @@ public interface MaterialMasterRepository extends JpaRepository<MaterialMaster, 
            nativeQuery = true)
    List<Object[]> searchMaterialsForDropdown(@Param("keyword") String keyword);
 
-   @Query(value = "SELECT m.material_code, m.description, m.category, m.sub_category, m.uom, m.unit_price, m.currency " +
+   @Query(value = "SELECT m.material_code, m.description, m.category, m.sub_category, m.uom, m.unit_price, m.currency , m.indigenous_or_imported " +
            "FROM material_master m " +
            "WHERE (LOWER(m.material_code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "   OR LOWER(m.description) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -48,7 +48,7 @@ public interface MaterialMasterRepository extends JpaRepository<MaterialMaster, 
            nativeQuery = true)
    List<Object[]> searchApprovedMaterialsComputer(@Param("keyword") String keyword);
 
-   @Query(value = "SELECT m.material_code, m.description, m.category, m.sub_category, m.uom, m.unit_price, m.currency " +
+   @Query(value = "SELECT m.material_code, m.description, m.category, m.sub_category, m.uom, m.unit_price, m.currency , m.indigenous_or_imported " +
            "FROM material_master m " +
            "WHERE (LOWER(m.material_code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "   OR LOWER(m.description) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

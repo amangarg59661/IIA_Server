@@ -1,0 +1,109 @@
+/* printEvaluation.css
+   Drop next to TenderEvaluator.jsx, import once: `import './printEvaluation.css';`
+   Pattern: print-only block stays display:none on screen, everything else
+   gets visibility:hidden only inside @media print, print-only block flips visible. */
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  .print-only {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+  @page {
+    size: A4;
+    margin: 15mm 12mm;
+  }
+}
+
+/* ── Shared print-document styling (screen preview uses same rules) ── */
+.eval-doc {
+  font-family: 'Times New Roman', Times, serif;
+  color: #000;
+  font-size: 11.5pt;
+  line-height: 1.4;
+  width: 100%;
+  max-width: 190mm;
+  margin: 0 auto;
+}
+.eval-doc .doc-header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+.eval-doc .doc-header img {
+  width: 70px;
+  height: auto;
+  display: block;
+  margin: 0 auto 4px;
+}
+.eval-doc .doc-header .org-name {
+  font-weight: 700;
+  font-size: 13pt;
+}
+.eval-doc .doc-title {
+  text-align: center;
+  font-weight: 700;
+  font-size: 13pt;
+  margin: 10px 0;
+}
+.eval-doc .section-banner {
+  background: #d9d9d9;
+  border: 1px solid #000;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px;
+  margin-top: 10px;
+}
+.eval-doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+.eval-doc table, .eval-doc th, .eval-doc td {
+  border: 1px solid #000;
+}
+.eval-doc th, .eval-doc td {
+  padding: 5px 7px;
+  vertical-align: top;
+  text-align: left;
+}
+.eval-doc th {
+  font-weight: 700;
+  background: #f2f2f2;
+}
+.eval-doc .free-text-box {
+  border: 1px solid #000;
+  border-top: none;
+  min-height: 30px;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+}
+.eval-doc .declaration-box {
+  border: 1px solid #000;
+  padding: 8px;
+  margin-top: 14px;
+  font-weight: 700;
+}
+.eval-doc .approval-block {
+  margin-top: 18px;
+}
+.eval-doc .approval-block .footnote {
+  font-style: italic;
+  font-size: 10pt;
+  margin-top: 4px;
+}

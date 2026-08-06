@@ -7,6 +7,7 @@ import com.astro.entity.InventoryModule.OhqMasterEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import java.math.BigDecimal;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +18,8 @@ public interface OhqMasterRepository extends JpaRepository<OhqMasterEntity, Inte
     List<OhqMasterEntity> findByLocatorId(Integer locatorId);
     Optional<OhqMasterEntity> findByAssetIdAndLocatorId(Integer assetId, Integer locatorId);
     Optional<OhqMasterEntity> findByAssetIdAndLocatorIdAndCustodianId(Integer assetId, Integer locatorId, String custodianId);
+
+    boolean existsByCustodianIdAndQuantityGreaterThan(String custodianId, BigDecimal quantity);
 
     @Query(value = """
         SELECT 

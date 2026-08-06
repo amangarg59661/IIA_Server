@@ -968,6 +968,10 @@ const handleCancellationApprove = async (record, approvalStatus) => {
         endpoint = `/api/process-controller/VoucherData`;
     config = { params: { processNo: record.requestId } };
         break;
+        case 12: 
+        endpoint = `/api/indents/byId`;
+        config = { params: { indentId: record.requestId } };
+        break;
       default:
         message.error("Invalid workflow ID.");
         setDetailLoading(false);

@@ -22,6 +22,8 @@ const printRef = useRef();
   const [grnIds, setGrnIds] = useState([]);
   const [selectedPoId, setSelectedPoId] = useState(""); // Purchase Order ID
   const [selectedSoId, setSelectedSoId] = useState("");
+    const [inspectionIds, setInspectionIds] = useState([]);
+  const [selectedInspectionId, setSelectedInspectionId] = useState("");
   const [selectedGrnId, setSelectedGrnId] = useState("");
   const [formData, setFormData] = useState({
     grnNo: "",
@@ -95,17 +97,36 @@ const printRef = useRef();
 
   fetchPoIds();
 }, []);
- useEffect(() => {
-  const fetchSoIds = async () => {
-    try {
-      const { data } = await axios.get("/api/process-controller/approvedSoIds");
-      const ids = data?.responseData || [];
+//  useEffect(() => {
+//   const fetchSoIds = async () => {
+//     try {
+//       const { data } = await axios.get("/api/process-controller/approvedSoIds");
+//       const ids = data?.responseData || [];
 
      
-      const options = ids.map(id => ({ value: id, label: id }));
+//       const options = ids.map(id => ({ value: id, label: id }));
+//       setSoOptions(options);
+//     } catch (error) {
+//       message.error("Failed to fetch Purchase Order IDs");
+//     }
+//   };
+
+//   fetchSoIds();
+// }, []);
+useEffect(() => {
+  const fetchSoIds = async () => {
+    try {
+      const { data } = await axios.get("/api/service-inspection/approvedSoIds");
+      const soList = data?.responseData || [];
+
+      const options = soList.map(item => ({
+        value: item.soId,
+        label: item.soId,
+        searchText: (item.soId + " " + item.vendorName + " " + (item.projectName || "")).toLowerCase(),
+      }));
       setSoOptions(options);
     } catch (error) {
-      message.error("Failed to fetch Purchase Order IDs");
+      message.error("Failed to fetch Service Order IDs");
     }
   };
 
@@ -162,6 +183,62 @@ useEffect(() => {
     fetchGrnIds(selectedPoId);
   }
 }, [selectedPoId]);
+const fetchInspectionIds = async (soId) => {
+  try {
+    const response = await axios.get(`/api/service-inspection/byApprovedSoId?soId=${soId}`);
+    const ids = response.data?.responseData || [];
+    setInspectionIds(ids.map(id => ({ value: id, label: id })));
+  } catch (err) {
+    console.error("Error fetching Service Inspection IDs", err);
+  }
+};
+useEffect(() => {
+  if (selectedSoId) {
+    fetchInspectionIds(selectedSoId);
+  }
+}, [selectedSoId]);
+
+const fetchInspectionPaymentVoucherData = async (inspectionProcessId) => {
+  try {
+    const { data } = await axios.get(`/api/service-inspection/paymentVoucherData?inspectionProcessId=${inspectionProcessId}`);
+    const res = data?.responseData;
+    if (res) {
+      setFormData(prev => ({
+        ...prev,
+        vendorName: res.vendorName,
+        vendorInvoiceNumber: res.vendorInvoiceName,
+        vendorInvoiceDate: res.vendorInvoiceDate,
+        currency: res.materialsList?.[0]?.currency || "INR",
+        exchangeRate: res.materialsList?.[0]?.exchangeRate || 0,
+        totalAmount: res.totalAmount,
+        paymentVoucherType: res.paymentVoucherType,
+        partialAmount: res.partialAmountAlreadypaid || null,
+        partialBalanceAmount: res.partialBalanceAmount || null,
+        advanceAmountpaid: res.advanceAmountAlreadyPaid || null,
+        advanceBalanceAmount: res.advanceBalanceAmount || null,
+        materialDtlList: res.materialsList?.map(mat => ({
+          materialCode: mat.materialCode,
+          materialDescription: mat.materialDescription,
+          quantity: mat.quantity,
+          rate: mat.unitPrice,
+          currency: mat.currency,
+          exchangeRate: mat.exchangeRate,
+          gst: mat.gst,
+          amount: mat.amount,
+        })) || []
+      }));
+    }
+  } catch (error) {
+    message.error("Failed to fetch Service Inspection payment data");
+    console.error(error);
+  }
+};
+useEffect(() => {
+  if (selectedInspectionId) {
+    fetchInspectionPaymentVoucherData(selectedInspectionId);
+  }
+}, [selectedInspectionId]);
+
 const fetchServiceOrderData = async (soId) => {
   try {
     const { data } = await axios.get(`/api/process-controller/paymentVoucherSOData?processNo=${soId}`);
@@ -503,12 +580,24 @@ const recomputeNetAmount = (data) => {
     if (fieldName === "grnNumber") {
     setSelectedGrnId(value); // triggers useEffect to call API
   }
-   if (fieldName === "ServiceOrderDetails") {
+  //  if (fieldName === "ServiceOrderDetails") {
+  //     setSelectedSoId(value);
+  //     if (formData.paymentVoucherType === "Advance") {
+  //       fetchSoAdvanceData(value);
+  //     } else {
+  //       fetchServiceOrderData(value);
+  //     }
+  //   }
+  if (fieldName === "ServiceOrderDetails") {
       setSelectedSoId(value);
+      // level-1 pick only — data fetch now happens off the inspection id, not here
+    }
+    if (fieldName === "serviceInspectionId") {
+      setSelectedInspectionId(value);
       if (formData.paymentVoucherType === "Advance") {
-        fetchSoAdvanceData(value);
+        fetchSoAdvanceData(selectedSoId);
       } else {
-        fetchServiceOrderData(value);
+        fetchInspectionPaymentVoucherData(value);
       }
     }
     if (fieldName === "cpDetails") {
@@ -639,6 +728,7 @@ const onFinish = async () => {
       purchaseOrderId: formData.purchaseOrderids || "",
       grnNumber: formData.grnNumber || "",
       serviceOrderDetails: formData.ServiceOrderDetails || "",
+      inspectionProcessId: formData.serviceInspectionId || "",
       paymentVoucherType: formData.paymentVoucherType,
       vendorName: formData.vendorName,
       vendorInvoiceNumber: formData.vendorInvoiceNumber,
@@ -746,8 +836,8 @@ const onFinish = async () => {
         
         
         {/* {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions), handleChange, formData, "", null, setFormData, handleSearch)} */}
-        {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone), handleChange, formData, "", null, setFormData, handleSearch)}
-
+        {/* {renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone), handleChange, formData, "", null, setFormData, handleSearch)} */}
+{renderFormFields(invoiceFields(formData, poOptions, grnIds, setSelectedPoId, soOptions, cpOptions, setFormData, tdsSectionDropdown, recomputeNetAmount, handleSearchVoucher, searchDone, inspectionIds), handleChange, formData, "", null, setFormData, handleSearch)}
         
         {/* {renderFormFields(grvFields, handleChange, formData, "", null, setFormData, handleSearch)} */}
         <ButtonContainer

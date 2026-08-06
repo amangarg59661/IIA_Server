@@ -49,6 +49,7 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         voucher.setPurchaseOrderId(dto.getPurchaseOrderId());
         voucher.setGrnNumber(dto.getGrnNumber());
         voucher.setServiceOrderDetails(dto.getServiceOrderDetails());
+        voucher.setInspectionProcessId(dto.getInspectionProcessId()); 
         voucher.setPaymentVoucherType(dto.getPaymentVoucherType());
         voucher.setVendorName(dto.getVendorName());
         voucher.setVendorInvoiceNumber(dto.getVendorInvoiceNumber());
@@ -71,9 +72,13 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         if ("CP".equalsIgnoreCase(paymentFor) && "Advance".equalsIgnoreCase(dto.getPaymentVoucherType())) {
             throw new IllegalArgumentException("Advance payment is not allowed for Contingency Purchase.");
         }
-
-        if ("Service Order".equalsIgnoreCase(paymentFor)) {
+if ("Service Order".equalsIgnoreCase(paymentFor) && !"Advance".equalsIgnoreCase(dto.getPaymentVoucherType())) {
+            existingVoucherOpt = paymentVoucherReposiotry.findTopByInspectionProcessIdOrderByIdDesc(dto.getInspectionProcessId());
+        } else if ("Service Order".equalsIgnoreCase(paymentFor)) {
             existingVoucherOpt = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(dto.getServiceOrderDetails());
+        
+        // if ("Service Order".equalsIgnoreCase(paymentFor)) {
+        //     existingVoucherOpt = paymentVoucherReposiotry.findTopByServiceOrderDetailsOrderByIdDesc(dto.getServiceOrderDetails());
         } else if ("CP".equalsIgnoreCase(paymentFor)) {
             existingVoucherOpt = paymentVoucherReposiotry.findTopByCpDetailsOrderByIdDesc(dto.getCpDetails());
         } else if ("Purchase Order".equalsIgnoreCase(paymentFor) && "Advance".equalsIgnoreCase(dto.getPaymentVoucherType())) {
@@ -195,6 +200,7 @@ public class PaymentVoucherServiceImpl implements PaymentVoucherService {
         dto.setPurchaseOrderId(entity.getPurchaseOrderId());
         dto.setGrnNumber(entity.getGrnNumber());
         dto.setServiceOrderDetails(entity.getServiceOrderDetails());
+        dto.setInspectionProcessId(entity.getInspectionProcessId());
         dto.setPaymentVoucherType(entity.getPaymentVoucherType());
         dto.setVendorName(entity.getVendorName());
         dto.setVendorInvoiceNumber(entity.getVendorInvoiceNumber());

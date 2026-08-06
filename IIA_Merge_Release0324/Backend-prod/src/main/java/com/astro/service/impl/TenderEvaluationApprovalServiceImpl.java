@@ -3985,7 +3985,8 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
 
         private void removeCommitteeMemberRoleIfSafe(Integer userId, String excludeTenderId) {
             // Skip permanent STEC members
-            if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
+           if (committeeRepository.existsByUserIdAndIsActiveTrue(userId)) {
+            // if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
                 log.debug("User {} is permanent STEC member. Keeping role.", userId);
                 return;
             }
@@ -4003,7 +4004,8 @@ boolean reroutedIndentorToPP = "PURCHASE_PERSONNEL".equalsIgnoreCase(target)
 
         private void removeCommitteeChairmanRoleIfSafe(Integer userId, String excludeTenderId) {
             // Skip permanent STEC chairman
-            if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
+            if (committeeRepository.existsByUserIdAndIsActiveTrue(userId)) {
+            // if (committeeRepository.findByUserIdAndIsActiveTrue(userId).isPresent()) {
                 log.debug("User {} is permanent STEC member. Keeping chairman role.", userId);
                 return;
             }

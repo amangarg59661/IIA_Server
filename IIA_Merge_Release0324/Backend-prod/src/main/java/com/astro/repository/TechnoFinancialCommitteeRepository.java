@@ -10,7 +10,7 @@ import java.util.Optional;
 
 @Repository
 public interface TechnoFinancialCommitteeRepository extends JpaRepository<TechnoFinancialCommittee, Long> {
-
+boolean existsByUserIdAndIsActiveTrue(Integer userId);
     List<TechnoFinancialCommittee> findByIsActiveTrue();
 
     Optional<TechnoFinancialCommittee> findByUserIdAndIsActiveTrue(Integer userId);

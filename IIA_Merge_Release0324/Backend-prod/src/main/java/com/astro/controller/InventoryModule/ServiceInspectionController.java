@@ -92,6 +92,16 @@ public class ServiceInspectionController {
         return ResponseEntity.ok(serviceInspectionService.getApprovedServiceInspectionIds());
     }
 
+       @GetMapping("/approvedSoIds")
+    public ResponseEntity<Object> getApprovedSoIdsForInspection() {
+        return ResponseEntity.ok(serviceInspectionService.getApprovedSoIdsForInspection());
+    }
+
+    @GetMapping("/byApprovedSoId")
+    public ResponseEntity<Object> getApprovedInspectionIdsBySoId(@RequestParam String soId) {
+        return ResponseEntity.ok(serviceInspectionService.getApprovedInspectionIdsBySoId(soId));
+    }
+
     @GetMapping("/paymentVoucherData")
     public ResponseEntity<Object> getPaymentVoucherDtoByInspectionId(@RequestParam String inspectionProcessId) {
         return ResponseEntity.ok(serviceInspectionService.getPaymentVoucherDtoByInspectionId(inspectionProcessId));

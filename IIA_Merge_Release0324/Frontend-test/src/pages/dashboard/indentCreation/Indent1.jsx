@@ -1,4 +1,5 @@
-        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal, Tooltip,  Collapse, Checkbox } from 'antd'
+        // import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal, Tooltip,  Collapse, Checkbox } from 'antd'
+        import { Card, message, Select, Row, Col, Tag, Button, Alert, Space, Modal, Tooltip,  Collapse, Checkbox, Input } from 'antd'
         import React, { useEffect, useRef, useState } from 'react'
         import { useSelector, useDispatch } from 'react-redux'
         import { fetchMasters } from '../../../store/slice/masterSlice'
@@ -717,6 +718,12 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                     name: "materialDetails",
                     children: [
                         {
+    name: "srNo",
+    label: "S.No.",
+    type: "custom",
+    render: (index) => <Input value={index + 1} disabled />
+},
+                        {
                             name: "materialCode",
                             label: "Material Code",
                             type: "select",
@@ -780,6 +787,17 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             type: "text",
                             required: true,
                             disabled: true
+                        },
+                        {
+                            name: "indigenousOrImported",
+                            label: "Imported / Indigenous",
+                            type: "select",
+                            // required: true,
+                            disabled: true,
+                            options: [
+                                { value: true, label: "Indigenous" },
+                                { value: false, label: "Imported" }
+                            ]
                         },
                         {
                             name: "quantity",
@@ -909,10 +927,18 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
             // Job Details Input Fields (for Job Indent type)
             const getJobInputFields = () => {
                 return {
+                    
                     heading: "Job/Service Details",
                     addButton: true,
                     name: "jobDetails",
                     children: [
+                       {
+    name: "srNo",
+    label: "S.No.",
+    type: "custom",
+    span:3,
+    render: (index) => <Input value={index + 1} disabled />
+},
                         {
                             name: "jobCode",
                             label: "Job Code",
@@ -953,6 +979,16 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             options: uomOptions,
                             disabled: true
                         },
+                       {
+    name: "origin",
+    label: "Imported / Indigenous",
+    type: "select",
+    disabled: true,
+    options: [
+        { value: "1", label: "Indigenous" },
+        { value: "0", label: "Imported" }
+    ]
+},
                         {
                             name: "quantity",
                             label: "Quantity",
@@ -1371,6 +1407,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                                 type: "select",
                                 span: 2,
                                 options: reasonDropdownLOV,
+                                multiline:true,
                                 required: true
                             },
                             {
@@ -1439,7 +1476,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             name: "uploadBuyBackFileNames",
                             label: "Upload Buy Back File",
                             type: "multiImage",
-                            required: true
+                            // required: true
                         }, {
                             name: "modelNumber",
                             label: "Model Number",
@@ -1669,6 +1706,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                         materialDetails[index].materialCategory = material.category
                         materialDetails[index].materialSubCategory = material.subCategory
                         materialDetails[index].uom = material.uom
+                        materialDetails[index].indigenousOrImported = material.indigenousOrImported
                         materialDetails[index].quantity = ""
                         materialDetails[index].unitPrice = material.unitPrice
                         // Feature 2: Reset conversionRate when material changes; set default 1 for non-INR
@@ -1775,6 +1813,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             jobDetails[index].category = job.category
                             jobDetails[index].subCategory = job.subCategory
                             jobDetails[index].uom = job.uom
+                            jobDetails[index].origin= job.origin
                             jobDetails[index].quantity = ""
                             jobDetails[index].estimatedPrice = job.estimatedPriceWithCcy
                             jobDetails[index].currency = job.currency

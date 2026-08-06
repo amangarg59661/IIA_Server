@@ -99,9 +99,17 @@ public class VendorQuotationAgainstTenderServiceImpl implements VendorQuotationA
            // assign back to DTO
            dto.setVendorId(vendorId);
        }
-
-       List<VendorQuotationAgainstTender> existingQuotations =
-               vendorQuotationAgainstTenderRepository.findAllByTenderIdAndVendorId(dto.getTenderId(), dto.getVendorId());
+List<VendorQuotationAgainstTender> existingQuotations =
+        vendorQuotationAgainstTenderRepository.findAllByTenderIdAndVendorId(dto.getTenderId(), dto.getVendorId());
+// 5b. Carry forward vendor quotations to the new version's tenderId
+// List<VendorQuotationAgainstTender> existingQuotations =
+//         vendorQuotationAgainstTenderRepository.findByTenderId(old.getTenderId());
+// // for (VendorQuotationAgainstTender vq : existingQuotations) {
+// //     vq.setTenderId(newTenderId);
+// // }
+// vendorQuotationAgainstTenderRepository.saveAll(existingQuotations);
+    //    List<VendorQuotationAgainstTender> existingQuotations =
+    //            vendorQuotationAgainstTenderRepository.findAllByTenderIdAndVendorId(dto.getTenderId(), dto.getVendorId());
 
        int maxVersion = 0;
        for (VendorQuotationAgainstTender q : existingQuotations) {

@@ -2,6 +2,8 @@ package com.astro.service.impl;
 
 import com.astro.constant.AppConstant;
 import com.astro.dto.workflow.LoginRoleDto;
+import com.astro.repository.ohq.OhqMasterRepository;
+import java.math.BigDecimal;
 import com.astro.dto.workflow.UserDto;
 import com.astro.dto.workflow.UserRoleDto;
 import com.astro.dto.workflow.UserSearchResponseDto;
@@ -38,6 +40,9 @@ public class UserServiceImpl implements UserService {
     UserMasterRepository userMasterRepository;
 
     @Autowired
+OhqMasterRepository ohqMasterRepository;
+
+    @Autowired
     UserRoleMasterRepository userRoleMasterRepository;
 
     @Autowired
@@ -61,7 +66,18 @@ public class UserServiceImpl implements UserService {
                 )
             ));
     }
-
+private void ensureNoAssetsOnHand(int userId) {
+    if (ohqMasterRepository.existsByCustodianIdAndQuantityGreaterThan(String.valueOf(userId), BigDecimal.ZERO)) {
+        throw new BusinessException(
+            new ErrorDetails(
+                AppConstant.ERROR_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                AppConstant.ERROR_TYPE_VALIDATION,
+                "Cannot deactivate user: user currently has one or more assets on hand."
+            )
+        );
+    }
+}
     @Override
     public UserRoleDto login(UserDto userDto) {
         UserRoleDto userRoleDto = null;
@@ -517,6 +533,10 @@ public class UserServiceImpl implements UserService {
             ));
 
         Boolean currentStatus = userMaster.getIsActive() != null ? userMaster.getIsActive() : true;
+
+        if (currentStatus) {
+    ensureNoAssetsOnHand(userId);
+}
         userMaster.setIsActive(!currentStatus);
         userMasterRepository.save(userMaster);
 
@@ -554,7 +574,7 @@ public class UserServiceImpl implements UserService {
                     "User not found for the provided user ID."
                 )
             ));
-
+ensureNoAssetsOnHand(userId);
         userMaster.setIsActive(false);
         userMasterRepository.save(userMaster);
 

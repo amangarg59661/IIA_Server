@@ -570,7 +570,8 @@ public class MaterialMasterServiceImpl implements MaterialMasterService {
                         (String) obj[3],                                          // subCategory
                         (String) obj[4],                                          // uom
                         obj[5] != null ? new java.math.BigDecimal(obj[5].toString()) : null, // unitPrice
-                        (String) obj[6]                                           // currency
+                        (String) obj[6],                                           // currency
+                        (Boolean) obj[7] != null ? (Boolean) obj[7] : null          // indigenousOrImported
                 ))
                 .collect(Collectors.toList());
     }

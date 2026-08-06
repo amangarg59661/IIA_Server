@@ -5942,6 +5942,8 @@ import { renderFormFields } from "../../../utils/CommonFunctions";
 import Btn from '../../../components/DKG_Btn';
 import { baseURL } from '../../../App';
 import TenderEvaluationHistory from '../queue/TenderEvaluationHistory';
+import PrintTemplates from '../../../utils/PrintTemplates';
+import '../../../utils/printEvaluation.css';
 
 const { Option } = Select;
 const { Text, Title } = Typography;
@@ -5961,6 +5963,9 @@ const TenderEvaluator = () => {
     financialComparisionSheetFileName: [],
     introduction: '',
   });
+  const [printDetails, setPrintDetails] = useState(null);
+ const [printDetailsLoading, setPrintDetailsLoading] = useState(false);
+ const [activePrintDoc, setActivePrintDoc] = useState(null); // 'TECHNICAL' | 'TECHNO_COMMERCIAL' | null
   const [quotationData, setQuotationData] = useState([]);
   const [notSubmittedVendors, setNotSubmittedVendors] = useState([]);
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -6378,6 +6383,18 @@ const handleSearchTender = async () => {
     setLoadingTender(false);
   }
 };
+const fetchPrintDetails = async (id) => {
+   if (!id) return;
+   try {
+     setPrintDetailsLoading(true);
+     const res = await axios.get('/api/tender-evaluation/print-details', { params: { tenderId: id } });
+     setPrintDetails(res.data?.responseData || null);
+   } catch (err) {
+     setPrintDetails(null);
+   } finally {
+     setPrintDetailsLoading(false);
+   }
+ };
 // quotation fetch is triggered via useEffect[tenderId] below — no separate effect needed
 
 
@@ -7762,8 +7779,8 @@ const baseColumns = [
       ]
     : []),
   ...(!isDouble ? [priceBidColumnForSingleBid] : [priceBidColumn]),
-  enteredAmountColumn,
-  l1BidderColumn,
+  ...(!isDouble ? [enteredAmountColumn] : []),
+  ...(!isDouble ? [l1BidderColumn] : []),
 
 ];
 
@@ -9928,6 +9945,7 @@ useEffect(() => {
     fetchIndentorOpenQuestions(tenderId);
     fetchDirCommitteeMembers();
     fetchDirEligibleUsers();
+    fetchPrintDetails(tenderId);
   }
 }, [tenderId]); // eslint-disable-line
 
@@ -10079,8 +10097,32 @@ useEffect(() => {
     ABOVE_50_LAKH_UPTO_1_CRORE: '₹50 Lakh – ₹1 Crore (STEC-II)',
     ABOVE_1_CRORE:              'Above ₹1 Crore (Director Ad Hoc)',
   }[evalStatus?.amountCategory] || evalStatus?.amountCategory?.replace(/_/g, ' ');
-
+const tenderTitle = approvedTenderIdsWithTitle.find(t => t.tenderId === formData.tenderId)?.title || '';
+ 
+  const getQualificationStatus = (record, docPhase) => {
+    if (!isAbove10L) {
+      return (docPhase === 'FINANCIAL' && isDoubleBidEval) ? record.financialSpoStatus : record.sopStatus;
+    }
+    const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+      ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === docPhase);
+    return dv?.decision;
+  };
+ 
+  const getCombinedRemarks = (record, docPhase) => {
+    const dv = evalStatus?.committeeVendorVotes?.[record.vendorId]
+      ?.find(v => v.voterRole === 'DIRECTOR' && v.phase === docPhase);
+    return [record.spoRemarks, dv?.remarks].filter(Boolean).join(' | ') || '-';
+  };
+ 
+  const canPrintTechnical = isDoubleBidEval && Boolean(evalStatus?.financialBidPhase);
+  const canPrintTechnoCommercial = evalStatus?.evaluationStatus === 'APPROVED';
+ 
+  const handlePrint = (docType) => {
+    setActivePrintDoc(docType);
+    setTimeout(() => window.print(), 100);
+  };
   return (
+    <>
     <FormContainer>
       <Heading
         title={
@@ -10094,7 +10136,20 @@ useEffect(() => {
             : undefined
         }
       />
-
+ {tenderId && (canPrintTechnical || canPrintTechnoCommercial) && (
+        <div className="no-print" style={{ margin: '8px 0 16px', display: 'flex', gap: 8 }}>
+          {canPrintTechnical && (
+            <Button onClick={() => handlePrint('TECHNICAL')} loading={printDetailsLoading}>
+              Print Technical Evaluation
+            </Button>
+          )}
+          {canPrintTechnoCommercial && (
+            <Button type="primary" onClick={() => handlePrint('TECHNO_COMMERCIAL')} loading={printDetailsLoading}>
+              Print Techno-Commercial Evaluation
+            </Button>
+          )}
+        </div>
+      )}
       <CustomForm
         formData={formData}
         onFinish={onFinish}
@@ -11950,6 +12005,20 @@ useEffect(() => {
         </Button>
       </Modal>
     </FormContainer>
+    {activePrintDoc && (
+      <PrintTemplates
+        docType={activePrintDoc}
+        formData={formData}
+        evalStatus={evalStatus}
+        quotationData={quotationData}
+        printDetails={printDetails}
+        tenderTitle={tenderTitle}
+        dirCommitteeMembers={dirCommitteeMembers}
+        getQualificationStatus={getQualificationStatus}
+        getCombinedRemarks={getCombinedRemarks}
+      />
+    )}
+    </>
   );
 };
 

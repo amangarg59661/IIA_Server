@@ -247,11 +247,17 @@ public class VendorMasterServiceImpl implements VendorMasterService {
                 .collect(Collectors.toList());
         List<IndentId> indentEntities = indentIdRepository.findByIndentIdIn(indentIds);
         List<String> approvedTenderIds = workflowTransitionRepository.findApprovedTenderIds();
+        // List<String> tenderIds = indentEntities.stream()
+        //         .map(indent -> indent.getTenderRequest().getTenderId())
+        //         .filter(approvedTenderIds::contains)
+        //         .distinct()
+        //         .collect(Collectors.toList());
         List<String> tenderIds = indentEntities.stream()
-                .map(indent -> indent.getTenderRequest().getTenderId())
-                .filter(approvedTenderIds::contains)
-                .distinct()
-                .collect(Collectors.toList());
+        .filter(indent -> Boolean.TRUE.equals(indent.getTenderRequest().getIsActive()))
+        .map(indent -> indent.getTenderRequest().getTenderId())
+        .filter(approvedTenderIds::contains)
+        .distinct()
+        .collect(Collectors.toList());
         List<TenderRequest> tenderRequests = tenderRequestRepository.findByTenderIdIn(tenderIds);
 
         // Convert to Map for quick lookup

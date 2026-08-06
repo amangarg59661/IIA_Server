@@ -308,28 +308,85 @@ export const apiCall = async (method, url, token, payload = null) => {
           />
         );
 
-        case "select":
-          return (
-            <Form.Item 
-              name={field?.name}
-              label={field?.label}
-              rules={field?.required ? [{ required: true, message: `${field?.label} is required` }] : []}
-            >
-              <Select showSearch options={field?.options} disabled={field?.disabled} onChange={(val) => handleChange(field?.name, val)} {...field.props}   filterOption={(input, option) =>
-    option?.label?.toLowerCase().includes(input.toLowerCase())
-  } />
-            </Form.Item>
-        );
+  //       case "select":
+  //         return (
+  //           <Form.Item 
+  //             name={field?.name}
+  //             label={field?.label}
+  //             rules={field?.required ? [{ required: true, message: `${field?.label} is required` }] : []}
+  //           >
+  //             <Select showSearch options={field?.options} disabled={field?.disabled} onChange={(val) => handleChange(field?.name, val)} {...field.props}   filterOption={(input, option) =>
+  //   option?.label?.toLowerCase().includes(input.toLowerCase())
+  // } />
+  //           </Form.Item>
+  //       );
+// After
+case "select":
+  return (
+    <Form.Item 
+      name={field?.name}
+      label={field?.label}
+      rules={field?.required ? [{ required: true, message: `${field?.label} is required` }] : []}
+    >
+      {field?.multiline && (
+        <style>{`
+          .multiline-select .ant-select-selector {
+            height: auto !important;
+            min-height: 32px;
+          }
+          .multiline-select .ant-select-selection-item,
+          .multiline-select .ant-select-selection-search {
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.4;
+            padding: 4px 0;
+          }
+          .multiline-select-dropdown .ant-select-item-option-content {
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.4;
+          }
+        `}</style>
+      )}
+      <Select
+        showSearch
+        options={field?.options}
+        disabled={field?.disabled}
+        onChange={(val) => handleChange(field?.name, val)}
+        className={field?.multiline ? "multiline-select" : undefined}
+        popupClassName={field?.multiline ? "multiline-select-dropdown" : undefined}
+        {...field.props}
+        filterOption={(input, option) =>
+          option?.label?.toLowerCase().includes(input.toLowerCase())
+        }
+      />
+    </Form.Item>
+);
         case "custom":
 
   if (typeof field.render === "function") {
-    // Extract index from field name if it's an array field like "materialDetails[0].purchaseHistoryButton"
-    const fieldNameStr = typeof field.name === 'string' ? field.name : '';
-    const match = fieldNameStr.match(/\[(\d+)\]/);
-    const index = match ? parseInt(match[1], 10) : null;
+    // Child fields inside a repeated section get name = [sectionName, childIndex, fieldName]
+    // Top-level fields (if ever formatted as "section[0].field") get a string name instead.
+    let index = null;
+    if (Array.isArray(field.name) && typeof field.name[1] === 'number') {
+      index = field.name[1];
+    } else if (typeof field.name === 'string') {
+      const match = field.name.match(/\[(\d+)\]/);
+      index = match ? parseInt(match[1], 10) : null;
+    }
     return field.render(index);
   }
   throw new Error("Custom type requires a render function.");
+  //       case "custom":
+
+  // if (typeof field.render === "function") {
+  //   // Extract index from field name if it's an array field like "materialDetails[0].purchaseHistoryButton"
+  //   const fieldNameStr = typeof field.name === 'string' ? field.name : '';
+  //   const match = fieldNameStr.match(/\[(\d+)\]/);
+  //   const index = match ? parseInt(match[1], 10) : null;
+  //   return field.render(index);
+  // }
+  // throw new Error("Custom type requires a render function.");
 
   case "pvselect":
   return (

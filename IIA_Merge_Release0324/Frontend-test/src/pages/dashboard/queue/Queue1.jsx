@@ -209,7 +209,7 @@ const Queue1 = () => {
   const tenderData = allData.filter((item) => item.workflowId === 4 || item.workflowId === 7);
   const cancelledData = allData.filter((item) => item.action === 'Indentor Cancelled');
   const pvData = allData.filter((item) => item.workflowId === 10);
-
+const siData = byWorkflowId(11);
   const tabs = [
     {
       key: 'IND',
@@ -240,6 +240,12 @@ const Queue1 = () => {
       label: `Service Order (${byWorkflowId(5).length})`,
       data: byWorkflowId(5),
       props: { workflowId: 5 },
+    },
+      {
+      key: 'SI',
+      label: `Service Inspection (${siData.length})`,
+      data: siData,
+      props: { workflowId: 11 },
     },
     {
       key: 'M',

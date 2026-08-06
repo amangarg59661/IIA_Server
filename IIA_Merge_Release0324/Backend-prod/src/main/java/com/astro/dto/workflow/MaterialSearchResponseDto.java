@@ -17,4 +17,5 @@ public class MaterialSearchResponseDto {
     private String uom;
     private BigDecimal unitPrice;
     private String currency;
+    private Boolean indigenousOrImported;
 }

@@ -10,6 +10,7 @@ const InputDatePicker = ({
   defaultValue,
   onChange,
   readOnly,
+  disabled,
   required,
   rules = [],
 }) => {
@@ -44,7 +45,7 @@ const InputDatePicker = ({
       <DatePicker
         style={{ width: "100%" }}
         format={dateFormat}
-        disabled={readOnly}
+        disabled={readOnly || disabled}
         onChange={handleDateChange}
       />
     </Form.Item>

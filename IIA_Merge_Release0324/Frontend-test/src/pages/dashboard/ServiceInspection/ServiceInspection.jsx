@@ -108,7 +108,8 @@ const ServiceInspection = () => {
     }
     try {
       // PLACEHOLDER — see contract #1 above
-      const { data } = await axios.get(`/api/service-inspection/soDetails?soId=${soId}`);
+      // const { data } = await axios.get(`/api/service-inspection/soDetails?soId=${soId}`);
+      const { data } = await axios.get(`/api/service-orders/byId?soId=${soId}`);
       const res = data?.responseData || {};
 
       setFormData((prev) => ({

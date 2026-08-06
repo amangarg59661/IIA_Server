@@ -2036,6 +2036,7 @@ const ApprovalWorkflow = () => {
     { id: 5 , name: 'Service Order Workflow' , key:'SO'},
     // { id: 7, name: 'Tender Evaluator Workflow', key: 'TENDER_EVALUATOR' },
     {id:10 , name:'Payment Voucher Workflow', key:'Payment'},
+    { id:11, name: 'Service Inspection Workflow', key: 'SI' },
   ]);
   // End
   const [branches, setBranches] = useState([]);
@@ -2056,7 +2057,9 @@ const ApprovalWorkflow = () => {
   const [condProjectBasedChecked, setCondProjectBasedChecked] = useState(false);
   const [condProjectBasedValue, setCondProjectBasedValue] = useState(undefined);
   const [condMaterialCategoryChecked, setCondMaterialCategoryChecked] = useState(false);
+  const [condModeOfProcurementChecked, setCondModeOfProcurementChecked] = useState(false);
   const [condMaterialCategoryValue, setCondMaterialCategoryValue] = useState(undefined);
+  const [condModeOfProcurementValue, setCondModeOfProcurementValue] = useState(undefined);
   const [condLocationChecked, setCondLocationChecked] = useState(false);
   const [condLocationValue, setCondLocationValue] = useState(undefined);
   const [condDepartmentChecked, setCondDepartmentChecked] = useState(false);
@@ -2074,6 +2077,8 @@ const ApprovalWorkflow = () => {
     setCondProjectBasedChecked(false);
     setCondProjectBasedValue(undefined);
     setCondMaterialCategoryChecked(false);
+    setCondModeOfProcurementChecked(false);
+    setCondModeOfProcurementValue(undefined);
     setCondMaterialCategoryValue(undefined);
     setCondLocationChecked(false);
     setCondLocationValue(undefined);
@@ -2212,6 +2217,11 @@ const ApprovalWorkflow = () => {
           setCondMaterialCategoryChecked(true);
           setCondMaterialCategoryValue(parsed.materialCategory);
         }
+
+        if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'modeOfProcurement')) {
+          setCondModeOfProcurementChecked(true);
+          setCondModeOfProcurementValue(parsed.modeOfProcurement);
+        }
         if (parsed && Object.prototype.hasOwnProperty.call(parsed, 'location')) {
           setCondLocationChecked(true);
           setCondLocationValue(parsed.location);
@@ -2265,6 +2275,10 @@ const ApprovalWorkflow = () => {
         message.error('Please select a value for Material Category.');
         return;
       }
+      if(condModeOfProcurementChecked && condModeOfProcurementValue === undefined) {
+        message.error('Please select a value for Mode of Procurement.');
+        return;
+      }
       if (condLocationChecked && condLocationValue === undefined) {
         message.error('Please select a value for Location.');
         return;
@@ -2286,6 +2300,7 @@ const ApprovalWorkflow = () => {
       const conditionConfigObj = {};
       if (condProjectBasedChecked) conditionConfigObj.projectBased = condProjectBasedValue;
       if (condMaterialCategoryChecked) conditionConfigObj.materialCategory = condMaterialCategoryValue;
+      if (condModeOfProcurementChecked) conditionConfigObj.modeOfProcurement = condModeOfProcurementValue;
       if (condLocationChecked) conditionConfigObj.location = condLocationValue;
       if (condDepartmentChecked) conditionConfigObj.department = condDepartmentValue;
       if (condMinAmountChecked) conditionConfigObj.minAmount = condMinAmountValue;
@@ -3120,6 +3135,38 @@ const ApprovalWorkflow = () => {
                       >
                         <Option value="COMPUTER">COMPUTER</Option>
                         <Option value="NON_COMPUTER">NON-COMPUTER</Option>
+                      </Select>
+                    </Col>
+                  )}
+                </Row>
+
+                 <Divider style={{ margin: '0 0 4px' }} />
+
+                <Row align="middle" gutter={16} style={{ padding: '10px 0' }}>
+                  <Col xs={24} sm={10}>
+                    <Checkbox
+                      checked={condModeOfProcurementChecked}
+                      onChange={(e) => {
+                        setCondModeOfProcurementChecked(e.target.checked);
+                        if (!e.target.checked) setCondModeOfProcurementValue(undefined);
+                      }}
+                    >
+                      Mode of Procurement
+                    </Checkbox>
+                  </Col>
+                  {condModeOfProcurementChecked && (
+                    <Col xs={24} sm={14}>
+                      <Select
+                        placeholder="Select value"
+                        value={condModeOfProcurementValue}
+                        onChange={(val) => setCondModeOfProcurementValue(val)}
+                        style={{ width: '100%' }}
+                      >
+                        <Option value="OPEN_TENDER">Open Tender</Option>
+                        <Option value="GLOBAL_TENDER">Global Tender</Option>
+                        <Option value="LIMITED_TENDER">Limited Tender</Option>
+                        <Option value="PROPRIETARY">Proprietary Purchase</Option>  
+                        <Option value="GEM">GEM Government e-Marketplace</Option>
                       </Select>
                     </Col>
                   )}

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag , TextArea} from "antd";
+import { Button, Card, Form, Input, Select, DatePicker, message, Modal, Tag ,input, TextArea} from "antd";
 import { HistoryOutlined, PrinterOutlined } from "@ant-design/icons";
 import { useReactToPrint } from "react-to-print";
 import axios from "axios";
@@ -1043,6 +1043,13 @@ useEffect(() => {
       name: "jobDetails",
       colCnt: 4,
       children: [
+        {
+            name: "srNo",
+            label: "S.No.",
+            type: "custom",
+            span:3,
+            render: (index) => <Input value={index + 1} disabled />
+        },
         { name: "jobCode",        label: "Job Code",        type: "text", disabled: true, span: 2 },
         { name: "jobDescription", label: "Job Description", type: "text", disabled: true, span: 2 },
         { name: "category",       label: "Category",        type: "text", disabled: true, span: 1 },
@@ -1067,6 +1074,13 @@ useEffect(() => {
       name: "materialDetails",
       colCnt: 4,
       children: [
+        {
+            name: "srNo",
+            label: "S.No.",
+            type: "custom",
+            span:3,
+            render: (index) => <Input value={index + 1} disabled />
+        },
         { name: "materialCode",        label: "Material Code",        type: "select", span: 2, disabled: true, showSearch: true, filterOption: (input, option) => option.label.toLowerCase().includes(input.toLowerCase()) },
         { name: "materialDescription", label: "Description",          type: "select", span: 2, disabled: true, showSearch: true, options: [], filterOption: (input, option) => option.label.toLowerCase().includes(input.toLowerCase()), required: true },
         { name: "uom",                 label: "UOM",                  type: "text",   disabled: true, required: true },

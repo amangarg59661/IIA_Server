@@ -42,12 +42,12 @@ const PurchaseOrderDetails = ({ tenderId }) => {
     );
   }
   const handleOpenTenderFormat = () => {
-  const url = `${baseURL}/data/tender-format?tenderId=${tenderId}&vendorId=${vendorId}`;
+  const url = `/data/tender-format?tenderId=${tenderId}&vendorId=${vendorId}`;
   window.open(url, '_blank');
 };
 const handleOpenPoFormat = () => {
    const poId = 'PO' + tenderId.substring(1);
-  const url = `${baseURL}/data/po-format?poId=${poId}`;
+  const url = `/data/po-format?poId=${poId}`;
   window.open(url, '_blank');
 };
 

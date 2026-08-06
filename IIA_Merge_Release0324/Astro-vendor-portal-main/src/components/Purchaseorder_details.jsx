@@ -77,7 +77,7 @@ const PurchaseOrderDetails = ({ tenderId }) => {
 // };
 const handleOpenTenderFormat = async () => {
   try {
-    const response = await axios.get(`${baseURL}/data/tender-format`, {
+    const response = await axios.get(`/data/tender-format`, {
       params: { tenderId, vendorId }, // dropped bogus tenderVersion
       headers: { Authorization: `Bearer ${token}` },
       responseType: 'blob',
@@ -93,7 +93,7 @@ const handleOpenTenderFormat = async () => {
 const handleOpenPoFormat = async () => {
   try {
     const poId = 'PO' + tenderId.substring(1);
-    const response = await axios.get(`${baseURL}/data/po-format`, {
+    const response = await axios.get(`/data/po-format`, {
       params: { poId }, // single source of query param now
       headers: { Authorization: `Bearer ${token}` },
       responseType: 'blob',

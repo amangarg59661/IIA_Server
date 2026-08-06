@@ -4,6 +4,7 @@ import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspe
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.paymentVoucherDto;
 import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
+import com.astro.dto.workflow.InventoryModule.SoInspectionInfoDto;
 
 import java.util.List;
 
@@ -34,4 +35,6 @@ String submitInspectionDraft(String inspectionProcessId, SaveServiceInspectionDt
 List<ServiceInspectionDto> getUserInspectionDrafts(Integer userId);
 String updateServiceInspection(String inspectionProcessId, SaveServiceInspectionDto req);
 List<EligibleSoDto> getEligibleSoIdsForInspection();
+List<SoInspectionInfoDto> getApprovedSoIdsForInspection();
+List<String> getApprovedInspectionIdsBySoId(String soId);
 }

@@ -162,6 +162,13 @@ export const PoDetails = [
       colCnt: 4,
       children: [
         {
+            name: "srNo",
+            label: "S.No.",
+            type: "custom",
+            span:3,
+            // render: (index) => <Input value={index + 1} disabled />
+        },
+        {
           name: "materialCode",
           label: "Material Code",
           type: "text",
@@ -427,7 +434,8 @@ export const PoDetails = [
           name: "vendorName",
           label: "Vendor Name",
           type: "select",
-         // required: true,
+          disabled: true,
+         required: true,
          // options: [],
         }, 
         {
@@ -441,7 +449,7 @@ export const PoDetails = [
           label: "Vendor Address",
           type: "text",
           required: true,
-         // disabled: true,
+         disabled: true,
         },
         {
           name: "vendorAccountNumber",
