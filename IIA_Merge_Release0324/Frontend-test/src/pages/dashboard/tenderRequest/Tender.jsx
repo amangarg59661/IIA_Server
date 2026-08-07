@@ -41,6 +41,7 @@ const Tender = () => {
   const [generatedTenderId, setGeneratedTenderId] = useState("");
   const [isStaleVersion, setIsStaleVersion] = useState(false);
 const [editBlockedReason, setEditBlockedReason] = useState("");
+const [startFreshTender, setStartFreshTender] = useState(false);
 
   // ✅ Fetch dropdown values from LOV system (Form ID: 9 - TenderRequest)
   const { lovValues: incoTermsLOV, loading: loadingIncoTerms } = useLOVValues(9, 'incoTerms');
@@ -74,6 +75,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   // Update-reason modal (replaces the old window.prompt())
 const [updateReasonModalOpen, setUpdateReasonModalOpen] = useState(false);
 const [updateReasonInput, setUpdateReasonInput] = useState("");
+const [formResetKey, setFormResetKey] = useState(0);
 const updateReasonResolverRef = useRef(null);
 
 const askUpdateReason = () => new Promise((resolve) => {
@@ -100,14 +102,61 @@ const handleUpdateReasonCancel = () => {
 };
 
   //const [formData, setFormData] = useState({});
-  const [formData, setFormData] = useState({
-    indentId: [],  
-    materialDetails: [],
-    billingAddress: "Koramangala, 2nd Block, Bangalore -560034",
-    buyBack: false,
-    tenderVersion: 1,
+  // const [formData, setFormData] = useState({
+  //   indentId: [],  
+  //   materialDetails: [],
+  //   billingAddress: "Koramangala, 2nd Block, Bangalore -560034",
+  //   buyBack: false,
+  //   tenderVersion: 1,
 
+  // });
+  // After
+const initialFormData = {
+  indentId: [],
+  materialDetails: [],
+  billingAddress: "Koramangala, 2nd Block, Bangalore -560034",
+  buyBack: false,
+  tenderVersion: 1,
+};
+const blankValueForFieldType = (type) => {
+  if (type === "checkbox") return false;
+  if (type === "date") return null;
+  if (type === "multiImage" || type === "multiIndentselect") return [];
+  return undefined;
+};
+
+const getBlankFieldValues = () => {
+  const blank = {};
+  TenderDetails.forEach((section) => {
+    (section.fieldList || []).forEach((field) => {
+      if (field?.name && field.type !== "custom") {
+        blank[field.name] = blankValueForFieldType(field.type);
+      }
+    });
   });
+  return blank;
+};
+
+const resetTenderForm = () => {
+  setFormData(initialFormData);
+  form.resetFields();                          // clears validation/error/touched state
+  form.setFieldsValue(getBlankFieldValues());   // force every field's value to blank
+  setStartFreshTender(true);
+  setFormResetKey((k) => k + 1);
+  setIsStaleVersion(false);
+  setEditBlockedReason("");
+  setSearchTenderId("");
+  setSearchDone(false);
+  setUsedIndentIds(new Set());
+  setConsigneeOptions([]);
+  setApprovedIndents([]);
+  setMaterialOptions([]);
+  setMaterialDescOptions([]);
+  setSelectedProjectName(null);
+  setBuyBackFields([]);
+};
+const [formData, setFormData] = useState(initialFormData);
+  
   useEffect(() => {
   const fetchTenderIds = async () => {
     try {
@@ -543,15 +592,26 @@ const filteredIndentOptions = lockType
         params: { tenderId: formData.tenderId },
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = response.data;
-      if (data?.responseData?.tenderId) {
-        setGeneratedTenderId(data.responseData.tenderId);
-        setIsPrintEnabled(true);
-        setModalOpen(true);
-        setFormData(prev => ({ ...prev, currentStatus: "SUBMITTED" }));
-        message.success("Tender submitted successfully");
-      }
-      return;
+      // const data = response.data;
+      // if (data?.responseData?.tenderId) {
+      //   setGeneratedTenderId(data.responseData.tenderId);
+      //   setIsPrintEnabled(true);
+      //   setModalOpen(true);
+      //   setFormData(prev => ({ ...prev, currentStatus: "SUBMITTED" }));
+      //   message.success("Tender submitted successfully");
+      // }
+      // return;
+      // After
+const data = response.data;
+const isSuccess = response.status === 200 || response.status === 201;
+if (isSuccess && data?.responseData?.tenderId) {
+  setGeneratedTenderId(data.responseData.tenderId);
+  setIsPrintEnabled(true);
+  setModalOpen(true);
+  message.success("Tender submitted successfully");
+  resetTenderForm();
+}
+return;
     }
 
     // TC_48: Check if tender is locked
@@ -588,7 +648,9 @@ const filteredIndentOptions = lockType
 //   headers: { Authorization: `Bearer ${token}` },
 //   params: { tenderId: formData.tenderId || tenderId }
 // });
-const isEditingExisting = Boolean(tenderId || formData.tenderId);
+// const isEditingExisting = Boolean(tenderId || formData.tenderId);
+const effectiveNavTenderId = startFreshTender ? undefined : tenderId;
+const isEditingExisting = Boolean(effectiveNavTenderId || formData.tenderId);
 
     // Single gate covering: stale version, under evaluation, or locked for PO/SO —
     // whether the tender was reached via location.state OR the Search Tender flow
@@ -606,40 +668,71 @@ const isEditingExisting = Boolean(tenderId || formData.tenderId);
       // formData.updateReason = updateReason;
     }
 
-    let data;
-    setSubmitBtnLoading(true);
-    const payload = buildPayload(currentData);
+//     let data;
+//     setSubmitBtnLoading(true);
+//     const payload = buildPayload(currentData);
 
-    if (isEditingExisting) {
-      // Update — creates a new version server-side (works whether we got here via
-      // location.state navigation OR the Search Tender flow)
-      const response = await axios.put(`/api/tender-requests`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { tenderId: formData.tenderId || tenderId }
-      });
-      data = response.data;
-      const newTenderId = data?.responseData?.tenderId; // e.g. T1001/2
-if (newTenderId) {
-  setFormData(prev => ({ ...prev, tenderId: newTenderId }));
+//     if (isEditingExisting) {
+//       // Update — creates a new version server-side (works whether we got here via
+//       // location.state navigation OR the Search Tender flow)
+//       const response = await axios.put(`/api/tender-requests`, payload, {
+//         headers: { Authorization: `Bearer ${token}` },
+//         params: { tenderId: formData.tenderId || tenderId }
+//       });
+//       data = response.data;
+//       const newTenderId = data?.responseData?.tenderId; // e.g. T1001/2
+// if (newTenderId) {
+//   setFormData(prev => ({ ...prev, tenderId: newTenderId }));
+// }
+//       message.success({
+//         content: `Tender updated successfully to version ${data?.responseData?.tenderVersion || 'N/A'}. Vendors have been notified.`,
+//         duration: 5
+//       });
+//     } else {
+//       //Create
+//       const response = await axios.post("/api/tender-requests", payload, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       data = response.data;
+//       message.success("Tender created successfully");
+//     }
+
+//     if (data?.responseData?.tenderId) {
+//       setGeneratedTenderId(data.responseData.tenderId);
+//       setIsPrintEnabled(true);
+//       setModalOpen(true);
+//     }
+// After
+let data;
+let response;
+setSubmitBtnLoading(true);
+const payload = buildPayload(currentData);
+
+if (isEditingExisting) {
+  response = await axios.put(`/api/tender-requests`, payload, {
+    headers: { Authorization: `Bearer ${token}` },
+    params: { tenderId: formData.tenderId || effectiveNavTenderId }
+  });
+  data = response.data;
+  message.success({ content: `Tender updated successfully to version ${data?.responseData?.tenderVersion || 'N/A'}. Vendors have been notified.`, duration: 5 });
+} else {
+  response = await axios.post("/api/tender-requests", payload, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  data = response.data;
+  message.success("Tender created successfully");
 }
-      message.success({
-        content: `Tender updated successfully to version ${data?.responseData?.tenderVersion || 'N/A'}. Vendors have been notified.`,
-        duration: 5
-      });
-    } else {
-      //Create
-      const response = await axios.post("/api/tender-requests", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      data = response.data;
-      message.success("Tender created successfully");
-    }
 
-    if (data?.responseData?.tenderId) {
-      setGeneratedTenderId(data.responseData.tenderId);
-      setIsPrintEnabled(true);
-      setModalOpen(true);
-    }
+if (data?.responseData?.tenderId) {
+  setGeneratedTenderId(data.responseData.tenderId);
+  setIsPrintEnabled(true);
+  setModalOpen(true);
+}
+
+// Success (200/201) — clear the form so the user can enter another tender.
+if (response?.status === 200 || response?.status === 201) {
+  resetTenderForm();
+}
   } catch (error) {
     // TC_48 & TC_50: Handle lock and validation errors
     const errorMessage = error?.response?.data?.errorMessage || error?.response?.data?.responseStatus?.message || "Failed to submit tender";
@@ -1404,6 +1497,7 @@ useEffect(() => {
         passed. Passing `customForm={form}` connects the two.
       */}
       <CustomForm
+      key={formResetKey}
         customForm={form}
         formData={formData}
         onFinish={handleFormSubmit}

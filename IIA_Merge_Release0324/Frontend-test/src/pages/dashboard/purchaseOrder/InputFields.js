@@ -1,4 +1,5 @@
 import countryList from "react-select-country-list";
+import { Input } from "antd";
 
 const countryOptions = [
   { label: "Austria", value: "Austria" },
@@ -166,7 +167,7 @@ export const PoDetails = [
             label: "S.No.",
             type: "custom",
             span:3,
-            // render: (index) => <Input value={index + 1} disabled />
+            render: (index) => <Input value={index + 1} disabled />
         },
         {
           name: "materialCode",
@@ -305,7 +306,7 @@ export const PoDetails = [
     },
     {
       heading: "Purchase Details",
-      colCnt: 4,
+      colCnt: 1,
       fieldList: [
         {
           name: "warranty",
@@ -337,7 +338,7 @@ export const PoDetails = [
           name: "applicablePbgToBeSubmitted",
           label: "Applicable PBG to be Submitted",
           type: "select",
-          span: 2,
+          span: 1,
           options: [
             ...Array.from({ length: 20 }, (_, i) => ({
             label: `${i + 1}%`,

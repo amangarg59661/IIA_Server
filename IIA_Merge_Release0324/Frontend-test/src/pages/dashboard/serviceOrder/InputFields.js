@@ -1,3 +1,5 @@
+import { Input } from "antd";
+
 const countryOptions = [
   { label: "Austria", value: "Austria" },
   { label: "Australia", value: "Australia" },
@@ -150,6 +152,13 @@ export const SoDetails = [
       name: "jobDtlList",
       colCnt: 6,
       children: [
+        {
+                    name: "srNo",
+                    label: "S.No.",
+                    type: "custom",
+                    span:3,
+                    render: (index) => <Input value={index + 1} disabled />
+                },
         {
           name: "jobCode",
           label: "Job Code",

@@ -8,6 +8,7 @@ import com.astro.dto.workflow.InventoryModule.SoInspectionInfoDto;
 
 import java.util.List;
 
+
 public interface ServiceInspectionService {
 
     // Persists master + material lines, then kicks off the generic

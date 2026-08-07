@@ -329,25 +329,32 @@ case "select":
       rules={field?.required ? [{ required: true, message: `${field?.label} is required` }] : []}
     >
       {field?.multiline && (
-        <style>{`
-          .multiline-select .ant-select-selector {
-            height: auto !important;
-            min-height: 32px;
-          }
-          .multiline-select .ant-select-selection-item,
-          .multiline-select .ant-select-selection-search {
-            white-space: normal !important;
-            word-break: break-word;
-            line-height: 1.4;
-            padding: 4px 0;
-          }
-          .multiline-select-dropdown .ant-select-item-option-content {
-            white-space: normal !important;
-            word-break: break-word;
-            line-height: 1.4;
-          }
-        `}</style>
-      )}
+  <style>{`
+    .multiline-select.ant-select {
+      height: auto !important;
+    }
+    .multiline-select .ant-select-selector {
+      height: auto !important;
+      min-height: 32px !important;
+      padding: 6px 30px 6px 11px !important;
+      align-items: flex-start !important;
+      overflow: visible !important;
+    }
+    .multiline-select .ant-select-selection-item {
+      position: static !important;
+      white-space: normal !important;
+      word-break: break-word;
+      line-height: 1.4;
+      overflow: visible !important;
+      text-overflow: unset !important;
+    }
+    .multiline-select-dropdown .ant-select-item-option-content {
+      white-space: normal !important;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+  `}</style>
+)}
       <Select
         showSearch
         options={field?.options}
