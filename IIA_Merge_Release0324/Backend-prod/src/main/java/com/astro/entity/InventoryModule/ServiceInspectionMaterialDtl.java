@@ -23,11 +23,15 @@ public class ServiceInspectionMaterialDtl {
     @Column(name = "INSPECTION_PROCESS_ID")
     private String inspectionProcessId;
 
-    @Column(name = "MATERIAL_CODE")
-    private String materialCode;
+@Column(name = "JOB_CODE")
+private String jobCode;
+@Column(name = "JOB_DESCRIPTION")
+private String jobDescription;
+    // @Column(name = "MATERIAL_CODE")
+    // private String materialCode;
 
-    @Column(name = "MATERIAL_DESCRIPTION")
-    private String materialDescription;
+    // @Column(name = "MATERIAL_DESCRIPTION")
+    // private String materialDescription;
 
     @Column(name = "ORDERED_QTY")
     private BigDecimal orderedQty;

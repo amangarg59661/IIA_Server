@@ -71,6 +71,7 @@ com\astro\entity\InventoryModule\GrnMaterialInDtlEntity.class
 com\astro\repository\InventoryModule\ogp\OgpDetailRejectedGiRepository.class
 com\astro\service\impl\JobMasterServiceImpl.class
 com\astro\service\impl\GemTenderEvaluationServiceImpl.class
+com\astro\config\FormCacheService.class
 com\astro\controller\UserController.class
 com\astro\service\impl\InventoryServiceImpl.class
 com\astro\service\impl\WorkOrderImpl.class
@@ -94,6 +95,7 @@ com\astro\service\impl\TenderEvaluationServiceImpl.class
 com\astro\dto\workflow\SeekClarificationDto.class
 com\astro\service\WorkOrderService.class
 com\astro\controller\InventoryModule\ProcessController.class
+com\astro\config\DesignatorCacheService.class
 com\astro\service\GoodsReturnService.class
 com\astro\repository\InventoryModule\AssetDisposalAuctionEntityRepository.class
 com\astro\config\ResponseHandler.class
@@ -135,6 +137,7 @@ com\astro\controller\LocatorMasterController.class
 com\astro\repository\InventoryModule\ogp\OgpPoDetailRepository.class
 com\astro\controller\InventoryModule\AssetMasterController.class
 com\astro\dto\workflow\InventoryModule\GoodsTransfer\GtIdDto.class
+com\astro\config\RedisConfig.class
 com\astro\dto\workflow\ProcurementDtos\WorkOrderDto\WorkOrderRequestDTO.class
 com\astro\entity\InventoryModule\GoodsTransfer.class
 com\astro\repository\ProcurementModule\ServiceOrderRepository\ServiceOrderMaterialRepository.class

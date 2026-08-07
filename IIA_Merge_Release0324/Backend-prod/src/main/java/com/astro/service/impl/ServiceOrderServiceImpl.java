@@ -160,10 +160,10 @@ serviceOrder.setParentSoId(null);
         List<ServiceOrderMaterial> serviceOrderMaterials = serviceOrderRequestDTO.getMaterials().stream()
                 .map(dto -> {
                     ServiceOrderMaterial material = new ServiceOrderMaterial();
-                    material.setMaterialCode(dto.getMaterialCode());
+                    // material.setJobCode(dto.getJobCode());
                     // material.setSoId(serviceOrderRequestDTO.getSoId());
                     material.setSoId(soId);
-                    material.setMaterialDescription(dto.getMaterialDescription());
+                    material.setJobDescription(dto.getJobDescription());
                     material.setQuantity(dto.getQuantity());
                     material.setRate(dto.getRate());
                     material.setExchangeRate(dto.getExchangeRate());
@@ -313,9 +313,9 @@ public ServiceOrderResponseDTO updateServiceOrder(String soId, ServiceOrderReque
     List<ServiceOrderMaterial> newMaterials = dto.getMaterials().stream()
             .map(matDto -> {
                 ServiceOrderMaterial material = new ServiceOrderMaterial();
-                material.setMaterialCode(matDto.getMaterialCode());
+                material.setJobCode(matDto.getJobCode());
                 material.setSoId(newSoId);
-                material.setMaterialDescription(matDto.getMaterialDescription());
+                material.setJobDescription(matDto.getJobDescription());
                 material.setQuantity(matDto.getQuantity());
                 material.setRate(matDto.getRate());
                 material.setExchangeRate(matDto.getExchangeRate());
@@ -525,8 +525,9 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setMaterials(serviceOrder.getMaterials().stream()
                 .map(dto -> {
                     ServiceOrderMaterialResponseDTO material = new ServiceOrderMaterialResponseDTO();
-                    material.setMaterialCode(dto.getMaterialCode());
-                    material.setMaterialDescription(dto.getMaterialDescription());
+                    // material.setMaterialCode(dto.getMaterialCode());
+                    material.setJobCode(dto.getJobCode());
+                    material.setJobDescription(dto.getJobDescription());
                     material.setQuantity(dto.getQuantity());
                     material.setRate(dto.getRate());
                     material.setExchangeRate(dto.getExchangeRate());
@@ -653,9 +654,9 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
                 ? Collections.emptyList()
                 : dto.getMaterials().stream().map(m -> {
                     ServiceOrderMaterial mat = new ServiceOrderMaterial();
-                    mat.setMaterialCode(m.getMaterialCode());
+                    mat.setJobCode(m.getJobCode());
                     mat.setSoId(soId);
-                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setJobDescription(m.getJobDescription());
                     mat.setQuantity(m.getQuantity());
                     mat.setRate(m.getRate());
                     mat.setExchangeRate(m.getExchangeRate());
@@ -751,9 +752,10 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
                 ? Collections.emptyList()
                 : dto.getMaterials().stream().map(m -> {
                     ServiceOrderMaterial mat = new ServiceOrderMaterial();
-                    mat.setMaterialCode(m.getMaterialCode());
+                    // mat.setMaterialCode(m.getMaterialCode());
+                    mat.setJobCode(m.getJobCode());
                     mat.setSoId(soId);
-                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setJobDescription(m.getJobDescription());
                     mat.setQuantity(m.getQuantity());
                     mat.setRate(m.getRate());
                     mat.setExchangeRate(m.getExchangeRate());
@@ -849,9 +851,9 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
                 ? Collections.emptyList()
                 : dto.getMaterials().stream().map(m -> {
                     ServiceOrderMaterial mat = new ServiceOrderMaterial();
-                    mat.setMaterialCode(m.getMaterialCode());
+                    mat.setJobCode(m.getJobCode());
                     mat.setSoId(soId);
-                    mat.setMaterialDescription(m.getMaterialDescription());
+                    mat.setJobDescription(m.getJobDescription());
                     mat.setQuantity(m.getQuantity());
                     mat.setRate(m.getRate());
                     mat.setExchangeRate(m.getExchangeRate());
@@ -939,8 +941,10 @@ public List<ServiceOrderResponseDTO> getSoVersionHistory(String soId) {
         response.setMaterials(ServiceOrder.getMaterials().stream()
                 .map(dto -> {
                     ServiceOrderMaterialResponseDTO material = new ServiceOrderMaterialResponseDTO();
-                    material.setMaterialCode(dto.getMaterialCode());
-                    material.setMaterialDescription(dto.getMaterialDescription());
+                    // material.setMaterialCode(dto.getMaterialCode());
+                    material.setJobCode(dto.getJobCode());
+                    material.setJobDescription(dto.getJobDescription());
+                    // material.setMaterialDescription(dto.getMaterialDescription());
                     material.setQuantity(dto.getQuantity());
                     material.setRate(dto.getRate());
                     material.setExchangeRate(dto.getExchangeRate());

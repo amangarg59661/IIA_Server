@@ -1354,8 +1354,8 @@ dto.setMaterialsList(mergedMaterials);
 
         List<paymentVoucherMaterials> materials = so.getMaterials().stream().map(mat -> {
             paymentVoucherMaterials m = new paymentVoucherMaterials();
-            m.setMaterialCode(mat.getMaterialCode());
-            m.setMaterialDescription(mat.getMaterialDescription());
+            // m.setJobCode(mat.getJobCode());
+            // m.setJobDescription(mat.getJobDescription());
             m.setQuantity(mat.getQuantity());
             m.setUnitPrice(mat.getRate());
             m.setCurrency(mat.getCurrency());

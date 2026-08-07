@@ -25,12 +25,12 @@ public class ServiceOrderMaterial {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "material_code")
-    private String materialCode;
+   @Column(name = "job_code")
+private String jobCode;
     @Column(name = "so_id")
     private String soId;
-    @Column(name = "material_description")
-    private String materialDescription;
+    @Column(name = "job_description")
+private String jobDescription;
     @Column(name = "quantity")
     private BigDecimal quantity;
     @Column(name = "rate")

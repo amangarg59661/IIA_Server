@@ -286,9 +286,12 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
             if (soOpt.isEmpty()) continue;
             ServiceOrder so = soOpt.get();
 
-            Map<String, BigDecimal> orderedByMaterial = so.getMaterials().stream()
-                    .collect(Collectors.toMap(
-                            ServiceOrderMaterial::getMaterialCode,
+            // Map<String, BigDecimal> orderedByMaterial = so.getMaterials().stream()
+            //         .collect(Collectors.toMap(
+            //                 ServiceOrderMaterial::getMaterialCode,
+            Map<String, BigDecimal> orderedByJob = so.getMaterials().stream()
+        .collect(Collectors.toMap(
+                ServiceOrderMaterial::getJobCode,
                             m -> m.getQuantity() != null ? m.getQuantity() : BigDecimal.ZERO,
                             BigDecimal::add));
 
@@ -301,11 +304,11 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
                 for (ServiceInspectionMaterialDtl line :
                         serviceInspectionMaterialDtlRepository.findByInspectionProcessId(cycle.getInspectionProcessId())) {
                     BigDecimal accepted = line.getAcceptedQty() != null ? line.getAcceptedQty() : BigDecimal.ZERO;
-                    acceptedByMaterial.merge(line.getMaterialCode(), accepted, BigDecimal::add);
+                    acceptedByMaterial.merge(line.getJobCode(), accepted, BigDecimal::add);
                 }
             }
 
-            boolean fullyReconciled = orderedByMaterial.entrySet().stream()
+            boolean fullyReconciled = orderedByJob.entrySet().stream()
                     .allMatch(e -> acceptedByMaterial.getOrDefault(e.getKey(), BigDecimal.ZERO).compareTo(e.getValue()) >= 0);
 
             if (!fullyReconciled) {
@@ -347,8 +350,10 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
         List<ServiceInspectionMaterialDtl> lines = materials.stream().map(line -> {
             ServiceInspectionMaterialDtl d = new ServiceInspectionMaterialDtl();
             d.setInspectionProcessId(inspectionProcessId);
-            d.setMaterialCode(line.getMaterialCode());
-            d.setMaterialDescription(line.getMaterialDescription());
+            // d.setMaterialCode(line.getMaterialCode());
+            d.setJobCode(line.getJobCode());
+d.setJobDescription(line.getJobDescription());
+            // d.setMaterialDescription(line.getMaterialDescription());
             d.setOrderedQty(line.getOrderedQty());
             d.setAcceptedQty(line.getAcceptedQty());
             d.setRejectedQty(line.getRejectedQty());
@@ -450,8 +455,10 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
 
         List<paymentVoucherMaterials> materials = lines.stream().map(mat -> {
             paymentVoucherMaterials m = new paymentVoucherMaterials();
-            m.setMaterialCode(mat.getMaterialCode());
-            m.setMaterialDescription(mat.getMaterialDescription());
+            // m.setMaterialCode(mat.getMaterialCode());
+            // m.setMaterialDescription(mat.getMaterialDescription());
+            m.setMaterialCode(mat.getJobCode());
+m.setMaterialDescription(mat.getJobDescription());
             m.setQuantity(mat.getAcceptedQty());   // accepted qty only — never the ordered qty
             m.setUnitPrice(mat.getRate());
             m.setGst(mat.getGst());
@@ -516,8 +523,10 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
 
         dto.setMaterials(lines.stream().map(l -> {
             ServiceInspectionMaterialLineDto m = new ServiceInspectionMaterialLineDto();
-            m.setMaterialCode(l.getMaterialCode());
-            m.setMaterialDescription(l.getMaterialDescription());
+            // m.setMaterialCode(l.getMaterialCode());
+            // m.setMaterialDescription(l.getMaterialDescription());
+            m.setJobCode(l.getJobCode());
+m.setJobDescription(l.getJobDescription());
             m.setOrderedQty(l.getOrderedQty());
             m.setAcceptedQty(l.getAcceptedQty());
             m.setRejectedQty(l.getRejectedQty());
