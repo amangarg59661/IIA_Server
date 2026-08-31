@@ -100,6 +100,7 @@ com\astro\entity\InventoryModule\GatepassOutAndIn.class
 com\astro\controller\OfficersSignatureController.class
 com\astro\entity\OfficerSignature.class
 com\astro\dto\workflow\VendorTechnicalDecisionDto.class
+com\astro\controller\InventoryModule\GrnReportController.class
 com\astro\service\ContigencyPurchaseService.class
 com\astro\entity\InventoryModule\OhqMasterEntity.class
 com\astro\service\impl\TechnoFinancialCommitteeServiceImpl.class
@@ -427,6 +428,7 @@ com\astro\dto\workflow\CommitteeVendorVoteDto.class
 com\astro\dto\workflow\ProcurementDtos\CpJobResponseDto.class
 com\astro\dto\workflow\InventoryModule\GoodsTransfer\GtDtl.class
 com\astro\repository\DesignationMasterRepository.class
+com\astro\dto\workflow\InventoryModule\grn\GrnReportRowDto.class
 com\astro\dto\workflow\InventoryModule\igp\IgpMaterialDtlDto.class
 com\astro\dto\workflow\paymentVoucherTdsRequestDto.class
 com\astro\dto\workflow\InventoryModule\ogp\OgpRejectedGiReportDto.class

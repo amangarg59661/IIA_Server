@@ -37,12 +37,12 @@ const ReportsMain = () => {
             icon: <PieChartOutlined />,
             path:"/reports/technoMom"
         },
-        {
-            id: 4,
-            title: "Vendor Contract Report",
-            icon: <FileTextOutlined />,
-            path: "/reports/vendorContract"
-        },
+        // {
+        //     id: 4,
+        //     title: "Vendor Contract Report",
+        //     icon: <FileTextOutlined />,
+        //     path: "/reports/vendorContract"
+        // },
       /*  {
             id: 5,
             title: "Procurement Activity Report",

@@ -11,7 +11,8 @@ import com.astro.dto.workflow.InventoryModule.grn.UpdateGrnDto;
 import com.astro.dto.workflow.InventoryModule.paymentVoucherDto;
 import com.astro.entity.InventoryModule.GiMasterEntity;
 import com.astro.entity.InventoryModule.GrnMasterEntity;
-
+import com.astro.dto.workflow.InventoryModule.grn.GrnReportRowDto;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +31,7 @@ public interface GrnService {
 
     public List<PoGrnInfoDto> getDistinctGrnProcessIdsForGIAndApproved();
 
-
+List<GrnReportRowDto> getGrnReport(LocalDateTime fromDate, LocalDateTime toDate, String category, String status);
     public List<String> getApprovedSoIds();
     public List<String> getGrnDetailsByProcessId(String grnProcessId);
     public paymentVoucherDto getPaymentVoucherData(String grnProcessId);

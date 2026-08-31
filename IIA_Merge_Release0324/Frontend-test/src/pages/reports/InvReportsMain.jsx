@@ -14,6 +14,7 @@ import AssetDisposalReport from './ApprovedAssetDisposalReport';
 import DisposalReport from './DisposalReport';
 import PersonalInventory from './PersonalInventoryReport';
 import ClosingBalanceReport from './ClosingBalanceReport';
+import DailyReceipt from './DailyReceipt';
 
 const InvReportsMain = () => {
     const tiles = [
@@ -94,6 +95,12 @@ const InvReportsMain = () => {
             icon:<InboxOutlined />,
             path: "/reports/ClosingBalance"
         },
+        {
+            id: 13,
+            title: "Daily Receipt",
+            icon: <InboxOutlined />,
+            path: " /reports/DailyReceipt"
+        }
         
     ]
     const [activeTab, setActiveTab] = useState(1)
@@ -123,7 +130,9 @@ const InvReportsMain = () => {
             case 11:
                 return <DisposalReport />
             case 12 :
-                return <ClosingBalanceReport />   
+                return <ClosingBalanceReport />  
+                case 13 :
+                return <DailyReceipt /> 
             default:
                 return <h1>Asset Report</h1>
         }

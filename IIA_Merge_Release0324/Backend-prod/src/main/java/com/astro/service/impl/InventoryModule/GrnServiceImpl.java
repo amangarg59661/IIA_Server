@@ -5,6 +5,8 @@ import com.astro.dto.workflow.InventoryModule.GiDto.GiApprovalDto;
 import com.astro.dto.workflow.InventoryModule.GiDto.GiWorkflowStatusDto;
 import com.astro.dto.workflow.PaymentVoucherPoSearchDto;
 import com.astro.entity.PaymentVoucher;
+import com.astro.entity.MaterialMaster;
+import com.astro.repository.MaterialMasterRepository;
 import com.astro.entity.PaymentVoucherMaterials;
 import com.astro.entity.ProcurementModule.PurchaseOrderAttributes;
 import com.astro.entity.ProcurementModule.ServiceOrder;
@@ -59,6 +61,8 @@ private com.astro.service.BudgetService budgetService;
 
     @Autowired
     private GiService giService;
+     @Autowired
+    private MaterialMasterRepository mmr;
 
     @Autowired
     private GiMaterialDtlRepository gimdr;
@@ -1511,6 +1515,145 @@ private String resolveConsigneeName(String poId, String storePersonName) {
     }
     return storePersonName;
 }
+@Override
+public List<GrnReportRowDto> getGrnReport(LocalDateTime fromDate, LocalDateTime toDate,
+                                           String category, String status) {
+
+    List<GrnMasterEntity> grns = (fromDate != null && toDate != null)
+            ? grnmr.findByGrnDateBetween(fromDate, toDate)
+            : grnmr.findAll();
+
+    if (status != null && !status.isBlank()) {
+        grns = grns.stream()
+                .filter(g -> status.equalsIgnoreCase(g.getStatus()))
+                .collect(Collectors.toList());
+    }
+
+    List<GrnReportRowDto> report = new ArrayList<>();
+
+    for (GrnMasterEntity grn : grns) {
+        String grinNo = "INV" + grn.getGrnProcessId() + "/" + grn.getGrnSubProcessId();
+
+        String vendorName = null;
+        String poNumber = null;
+        if (grn.getGiSubProcessId() != null) {
+            GiMasterEntity giMaster = gimr.findById(grn.getGiSubProcessId()).orElse(null);
+            if (giMaster != null) {
+                GprnMasterEntity gprn = gprnMasterRepository.findBySubProcessId(giMaster.getGprnSubProcessId());
+                if (gprn != null) {
+                    vendorName = gprn.getVendorId();
+                    poNumber = gprn.getPoId();
+                }
+            }
+        }
+
+        String dateStr = CommonUtils.convertDateToString(grn.getGrnDate());
+        String receivedBy = grn.getCreatedBy();
+        String indentor = grn.getConsigneeName();
+        String location = grn.getLocationId() != null ? String.valueOf(grn.getLocationId()) : null;
+          // invoice = payment voucher raised against this GRN
+        String invoiceNoAndDate = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(grinNo)
+                .map(pv -> {
+                    String num = pv.getVendorInvoiceNumber();
+                    String dt = pv.getVendorInvoiceDate();
+                    if (num == null) return null;
+                    return dt != null ? (num + " dated " + dt) : num;
+                })
+                .orElse(null);
+
+        // for (GrnMaterialDtlEntity m : grnmdr.findByGrnSubProcessId(grn.getGrnSubProcessId())) {
+        //     GrnReportRowDto row = new GrnReportRowDto();
+        //     row.setGrinId(grn.getGrnSubProcessId());
+        //     row.setGrinNo(grinNo);
+        //     row.setDate(dateStr);
+        //     row.setItemDescription(m.getMaterialCode());
+        //     row.setCategory(resolveAssetCategory(m.getAssetId()));
+        //     row.setSubCategory(resolveAssetSubCategory(m.getAssetId()));
+        //     row.setQuantityReceived(m.getQuantity());
+        //     row.setUom(m.getUomId() != null ? String.valueOf(m.getUomId()) : null);
+        //     row.setVendorName(vendorName);
+        //     row.setInvoiceNoAndDate(null);
+        //     row.setReceivedBy(receivedBy);
+        //     row.setLocation(location);
+        //     row.setIndentor(indentor);
+        //     row.setPoNumber(poNumber);
+        //     report.add(row);
+        // }
+                       for (GrnMaterialDtlEntity m : grnmdr.findByGrnSubProcessId(grn.getGrnSubProcessId())) {
+            AssetMasterEntity asset = m.getAssetId() != null ? amr.findById(m.getAssetId()).orElse(null) : null;
+            MaterialMaster mm = (asset != null && asset.getMaterialCode() != null)
+                    ? mmr.findById(asset.getMaterialCode()).orElse(null)
+                    : null;
+
+            GrnReportRowDto row = new GrnReportRowDto();
+            row.setGrinId(grn.getGrnSubProcessId());
+            row.setGrinNo(grinNo);
+            row.setDate(dateStr);
+            row.setItemDescription(mm != null ? mm.getDescription() : null);
+            row.setCategory(mm != null ? mm.getCategory() : null);
+            row.setSubCategory(mm != null ? mm.getSubCategory() : null);
+            row.setQuantityReceived(m.getQuantity());
+            row.setUom(mm != null ? mm.getUom() : null);
+            row.setVendorName(vendorName);
+            row.setInvoiceNoAndDate(invoiceNoAndDate);
+            row.setReceivedBy(receivedBy);
+            row.setLocation(location);
+            row.setIndentor(indentor);
+            row.setPoNumber(asset != null && asset.getPoId() != null ? asset.getPoId() : poNumber);
+            report.add(row);
+        }
+
+        // for (GrnConsumableDtlEntity c : gcdr.findByGrnSubProcessId(grn.getGrnSubProcessId())) {
+        //     GrnReportRowDto row = new GrnReportRowDto();
+        //     row.setGrinId(grn.getGrnSubProcessId());
+        //     row.setGrinNo(grinNo);
+        //     row.setDate(dateStr);
+        //     row.setItemDescription(c.getMaterialCode());
+        //     row.setCategory("Consumables");
+        //     row.setSubCategory(null);
+        //     row.setQuantityReceived(c.getQuantity());
+        //     row.setUom(null);
+        //     row.setVendorName(vendorName);
+        //     row.setInvoiceNoAndDate(null);
+        //     row.setReceivedBy(receivedBy);
+        //     row.setLocation(location);
+        //     row.setIndentor(indentor);
+        //     row.setPoNumber(poNumber);
+        //     report.add(row);
+        // }
+                for (GrnConsumableDtlEntity c : gcdr.findByGrnSubProcessId(grn.getGrnSubProcessId())) {
+            MaterialMaster mm = c.getMaterialCode() != null
+                    ? mmr.findById(c.getMaterialCode()).orElse(null)
+                    : null;
+
+            GrnReportRowDto row = new GrnReportRowDto();
+            row.setGrinId(grn.getGrnSubProcessId());
+            row.setGrinNo(grinNo);
+            row.setDate(dateStr);
+            row.setItemDescription(mm != null ? mm.getDescription() : null);
+            row.setCategory(mm != null ? mm.getCategory() : "Consumables"); // material master category should already say Consumables here — kept as fallback only
+            row.setSubCategory(mm != null ? mm.getSubCategory() : null);
+            row.setQuantityReceived(c.getQuantity());
+            row.setUom(mm != null ? mm.getUom() : null);
+            row.setVendorName(vendorName);
+            row.setInvoiceNoAndDate(invoiceNoAndDate);
+            row.setReceivedBy(receivedBy);
+            row.setLocation(location);
+            row.setIndentor(indentor);
+            row.setPoNumber(poNumber);
+            report.add(row);
+        }
+    }
+
+    if (category != null && !category.isBlank()) {
+        report = report.stream()
+                .filter(r -> category.equalsIgnoreCase(r.getCategory()))
+                .collect(Collectors.toList());
+    }
+
+    return report;
+}
+
 
 
 }

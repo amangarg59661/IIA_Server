@@ -52,4 +52,7 @@ List<GrnMasterEntity> findByStatusOrderByCreateDateAsc(String status);
 List<GrnMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
 
 
+List<GrnMasterEntity> findByGrnDateBetween(LocalDateTime start, LocalDateTime end);
+
+
 }
