@@ -79,6 +79,7 @@ import FieldStationApproverConfig from "../dashboard/admin/FieldStationApproverC
 import FullWorkflowConfig from "../dashboard/admin/FullWorkflowConfig";
 import CommitteeManagement from "../dashboard/admin/CommitteeManagement";
 import PersonalInventory from "../reports/PersonalInventoryReport";
+import CycleCountEntry from "../dashboard/Cycle Count/CycleCountEntry";
 /*
 const RoutesComponent = () => {
   return (
@@ -216,6 +217,7 @@ const storePersonRoutes = (
     <Route path="/inventory/outward" element={<Ogp />} />
     <Route path="/inventory/inward" element={<Igp />} />
     <Route path="/inventory/ServiceInspection" element={<ServiceInspection />} />
+    <Route path="/inventory/CycleCount" element={<CycleCountEntry />} />
 
   </>
 );

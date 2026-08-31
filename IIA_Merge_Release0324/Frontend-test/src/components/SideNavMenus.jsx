@@ -267,7 +267,8 @@ export const sidebarMenus = {
           icon: <CiPassport1 />,
           label: "Service Inspection",
           path: "/inventory/ServiceInspection",
-        }
+        },
+        
       ],
     },
     {
@@ -409,6 +410,7 @@ export const sidebarMenus = {
           label: "Service Inspection",
           path: "/inventory/ServiceInspection",
         },
+        
           // {
           //   key: "4.5",
           //   icon: <MdOutlineAddBox />,
@@ -457,6 +459,13 @@ export const sidebarMenus = {
             label: "Asset Auction",
             path: "/inventory/ForDisposalAssets",
           },
+          {
+          key: "4.1.4",
+          icon: <MdOutlineAddBox />,
+          label: "Cycle Count",
+          path: "/inventory/CycleCount",
+
+        },
       ],
     },
     {
