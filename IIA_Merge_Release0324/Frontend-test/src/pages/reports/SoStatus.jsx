@@ -81,14 +81,14 @@ const SoStatus =({ onChartData, selectedBarKey, selectedPieKey }) => {
           pagination={false}
           columns={[
             {
-    title: 'Material Code',
-    dataIndex: 'materialCode',
-    key: 'materialCode',
+    title: 'Job Code',
+    dataIndex: 'jobCode',
+    key: 'jobCode',
   },
   {
-    title: 'Material Description',
-    dataIndex: 'materialDescription',
-    key: 'materialDescription',
+    title: 'Job Description',
+    dataIndex: 'jobDescription',
+    key: 'jobDescription',
   },
   {
     title: 'Quantity',

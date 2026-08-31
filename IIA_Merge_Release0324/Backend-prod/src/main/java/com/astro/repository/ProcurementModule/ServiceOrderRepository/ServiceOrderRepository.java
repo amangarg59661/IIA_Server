@@ -254,8 +254,8 @@ List<Object[]> getApprovedUserIdsSoReport(
               wt.status AS status,
               JSON_ARRAYAGG(
                 JSON_OBJECT(
-                  'materialCode',        attr.job_code,
-                  'materialDescription', attr.job_description,
+                  'jobCode',        attr.job_code,
+                  'jobDescription', attr.job_description,
                   'quantity',            attr.quantity,
                   'rate',                attr.rate,
                   'currency',            attr.currency,
@@ -294,8 +294,8 @@ List<Object[]> getApprovedUserIdsSoReport(
       wt.status AS status,
       JSON_ARRAYAGG(
         JSON_OBJECT(
-          'materialCode',        attr.job_code,
-          'materialDescription', attr.job_description,
+          'jobCode',        attr.job_code,
+          'jobDescription', attr.job_description,
           'quantity',            attr.quantity,
           'rate',                attr.rate,
           'currency',            attr.currency,
@@ -332,8 +332,8 @@ List<Object[]> getApprovedUserIdsSoReport(
       so.total_value_of_so AS value,
       JSON_ARRAYAGG(
         JSON_OBJECT(
-          'materialCode', soa.job_code,
-          'materialDescription', soa.job_description
+          'jobCode', soa.job_code,
+          'jobDescription', soa.job_description
         )
       ) AS descriptions,
       so.vendor_name AS vendorName,
@@ -361,8 +361,8 @@ List<Object[]> getApprovedUserIdsSoReport(
                       (
               SELECT JSON_ARRAYAGG(
                       JSON_OBJECT(
-                      'materialCode', attr.job_code,
-                         'materialDescription', attr.job_description
+                      'jobCode', attr.job_code,
+                         'jobDescription', attr.job_description
                       )
                      )
               FROM service_order_material attr
