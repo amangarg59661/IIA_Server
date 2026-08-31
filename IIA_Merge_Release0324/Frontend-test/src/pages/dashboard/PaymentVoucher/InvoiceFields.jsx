@@ -549,7 +549,9 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
       { name: "alreadyInvoicedAmount", label: "Already Invoice Amount (Rs)", type: "text" },
       { name: "balanceAmount", label: "Balance Amount (Rs)", type: "text" },
     ],
-  },*/ {
+  },*/
+  
+  /*{
       heading: "Material Details",
       name: "materialDtlList",
       colCnt: 6,
@@ -612,7 +614,39 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
             required: true
         },
       ]
-    },
+    },*/
+    ...(formData.jobDtlList?.length > 0
+      ? [{
+          heading: "Job Details",
+          name: "jobDtlList",
+          colCnt: 6,
+          children: [
+            { name: "jobCode", label: "Job Code", type: "text", disabled: true, required: true, span: 2 },
+            { name: "jobDescription", label: "Job Description", type: "text", disabled: true, required: true, span: 2 },
+            { name: "quantity", label: "Quantity", type: "text", disabled: true, required: true },
+            { name: "rate", label: "Unit Rate", type: "text", disabled: true, required: true },
+            { name: "currency", label: "Currency", type: "text", disabled: true, required: true },
+            { name: "gst", label: "GST (%)", type: "text", disabled: true, required: true },
+            { name: "amount", label: "Amount", type: "text", disabled: true, required: true },
+          ]
+        }]
+      :  [{
+          heading: "Material Details",
+          name: "materialDtlList",
+          colCnt: 6,
+          children: [
+            { name: "materialCode", label: "Material Code", type: "text", disabled: true, required: true, span: 2 },
+            { name: "materialDescription", label: "Material Description", type: "text", disabled: true, required: true, span: 2 },
+            { name: "quantity", label: "Quantity", type: "text", disabled: true, required: true },
+            { name: "rate", label: "Unit Rate", type: "text", disabled: true, required: true },
+            { name: "currency", label: "Currency", type: "text", disabled: true, required: true },
+            { name: "gst", label: "GST (%)", type: "text", disabled: true, required: true },
+            { name: "amount", label: "Amount", type: "text", disabled: true, required: true },
+          ]
+        }]
+      
+    // ...(formData.paymentVoucherIsFor === "Service Order"
+      
    /* {
         heading: "Material Details",
         name: "materialDtlList",
@@ -709,5 +743,5 @@ export const invoiceFields =(formData, poOptions, grnIds,setSelectedPoId, soOpti
     ],
   },*/
    
-];
+),];
 

@@ -41,4 +41,5 @@ public class AssetFullResponseDto {
     private String custodianId;
     private Integer locatorId;  // ← from OhqMasterEntity
     private BigDecimal quantity;
+    private String custodianName; // ← from UserMasterEntity
 }

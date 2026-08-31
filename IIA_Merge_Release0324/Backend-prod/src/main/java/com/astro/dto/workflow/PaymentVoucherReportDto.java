@@ -33,6 +33,7 @@ public class PaymentVoucherReportDto {
     private String createdBy;
     private LocalDateTime createdDate;
     private List<PaymentVoucherMaterialDto> materials;
+    private List<PaymentVoucherJobDto> jobs;
      private List<PaymentVoucherTdsDto> tdsList;
     private List<PaymentVoucherDeductionDto> deductions;
 }

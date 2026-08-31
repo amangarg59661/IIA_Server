@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.astro.entity.InventoryModule.GtMasterEntity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -35,6 +36,8 @@ public interface GtMasterRepository extends JpaRepository<GtMasterEntity,Long> {
             nativeQuery = true)
     List<Long> findApprovedIdsWithoutOgp();
 
+List<GtMasterEntity> findByStatusInOrderByCreateDateAsc(List<String> statuses);
+List<GtMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
 
 
 }

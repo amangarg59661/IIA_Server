@@ -46,4 +46,12 @@ public class DemandAndIssueMasterEntity {
 
     private LocalDate issueDate;
     private Integer issuedBy;
+
+    @Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
+
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
 }

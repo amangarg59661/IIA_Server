@@ -127,7 +127,7 @@ public class ogpAssetServiceImpl implements ogpAssetService {
         }).collect(Collectors.toList());
     }
 
-    public String approveOgpAssetDisposal(Integer disposalOgpId) {
+    public String approveOgpAssetDisposal(Integer disposalOgpId, Integer actionBy) {
         OgpAssetDisposal disposal = ogpAssetDisposalRepository.findById(disposalOgpId)
                 .orElseThrow(() -> new BusinessException(
                         new ErrorDetails(
@@ -137,11 +137,15 @@ public class ogpAssetServiceImpl implements ogpAssetService {
                                 "Asset disposal not found for the provided process number.")));
 
         disposal.setStatus("APPROVED");
+        if (actionBy != null) {
+        disposal.setUpdatedBy(String.valueOf(actionBy));
+        disposal.setUpdateDate(LocalDateTime.now());
+    }
         ogpAssetDisposalRepository.save(disposal);
         return "Asset Disposal OGP approved successfully.";
     }
 
-    public String rejectOgpAssetDisposal(Integer disposalOgpId) {
+    public String rejectOgpAssetDisposal(Integer disposalOgpId, Integer actionBy) {
         OgpAssetDisposal disposal = ogpAssetDisposalRepository.findById(disposalOgpId)
                 .orElseThrow(() -> new BusinessException(
                         new ErrorDetails(
@@ -151,6 +155,10 @@ public class ogpAssetServiceImpl implements ogpAssetService {
                                 "Asset disposal not found for the provided process number.")));
 
         disposal.setStatus("REJECTED");
+        if (actionBy != null) {
+        disposal.setUpdatedBy(String.valueOf(actionBy));
+        disposal.setUpdateDate(LocalDateTime.now());
+    }
 
         ogpAssetDisposalRepository.save(disposal);
         return "Asset Disposal OGP rejected successfully.";

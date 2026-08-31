@@ -17,7 +17,7 @@ public class PurchaseOrderResponseDTO {
     private String consignesAddress;
     private String billingAddress;
     private String deliveryPeriod; // updated by abhinav to string from BigDecimal
-    private Boolean ifLdClauseApplicable;
+    private String ifLdClauseApplicable;
     private String incoTerms;
     private String paymentTerms;
     private String vendorName;

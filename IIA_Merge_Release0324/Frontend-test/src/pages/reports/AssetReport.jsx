@@ -9,16 +9,22 @@ const AssetReport =  ({ onChartData, selectedBarKey, selectedPieKey }) => {
   const [reportData, setReportData] = useState([]);
     const columns = [
         { title: 'Asset ID', dataIndex: 'assetId', key: 'assetId_AssetReport', searchable: true },
-        { title: 'Material Code', dataIndex: 'materialCode', key: 'materialCode_AssetReport', searchable: true },
-        { title: 'Material Description', dataIndex: 'materialDesc', key: 'materialDesc_AssetReport', searchable: true },
+        { title: 'Asset Code', dataIndex: 'assetCode', key: 'assetCode_AssetReport', searchable: true },
         { title: 'Asset Description', dataIndex: 'assetDesc', key: 'assetDesc_AssetReport', searchable: true },
-        { title: 'Make No', dataIndex: 'makeNo', key: 'makeNo_AssetReport', searchable: true },
-        { title: 'Serial No', dataIndex: 'serialNo', key: 'serialNo_AssetReport', searchable: true },
-        { title: 'Model No', dataIndex: 'modelNo', key: 'modelNo_AssetReport', searchable: true },
-        { title: 'UOM', dataIndex: 'uomId', key: 'uomId_AssetReport', filterable: true },
+        { title: 'Asset Category', dataIndex: 'category', key: 'category_AssetReport', searchable: true },
+        { title: 'Asset Sub Category', dataIndex: 'subCategory', key: 'subCategory_AssetReport', searchable: true },
+        { title: 'Assigned', dataIndex: 'assignedTo', key: 'assignedTo_AssetReport', searchable: true },
+        { title: 'Locator', dataIndex: 'location', key: 'location_AssetReport', searchable: true },
         { title: 'PO ID', dataIndex: 'poId', key: 'poId_AssetReport', searchable: true },
         { title: 'PO Value', dataIndex: 'poValue', key: 'poValue_AssetReport', searchable: true },
+        { title: 'GRIN Date', dataIndex: 'purchaseDate', key: 'purchaseDate_AssetReport', searchable: true },
+        { title: 'Payment Voucher Number', dataIndex: 'invoiceNo', key: 'invoiceNo_AssetReport', searchable: true },
+        { title: 'Payment Voucher Date', dataIndex: 'invoiceDate', key: 'invoiceDate_AssetReport', searchable: true },
         { title: 'Vendor Id', dataIndex: 'vendorId', key: 'vendorId_AssetReport', searchable: true },
+        { title: 'Vendor Name', dataIndex: 'vendorName', key: 'vendorName_AssetReport', searchable: true },
+        { title: 'Condition', dataIndex: 'conditionOfGoods', key: 'conditionOfGoods_AssetReport', searchable: true },
+        { title: 'Remarks', dataIndex: 'remarks', key: 'remarks_AssetReport', searchable: true },
+
     ];
     localStorage.getItem('ASSET_REPORT_COLUMNS')
     

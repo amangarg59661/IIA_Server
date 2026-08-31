@@ -39,7 +39,7 @@ import com.astro.service.InventoryModule.ServiceInspectionService;
 import com.astro.dto.workflow.InventoryModule.GiDto.SaveGiDto;
 
 import org.springframework.beans.factory.annotation.Autowired;
-
+import com.astro.service.InventoryModule.CycleCountService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -53,7 +53,8 @@ public class ProcessServiceImpl implements ProcessService {
     
     @Autowired
     private GiService giService;
-    
+    @Autowired
+    private CycleCountService cycleCountService;
     @Autowired
     private GrvService grvService;
 
@@ -151,6 +152,8 @@ public class ProcessServiceImpl implements ProcessService {
                 return gtService.getGtDtls(processNo);
             case "SI":
                 return serviceInspectionService.getServiceInspectionDtls(processNo);
+            case "CC":
+                return cycleCountService.getCycleCountDtls(processNo);
             default:
                 throw new BusinessException(
                     new ErrorDetails(AppConstant.ERROR_TYPE_CODE_DB,
@@ -283,20 +286,20 @@ public List<OhqReportDto> getOhqReport() {
     }
 
     @Override
-    public void approveOgp(GprApprovalDto req) {
-    ogpService.approveOgp(req);
+    public void approveOgp(GprApprovalDto req, Integer actionBy) {
+    ogpService.approveOgp(req, actionBy);
     }
     @Override
-    public void rejectOgp(GprApprovalDto req) {
-        ogpService.rejectOgp(req);
+    public void rejectOgp(GprApprovalDto req, Integer actionBy) {
+        ogpService.rejectOgp(req, actionBy);
     }
     @Override
-    public void approveGprn(String processNo) {
-        gprnService.approveGprn(processNo);
+    public void approveGprn(String processNo, Integer actionBy) {
+        gprnService.approveGprn(processNo, actionBy);
     }
     @Override
-    public void rejectGprn(String processNo) {
-        gprnService.rejectGprn(processNo);
+    public void rejectGprn(String processNo, Integer actionBy) {
+        gprnService.rejectGprn(processNo, actionBy);
     }
 
     @Override
@@ -305,8 +308,8 @@ public List<OhqReportDto> getOhqReport() {
     }
 
     @Override
-    public void changeReqGprn(String processNo) {
-        gprnService.changeReqGprn(processNo);
+    public void changeReqGprn(String processNo, Integer actionBy) {
+        gprnService.changeReqGprn(processNo, actionBy);
     }
 
     @Override
@@ -321,12 +324,12 @@ public List<OhqReportDto> getOhqReport() {
     }
 
     @Override
-    public void approveGiOgp(String ogpId){
-        ogpService.approveGiOgp(ogpId);
+    public void approveGiOgp(String ogpId, Integer actionBy){
+        ogpService.approveGiOgp(ogpId, actionBy);
     }
 
     @Override
-    public void rejectGiOgp(String ogpId){
-        ogpService.rejectGiOgp(ogpId);
+    public void rejectGiOgp(String ogpId, Integer actionBy){
+        ogpService.rejectGiOgp(ogpId, actionBy);
     }
 }

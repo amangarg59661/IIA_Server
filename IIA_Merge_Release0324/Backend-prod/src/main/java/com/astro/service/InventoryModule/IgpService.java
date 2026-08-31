@@ -12,8 +12,8 @@ public interface IgpService {
 
     public List<IgpCombinedDetailDto> getIgpDetails();
     public String saveMaterialIgp(MaterialIgpDto req);
-    public void approveMaterialIgp(String igpId);
-    public void rejectMaterialIgp(String igpId);
+    public void approveMaterialIgp(String igpId, Integer actionBy);
+    public void rejectMaterialIgp(String igpId, Integer actionBy);
     public MaterialIgpDto getIgpMaterialDtls(String igpId);
     public void validateMaterialIgp(String igpId);
     public List<MaterialIgpDto> getAwaitingApprovalIgp();

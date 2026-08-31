@@ -28,6 +28,7 @@ const printRef = useRef();
   const [formData, setFormData] = useState({
     grnNo: "",
     materialDtlList: [],
+    jobDtlList: [],
     tdsDtlList: [],
     deductionDtlList: [],
     grnType: "GRN",
@@ -208,23 +209,23 @@ const fetchInspectionPaymentVoucherData = async (inspectionProcessId) => {
         vendorName: res.vendorName,
         vendorInvoiceNumber: res.vendorInvoiceName,
         vendorInvoiceDate: res.vendorInvoiceDate,
-        currency: res.materialsList?.[0]?.currency || "INR",
-        exchangeRate: res.materialsList?.[0]?.exchangeRate || 0,
+        currency: res.jobsList?.[0]?.currency || "INR",
+        exchangeRate: res.jobsList?.[0]?.exchangeRate || 0,
         totalAmount: res.totalAmount,
         paymentVoucherType: res.paymentVoucherType,
         partialAmount: res.partialAmountAlreadypaid || null,
         partialBalanceAmount: res.partialBalanceAmount || null,
         advanceAmountpaid: res.advanceAmountAlreadyPaid || null,
         advanceBalanceAmount: res.advanceBalanceAmount || null,
-        materialDtlList: res.materialsList?.map(mat => ({
-          materialCode: mat.materialCode,
-          materialDescription: mat.materialDescription,
-          quantity: mat.quantity,
-          rate: mat.unitPrice,
-          currency: mat.currency,
-          exchangeRate: mat.exchangeRate,
-          gst: mat.gst,
-          amount: mat.amount,
+        jobDtlList: res.jobsList?.map(job => ({
+          jobCode: job.jobCode,
+          jobDescription: job.jobDescription,
+          quantity: job.quantity,
+          rate: job.unitPrice,
+          currency: job.currency,
+          exchangeRate: job.exchangeRate,
+          gst: job.gst,
+          amount: job.amount,
         })) || []
       }));
     }
@@ -233,6 +234,41 @@ const fetchInspectionPaymentVoucherData = async (inspectionProcessId) => {
     console.error(error);
   }
 };
+// const fetchInspectionPaymentVoucherData = async (inspectionProcessId) => {
+//   try {
+//     const { data } = await axios.get(`/api/service-inspection/paymentVoucherData?inspectionProcessId=${inspectionProcessId}`);
+//     const res = data?.responseData;
+//     if (res) {
+//       setFormData(prev => ({
+//         ...prev,
+//         vendorName: res.vendorName,
+//         vendorInvoiceNumber: res.vendorInvoiceName,
+//         vendorInvoiceDate: res.vendorInvoiceDate,
+//         currency: res.materialsList?.[0]?.currency || "INR",
+//         exchangeRate: res.materialsList?.[0]?.exchangeRate || 0,
+//         totalAmount: res.totalAmount,
+//         paymentVoucherType: res.paymentVoucherType,
+//         partialAmount: res.partialAmountAlreadypaid || null,
+//         partialBalanceAmount: res.partialBalanceAmount || null,
+//         advanceAmountpaid: res.advanceAmountAlreadyPaid || null,
+//         advanceBalanceAmount: res.advanceBalanceAmount || null,
+//         materialDtlList: res.materialsList?.map(mat => ({
+//           materialCode: mat.materialCode,
+//           materialDescription: mat.materialDescription,
+//           quantity: mat.quantity,
+//           rate: mat.unitPrice,
+//           currency: mat.currency,
+//           exchangeRate: mat.exchangeRate,
+//           gst: mat.gst,
+//           amount: mat.amount,
+//         })) || []
+//       }));
+//     }
+//   } catch (error) {
+//     message.error("Failed to fetch Service Inspection payment data");
+//     console.error(error);
+//   }
+// };
 useEffect(() => {
   if (selectedInspectionId) {
     fetchInspectionPaymentVoucherData(selectedInspectionId);
@@ -270,7 +306,12 @@ const fetchServiceOrderData = async (soId) => {
           exchangeRate: mat.exchangeRate,
           gst: mat.gst,
           amount: mat.amount,
-        })) || []
+        })) || [],
+        jobDtlList: res.jobsList?.map(job => ({
+  jobCode: job.jobCode, jobDescription: job.jobDescription,
+  quantity: job.quantity, rate: job.unitPrice, currency: job.currency,
+  exchangeRate: job.exchangeRate, gst: job.gst, amount: job.amount,
+})) || []
       }));
     }
   } catch (error) {
@@ -307,7 +348,12 @@ const fetchCpData = async (cpId) => {
           exchangeRate: mat.exchangeRate,
           gst: mat.gst,
           amount: mat.amount,
-        })) || []
+        })) || [],
+        jobDtlList: res.jobsList?.map(job => ({
+  jobCode: job.jobCode, jobDescription: job.jobDescription,
+  quantity: job.quantity, rate: job.unitPrice, currency: job.currency,
+  exchangeRate: job.exchangeRate, gst: job.gst, amount: job.amount,
+})) || []
       }));
     }
   } catch (error) {
@@ -423,7 +469,12 @@ const fetchPaymentVoucherData = async (grnNumber) => {
           exchangeRate: mat.exchangeRate,
           gst: mat.gst,
           amount: mat.amount,
-        })) || []
+        })) || [],
+        jobDtlList: res.jobsList?.map(job => ({
+  jobCode: job.jobCode, jobDescription: job.jobDescription,
+  quantity: job.quantity, rate: job.unitPrice, currency: job.currency,
+  exchangeRate: job.exchangeRate, gst: job.gst, amount: job.amount,
+})) || []
       }));
     
     }
@@ -762,6 +813,15 @@ const onFinish = async () => {
         currency: mat.currency,
         exchangeRate: mat.exchangeRate,
         gst: mat.gst
+      })) || [],
+       jobs: formData.jobDtlList?.map(job => ({
+        jobCode: job.jobCode,
+        jobDescription: job.jobDescription,
+        quantity: job.quantity,
+        unitPrice: job.rate,
+        currency: job.currency,
+        exchangeRate: job.exchangeRate,
+        gst: job.gst
       })) || []
     };
     // const payload = {

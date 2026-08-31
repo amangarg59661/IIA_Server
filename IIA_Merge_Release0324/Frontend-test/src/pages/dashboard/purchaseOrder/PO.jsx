@@ -56,6 +56,8 @@ const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
 const [versionHistoryList, setVersionHistoryList] = useState([]);
 const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
   // ✅ Fetch LOV values for Purchase Order (Form ID: 8)
+  const { lovValues: ldclauseLOV, loading: loadingLdclause } = useLOVValues(8, 'ifLdClauseApplicable');
+  const { lovValues: gstLOV, loading: loadingGst } = useLOVValues(8, 'gst');
   const { lovValues: deliveryPeriodLOV, loading: loadingDeliveryPeriod } = useLOVValues(8, 'deliveryPeriod');
   const { lovValues: warrantyLOV, loading: loadingWarranty } = useLOVValues(8, 'warranty');
   const { lovValues: pbgLOV, loading: loadingPbg } = useLOVValues(8, 'applicablePbgToBeSubmitted'); 
@@ -199,6 +201,8 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
       currency: material.currency || "INR",
       gst: material.gst || "",
       duties: material.duties || "",
+      dutiesGst: material.dutiesGst || "",
+      freightChargeGst: material.freightChargeGst || "",
       projectName: indent.projectName || "",
       buyBack: indent.buyBack === true,
       buyBackAmount: indent.buyBack === true ? (indent.buyBackAmount || "") : "",
@@ -353,7 +357,7 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
                     };
                 }
 
-          // ✅ LOV Integration for Purchase Order fields
+          
           if (field.name === "deliveryPeriod") {
             return {
               ...field,
@@ -362,6 +366,17 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
                 : field.options
             };
           }
+
+          if (field.name === "ifLdClauseApplicable") {
+            return {
+              ...field,
+              options: ldclauseLOV.length > 0
+                ? ldclauseLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
+                : field.options
+            };
+          }
+        
+
 
           if (field.name === "warranty") {
             return {
@@ -499,8 +514,8 @@ updated[index].gstAmount = gstAmount.toFixed(2);
 updated[index].estimatedItemTotal = (
   baseAmount
   +gstAmount
-  + parseFloat(item.duties || 0) 
-  + parseFloat(item.freightCharge || 0)
+  + parseFloat(item.duties || 0)  + parseFloat(item.dutiesGst || 0)
+  + parseFloat(item.freightCharge || 0) + parseFloat(item.freightChargeGst || 0)
   - parseFloat(item.buyBackAmount || 0)
 ).toFixed(2);
 
@@ -534,6 +549,8 @@ updated[index].estimatedItemTotal = (
       budgetCode: m.budgetCode || "",
       currency: m.currency || "",
       duties: Number(m.duties) || 0,
+      dutiesGst: Number(m.dutiesGst) || 0,
+      freightChargeGst: Number(m.freightChargeGst) || 0,
       exchangeRate: Number(m.exchangeRate) || 0,
       freightCharge: Number(m.freightCharge) || 0,
       gst: Number(m.gst) || 0,
@@ -831,6 +848,17 @@ if (child.name === "budgetCode") {
           
         }
 
+        // ✅ LOV Integration for Purchase Order fields
+          if (child.name === "gst" || child.name === "dutiesGst" || child.name === "freightChargeGst") {
+            return {
+              ...child,
+              options: gstLOV.length > 0
+                ? gstLOV.map(lov => ({ label: lov.lovDisplayValue, value: lov.lovValue }))
+                : child.options
+            };
+          }
+
+
         return child;
       }),
     };
@@ -1107,6 +1135,8 @@ if (field.name === "buyBackAmount") {
             { key: 'exchangeRate',        label: 'Exchange Rate' },
             { key: 'gst',                 label: 'GST' },
             { key: 'duties',              label: 'Duties' },
+            { key: 'dutiesGst',           label: 'Duties GST' },
+            {key: 'freightChargeGst',     label: 'Freight GST' },
             { key: 'freightCharge',       label: 'Freight' },
             { key: 'budgetCode',          label: 'Budget Code' },
             { key: 'uom',                 label: 'UOM' },

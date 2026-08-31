@@ -11,12 +11,12 @@ public interface GtService {
     public String createGt(GtMasterDto gtMasterDto);
     public List<GtMasterDto> getPendingGt();
     public List<GtMasterDto> getRecevierPendingGt();
-    public void approveGt(String gtId);
-    public void rejectGt(String gtId);
+    public void approveGt(String gtId, Integer actionBy);
+    public void rejectGt(String gtId, Integer actionBy);
     public GtMasterResponseDto getGtById(String gtId);
     public GtMasterDto getGtDtls(String gtId);
     public void approveGtFromOgp(String gtId);
-    public void receiverApproveGt(String gtId);
+    public void receiverApproveGt(String gtId, Integer actionBy);
     public List<withinFieldStationGtDto> getGtReport(String  startDate, String  endDate) ;
 
     public List<Long> getPendingInterFiledGtIdsOgp();

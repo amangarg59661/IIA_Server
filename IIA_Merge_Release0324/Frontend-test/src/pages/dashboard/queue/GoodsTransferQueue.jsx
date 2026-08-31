@@ -5,7 +5,7 @@ import TableComponent from '../../../components/DKG_Table';
 import { useSelector } from 'react-redux';
 
 const GoodsTransferQueue = () => {
-  const { role } = useSelector(state => state?.auth);
+  const { role, userId } = useSelector(state => state?.auth);
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
 /*
@@ -63,7 +63,7 @@ const GoodsTransferQueue = () => {
 
   const handleApprove = async (record) => {
     try {
-      await axios.post('/api/process-controller/approveGt', { gtId: record.id });
+      await axios.post('/api/process-controller/approveGt', { gtId: record.id },{params: {actionBy: userId}});
       message.success('GT approved successfully');
       fetchGatePassQueue();
     } catch (error) {
@@ -73,7 +73,7 @@ const GoodsTransferQueue = () => {
   };
    const handleReceiverApprove = async (record) => {
     try {
-      await axios.post('/api/process-controller/receiverApproveGt', { gtId: record.id });
+      await axios.post('/api/process-controller/receiverApproveGt', { gtId: record.id }, {params: {actionBy: userId}});
       message.success('GT accepted by receiver');
       fetchGatePassQueue();
     } catch (error) {
@@ -84,7 +84,7 @@ const GoodsTransferQueue = () => {
 
   const handleReject = async (record) => {
     try {
-      await axios.post('/api/process-controller/rejectGt', { gtId: record.id });
+      await axios.post('/api/process-controller/rejectGt', { gtId: record.id }, {params: {actionBy: userId}});
       message.success('GT rejected successfully');
       fetchGatePassQueue();
     } catch (error) {

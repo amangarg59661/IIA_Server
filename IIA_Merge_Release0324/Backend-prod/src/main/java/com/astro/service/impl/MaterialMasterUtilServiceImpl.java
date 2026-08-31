@@ -416,6 +416,7 @@ private void saveMaterialTracking(String materialCode, String status, String act
         material.setCreatedBy(dto.getCreatedBy());
         material.setUpdatedBy(dto.getUpdatedBy());
         // Added by Aman 
+        material.setUpdateFlag(true); // Set the update flag to true
         material.setAssetFlag(dto.getAsset_Flag());
         if (dto.getUploadImageFileName() == null || dto.getUploadImageFileName().isEmpty()) {
             material.setUploadImageName(null);

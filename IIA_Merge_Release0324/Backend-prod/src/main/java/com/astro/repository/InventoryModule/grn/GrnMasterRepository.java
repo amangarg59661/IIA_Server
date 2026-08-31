@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,5 +47,9 @@ String findSingleIndentorNameForTender(@Param("tenderId") String tenderId);
 
 @Query("SELECT g.gprnSubProcessId FROM GiMasterEntity g WHERE g.inspectionSubProcessId = :giSubProcessId")
 Integer findGprnSubProcessIdByGiSubProcessId(@Param("giSubProcessId") Integer giSubProcessId);
+
+List<GrnMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<GrnMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
 
 }

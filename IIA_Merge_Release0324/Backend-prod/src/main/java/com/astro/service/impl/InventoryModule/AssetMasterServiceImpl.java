@@ -9,6 +9,11 @@ import com.astro.entity.InventoryModule.*;
 import com.astro.entity.UserMaster;
 import com.astro.repository.InventoryModule.*;
 import com.astro.repository.UserMasterRepository;
+import com.astro.repository.VendorMasterRepository;
+import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
+import com.astro.entity.VendorMaster;
+import com.astro.entity.PaymentVoucher;
+import java.util.Optional;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.validator.internal.metadata.aggregated.rule.OverridingMethodMustNotAlterParameterConstraints;
@@ -60,6 +65,11 @@ public class AssetMasterServiceImpl implements AssetMasterService {
     private OhqMasterRepository ohqMasterRepository;
     @Autowired
     private UserMasterRepository userMasterRepository;
+
+    @Autowired
+    private VendorMasterRepository vendorMasterRepository;
+    @Autowired
+    private PaymentVoucherReposiotry paymentVoucherReposiotry;
 
     private final String basePath;
 
@@ -201,6 +211,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
             detail.setAssetId(detailDto.getAssetId());
             detail.setAssetCode(detailDto.getAssetCode());
             detail.setAssetDesc(detailDto.getAssetDesc());
+            detail.setUom(detailDto.getUom());
             detail.setDisposalQuantity(detailDto.getQuantity());
             detail.setDisposalCategory(detailDto.getDisposalCategory());
             detail.setDisposalMode(detailDto.getDisposalMode());
@@ -304,6 +315,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
                 dDto.setDepriciationRate(detail.getDepriciationRate());
                 dDto.setUnitPrice(detail.getUnitPrice());
                 dDto.setCustodianId(detail.getCustodianId());
+                dDto.setUom(detail.getUom());
                 dDto.setPoValue(detail.getPoValue());
                 dDto.setReasonForDisposal(detail.getReasonForDisposal());
                 dDto.setPoDate(CommonUtils.convertDateToString(detail.getPoDate()));
@@ -327,10 +339,13 @@ public class AssetMasterServiceImpl implements AssetMasterService {
         for (AssetDisposalMasterEntity master : masters) {
             AssetDisposalDto dto = new AssetDisposalDto();
             dto.setDisposalId(master.getDisposalId());
+            dto.setAuctionId(master.getAuctionId());
             dto.setDisposalDate(master.getDisposalDate() != null ? master.getDisposalDate().toString() : null);
             dto.setCreatedBy(master.getCreatedBy());
             dto.setLocationId(master.getLocationId());
             dto.setCustodianId(master.getCustodianId());
+            String userName = userMasterRepository.findUserNameByUserId(Integer.valueOf(master.getCustodianId()));
+                        dto.setCustodianName(userName);
 
             dto.setStatus(master.getStatus());
             dto.setAction(master.getAction());
@@ -342,6 +357,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
                 dDto.setAssetId(detail.getAssetId());
                 dDto.setAssetCode(detail.getAssetCode());
                 dDto.setAssetDesc(detail.getAssetDesc());
+                dDto.setUom(detail.getUom());
                 dDto.setQuantity(detail.getDisposalQuantity());
                 dDto.setDisposalCategory(detail.getDisposalCategory());
                 dDto.setDisposalMode(detail.getDisposalMode());
@@ -353,6 +369,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
                 dDto.setDepriciationRate(detail.getDepriciationRate());
                 dDto.setUnitPrice(detail.getUnitPrice());
                 dDto.setCustodianId(detail.getCustodianId());
+                dDto.setPoId(detail.getPoId());
                 dDto.setPoValue(detail.getPoValue());
                 dDto.setReasonForDisposal(detail.getReasonForDisposal());
                 detailDtos.add(dDto);
@@ -365,7 +382,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
         return result;
     }
     @Transactional
-    public void approveDisposal(String disposalIdStr) {
+    public void approveDisposal(String disposalIdStr, Integer actionBy) {
       //  Integer disposalId = Integer.valueOf(disposalIdStr.split("/")[1]); // Extract ID from string if needed
         Integer disposalId = Integer.valueOf(disposalIdStr);
         AssetDisposalMasterEntity disposalMaster = disposalMasterRepository.findById(disposalId)
@@ -375,11 +392,15 @@ public class AssetMasterServiceImpl implements AssetMasterService {
                         AppConstant.ERROR_TYPE_RESOURCE,
                         "Asset Disposal not found for ID: " + disposalId)));
         disposalMaster.setAction("Approved");
+         if (actionBy != null) {
+        disposalMaster.setUpdatedBy(String.valueOf(actionBy));
+        disposalMaster.setUpdateDate(LocalDateTime.now());
+    }
         disposalMasterRepository.save(disposalMaster);
     }
 
     @Transactional
-    public void rejectDisposal(String disposalIdStr) {
+    public void rejectDisposal(String disposalIdStr, Integer actionBy) {
       //  Integer disposalId = Integer.valueOf(disposalIdStr.split("/")[1]);
         Integer disposalId = Integer.valueOf(disposalIdStr);
         AssetDisposalMasterEntity disposalMaster = disposalMasterRepository.findById(disposalId)
@@ -408,6 +429,10 @@ public class AssetMasterServiceImpl implements AssetMasterService {
             ohqMasterRepository.save(ohq);
         }
         disposalMaster.setAction("Rejected");
+         if (actionBy != null) {
+        disposalMaster.setUpdatedBy(String.valueOf(actionBy));
+        disposalMaster.setUpdateDate(LocalDateTime.now());
+    }
         disposalMasterRepository.save(disposalMaster);
     }
 
@@ -545,7 +570,7 @@ public class AssetMasterServiceImpl implements AssetMasterService {
                         AppConstant.ERROR_TYPE_RESOURCE,
                         "Asset not found with ID: " + assetId)));
 
-        // System.out.println("ASEET" + asset);
+        // System.out.println("ASSET" + asset);
 
         AssetMasterDto response = new AssetMasterDto();
         response.setAssetId(asset.getAssetId());
@@ -572,39 +597,134 @@ public class AssetMasterServiceImpl implements AssetMasterService {
         return response;
     }
 
-    @Override
-public List<AssetMasterReportDto> getAssetReport() {
-    List<Object[]> results = assetMasterRepository.getAssetReport();
+//     @Override
+// public List<AssetMasterReportDto> getAssetReport(String userId, String roleName) {
+// List<Object[]> results;
+//     if (roleName.equals("Store Person")){
+//          results = assetMasterRepository.getAssetReport();
+//     } else{
+//      results = assetMasterRepository.getAssetReportRole(userId);}
     
-    return results.stream().map(row -> {
-        AssetMasterReportDto dto = new AssetMasterReportDto();
-        dto.setAssetId((Integer) row[0]);
-        dto.setMaterialCode((String) row[1]);
-        dto.setMaterialDesc((String) row[2]);
-        dto.setAssetDesc((String) row[3]);
-        dto.setMakeNo((String) row[4]);
-        dto.setSerialNo((String) row[5]);
-        dto.setModelNo((String) row[6]);
-        dto.setInitQuantity((BigDecimal) row[7]);
-        dto.setUnitPrice((BigDecimal) row[8]);
-        dto.setUomId((String) row[9]);
-        dto.setDepriciationRate((BigDecimal) row[10]);
-        CommonUtils.convertSqlDateToString((Date) row[11]);
-        // dto.setEndOfLife(row[11] != null ? ((Date) row[11]).toLocalDate() : null);
-        dto.setStockLevels((BigDecimal) row[12]);
-        dto.setConditionOfGoods((String) row[13]);
-        dto.setShelfLife((String) row[14]);
-        dto.setComponentName((String) row[15]);
-        dto.setComponentId((Integer) row[16]);
-        // dto.setCreateDate(((Timestamp) row[17]).toLocalDateTime());
-        dto.setCreatedBy(row[18] != null ? String.valueOf(row[18]) : null);
-        // dto.setUpdatedDate(((Timestamp) row[19]).toLocalDateTime());
-        dto.setUpdatedBy(row[20] != null ? String.valueOf(row[20]) : null);
-        dto.setPoId((String) row[21]); // po_id
-        dto.setPoValue((BigDecimal) row[22]); // total_value_of_po
-        dto.setVendorId((String) row[23]);
-        return dto;
-    }).collect(Collectors.toList());
+//     return results.stream().map(row -> {
+//         AssetMasterReportDto dto = new AssetMasterReportDto();
+//         dto.setAssetId((Integer) row[0]);
+//         dto.setAssetDesc((String) row[3]);
+//         dto.setMakeNo((String) row[4]);
+//         dto.setSerialNo((String) row[5]);
+//         dto.setModelNo((String) row[6]);
+//         dto.setInitQuantity((BigDecimal) row[7]);
+//         dto.setUnitPrice((BigDecimal) row[8]);
+//         dto.setUomId((String) row[9]);
+//         dto.setDepriciationRate((BigDecimal) row[10]);
+//         CommonUtils.convertSqlDateToString((Date) row[11]);
+//         // dto.setEndOfLife(row[11] != null ? ((Date) row[11]).toLocalDate() : null);
+//         dto.setStockLevels((BigDecimal) row[12]);
+//         dto.setConditionOfGoods((String) row[13]);
+//         dto.setShelfLife((String) row[14]);
+//         dto.setComponentName((String) row[15]);
+//         dto.setComponentId((Integer) row[16]);
+//         // dto.setCreateDate(((Timestamp) row[17]).toLocalDateTime());
+//         dto.setCreatedBy(row[18] != null ? String.valueOf(row[18]) : null);
+//         // dto.setUpdatedDate(((Timestamp) row[19]).toLocalDateTime());
+//         dto.setUpdatedBy(row[20] != null ? String.valueOf(row[20]) : null);
+//         dto.setPoId((String) row[21]); // po_id
+//         dto.setPoValue((BigDecimal) row[22]); // total_value_of_po
+//         dto.setVendorId((String) row[23]);
+//         dto.setCustodianId((String) row[24]);
+//         // dto.setCustodianName((String) row[25]);
+//         dto.setAssetCode((String) row[25]);
+
+//         dto.setCategory((String) row[26]);
+//         dto.setSubCategory((String) row[27]);
+//         return dto;
+//     }).collect(Collectors.toList());
+// }
+    @Override
+public List<AssetMasterReportDto> getAssetReport(String userId, String roleName) {
+    List<Object[]> results;
+    if (roleName.equals("Store Person")){
+         results = assetMasterRepository.getAssetReport();
+    } else{
+     results = assetMasterRepository.getAssetReportRole(userId);}
+
+    return results.stream().map(this::mapAssetReportRow).collect(Collectors.toList());
+}
+
+// Shared mapper — both queries return identical column order now.
+// idx: 0 asset_id, 1 asset_desc, 2 make_no, 3 serial_no, 4 model_no, 5 init_quantity,
+// 6 unit_price, 7 uom_id, 8 depriciation_rate, 9 end_of_life, 10 stock_levels,
+// 11 condition_of_goods, 12 shelf_life, 13 component_name, 14 component_id, 15 create_date,
+// 16 created_by, 17 updated_date, 18 updated_by, 19 po_id, 20 total_value_of_po,
+// 21 vendor_id, 22 custodian_id, 23 asset_code, 24 category, 25 sub_category,
+// 26 locator, 27 status, 28 grn_number
+private AssetMasterReportDto mapAssetReportRow(Object[] row) {
+    AssetMasterReportDto dto = new AssetMasterReportDto();
+
+    dto.setAssetId((Integer) row[0]);
+    dto.setAssetDesc((String) row[1]); // also feeds "Material Description" in the report
+    dto.setMakeNo((String) row[2]);
+    dto.setSerialNo((String) row[3]);
+    dto.setModelNo((String) row[4]);
+    dto.setInitQuantity((BigDecimal) row[5]);
+    dto.setUnitPrice((BigDecimal) row[6]);
+    dto.setUomId((String) row[7]);
+    dto.setDepriciationRate((BigDecimal) row[8]);
+        dto.setEndOfLife(row[9] != null ? ((Date) row[9]).toLocalDate() : null);
+    // dto.setEndOfLife(row[9] != null ? CommonUtils.convertSqlDateToString((Date) row[9]) : null);
+    dto.setStockLevels((BigDecimal) row[10]);
+    dto.setConditionOfGoods((String) row[11]);
+    dto.setShelfLife((String) row[12]);
+    dto.setComponentName((String) row[13]);
+    dto.setComponentId((Integer) row[14]);
+    dto.setCreatedBy(row[16] != null ? String.valueOf(row[16]) : null);
+    dto.setUpdatedBy(row[18] != null ? String.valueOf(row[18]) : null);
+
+    String poId = row[19] != null ? String.valueOf(row[19]) : null;
+    dto.setPoId(poId);
+    dto.setPoNumber(poId);
+    dto.setPoValue((BigDecimal) row[20]);
+    dto.setPurchaseValue((BigDecimal) row[20]);
+
+    String vendorId = (String) row[21];
+    dto.setVendorId(vendorId);
+    dto.setVendorName(resolveVendorName(vendorId));
+
+    String custodianId = row[22] != null ? String.valueOf(row[22]) : null;
+    dto.setCustodianId(custodianId);
+    dto.setAssignedTo(resolveCustodianName(custodianId));
+
+    dto.setAssetCode((String) row[23]);
+    dto.setCategory((String) row[24]);
+    dto.setSubCategory((String) row[25]);
+    dto.setLocation(row[26] != null ? String.valueOf(row[26]) : null);
+    // dto.setLocation((String) row[26]);       // asset_serial.locator
+    dto.setCurrentStatus((String) row[27]);  // asset_serial.status
+
+    dto.setPurchaseDate(row[15] != null ? row[15].toString() : null); // create_date, proxy — confirmed OK
+
+    String grnNumber = (String) row[28];
+    dto.setGrnNumber(grnNumber);
+    if (grnNumber != null && !grnNumber.isBlank()) {
+        Optional<PaymentVoucher> voucher = paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(grnNumber);
+        dto.setInvoiceNo(voucher.map(PaymentVoucher::getVendorInvoiceNumber).orElse(null));
+        dto.setInvoiceDate(voucher.map(v -> String.valueOf(v.getVendorInvoiceDate())).orElse(null));
+    }
+
+    return dto;
+}
+
+private String resolveVendorName(String vendorId) {
+    if (vendorId == null || vendorId.isBlank()) return null;
+    return vendorMasterRepository.findById(vendorId).map(VendorMaster::getVendorName).orElse(null);
+}
+
+private String resolveCustodianName(String custodianId) {
+    if (custodianId == null || custodianId.isBlank()) return null;
+    try {
+        return userMasterRepository.findUserNameByUserId(Integer.valueOf(custodianId));
+    } catch (NumberFormatException e) {
+        return null;
+    }
 }
 
 @Override
@@ -647,6 +767,7 @@ public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList(){
            dto.setCustodianId((String) r[8]);
            dto.setPoValue((BigDecimal) r[9]);
            dto.setPoId((String) r[10]);
+           
            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
            if (r[11] != null) {
@@ -661,6 +782,7 @@ public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList(){
            dto.setModelNo((String) r[13]);
 
            dto.setAssetCode((String) r[14]);
+           dto.setUom((String) r[15]);
            List<String> serials = assetSerialEntityRepository.findSerialNumbers(
                    dto.getAssetId(),
                    dto.getAssetCode(),
@@ -718,6 +840,10 @@ public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList(){
                     disposalDto.setCreatedBy(disposal.getCreatedBy());
                     disposalDto.setCreateDate(disposal.getCreateDate() != null ? disposal.getCreateDate().toString() : null);
                     disposalDto.setAction(disposal.getAction());
+                    String userName = userMasterRepository.findUserNameByUserId(Integer.valueOf(disposal.getCustodianId()));
+                        disposalDto.setCustodianName(userName);
+
+                   
 
                     // Step 4: Fetch assets for this disposal
                     List<AssetDisposalDetailEntity> assetDetails = disposalDetailRepository.findByDisposalId(disposal.getDisposalId());
@@ -727,12 +853,14 @@ public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList(){
                         ad.setDisposalId(dd.getDisposalId());
                         ad.setAssetId(dd.getAssetId());
                         ad.setAssetDesc(dd.getAssetDesc());
+                        ad.setUom(dd.getUom());
                         ad.setDisposalQuantity(dd.getDisposalQuantity());
                         ad.setLocatorId(dd.getLocatorId());
                         ad.setBookValue(dd.getBookValue());
                         ad.setDepriciationRate(dd.getDepriciationRate());
                         ad.setUnitPrice(dd.getUnitPrice());
                         ad.setCustodianId(dd.getCustodianId());
+                        ad.setPoId(dd.getPoId());
                         ad.setPoValue(dd.getPoValue());
                         ad.setReasonForDisposal(dd.getReasonForDisposal());
                         return ad;

@@ -73,7 +73,8 @@ public interface OhqMasterRepository extends JpaRepository<OhqMasterEntity, Inte
             po.delivery_date As gprnDate,
             a.serial_no As serialNo,
             a.model_no As modelNo,
-            a.asset_code As assetCode
+            a.asset_code As assetCode,
+            a.uom_id as uom
         FROM ohq_master o
         JOIN asset_master a ON o.asset_id = a.asset_id
         LEFT JOIN purchase_order po ON po.po_id = a.po_id

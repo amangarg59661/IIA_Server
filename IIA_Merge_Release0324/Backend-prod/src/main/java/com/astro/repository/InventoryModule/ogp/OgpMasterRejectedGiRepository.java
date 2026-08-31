@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.astro.entity.InventoryModule.OgpMasterRejectedGiEntity;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -12,4 +13,8 @@ public interface OgpMasterRejectedGiRepository extends JpaRepository<OgpMasterRe
     List<OgpMasterRejectedGiEntity> findByStatus(String status);
 
     boolean existsByGiId(String giId);
+
+    List<OgpMasterRejectedGiEntity> findByStatusOrderByOgpDateAsc(String status);
+List<OgpMasterRejectedGiEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
 }

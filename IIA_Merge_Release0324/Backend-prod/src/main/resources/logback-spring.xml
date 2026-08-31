@@ -51,6 +51,18 @@
         </rollingPolicy>
     </appender>
 
+     <!-- ====== Redis Cache Logs ====== -->
+    <appender name="RedisFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_HOME}/redis.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] %logger{36} - %msg%n</pattern>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_HOME}/redis-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+    </appender>
+
     <!-- ====== Root Logger ====== -->
     <root level="INFO">
         <appender-ref ref="Console" />
@@ -65,6 +77,12 @@
 
     <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
         <appender-ref ref="DBFile" />
+    </logger>
+
+     <!-- ====== Redis Monitor Logs ====== -->
+    <logger name="REDIS_MONITOR" level="DEBUG" additivity="false">
+        <appender-ref ref="RedisFile" />
+        <appender-ref ref="Console" />
     </logger>
 
 </configuration>

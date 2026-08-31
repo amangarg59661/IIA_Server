@@ -260,13 +260,7 @@ export const PoDetails = [
             label: "GST (%)",
             type: "select",
             required: true,
-            options: [
-              { label: "Nil", value: "0" },
-              { label: "5%", value: "5" },
-              { label: "12%", value: "12" },
-              { label: "18%", value: "18" },
-              { label: "28%", value: "28" }
-            ]
+            options: [ ]
         },
         {
           name: "gstAmount",
@@ -282,10 +276,24 @@ export const PoDetails = [
             type: "text",
         },
         {
+          name: "dutiesGst",
+          label: "GST on Duties",
+          type: "select",
+          // disabled: true,
+          // required: true,
+        },
+        {
             name: "freightCharge",
             label: "Freight Charges",
             type: "text", 
             span: 3
+        },
+        {
+          name: "freightChargeGst",
+          label: "GST on Freight Charges",
+          type: "select",
+          // disabled: true,
+          // required: true,
         },
         {
             name: "inrEquivalent",
@@ -306,19 +314,20 @@ export const PoDetails = [
     },
     {
       heading: "Purchase Details",
-      colCnt: 1,
+      colCnt: 2,
       fieldList: [
         {
           name: "warranty",
           label: "Warranty",
-          //type: "text",
+          //type: "text",        
           type:"select",
           options:warrantyOptions,
         }, 
         {
           name: "ifLdClauseApplicable",
-          label: "If LD Clause Applicable",
-          type: "checkbox",
+          label: "LD Clause Applicable",
+          type: "select",
+          options: []
         },
         {
           name: "incoTerms",
@@ -338,7 +347,7 @@ export const PoDetails = [
           name: "applicablePbgToBeSubmitted",
           label: "Applicable PBG to be Submitted",
           type: "select",
-          span: 1,
+          // span: 1,
           options: [
             ...Array.from({ length: 20 }, (_, i) => ({
             label: `${i + 1}%`,

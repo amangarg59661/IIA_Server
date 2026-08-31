@@ -45,14 +45,14 @@ public interface ProcessService {
 
     public OgpPoResponseDto getPoOgp(String processNo);
 
-    public void approveOgp(GprApprovalDto req);
-    public void rejectOgp(GprApprovalDto req);
-    public void rejectGprn(String processNo);
-    public void approveGprn(String processNo);
-    public void changeReqGprn(String processNo);
+    public void approveOgp(GprApprovalDto req, Integer actionBy);
+    public void rejectOgp(GprApprovalDto req, Integer actionBy);
+    public void rejectGprn(String processNo,Integer actionBy);
+    public void approveGprn(String processNo, Integer actionBy);
+    public void changeReqGprn(String processNo,Integer actionBy);
     public void updateGprn(SaveGprnDto req);
     public String saveOgpRejectedGi(OgpMasterRejectedGiDto req);
     public List<OgpMasterRejectedGiDto> getAwaitingRejectedGi();
-public void approveGiOgp(String ogpId);
-public void rejectGiOgp(String ogpId);
+public void approveGiOgp(String ogpId, Integer actionBy);
+public void rejectGiOgp(String ogpId, Integer actionBy);
 }

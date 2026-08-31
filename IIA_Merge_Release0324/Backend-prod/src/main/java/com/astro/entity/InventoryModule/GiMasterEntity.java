@@ -58,4 +58,9 @@ private Integer spoRejectionCount = 0;
 
     private BigDecimal poAmount;
     private BigDecimal gprnAmount;
+
+     @LastModifiedBy
+    private String updatedBy;
+    @LastModifiedDate
+    private LocalDateTime updateDate;
 }

@@ -2037,6 +2037,7 @@ const ApprovalWorkflow = () => {
     // { id: 7, name: 'Tender Evaluator Workflow', key: 'TENDER_EVALUATOR' },
     {id:10 , name:'Payment Voucher Workflow', key:'Payment'},
     { id:11, name: 'Service Inspection Workflow', key: 'SI' },
+    {id : 12 , name: 'Cycle Count Workflow', key:'WW'},
   ]);
   // End
   const [branches, setBranches] = useState([]);

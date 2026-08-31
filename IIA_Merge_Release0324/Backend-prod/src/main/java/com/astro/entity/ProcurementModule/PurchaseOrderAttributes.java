@@ -42,6 +42,10 @@ public class PurchaseOrderAttributes {
     private BigDecimal gst;
     @Column(name = "duties")
     private BigDecimal duties;
+    @Column(name = "gst_duties")
+    private BigDecimal gstDuties;
+    @Column(name = "gst_freight")
+    private BigDecimal gstFreight;
     @Column(name = "freight_charge")
     private BigDecimal freightCharge;
     @Column(name = "budget_code")

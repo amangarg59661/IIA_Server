@@ -984,57 +984,130 @@ private String extractBaseSoId(String soId) {
     int slashIdx = soId.indexOf('/');
     return slashIdx >= 0 ? soId.substring(0, slashIdx) : soId;
 }
-    @Override
-    public List<ApprovedSoListReportDto> getApprovedSoListReport(String startDate, String endDate, Integer userId, String roleName) {
-        LocalDate from = CommonUtils.convertStringToDateObject(startDate);
-        LocalDate to = CommonUtils.convertStringToDateObject(endDate);
 
-      //  List<Object[]> rows = serviceOrderRepository.getApprovedSoReport(from, to);
-        List<Object[]> rows;
-        if ("Indent Creator".equalsIgnoreCase(roleName)) {
-            rows = serviceOrderRepository.getApprovedUserIdsSoReport(from, to, userId);
-            System.out.println(roleName);
-        } else {
-            rows =serviceOrderRepository.getApprovedSoReport(from, to);
-        }
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+@Override
+public List<ApprovedSoListReportDto> getApprovedSoListReport(String startDate, String endDate, Integer userId, String roleName) {
+    LocalDate from = CommonUtils.convertStringToDateObject(startDate);
+    LocalDate to = CommonUtils.convertStringToDateObject(endDate);
 
-        return rows.stream().map(row -> {
-            ApprovedSoListReportDto dto = new ApprovedSoListReportDto();
-            dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
-                    ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
-                    : null));
-            dto.setSoId((String) row[1]);
-            dto.setVendorName((String) row[2]);
-            dto.setValue(row[3] != null
-                    ? ((BigDecimal) row[3]).doubleValue()
-                    : 0.0
-            );
-            dto.setTenderId((String) row[4]);
-            dto.setProject((String) row[5]);
-            dto.setVendorId((String) row[6]);
-            dto.setIndentIds((String) row[7]);
-            dto.setModeOfProcurement((String) row[8]);
-
-            String json = (String) row[9];
-            try {
-                List<ServiceOrderMaterialResponseDTO> materials = mapper.readValue(
-                        json,
-                        mapper.getTypeFactory().constructCollectionType(
-                                List.class,
-                                ServiceOrderMaterialResponseDTO.class
-                        )
-                );
-                dto.setMaterials(materials);
-            } catch (Exception e) {
-                dto.setMaterials(new ArrayList<>());
-            }
-
-            return dto;
-        }).collect(Collectors.toList());
+    List<Object[]> rows;
+    if ("Indent Creator".equalsIgnoreCase(roleName)) {
+        rows = serviceOrderRepository.getApprovedUserIdsSoReport(from, to, userId);
+        System.out.println(roleName);
+    } else {
+        rows = serviceOrderRepository.getApprovedSoReport(from, to);
     }
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JavaTimeModule());
+    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    return rows.stream().map(row -> {
+        ApprovedSoListReportDto dto = new ApprovedSoListReportDto();
+        dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
+                ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
+                : null));
+        dto.setSoId((String) row[1]);
+        dto.setVendorName((String) row[2]);
+        dto.setValue(row[3] != null
+                ? ((BigDecimal) row[3]).doubleValue()
+                : 0.0
+        );
+        dto.setTenderId((String) row[4]);
+        dto.setProject((String) row[5]);
+        dto.setVendorId((String) row[6]);
+        dto.setIndentIds((String) row[7]);
+        dto.setModeOfProcurement((String) row[8]);
+
+        dto.setSoDate(CommonUtils.convertDateToString(row[9] != null
+                ? ((Timestamp) row[9]).toLocalDateTime().toLocalDate()
+                : null));
+        dto.setIndentorName((String) row[10]);
+        dto.setNonGemReason((String) row[11]);
+
+        String mode = (String) row[8];
+        String gemStatus = null;
+        if (mode != null) {
+            gemStatus = switch (mode) {
+                case "GeM" -> "GeM";
+                case "Proprietary/Single Tender" -> "Non-GeM (Proprietary/Single Tender)";
+                case "Limited Pre Approved Vendor Tender" -> "Non-GeM (Limited Pre Approved Vendor Tender)";
+                case "Brand PAC" -> "Non-GeM (Brand PAC)";
+                case "Open Tender" -> "Non-GeM (Open Tender)";
+                case "Global Tender" -> "Non-GeM (Global Tender)";
+                default -> "Other";
+            };
+        }
+        dto.setGemOrNonGem(gemStatus);
+
+        String json = (String) row[12];
+        try {
+            List<ServiceOrderMaterialResponseDTO> materials = mapper.readValue(
+                    json,
+                    mapper.getTypeFactory().constructCollectionType(
+                            List.class,
+                            ServiceOrderMaterialResponseDTO.class
+                    )
+            );
+            dto.setMaterials(materials);
+        } catch (Exception e) {
+            e.printStackTrace();
+            dto.setMaterials(new ArrayList<>());
+        }
+
+        return dto;
+    }).collect(Collectors.toList());
+}
+    // @Override
+    // public List<ApprovedSoListReportDto> getApprovedSoListReport(String startDate, String endDate, Integer userId, String roleName) {
+    //     LocalDate from = CommonUtils.convertStringToDateObject(startDate);
+    //     LocalDate to = CommonUtils.convertStringToDateObject(endDate);
+
+    //   //  List<Object[]> rows = serviceOrderRepository.getApprovedSoReport(from, to);
+    //     List<Object[]> rows;
+    //     if ("Indent Creator".equalsIgnoreCase(roleName)) {
+    //         rows = serviceOrderRepository.getApprovedUserIdsSoReport(from, to, userId);
+    //         System.out.println(roleName);
+    //     } else {
+    //         rows =serviceOrderRepository.getApprovedSoReport(from, to);
+    //     }
+    //     ObjectMapper mapper = new ObjectMapper();
+    //     mapper.registerModule(new JavaTimeModule());
+    //     mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    //     return rows.stream().map(row -> {
+    //         ApprovedSoListReportDto dto = new ApprovedSoListReportDto();
+    //         dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
+    //                 ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
+    //                 : null));
+    //         dto.setSoId((String) row[1]);
+    //         dto.setVendorName((String) row[2]);
+    //         dto.setValue(row[3] != null
+    //                 ? ((BigDecimal) row[3]).doubleValue()
+    //                 : 0.0
+    //         );
+    //         dto.setTenderId((String) row[4]);
+    //         dto.setProject((String) row[5]);
+    //         dto.setVendorId((String) row[6]);
+    //         dto.setIndentIds((String) row[7]);
+    //         dto.setModeOfProcurement((String) row[8]);
+
+    //         String json = (String) row[9];
+    //         try {
+    //             List<ServiceOrderMaterialResponseDTO> materials = mapper.readValue(
+    //                     json,
+    //                     mapper.getTypeFactory().constructCollectionType(
+    //                             List.class,
+    //                             ServiceOrderMaterialResponseDTO.class
+    //                     )
+    //             );
+    //             dto.setMaterials(materials);
+    //         } catch (Exception e) {
+    //             dto.setMaterials(new ArrayList<>());
+    //         }
+
+    //         return dto;
+    //     }).collect(Collectors.toList());
+    // }
 
 
     @Override

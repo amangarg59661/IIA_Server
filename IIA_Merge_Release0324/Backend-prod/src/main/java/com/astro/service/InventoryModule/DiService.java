@@ -12,8 +12,8 @@ public interface DiService {
     public String createDi(DiMasterDto diMasterDto);
     public List<DiMasterDto> getPendingDi();
     public List<DiMasterDto> getPendingIssueNote();
-    public void approveDi(String diId);
-    public void rejectDi(String diId);
+    public void approveDi(String diId, Integer actionBy);
+    public void rejectDi(String diId, Integer actionBy);
     public DiMasterDto getDiById(String diId);
     public String updateDi(String diId, DiMasterDto diMasterDto);
     public List<DemandAndIssueReportDto> getDemandAndIssueReport(String startDate, String endDate);

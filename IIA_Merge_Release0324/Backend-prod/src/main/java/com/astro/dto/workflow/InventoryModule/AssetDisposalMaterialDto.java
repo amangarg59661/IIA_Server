@@ -17,6 +17,8 @@ public class AssetDisposalMaterialDto {
     private BigDecimal unitPrice;
     private String custodianId;
     private BigDecimal poValue;
+    private String uom;
+    private String poId;
 
     private String reasonForDisposal;
 

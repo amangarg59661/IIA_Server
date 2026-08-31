@@ -2901,8 +2901,10 @@ const [allBudgetCodes, setAllBudgetCodes] = useState([]);
       duties: Number(j.duties) || 0,
       exchangeRate: Number(j.exchangeRate) || 0,
       gst: Number(j.gst) || 0,
-      materialCode: j.jobCode || j.materialCode || "",
-      materialDescription: j.jobDescription || j.materialDescription || "",
+      // materialCode: j.jobCode || j.materialCode || "",
+      // materialDescription: j.jobDescription || j.materialDescription || "",
+      jobCode: j.jobCode || "",
+jobDescription: j.jobDescription || "",
       quantity: Number(j.quantity) || 0,
       rate: Number(j.rate) || 0,
     })),
@@ -3026,8 +3028,8 @@ setFormData({
   jobDtlList: (responseData?.materials || []).map((m) => {
     const row = {
       ...m,
-      jobCode: m.materialCode || m.jobCode || "",
-      jobDescription: m.materialDescription || m.jobDescription || "",
+      jobCode: m.jobCode || "",
+jobDescription: m.jobDescription || "",
     };
     return { ...row, ...calcRowAmounts(row) };
   }),
@@ -3081,8 +3083,10 @@ if (responseData.isActive === false) {
             jobDtlList: (latest.materials || []).map((m) => {
   const row = {
     ...m,
-    jobCode: m.materialCode || m.jobCode || "",
-    jobDescription: m.materialDescription || m.jobDescription || "",
+    jobCode: m.jobCode || "",
+jobDescription: m.jobDescription || "",
+    // jobCode: m.materialCode || m.jobCode || "",
+    // jobDescription: m.materialDescription || m.jobDescription || "",
   };
   return { ...row, ...calcRowAmounts(row) };
 }),

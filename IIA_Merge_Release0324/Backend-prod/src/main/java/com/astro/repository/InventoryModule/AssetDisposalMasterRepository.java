@@ -133,4 +133,7 @@ public interface AssetDisposalMasterRepository extends JpaRepository<AssetDispos
             nativeQuery = true)
     List<Integer> findPendingAuctionIdsWithoutOgp();
 
+    List<AssetDisposalMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<AssetDisposalMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
 }

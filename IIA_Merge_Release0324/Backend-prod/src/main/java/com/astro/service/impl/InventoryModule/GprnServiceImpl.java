@@ -412,7 +412,7 @@ public List<PendingGprnPoDto> getPendingGprnDetails() {
 
     @Override
     @Transactional
-    public void rejectGprn(String processNo) {
+    public void rejectGprn(String processNo , Integer actionBy) {
         String[] processNoSplit = processNo.split("/");
         // if (processNoSplit.length != 2) {
         if (processNoSplit.length < 2) {
@@ -433,12 +433,16 @@ public List<PendingGprnPoDto> getPendingGprnDetails() {
                 "Goods Inspection not found")));
 
         giMaster.setStatus("REJECTED");
+        if (actionBy != null) {
+        giMaster.setUpdatedBy(String.valueOf(actionBy));
+        giMaster.setUpdateDate(LocalDateTime.now());
+    }
         gmr.save(giMaster);
     }
 
     @Override
     @Transactional
-    public void approveGprn(String processNo) {
+    public void approveGprn(String processNo, Integer actionBy) {
         String[] processNoSplit = processNo.split("/");
         // if (processNoSplit.length != 2) {
         if (processNoSplit.length < 2) {
@@ -459,12 +463,16 @@ public List<PendingGprnPoDto> getPendingGprnDetails() {
                 "Goods Inspection not found")));
 
         giMaster.setStatus("APPROVED");
+        if (actionBy != null) {
+        giMaster.setUpdatedBy(String.valueOf(actionBy));
+        giMaster.setUpdateDate(LocalDateTime.now());
+    }
         gmr.save(giMaster);
     }
 
     @Override
     @Transactional
-    public void changeReqGprn(String processNo) {
+    public void changeReqGprn(String processNo,  Integer actionBy) {
         String[] processNoSplit = processNo.split("/");
         // if (processNoSplit.length != 2) {
         if (processNoSplit.length < 2) {
@@ -485,6 +493,10 @@ public List<PendingGprnPoDto> getPendingGprnDetails() {
                 "Goods Inspection not found")));
 
         giMaster.setStatus("CHANGE REQUEST");
+        if (actionBy != null) {
+        giMaster.setUpdatedBy(String.valueOf(actionBy));
+        giMaster.setUpdateDate(LocalDateTime.now());
+    }
         gmr.save(giMaster);
     }
 

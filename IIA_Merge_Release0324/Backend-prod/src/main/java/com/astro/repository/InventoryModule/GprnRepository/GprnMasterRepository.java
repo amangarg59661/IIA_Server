@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -152,5 +153,8 @@ String findSingleIndentCreatedByForTender(@Param("tenderId") String tenderId);
 @Query("SELECT ic.indentorName FROM IndentCreation ic " +
        "WHERE ic.indentId = (SELECT i.indentId FROM IndentId i WHERE i.tenderRequest.tenderId = :tenderId)")
 String findSingleIndentorNameForTender(@Param("tenderId") String tenderId);
+
+List<GprnMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<GprnMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
 
 }

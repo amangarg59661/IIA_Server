@@ -108,7 +108,7 @@ public class GtServiceImpl implements GtService {
 
     @Override
     @Transactional
-    public void rejectGt(String gtId){
+    public void rejectGt(String gtId, Integer actionBy){
         Long id = Long.valueOf(gtId.split("/")[1]);
         GtMasterEntity gtMasterEntity = gtmr.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -118,6 +118,10 @@ public class GtServiceImpl implements GtService {
                                 AppConstant.ERROR_TYPE_VALIDATION,
                                 "Goods Transfer not found for the provided process number.")));
         gtMasterEntity.setStatus("REJECTED");
+         if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+         }
         gtmr.save(gtMasterEntity);
 
         UserMaster um = userMasterRepository.findByUserId(gtMasterEntity.getSenderCustodianId());
@@ -141,7 +145,7 @@ public class GtServiceImpl implements GtService {
     }
     @Override
     @Transactional
-    public void receiverApproveGt(String gtId) {
+    public void receiverApproveGt(String gtId,  Integer actionBy) {
         Long id = Long.valueOf(gtId.split("/")[1]);
         GtMasterEntity gtMasterEntity = gtmr.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -153,6 +157,10 @@ public class GtServiceImpl implements GtService {
 
         // After receiver accepts, move to awaiting store purchase officer approval
         gtMasterEntity.setStatus("AWAITING APPROVAL");
+         if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+         }
         gtmr.save(gtMasterEntity);
 
         UserMaster um = userMasterRepository.findByUserId(gtMasterEntity.getSenderCustodianId());
@@ -189,7 +197,7 @@ public class GtServiceImpl implements GtService {
 
     @Override
     @Transactional
-    public void approveGt(String gtId) {
+    public void approveGt(String gtId, Integer actionBy) {
         Long id = Long.valueOf(gtId.split("/")[1]);
         GtMasterEntity gtMasterEntity = gtmr.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -199,6 +207,10 @@ public class GtServiceImpl implements GtService {
                                 AppConstant.ERROR_TYPE_VALIDATION,
                                 "Goods Transfer not found for the provided process number.")));
         gtMasterEntity.setStatus("APPROVED");
+         if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+         }
 
         List<GtDtlEntity> gtDtlEntityList = gtdr.findByGtId(id);
 

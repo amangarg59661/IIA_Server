@@ -12,7 +12,7 @@ const PendingGi = () => {
 
     const handleApprove = async (record) => {
       try {
-        await axios.post(`/api/process-controller/approveGprn`, {processNo: "INV" + record.processId + "/" + record.subProcessId,});
+        await axios.post(`/api/process-controller/approveGprn`, {processNo: "INV" + record.processId + "/" + record.subProcessId,}, {params: {actionBy: userId}});
         message.success('GPRN approved successfully');
         populateData();
       } catch (error) {
@@ -27,7 +27,7 @@ const PendingGi = () => {
       try {
         await axios.post(`/api/process-controller/rejectGprn`, {
           processNo: "INV" + record.processId + "/" + record.subProcessId,
-        });
+        }, {params: {actionBy: userId}});
         message.success('GPRN rejected successfully');
         // setRejectComment('');
         populateData();
@@ -40,7 +40,7 @@ const PendingGi = () => {
       try {
         await axios.post(`/api/process-controller/changeReqGprn`, {
           processNo: "INV" + record.processId + "/" + record.subProcessId,
-        });
+        }, {params: {actionBy: userId}});
         message.success('GPRN change request successful.');
         // setRejectComment('');
         populateData();

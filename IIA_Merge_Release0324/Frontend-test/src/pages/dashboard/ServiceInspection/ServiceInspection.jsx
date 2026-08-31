@@ -119,8 +119,10 @@ const ServiceInspection = () => {
         projectName: res.projectName || "",
         soAmount: res.soAmount || "",
         materials: (res.materials || []).map((line) => ({
-          materialCode: line.materialCode,
-          materialDescription: line.materialDescription,
+          // materialCode: line.materialCode,
+          // materialDescription: line.materialDescription,
+          jobCode: line.jobCode,
+  jobDescription: line.jobDescription,
           orderedQty: line.quantity,
           rate: line.rate,
           acceptedQty: "",
@@ -253,16 +255,16 @@ const ServiceInspection = () => {
       colCnt: 4,
       children: [
         {
-          name: "materialCode",
-          label: "Material Code",
+          name: "jobCode",
+          label: "Job Code",
           type: "text",
           disabled: true,
           span: 2,
           required: true,
         },
         {
-          name: "materialDescription",
-          label: "Description",
+          name: "jobDescription",
+          label: "Job Description",
           type: "text",
           disabled: true,
           span: 3,

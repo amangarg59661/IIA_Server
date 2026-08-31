@@ -437,7 +437,7 @@ const handleOpenTenderFormat = async () => {
       {tenderId}
     </span>
   </p>
-  <Button onClick={handleOpenTenderFormat}>View Tender Copy</Button>
+  <Button onClick={handleOpenTenderFormat}>View Tender Document </Button>
 
 {/*
   <Button

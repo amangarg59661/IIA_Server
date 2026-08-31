@@ -66,6 +66,14 @@ const assetFields = [
                 // required: true
             },
             {
+                name: "custodianName",
+                label: "Custodian Name",
+                type: "text",
+                span: 2,
+                disabled: true,
+                // required: true
+            },
+            {
                 name: "locatorId",
                 label: "Field Station",
                 type: "select",
@@ -613,7 +621,7 @@ useEffect(() => {
   title="Asset Search Results"
   onCancel={() => setIsSearchModalOpen(false)}
   footer={null}
-  width={1000}
+  width={1100}
 >
   <Table
   rowKey={(record) => `${record.assetId}-${record.locatorId}-${record.custodianId}`}

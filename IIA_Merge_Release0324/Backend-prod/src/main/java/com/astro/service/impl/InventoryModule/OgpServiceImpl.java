@@ -459,7 +459,7 @@ public class OgpServiceImpl implements OgpService {
 
     @Override
     @Transactional
-    public void approveOgp(GprApprovalDto req) {
+    public void approveOgp(GprApprovalDto req, Integer actionBy) {
         String processNo = req.getProcessNo();
         String type = req.getType();
         String[] processNoSplit = processNo.split("/");
@@ -483,6 +483,10 @@ public class OgpServiceImpl implements OgpService {
                     "OGP not found")));
 
             ogpMaster.setStatus("APPROVED");
+            if (actionBy != null) {
+            ogpMaster.setUpdatedBy(String.valueOf(actionBy));
+            ogpMaster.setUpdateDate(LocalDateTime.now());
+        }
             ogpMasterRepository.save(ogpMaster);
         } else {
             // Handle PO type OGP
@@ -494,13 +498,17 @@ public class OgpServiceImpl implements OgpService {
                     "OGP PO not found")));
 
             poOgp.setStatus("APPROVED");
+            if (actionBy != null) {
+            poOgp.setUpdatedBy(String.valueOf(actionBy));
+            poOgp.setUpdateDate(LocalDateTime.now());
+        }
             ogpMasterPoRepository.save(poOgp);
         }
     }
 
     @Override
     @Transactional
-    public void rejectOgp(GprApprovalDto req) {
+    public void rejectOgp(GprApprovalDto req , Integer actionBy) {
         String processNo = req.getProcessNo();
         String type = req.getType();
         String[] processNoSplit = processNo.split("/");
@@ -524,6 +532,10 @@ public class OgpServiceImpl implements OgpService {
                     "OGP not found")));
 
             ogpMaster.setStatus("REJECTED");
+            if (actionBy != null) {
+            ogpMaster.setUpdatedBy(String.valueOf(actionBy));
+            ogpMaster.setUpdateDate(LocalDateTime.now());
+        }
             ogpMasterRepository.save(ogpMaster);
         } else {
             // Handle PO type OGP
@@ -535,6 +547,10 @@ public class OgpServiceImpl implements OgpService {
                     "OGP PO not found")));
 
             poOgp.setStatus("REJECTED");
+            if (actionBy != null) {
+            poOgp.setUpdatedBy(String.valueOf(actionBy));
+            poOgp.setUpdateDate(LocalDateTime.now());
+        }
             ogpMasterPoRepository.save(poOgp);
         }
     }
@@ -629,7 +645,7 @@ public class OgpServiceImpl implements OgpService {
 }
 
     @Override
-    public void approveGiOgp(String ogpId){
+    public void approveGiOgp(String ogpId, Integer actionBy){
         Integer ogpSubprocessId = Integer.parseInt(ogpId.split("/")[1]);
         OgpMasterRejectedGiEntity omrge = omrgr.findById(ogpSubprocessId)
                                     .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -638,10 +654,14 @@ public class OgpServiceImpl implements OgpService {
                                         AppConstant.ERROR_TYPE_RESOURCE,
                                         "OGP not found")));
         omrge.setStatus("APPROVED");
+        if (actionBy != null) {
+        omrge.setUpdatedBy(String.valueOf(actionBy));
+        omrge.setUpdateDate(LocalDateTime.now());
+    }
         omrgr.save(omrge);
     }
     @Override
-    public void rejectGiOgp(String ogpId){
+    public void rejectGiOgp(String ogpId, Integer actionBy){
         Integer ogpSubprocessId = Integer.parseInt(ogpId.split("/")[1]);
         OgpMasterRejectedGiEntity omrge = omrgr.findById(ogpSubprocessId)
                                     .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
@@ -650,6 +670,10 @@ public class OgpServiceImpl implements OgpService {
                                         AppConstant.ERROR_TYPE_RESOURCE,
                                         "OGP not found")));
         omrge.setStatus("REJECTED");
+        if (actionBy != null) {
+        omrge.setUpdatedBy(String.valueOf(actionBy));
+        omrge.setUpdateDate(LocalDateTime.now());
+    }
         omrgr.save(omrge);
     }
 
@@ -782,7 +806,7 @@ public class OgpServiceImpl implements OgpService {
     }
     @Override
     @Transactional
-    public void approveReceiverGtOgp(String ogpId) {
+    public void approveReceiverGtOgp(String ogpId, Integer actionBy) {
         OgpGtMasterEntity gtMasterEntity = ogmr.findById(Long.parseLong(ogpId.split("/")[1]))
                 .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                         AppConstant.ERROR_CODE_RESOURCE,
@@ -791,12 +815,16 @@ public class OgpServiceImpl implements OgpService {
                         "OGP not found")));
 
         gtMasterEntity.setStatus("RECEIVER APPROVED");
+        if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+    }
         ogmr.save(gtMasterEntity);
     }
 
     @Override
     @Transactional
-    public void approveGtOgp(String ogpId){
+    public void approveGtOgp(String ogpId, Integer actionBy){
         OgpGtMasterEntity gtMasterEntity = ogmr.findById(Long.parseLong(ogpId.split("/")[1]))
                                     .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                                         AppConstant.ERROR_CODE_RESOURCE,
@@ -812,13 +840,17 @@ public class OgpServiceImpl implements OgpService {
             ));
         }
         gtMasterEntity.setStatus("APPROVED");
+        if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+    }
         ogmr.save(gtMasterEntity);
         gtService.approveGtFromOgp("INV/" + gtMasterEntity.getGtId());
     }
 
     @Override
     @Transactional
-    public void rejectGtOgp(String ogpId){
+    public void rejectGtOgp(String ogpId, Integer actionBy){
         OgpGtMasterEntity gtMasterEntity = ogmr.findById(Long.parseLong(ogpId.split("/")[1]))
                                     .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
                                         AppConstant.ERROR_CODE_RESOURCE,
@@ -826,6 +858,10 @@ public class OgpServiceImpl implements OgpService {
                                         AppConstant.ERROR_TYPE_RESOURCE,
                                         "OGP not found")));
         gtMasterEntity.setStatus("REJECTED");
+        if (actionBy != null) {
+        gtMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        gtMasterEntity.setUpdateDate(LocalDateTime.now());
+    }
         ogmr.save(gtMasterEntity);
     }
 

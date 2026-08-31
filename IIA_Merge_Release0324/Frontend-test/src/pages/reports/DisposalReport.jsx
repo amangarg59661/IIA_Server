@@ -28,6 +28,7 @@ const DisposalReport = ({ onChartData, selectedBarKey, selectedPieKey }) => {
             { title: 'Location', dataIndex: 'locationId', key: 'locationId' },
             { title: 'Status', dataIndex: 'status', key: 'status' },
             { title: 'Custodian ID', dataIndex: 'custodianId', key: 'custodianId' },
+            {title: 'Custodian Name', dataIndex: 'custodianName', key:'custodianName'},
             {
               title: 'Assets',
               dataIndex: 'assets',
@@ -40,11 +41,14 @@ const DisposalReport = ({ onChartData, selectedBarKey, selectedPieKey }) => {
                   columns={[
                     { title: 'Asset ID', dataIndex: 'assetId', key: 'assetId' },
                     { title: 'Asset Desc', dataIndex: 'assetDesc', key: 'assetDesc' },
+                    { title: 'UOM', dataIndex:'uom' , key:'uom'},
                     { title: 'Quantity', dataIndex: 'disposalQuantity', key: 'disposalQuantity' },
                     { title: 'Locator ID', dataIndex: 'locatorId', key: 'locatorId' },
                     { title: 'Book Value', dataIndex: 'bookValue', key: 'bookValue' },
                     { title: 'Unit Price', dataIndex: 'unitPrice', key: 'unitPrice' },
+                    { title: 'PO ID', dataIndex:'poId' , key:'poId'},
                     { title: 'PO Value', dataIndex: 'poValue', key: 'poValue' },
+                    { title: 'GRIN Date', dataIndex:'grinDate' , key:'grinDate'},
                     { title: 'Reason', dataIndex: 'reasonForDisposal', key: 'reasonForDisposal' },
                   ]}
                 />

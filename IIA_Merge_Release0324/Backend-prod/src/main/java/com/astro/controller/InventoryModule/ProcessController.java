@@ -52,12 +52,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
+import com.astro.dto.workflow.InventoryModule.cyclecount.InitiateCycleCountDto;
+import com.astro.dto.workflow.InventoryModule.cyclecount.SubmitCycleCountDto;
+import com.astro.dto.workflow.InventoryModule.cyclecount.CycleCountDto;
+import com.astro.dto.workflow.InventoryModule.cyclecount.PendingCycleCountDto;
 
 
 @RestController
 @RequestMapping("/api/process-controller")
 public class ProcessController {
+
+    @Autowired
+private CycleCountService cycleCountService;
 
     @Autowired
     private ProcessService processService;
@@ -102,7 +108,36 @@ public class ProcessController {
         res.put("processNo", processNo);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
+@PostMapping("/initiateCycleCount")
+public ResponseEntity<Object> initiateCycleCount(@RequestBody InitiateCycleCountDto req) {
+    String id = cycleCountService.initiateCycleCount(req);
+    Map<String, String> res = new HashMap<>();
+    res.put("processNo", id);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
 
+@PostMapping("/submitCycleCount")
+public ResponseEntity<Object> submitCycleCount(@RequestBody SubmitCycleCountDto req) {
+    cycleCountService.submitCycleCount(req);
+
+    String workflowName = "Cycle Count Workflow";
+    WorkflowTransitionDto workflowTransitionDto =
+            workflowService.initiateWorkflow(req.getCycleCountId(), workflowName, req.getCountedBy());
+
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
+}
+
+@GetMapping("/SearchByCycleCountId")
+public ResponseEntity<Object> getCycleCountById(@RequestParam String cycleCountId) {
+    CycleCountDto res = cycleCountService.getCycleCountDtls(cycleCountId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
+
+@GetMapping("/getPendingCycleCounts")
+public ResponseEntity<Object> getPendingCycleCounts() {
+    List<PendingCycleCountDto> res = cycleCountService.getPendingCycleCounts();
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
     @GetMapping("/getSubProcessDtls")
     public ResponseEntity<Object> getSubProcessDtls(@RequestParam String processStage, @RequestParam String processNo ) {
        Object created = processService.getSubProcessDtls(processStage, processNo);
@@ -194,39 +229,42 @@ public class ProcessController {
     }
     
     @PostMapping("/approveOgp")
-    public ResponseEntity<Object> approveOgp(@RequestBody GprApprovalDto req) {
-        processService.approveOgp(req);
+    public ResponseEntity<Object> approveOgp(@RequestBody GprApprovalDto req , @RequestParam(required = false) Integer actionBy) {
+        processService.approveOgp(req, actionBy);
         Map<String, String> res = new HashMap<>();
         res.put("message", "OGP approved successfully");
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
 
     @PostMapping("/rejectOgp")
-    public ResponseEntity<Object> rejectOgp(@RequestBody GprApprovalDto req) {
-        processService.rejectOgp(req);
+    public ResponseEntity<Object> rejectOgp(@RequestBody GprApprovalDto req,  @RequestParam(required = false) Integer actionBy) {
+        processService.rejectOgp(req, actionBy);
         Map<String, String> res = new HashMap<>();
         res.put("message", "OGP rejected successfully");
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
 
     @PostMapping("/approveGprn")
-    public ResponseEntity<Object> approveGi(@RequestBody GprApprovalDto req) {
-        processService.approveGprn(req.getProcessNo());
+    public ResponseEntity<Object> approveGi(@RequestBody GprApprovalDto req,
+                                         @RequestParam(required = false) Integer actionBy) {
+        processService.approveGprn(req.getProcessNo(), actionBy);
         Map<String, String> res = new HashMap<>();
         res.put("message", "GPRN approved successfully");
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
     @PostMapping("/changeReqGprn")
-    public ResponseEntity<Object> changeReqGprn(@RequestBody GprApprovalDto req) {
-        processService.changeReqGprn(req.getProcessNo());
+    public ResponseEntity<Object> changeReqGprn(@RequestBody GprApprovalDto req,
+                                         @RequestParam(required = false) Integer actionBy) {
+        processService.changeReqGprn(req.getProcessNo(), actionBy);
         Map<String, String> res = new HashMap<>();
         res.put("message", "GPRN change request successful.");
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
 
     @PostMapping("/rejectGprn")
-    public ResponseEntity<Object> rejectGi(@RequestBody GprApprovalDto req) {
-        processService.rejectGprn(req.getProcessNo());
+    public ResponseEntity<Object> rejectGi(@RequestBody GprApprovalDto req ,
+                                         @RequestParam(required = false) Integer actionBy) {
+        processService.rejectGprn(req.getProcessNo(),actionBy);
         Map<String, String> res = new HashMap<>();
         res.put("message", "GPRN rejected successfully");
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
@@ -381,14 +419,14 @@ public class ProcessController {
     }
 
     @PostMapping("/approveGiOgp")
-    public ResponseEntity<Object> approveGiOgp(@RequestBody OgpIdDto req) {
-        processService.approveGiOgp(req.getOgpId());
+    public ResponseEntity<Object> approveGiOgp(@RequestBody OgpIdDto req, @RequestParam(required = false) Integer actionBy) {
+        processService.approveGiOgp(req.getOgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     
     @PostMapping("/rejectGiOgp")
-    public ResponseEntity<Object> rejectGiOgp(@RequestBody OgpIdDto req) {
-        processService.rejectGiOgp(req.getOgpId());
+    public ResponseEntity<Object> rejectGiOgp(@RequestBody OgpIdDto req, @RequestParam(required = false) Integer actionBy) {
+        processService.rejectGiOgp(req.getOgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     
@@ -403,15 +441,15 @@ public class ProcessController {
     }
 
     @PostMapping("/approveMaterialIgp")
-    public ResponseEntity<Object> approveMaterialIgp(@RequestBody IgpIdDto req) {
-        igpService.approveMaterialIgp(req.getIgpId());
+    public ResponseEntity<Object> approveMaterialIgp(@RequestBody IgpIdDto req ,@RequestParam(required = false) Integer actionBy) {
+        igpService.approveMaterialIgp(req.getIgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     
 
     @PostMapping("/rejectMaterialIgp")
-    public ResponseEntity<Object> rejectMaterialIgp(@RequestBody IgpIdDto req) {
-        igpService.rejectMaterialIgp(req.getIgpId());
+    public ResponseEntity<Object> rejectMaterialIgp(@RequestBody IgpIdDto req, @RequestParam(required = false) Integer actionBy) {
+        igpService.rejectMaterialIgp(req.getIgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
 
@@ -489,18 +527,18 @@ public class ProcessController {
     }
 
     @PostMapping("/approveGt")
-    public ResponseEntity<Object> approveGt(@RequestBody GtIdDto req) {
-        gtService.approveGt(req.getGtId());
+    public ResponseEntity<Object> approveGt(@RequestBody GtIdDto req, @RequestParam(required = false) Integer actionBy) {
+        gtService.approveGt(req.getGtId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @PostMapping("/receiverApproveGt")
-    public ResponseEntity<Object> receiverApproveGt(@RequestBody GtIdDto req) {
-        gtService.receiverApproveGt(req.getGtId());
+    public ResponseEntity<Object> receiverApproveGt(@RequestBody GtIdDto req, @RequestParam(required = false) Integer actionBy) {
+        gtService.receiverApproveGt(req.getGtId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @PostMapping("/rejectGt")
-    public ResponseEntity<Object> rejectGt(@RequestBody GtIdDto req) {
-        gtService.rejectGt(req.getGtId());
+    public ResponseEntity<Object> rejectGt(@RequestBody GtIdDto req, @RequestParam(required = false) Integer actionBy) {
+        gtService.rejectGt(req.getGtId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
 
@@ -525,19 +563,19 @@ public class ProcessController {
 
 
     @PostMapping("/approveGtOgp")
-    public ResponseEntity<Object> approveGtOgp(@RequestBody OgpIdDto req) {
-        ogpService.approveGtOgp(req.getOgpId());
+    public ResponseEntity<Object> approveGtOgp(@RequestBody OgpIdDto req , @RequestParam(required = false) Integer actionBy) {
+        ogpService.approveGtOgp(req.getOgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @PostMapping("/approveReciverGtOgp")
-    public ResponseEntity<Object> approveReciverGtOgp(@RequestBody OgpIdDto req) {
-        ogpService.approveReceiverGtOgp(req.getOgpId());
+    public ResponseEntity<Object> approveReciverGtOgp(@RequestBody OgpIdDto req, @RequestParam(required = false) Integer actionBy) {
+        ogpService.approveReceiverGtOgp(req.getOgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
 
     @PostMapping("/rejectGtOgp")
-    public ResponseEntity<Object> rejectGtOgp(@RequestBody OgpIdDto req) {
-        ogpService.rejectGtOgp(req.getOgpId());
+    public ResponseEntity<Object> rejectGtOgp(@RequestBody OgpIdDto req ,@RequestParam(required = false) Integer actionBy) {
+        ogpService.rejectGtOgp(req.getOgpId(), actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
 
@@ -560,13 +598,13 @@ public class ProcessController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
     @PostMapping("/approveDi")
-    public ResponseEntity<Object> approveDi(@RequestParam String diId) {
-        diService.approveDi(diId);
+    public ResponseEntity<Object> approveDi(@RequestParam String diId, @RequestParam(required = false) Integer actionBy) {
+        diService.approveDi(diId, actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @PostMapping("/rejectDi")
-    public ResponseEntity<Object> rejectDi(@RequestParam String diId) {
-        diService.rejectDi(diId);
+    public ResponseEntity<Object> rejectDi(@RequestParam String diId, @RequestParam(required = false) Integer actionBy) {
+        diService.rejectDi(diId , actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @GetMapping("/getStoreStockOhqConsumable")
@@ -593,13 +631,13 @@ public class ProcessController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
     @PostMapping("/approveAssetDisposal")
-    public ResponseEntity<Object> getAssetDisposalApproval(@RequestParam String disposalId) {
-        assetMasterService.approveDisposal(disposalId);
+    public ResponseEntity<Object> getAssetDisposalApproval(@RequestParam String disposalId, @RequestParam(required = false) Integer actionBy) {
+        assetMasterService.approveDisposal(disposalId, actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
     @PostMapping("/rejectAssetDisposal")
-    public ResponseEntity<Object> getAssetDisposalReject(@RequestParam String disposalId) {
-        assetMasterService.rejectDisposal(disposalId);
+    public ResponseEntity<Object> getAssetDisposalReject(@RequestParam String disposalId,  @RequestParam(required = false) Integer actionBy) {
+        assetMasterService.rejectDisposal(disposalId, actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(), HttpStatus.OK);
     }
 
@@ -631,13 +669,13 @@ public class ProcessController {
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
     @PostMapping("/approveOgpAssetDisposal")
-    public ResponseEntity<Object> getOgpAssetDisposalApproval(@RequestParam Integer disposalOgpId) {
-      String res=  ogpAssetDisposalService.approveOgpAssetDisposal(disposalOgpId);
+    public ResponseEntity<Object> getOgpAssetDisposalApproval(@RequestParam Integer disposalOgpId, @RequestParam(required = false) Integer actionBy) {
+      String res=  ogpAssetDisposalService.approveOgpAssetDisposal(disposalOgpId, actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
     @PostMapping("/rejectOgpAssetDisposal")
-    public ResponseEntity<Object> getOgpAssetDisposalReject(@RequestParam Integer disposalOgpId) {
-        String res=  ogpAssetDisposalService.rejectOgpAssetDisposal(disposalOgpId);
+    public ResponseEntity<Object> getOgpAssetDisposalReject(@RequestParam Integer disposalOgpId, @RequestParam(required = false) Integer actionBy) {
+        String res=  ogpAssetDisposalService.rejectOgpAssetDisposal(disposalOgpId, actionBy);
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
     }
 

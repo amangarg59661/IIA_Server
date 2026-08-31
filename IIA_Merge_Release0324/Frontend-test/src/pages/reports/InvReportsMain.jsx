@@ -8,21 +8,29 @@ import OgpReport from './OgpReport';
 import RejectedGiReport from './RejectedGiReport';
 import IgpMaterialInReport from './IgpMaterialInReport';
 import WithInFieldStationGtReport from './withInFieldStationGtReport';
-import DemandAndIssueQueue from '../dashboard/queue/DemandAndIssueQueue';
+// import DemandAndIssueQueue from '../dashboard/queue/DemandAndIssueQueue';
 import DemandAndIssueReport from './DemandAndIssueReport';
 import AssetDisposalReport from './ApprovedAssetDisposalReport';
 import DisposalReport from './DisposalReport';
+import PersonalInventory from './PersonalInventoryReport';
+import ClosingBalanceReport from './ClosingBalanceReport';
 
 const InvReportsMain = () => {
     const tiles = [
         {
-            id: 1,
+            id: 1 ,
+            title: "Personal Inventory",
+            icon: <DatabaseOutlined />,
+            path: "/reports/personalinventory"
+        },
+        {
+            id: 2,
             title: "Asset Report",
             icon: <DatabaseOutlined />,
             path:"/reports/asset"
         },
         {
-            id: 2,
+            id: 3,
             title: "Stock Report",
             icon: <BoxPlotOutlined />,
             path:"/reports/stock"
@@ -64,21 +72,27 @@ const InvReportsMain = () => {
             path: "/reports/WithINFieldStationGtReport"
         }, {
             id: 9,
-            title: "Deamnd And Issue Report",
+            title: "Demand And Issue Report",
             icon: <InboxOutlined />,
             path: "/reports/DemandAndIssueReport"
         },
          {
             id: 10,
-            title: "Approved Assets Disposal Report",
+            title: "Approved Disposal Report",
             icon: <InboxOutlined />,
             path: "/reports/AssetDisposalReport"
         },
         {
             id: 11,
-            title: "Disposal Report",
+            title: "Condemned Assets Report ",
             icon: <InboxOutlined />,
             path: "/reports/DisposalReport"
+        },
+        {
+            id :12,
+            title: 'Closing Balance',
+            icon:<InboxOutlined />,
+            path: "/reports/ClosingBalance"
         },
         
     ]
@@ -87,11 +101,11 @@ const InvReportsMain = () => {
     const renderReports = () => {
         switch(activeTab) {
             case 1:
-                return <AssetReport />
+                return <PersonalInventory />
             case 2:
-                return <StockReport />
+                return <AssetReport />
             case 3:
-                return <GoodsIssueReport />
+                return <StockReport />
             case 4:
                 return <IgpReport />
             case 5:
@@ -108,6 +122,8 @@ const InvReportsMain = () => {
                 return <AssetDisposalReport />
             case 11:
                 return <DisposalReport />
+            case 12 :
+                return <ClosingBalanceReport />   
             default:
                 return <h1>Asset Report</h1>
         }

@@ -32,5 +32,20 @@ public class AssetMasterReportDto {
     private String poId;
     private BigDecimal poValue;
     private String vendorId;
+    private String custodianId;
+    private String custodianName;
+    private String assetCode;
+    private String category;
+    private String subCategory;
 
+    private String poNumber;
+private BigDecimal purchaseValue;
+private String vendorName;
+private String assignedTo;
+private String location;
+private String currentStatus;
+private String purchaseDate;
+private String grnNumber;
+private String invoiceNo;
+private String invoiceDate;
 }

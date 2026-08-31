@@ -41,7 +41,7 @@ public class PurchaseOrder {
     @Column(name = "delivery_period")
     private String deliveryPeriod; // updated by abhinavto string from BigDecimal
     @Column(name = "if_ld_clause_applicable")
-    private  Boolean ifLdClauseApplicable;
+    private  String ifLdClauseApplicable;
     @Column(name = "inco_terms")
     private String incoTerms;
     @Column(name = "payment_terms")
@@ -146,8 +146,7 @@ private String cancellationReason;
     private String createdBy;
     @Column(name = "updated_by")
     @LastModifiedBy
-    // private String updatedBy;
-    private String updatedBy; //updated by abhinav to Integer to match createdBy type
+    private String updatedBy; 
 
     @Column(name = "created_date", updatable = false)
     @CreatedDate

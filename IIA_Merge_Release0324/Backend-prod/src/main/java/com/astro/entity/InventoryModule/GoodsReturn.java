@@ -35,14 +35,15 @@ public class GoodsReturn {
     @Column(name = "reason_of_return")
     private String reasonOfReturn;
 
-    @LastModifiedBy
-    private String updatedBy;
+   
     @CreatedBy
     private String createdBy;
 
     @CreatedDate
     private LocalDateTime createdDate;
 
+ @LastModifiedBy
+    private String updatedBy;
     @LastModifiedDate
     private LocalDateTime updatedDate;
 

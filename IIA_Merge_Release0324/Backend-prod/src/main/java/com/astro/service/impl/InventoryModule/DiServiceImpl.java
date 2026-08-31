@@ -17,11 +17,13 @@ import com.astro.repository.InventoryModule.OhqMasterConsumableRepository;
 import com.astro.repository.UserMasterRepository;
 import com.astro.service.InventoryModule.DiService;
 import com.astro.service.InventoryModule.GtService;
+import com.astro.service.InventoryModule.StoreStockService;
 import com.astro.util.CommonUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
@@ -44,6 +46,8 @@ public class DiServiceImpl implements DiService {
     @Autowired
     private OhqConsumableStoreStockRepository ohqStoreStockRepo;
     @Autowired
+private StoreStockService storeStockService;
+    @Autowired
     private OhqMasterConsumableRepository ohqMasterConsumableRepository;
     @Override
     @Transactional
@@ -51,11 +55,20 @@ public class DiServiceImpl implements DiService {
         for (GtDtl gtDtl : diMasterDto.getMaterialDtlList()) {
             // Get current stock
             OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
-                    .findByMaterialCode(gtDtl.getMaterialCode())
+                    .findByMaterialCodeAndLocatorIdAndCustodianId(
+                            gtDtl.getMaterialCode(),
+                            gtDtl.getSenderLocatorId(),
+                            String.valueOf(diMasterDto.getSenderCustodianId()))
                     .orElse(null);
 
             BigDecimal requestedQty = gtDtl.getQuantity();
             BigDecimal availableQty = stock != null ? stock.getQuantity() : BigDecimal.ZERO;
+            // OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
+            //         .findByMaterialCode(gtDtl.getMaterialCode())
+            //         .orElse(null);
+
+            // BigDecimal requestedQty = gtDtl.getQuantity();
+            // BigDecimal availableQty = stock != null ? stock.getQuantity() : BigDecimal.ZERO;
 
             // Get in-progress quantity for this material (AWAITING APPROVAL & DEMAND)
             BigDecimal inProgressQty = demandAndIssueDtlEntityRepository.getInProgressQty(
@@ -226,7 +239,7 @@ public class DiServiceImpl implements DiService {
 
     @Override
     @Transactional
-    public void approveDi(String diId) {
+    public void approveDi(String diId, Integer actionBy) {
         Long id = Long.valueOf(diId.split("/")[1]);
         DemandAndIssueMasterEntity demandAndIssueMaster = demandAndIssueMasterEntityRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -236,12 +249,16 @@ public class DiServiceImpl implements DiService {
                                 AppConstant.ERROR_TYPE_VALIDATION,
                                 "Demand Issue not found for the provided process number.")));
         demandAndIssueMaster.setStatus("DEMAND");
+         if (actionBy != null) {
+        demandAndIssueMaster.setUpdatedBy(String.valueOf(actionBy));
+        demandAndIssueMaster.setUpdateDate(LocalDateTime.now());
+    }
         demandAndIssueMasterEntityRepository.save(demandAndIssueMaster);
 
     }
     @Override
     @Transactional
-    public void rejectDi(String diId) {
+    public void rejectDi(String diId, Integer actionBy) {
         Long id = Long.valueOf(diId.split("/")[1]);
         DemandAndIssueMasterEntity demandAndIssueMaster = demandAndIssueMasterEntityRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(
@@ -251,6 +268,10 @@ public class DiServiceImpl implements DiService {
                                 AppConstant.ERROR_TYPE_VALIDATION,
                                 "Demand Issue not found for the provided process number.")));
         demandAndIssueMaster.setStatus("Rejected");
+         if (actionBy != null) {
+        demandAndIssueMaster.setUpdatedBy(String.valueOf(actionBy));
+        demandAndIssueMaster.setUpdateDate(LocalDateTime.now());
+    }
         demandAndIssueMasterEntityRepository.save(demandAndIssueMaster);
 
     }
@@ -341,9 +362,12 @@ public class DiServiceImpl implements DiService {
     @Transactional
     public String updateDi(String diId, DiMasterDto diMasterDto) {
         Long id = Long.valueOf(diId.split("/")[1]);
-
         DemandAndIssueMasterEntity di = demandAndIssueMasterEntityRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("DI not found with ID: " + diId));
+
+        // Captured BEFORE overwriting status below — this is what decides whether stock
+        // gets touched at all. Prevents re-decrementing on a repeat/duplicate call.
+        boolean alreadyIssued = "Approved".equals(di.getStatus());
 
         // Update DI Master details if needed
         di.setDemandIssueDate(CommonUtils.convertStringToDateObject(diMasterDto.getDiDate()));
@@ -353,6 +377,17 @@ public class DiServiceImpl implements DiService {
         di.setIssuedBy(diMasterDto.getCreatedBy() != null ? Integer.valueOf(diMasterDto.getCreatedBy()) : null);
         di.setStatus("Approved");
         demandAndIssueMasterEntityRepository.save(di);
+        // DemandAndIssueMasterEntity di = demandAndIssueMasterEntityRepository.findById(id)
+        //         .orElseThrow(() -> new RuntimeException("DI not found with ID: " + diId));
+
+        // // Update DI Master details if needed
+        // di.setDemandIssueDate(CommonUtils.convertStringToDateObject(diMasterDto.getDiDate()));
+        // di.setSenderLocationId(diMasterDto.getSenderLocationId());
+        // di.setSenderCustodianId(diMasterDto.getSenderCustodianId());
+        // di.setIssueDate(LocalDate.now());
+        // di.setIssuedBy(diMasterDto.getCreatedBy() != null ? Integer.valueOf(diMasterDto.getCreatedBy()) : null);
+        // di.setStatus("Approved");
+        // demandAndIssueMasterEntityRepository.save(di);
 
         // Fetch existing materials for this DI
         List<DemandAndIssueDtlEntity> existingMaterials = demandAndIssueDtlEntityRepository.findByDiId(di.getId());
@@ -364,7 +399,6 @@ public class DiServiceImpl implements DiService {
         // Handle Add / Update
         for (GtDtl gtDtl : diMasterDto.getMaterialDtlList()) {
             DemandAndIssueDtlEntity existing = existingMap.get(gtDtl.getMaterialCode());
-
             if (existing != null) {
                 // Update existing material
                 existing.setQuantity(gtDtl.getQuantity());
@@ -377,10 +411,18 @@ public class DiServiceImpl implements DiService {
                 demandAndIssueDtlEntityRepository.save(existing);
                 existingMap.remove(gtDtl.getMaterialCode());
 
-                // Reduce stock quantity for updated material
-                reduceStock(gtDtl.getMaterialCode(), gtDtl.getQuantity());
+                // Only move physical stock the first time this DI crosses into
+                // Approved — a repeat call (edit, retry, double-submit) must not
+                // decrement again.
+                if (!alreadyIssued) {
+                    storeStockService.adjustQuantity(
+                            gtDtl.getMaterialCode(),
+                            gtDtl.getSenderLocatorId(),
+                            String.valueOf(di.getSenderCustodianId()),
+                            gtDtl.getQuantity().negate());
 
-                addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(),gtDtl.getSenderLocatorId());
+                    addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(), gtDtl.getSenderLocatorId());
+                }
 
             } else {
                 // Add new material
@@ -398,13 +440,56 @@ public class DiServiceImpl implements DiService {
                 newMaterial.setSenderLocatorId(gtDtl.getSenderLocatorId());
                 demandAndIssueDtlEntityRepository.save(newMaterial);
 
-                // Reduce stock for newly added material
-                reduceStock(gtDtl.getMaterialCode(), gtDtl.getQuantity());
+                if (!alreadyIssued) {
+                    storeStockService.adjustQuantity(
+                            gtDtl.getMaterialCode(),
+                            gtDtl.getSenderLocatorId(),
+                            String.valueOf(di.getSenderCustodianId()),
+                            gtDtl.getQuantity().negate());
 
-                addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(),gtDtl.getSenderLocatorId());
-
-
+                    addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(), gtDtl.getSenderLocatorId());
+                }
             }
+            // if (existing != null) {
+            //     // Update existing material
+            //     existing.setQuantity(gtDtl.getQuantity());
+            //     existing.setReceiverLocatorId(gtDtl.getReceiverLocatorId());
+            //     existing.setSenderLocatorId(gtDtl.getSenderLocatorId());
+            //     existing.setUnitPrice(gtDtl.getUnitPrice());
+            //     existing.setBookValue(gtDtl.getBookValue());
+            //     existing.setDepriciationRate(gtDtl.getDepriciationRate());
+            //     existing.setMaterialDesc(gtDtl.getMaterialDesc());
+            //     demandAndIssueDtlEntityRepository.save(existing);
+            //     existingMap.remove(gtDtl.getMaterialCode());
+
+            //     // Reduce stock quantity for updated material
+            //     reduceStock(gtDtl.getMaterialCode(), gtDtl.getQuantity());
+
+            //     addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(),gtDtl.getSenderLocatorId());
+
+            // } else {
+            //     // Add new material
+            //     DemandAndIssueDtlEntity newMaterial = new DemandAndIssueDtlEntity();
+            //     newMaterial.setDiId(di.getId());
+            //     newMaterial.setAssetId(gtDtl.getAssetId());
+            //     newMaterial.setAssetDesc(gtDtl.getAssetDesc());
+            //     newMaterial.setMaterialCode(gtDtl.getMaterialCode());
+            //     newMaterial.setUnitPrice(gtDtl.getUnitPrice());
+            //     newMaterial.setDepriciationRate(gtDtl.getDepriciationRate());
+            //     newMaterial.setBookValue(gtDtl.getBookValue());
+            //     newMaterial.setMaterialDesc(gtDtl.getMaterialDesc());
+            //     newMaterial.setQuantity(gtDtl.getQuantity());
+            //     newMaterial.setReceiverLocatorId(gtDtl.getReceiverLocatorId());
+            //     newMaterial.setSenderLocatorId(gtDtl.getSenderLocatorId());
+            //     demandAndIssueDtlEntityRepository.save(newMaterial);
+
+            //     // Reduce stock for newly added material
+            //     reduceStock(gtDtl.getMaterialCode(), gtDtl.getQuantity());
+
+            //     addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(),gtDtl.getSenderLocatorId());
+
+
+            // }
         }
 
         // 6. Remove materials not present in the updated list
@@ -417,19 +502,19 @@ public class DiServiceImpl implements DiService {
         return "DI " + diId + " updated successfully and stock adjusted!";
     }
 
-    private void reduceStock(String materialCode, BigDecimal issuedQty) {
-        OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
-                .findByMaterialCode(materialCode)
-                .orElseThrow(() -> new RuntimeException("Stock not found for material: " + materialCode));
+    // private void reduceStock(String materialCode, BigDecimal issuedQty) {
+    //     OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
+    //             .findByMaterialCode(materialCode)
+    //             .orElseThrow(() -> new RuntimeException("Stock not found for material: " + materialCode));
 
-        BigDecimal newQty = stock.getQuantity().subtract(issuedQty);
-        if (newQty.compareTo(BigDecimal.ZERO) < 0) {
-            throw new RuntimeException("Insufficient stock for material: " + materialCode);
-        }
+    //     BigDecimal newQty = stock.getQuantity().subtract(issuedQty);
+    //     if (newQty.compareTo(BigDecimal.ZERO) < 0) {
+    //         throw new RuntimeException("Insufficient stock for material: " + materialCode);
+    //     }
 
-        stock.setQuantity(newQty);
-        ohqStoreStockRepo.save(stock);
-    }
+    //     stock.setQuantity(newQty);
+    //     ohqStoreStockRepo.save(stock);
+    // }
 
     private void addToCustodianStock(String materialCode, BigDecimal qtyToAdd, Integer custodianId,Integer senderLocatorId) {
         OhqMasterConsumableEntity stock = ohqMasterConsumableRepository

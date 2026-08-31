@@ -34,6 +34,7 @@ import GoodsIssueReport from "../reports/GoodsIssueReport";
 import IgpReport from "../reports/IgpReport";
 import OgpReport from "../reports/OgpReport";
 import AssetReport from "../reports/AssetReport";
+// import PersonalInventory from "../reports/PersonalInventory";
 import StockReport from "../reports/StockReport";
 import Tender from "../dashboard/tenderRequest/Tender";
 import ContingencyPurchase from "../dashboard/contingencyPurchase/ContingencyPurchase";
@@ -77,6 +78,7 @@ import DepartmentApproverMapping from "../dashboard/admin/DepartmentApproverMapp
 import FieldStationApproverConfig from "../dashboard/admin/FieldStationApproverConfig";
 import FullWorkflowConfig from "../dashboard/admin/FullWorkflowConfig";
 import CommitteeManagement from "../dashboard/admin/CommitteeManagement";
+import PersonalInventory from "../reports/PersonalInventoryReport";
 /*
 const RoutesComponent = () => {
   return (
@@ -391,6 +393,7 @@ const RoutesComponent = () => {
                 <Route path="ogp" element={<OgpReport />} />
                 <Route path="asset" element={<AssetReport />} />
                 <Route path="stock" element={<StockReport />} />
+                <Route path="personalinventory" element={<PersonalInventory />}/>
               </Route>
             )}
 

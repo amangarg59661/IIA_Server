@@ -62,4 +62,13 @@ public class OgpMasterPoEntity {
     @Column(name="date_of_return")
     private LocalDate dateOfReturn;
 
+
+    @Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
+
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
+
 }

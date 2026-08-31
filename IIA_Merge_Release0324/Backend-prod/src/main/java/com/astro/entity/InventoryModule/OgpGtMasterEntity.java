@@ -62,4 +62,12 @@ public class OgpGtMasterEntity {
     @Column(name = "created_by", nullable = false, length = 100)
     @CreatedBy
     private String createdBy;
+
+    @Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
+
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
 }

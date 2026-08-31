@@ -49,6 +49,9 @@ public class Reports {
     private IsnService isnService;
 
     @Autowired
+private StockLedgerService stockLedgerService;
+
+    @Autowired
     private ProcessService processService;
 
     @Autowired
@@ -100,6 +103,14 @@ public class Reports {
     ) {
         List<VendorContractReportDTO> response = purchaseOrderService.getVendorContractDetails(startDate, endDate);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+    }
+
+    @GetMapping("stock-ledger")
+    public ResponseEntity<Object> getStockLedger() {
+
+        List<StockLedgerDto> response = stockLedgerService.getStockLedger();
+        return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
+
     }
 
     @GetMapping("procurement-activity-report")
@@ -241,9 +252,9 @@ public class Reports {
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
     }
     @GetMapping("/asset")
-    public ResponseEntity<Object> getAssetReport() {
+    public ResponseEntity<Object> getAssetReport(@RequestParam String userId, @RequestParam String roleName) {
 
-        List<AssetMasterReportDto> response = assetMasterService.getAssetReport();
+        List<AssetMasterReportDto> response = assetMasterService.getAssetReport(userId, roleName);
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
     }
     @GetMapping("/performanceSecurityReport")

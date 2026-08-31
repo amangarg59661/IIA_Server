@@ -12,8 +12,8 @@ public interface GprnService {
 
     public List<String> getPendingGprn();
     public List<PendingGprnPoDto> getPendingGprnDetails();
-    public void rejectGprn(String processNo);
-    public void approveGprn(String processNo);
-    public void changeReqGprn(String processNo);
+    public void rejectGprn(String processNo, Integer actionBy);
+    public void approveGprn(String processNo, Integer actionBy);
+    public void changeReqGprn(String processNo, Integer actionBy);
     public void updateGprn(SaveGprnDto updateRequest);
 }

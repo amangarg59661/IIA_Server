@@ -100,6 +100,9 @@ const MaterialDetailModal = ({ visible, setVisible, materialData }) => {
             <Descriptions.Item label = "Asset" span = {2}>
               {materialData.asset_Flag ? "Yes" : "No"}
             </Descriptions.Item>
+            <Descriptions.Item label = "Updated/Created" span = {2}>
+              {materialData.update_Flag ? "Updated" : "Created"}
+            </Descriptions.Item>
         {/* End */}
 
 <Descriptions.Item label="Upload Documents" span={2}>

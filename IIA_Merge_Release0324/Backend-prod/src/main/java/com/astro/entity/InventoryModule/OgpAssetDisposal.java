@@ -54,4 +54,13 @@ public class OgpAssetDisposal {
 
     @OneToMany(mappedBy = "disposal", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<OgpAssetDisposalDetail> assets;
+
+
+    @Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
+
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
 }

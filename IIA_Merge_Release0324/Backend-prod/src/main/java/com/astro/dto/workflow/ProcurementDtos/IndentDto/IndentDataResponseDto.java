@@ -1,4 +1,5 @@
 package com.astro.dto.workflow.ProcurementDtos.IndentDto;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
 
@@ -48,6 +49,11 @@ public class IndentDataResponseDto {
     private String dateOfPurchase;
     private String proprietaryJustification;
     private Boolean buyBack;
+    private String buyBackMaterialDescription;
+private String make;
+private Integer buyBackQuantity;
+private String statusOfBuyBackMaterial;
+private String buyBackYearOfManufacture;
     private Boolean proprietaryAndLimitedDeclaration;
     private List<String> uploadBuyBackFileNames;
     private String createdBy;

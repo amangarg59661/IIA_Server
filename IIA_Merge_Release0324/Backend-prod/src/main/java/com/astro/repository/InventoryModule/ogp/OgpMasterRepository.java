@@ -82,4 +82,8 @@ public interface OgpMasterRepository extends JpaRepository<OgpMasterEntity, Inte
 """, nativeQuery = true)
     List<Object[]> getOgpRejectedGiReport(LocalDateTime startDate, LocalDateTime endDate);
 
+        List<OgpMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<OgpMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
+
 }

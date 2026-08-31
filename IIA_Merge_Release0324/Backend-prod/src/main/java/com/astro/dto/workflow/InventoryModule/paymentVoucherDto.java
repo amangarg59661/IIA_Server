@@ -12,6 +12,7 @@ public class paymentVoucherDto {
     private String vendorInvoiceName;
     private String vendorInvoiceDate;
     private List<paymentVoucherMaterials> materialsList;
+    private List<paymentVoucherJobs> jobsList;
     private BigDecimal totalAmount;
     private String paymentVoucherType;
     private BigDecimal partialAmountAlreadypaid;

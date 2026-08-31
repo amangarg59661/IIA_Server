@@ -55,4 +55,8 @@ public interface DemandAndIssueMasterEntityRepository extends JpaRepository<Dema
             @Param("to") LocalDateTime to
     );
 
+    List<DemandAndIssueMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<DemandAndIssueMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
+
 }

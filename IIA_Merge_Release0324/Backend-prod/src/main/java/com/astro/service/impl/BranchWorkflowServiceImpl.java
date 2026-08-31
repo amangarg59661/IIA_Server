@@ -35,6 +35,7 @@ import com.astro.repository.ProcurementModule.ServiceOrderRepository.ServiceOrde
 import com.astro.entity.PaymentVoucher;
 import com.astro.entity.ProcurementModule.ServiceOrder;
 import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
+import com.astro.repository.InventoryModule.CycleCountMasterRepository;
 // End
 
 import java.math.BigDecimal;
@@ -46,6 +47,9 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
 
     @Autowired
     private WorkflowBranchMasterRepository branchRepository;
+
+    @Autowired
+private CycleCountMasterRepository cycleCountMasterRepository;
 
     @Autowired
     private ApproverMasterRepository approverRepository;
@@ -735,6 +739,29 @@ public class BranchWorkflowServiceImpl implements BranchWorkflowService {
         return conditions;
     }
     // End
+
+    @Override
+public Map<String, Object> buildCycleCountConditions(String requestId) {
+
+    Map<String, Object> conditions = new HashMap<>();
+
+    try {
+        Long id = Long.parseLong(requestId.split("/")[1]);
+        cycleCountMasterRepository.findById(id).ifPresent(cc -> {
+            BigDecimal totalVariance = cc.getTotalVarianceValue() != null
+                    ? cc.getTotalVarianceValue()
+                    : BigDecimal.ZERO;
+            conditions.put("totalAmount", totalVariance); // signed, per your call
+        });
+        System.out.println("📋 Cycle Count Conditions Built: " + conditions);
+
+    } catch (Exception e) {
+        System.err.println("❌ Error building Cycle Count conditions: " + e.getMessage());
+        e.printStackTrace();
+    }
+
+    return conditions;
+}
 @Override
     public Map<String, Object> buildServiceInspectionConditions(String requestId) {
 

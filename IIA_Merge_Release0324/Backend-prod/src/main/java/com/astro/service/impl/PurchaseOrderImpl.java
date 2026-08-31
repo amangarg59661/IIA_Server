@@ -258,7 +258,7 @@ for (PurchaseOrderAttributesDTO dto : purchaseOrderRequestDTO.getPurchaseOrderAt
     String materialCode = dto.getMaterialCode();
     BigDecimal lineTotal = calculateTotalPriceInInr(
             dto.getRate(), dto.getExchangeRate(), dto.getCurrency(),
-            dto.getQuantity(), dto.getGst(), dto.getDuties(), dto.getFreightCharge()
+            dto.getQuantity(), dto.getGst(), dto.getDuties(), dto.getFreightCharge(), dto.getGstDuties(), dto.getGstFreight()
     );
 
     if (clubbedAttrs.containsKey(materialCode)) {
@@ -276,6 +276,8 @@ for (PurchaseOrderAttributesDTO dto : purchaseOrderRequestDTO.getPurchaseOrderAt
         attribute.setGst(dto.getGst());
         attribute.setDuties(dto.getDuties());
         attribute.setFreightCharge(dto.getFreightCharge());
+        attribute.setGstDuties(dto.getGstDuties());
+        attribute.setGstFreight(dto.getGstFreight());
         attribute.setBudgetCode(dto.getBudgetCode());
         attribute.setTotalPoMaterialPriceInInr(lineTotal);
         attribute.setPurchaseOrder(purchaseOrder);
@@ -516,7 +518,7 @@ for (PurchaseOrderAttributesDTO attrDto : dto.getPurchaseOrderAttributes()) {
     String materialCode = attrDto.getMaterialCode();
     BigDecimal lineTotal = calculateTotalPriceInInr(
             attrDto.getRate(), attrDto.getExchangeRate(), attrDto.getCurrency(),
-            attrDto.getQuantity(), attrDto.getGst(), attrDto.getDuties(), attrDto.getFreightCharge());
+            attrDto.getQuantity(), attrDto.getGst(), attrDto.getDuties(), attrDto.getFreightCharge(), attrDto.getGstDuties(), attrDto.getGstFreight());
 
     if (clubbedAttrs.containsKey(materialCode)) {
         PurchaseOrderAttributes existing = clubbedAttrs.get(materialCode);
@@ -533,6 +535,8 @@ for (PurchaseOrderAttributesDTO attrDto : dto.getPurchaseOrderAttributes()) {
         attr.setGst(attrDto.getGst());
         attr.setDuties(attrDto.getDuties());
         attr.setFreightCharge(attrDto.getFreightCharge());
+        attr.setGstDuties(attrDto.getGstDuties());
+        attr.setGstFreight(attrDto.getGstFreight());
         attr.setBudgetCode(attrDto.getBudgetCode());
         attr.setPurchaseOrder(newPO);
         attr.setTotalPoMaterialPriceInInr(lineTotal);
@@ -1355,57 +1359,129 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
     }
 
 
-    @Override
-    public List<ApprovedPoListReportDto> getApprovedPoReport(String startDate, String endDate, Integer userId, String roleName) {
-        LocalDate from = CommonUtils.convertStringToDateObject(startDate);
-        LocalDate to = CommonUtils.convertStringToDateObject(endDate);
+@Override
+public List<ApprovedPoListReportDto> getApprovedPoReport(String startDate, String endDate, Integer userId, String roleName) {
+    LocalDate from = CommonUtils.convertStringToDateObject(startDate);
+    LocalDate to = CommonUtils.convertStringToDateObject(endDate);
 
-     //   List<Object[]> rows = purchaseOrderRepository.getApprovedPoReport(from, to);
-        List<Object[]> rows;
-        if ("Indent Creator".equalsIgnoreCase(roleName)) {
-            rows = purchaseOrderRepository.getApprovedPoReportByIndentCreator(from, to, userId);
-            System.out.println(roleName);
-        } else {
-            rows = purchaseOrderRepository.getApprovedPoReport(from, to);
+    List<Object[]> rows;
+    if ("Indent Creator".equalsIgnoreCase(roleName)) {
+        rows = purchaseOrderRepository.getApprovedPoReportByIndentCreator(from, to, userId);
+        System.out.println(roleName);
+    } else {
+        rows = purchaseOrderRepository.getApprovedPoReport(from, to);
+    }
+
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.registerModule(new JavaTimeModule());
+    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+    return rows.stream().map(row -> {
+        ApprovedPoListReportDto dto = new ApprovedPoListReportDto();
+
+        dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
+                ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
+                : null));
+        dto.setPoId((String) row[1]);
+        dto.setVendorName((String) row[2]);
+        dto.setValue(((BigDecimal) row[3]).doubleValue());
+        dto.setTenderId((String) row[4]);
+        dto.setProject((String) row[5]);
+        dto.setVendorId((String) row[6]);
+        dto.setIndentIds((String) row[7]);
+        dto.setModeOfProcurement((String) row[8]);
+
+        dto.setPoDate(CommonUtils.convertDateToString(row[9] != null
+                ? ((Timestamp) row[9]).toLocalDateTime().toLocalDate()
+                : null));
+        dto.setIndentorName((String) row[10]);
+        dto.setNonGemReason((String) row[11]);
+
+        String mode = (String) row[8];
+        String gemStatus = null;
+        if (mode != null) {
+            gemStatus = switch (mode) {
+                case "GeM" -> "GeM";
+                case "Proprietary/Single Tender" -> "Non-GeM (Proprietary/Single Tender)";
+                case "Limited Pre Approved Vendor Tender" -> "Non-GeM (Limited Pre Approved Vendor Tender)";
+                case "Brand PAC" -> "Non-GeM (Brand PAC)";
+                case "Open Tender" -> "Non-GeM (Open Tender)";
+                case "Global Tender" -> "Non-GeM (Global Tender)";
+                default -> "Other";
+            };
+        }
+        dto.setGemOrNonGem(gemStatus);
+
+        // Parse JSON array of attributes (column index shifted 9 -> 12)
+        String json = (String) row[12];
+        try {
+            List<PurchaseOrderAttributesResponseDTO> attrs = mapper.readValue(
+                    json,
+                    mapper.getTypeFactory().constructCollectionType(
+                            List.class,
+                            PurchaseOrderAttributesResponseDTO.class
+                    )
+            );
+            dto.setPurchaseOrderAttributes(attrs);
+        } catch (Exception e) {
+            dto.setPurchaseOrderAttributes(new ArrayList<>());
         }
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new JavaTimeModule());
-        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return dto;
+    }).collect(Collectors.toList());
+}
 
-        return rows.stream().map(row -> {
-            ApprovedPoListReportDto dto = new ApprovedPoListReportDto();
+    // @Override
+    // public List<ApprovedPoListReportDto> getApprovedPoReport(String startDate, String endDate, Integer userId, String roleName) {
+    //     LocalDate from = CommonUtils.convertStringToDateObject(startDate);
+    //     LocalDate to = CommonUtils.convertStringToDateObject(endDate);
 
-            dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
-                    ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
-                    : null));
-            dto.setPoId((String) row[1]);
-            dto.setVendorName((String) row[2]);
-            dto.setValue(((BigDecimal) row[3]).doubleValue());
-            dto.setTenderId((String) row[4]);
-            dto.setProject((String) row[5]);
-            dto.setVendorId((String) row[6]);
-            dto.setIndentIds((String) row[7]);
-            dto.setModeOfProcurement((String) row[8]);
+    //  //   List<Object[]> rows = purchaseOrderRepository.getApprovedPoReport(from, to);
+    //     List<Object[]> rows;
+    //     if ("Indent Creator".equalsIgnoreCase(roleName)) {
+    //         rows = purchaseOrderRepository.getApprovedPoReportByIndentCreator(from, to, userId);
+    //         System.out.println(roleName);
+    //     } else {
+    //         rows = purchaseOrderRepository.getApprovedPoReport(from, to);
+    //     }
 
-            // Parse JSON array of attributes (column index 9)
-            String json = (String) row[9];
-            try {
-                List<PurchaseOrderAttributesResponseDTO> attrs = mapper.readValue(
-                        json,
-                        mapper.getTypeFactory().constructCollectionType(
-                                List.class,
-                                PurchaseOrderAttributesResponseDTO.class
-                        )
-                );
-                dto.setPurchaseOrderAttributes(attrs);
-            } catch (Exception e) {
-                dto.setPurchaseOrderAttributes(new ArrayList<>());
-            }
+    //     ObjectMapper mapper = new ObjectMapper();
+    //     mapper.registerModule(new JavaTimeModule());
+    //     mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-            return dto;
-        }).collect(Collectors.toList());
-    }
+    //     return rows.stream().map(row -> {
+    //         ApprovedPoListReportDto dto = new ApprovedPoListReportDto();
+
+    //         dto.setApprovedDate(CommonUtils.convertDateToString(row[0] != null
+    //                 ? ((Timestamp) row[0]).toLocalDateTime().toLocalDate()
+    //                 : null));
+    //         dto.setPoId((String) row[1]);
+    //         dto.setVendorName((String) row[2]);
+    //         dto.setValue(((BigDecimal) row[3]).doubleValue());
+    //         dto.setTenderId((String) row[4]);
+    //         dto.setProject((String) row[5]);
+    //         dto.setVendorId((String) row[6]);
+    //         dto.setIndentIds((String) row[7]);
+    //         dto.setModeOfProcurement((String) row[8]);
+
+    //         // Parse JSON array of attributes (column index 9)
+    //         String json = (String) row[9];
+    //         try {
+    //             List<PurchaseOrderAttributesResponseDTO> attrs = mapper.readValue(
+    //                     json,
+    //                     mapper.getTypeFactory().constructCollectionType(
+    //                             List.class,
+    //                             PurchaseOrderAttributesResponseDTO.class
+    //                     )
+    //             );
+    //             dto.setPurchaseOrderAttributes(attrs);
+    //         } catch (Exception e) {
+    //             dto.setPurchaseOrderAttributes(new ArrayList<>());
+    //         }
+
+    //         return dto;
+    //     }).collect(Collectors.toList());
+    // }
 
 
     @Override
@@ -1633,7 +1709,9 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
             BigDecimal quantity,
             BigDecimal gst,
             BigDecimal duties,
-            BigDecimal freightCharge
+            BigDecimal freightCharge,
+            BigDecimal gstDuties,
+            BigDecimal gstFreight
     ) {
         if (rate == null || quantity == null) return BigDecimal.ZERO;
 
@@ -1642,6 +1720,8 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         gst = gst != null ? gst : BigDecimal.ZERO;
         duties = duties != null ? duties : BigDecimal.ZERO;
         freightCharge = freightCharge != null ? freightCharge : BigDecimal.ZERO;
+        gstDuties = gstDuties != null ? gstDuties : BigDecimal.ZERO;
+        gstFreight = gstFreight != null ? gstFreight : BigDecimal.ZERO;
 
         // Convert rate to INR if not already INR
         BigDecimal baseRate = "INR".equalsIgnoreCase(currency) ? rate : rate.multiply(exchangeRate);
@@ -1652,9 +1732,10 @@ Optional<TenderRequest> tenderRequest = purchaseOrder.getTenderId() != null
         // GST & Duties Amounts
         BigDecimal gstAmount = baseAmount.multiply(gst).divide(BigDecimal.valueOf(100));
         BigDecimal dutiesAmount = baseAmount.multiply(duties).divide(BigDecimal.valueOf(100));
-
-        // Total = Base + GST + Duties + Freight
-        return baseAmount.add(gstAmount).add(dutiesAmount).add(freightCharge);
+        BigDecimal gstDutiesAmount = dutiesAmount.multiply(gstDuties).divide(BigDecimal.valueOf(100));
+        BigDecimal gstFreightAmount = freightCharge.multiply(gstFreight).divide(BigDecimal.valueOf(100));
+        // Total = Base + GST + Duties + Freight + GST Duties + GST Freight
+        return baseAmount.add(gstAmount).add(dutiesAmount).add(freightCharge).add(gstDutiesAmount).add(gstFreightAmount);
     }
 
     public List<SearchPOIdDto> searchPOIds(String type, String value) {
@@ -2091,7 +2172,7 @@ if (dto.getPurchaseOrderAttributes() != null) {
         String materialCode = a.getMaterialCode();
         BigDecimal lineTotal = (a.getRate() != null && a.getQuantity() != null)
                 ? calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
-                        a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge())
+                        a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge(), a.getGstDuties(), a.getGstFreight())
                 : BigDecimal.ZERO;
         BigDecimal qty = a.getQuantity() != null ? a.getQuantity() : BigDecimal.ZERO;
 
@@ -2110,6 +2191,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGst(a.getGst());
             attr.setDuties(a.getDuties());
             attr.setFreightCharge(a.getFreightCharge());
+            attr.setGstDuties(a.getGstDuties());
+            attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(draft);
@@ -2227,7 +2310,7 @@ if (dto.getPurchaseOrderAttributes() != null) {
         String materialCode = a.getMaterialCode();
         BigDecimal lineTotal = (a.getRate() != null && a.getQuantity() != null)
                 ? calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
-                        a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge())
+                        a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge(), a.getGstDuties(), a.getGstFreight())
                 : BigDecimal.ZERO;
         BigDecimal qty = a.getQuantity() != null ? a.getQuantity() : BigDecimal.ZERO;
 
@@ -2246,6 +2329,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGst(a.getGst());
             attr.setDuties(a.getDuties());
             attr.setFreightCharge(a.getFreightCharge());
+            attr.setGstDuties(a.getGstDuties());
+            attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(existing);
@@ -2360,7 +2445,7 @@ if (dto.getPurchaseOrderAttributes() != null) {
     for (PurchaseOrderAttributesDTO a : dto.getPurchaseOrderAttributes()) {
         String materialCode = a.getMaterialCode();
         BigDecimal lineTotal = calculateTotalPriceInInr(a.getRate(), a.getExchangeRate(), a.getCurrency(),
-                a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge());
+                a.getQuantity(), a.getGst(), a.getDuties(), a.getFreightCharge(), a.getGstDuties(), a.getGstFreight());
 
         if (clubbedAttrs.containsKey(materialCode)) {
             PurchaseOrderAttributes existingAttr = clubbedAttrs.get(materialCode);
@@ -2377,6 +2462,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGst(a.getGst());
             attr.setDuties(a.getDuties());
             attr.setFreightCharge(a.getFreightCharge());
+            attr.setGstDuties(a.getGstDuties());
+            attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(existing);

@@ -520,11 +520,15 @@ public List<IgpMaterialInReportDto> getIgpMaterialInReport(String startDate, Str
 
     @Override
     @Transactional
-    public void approveMaterialIgp(String igpId) {
+    public void approveMaterialIgp(String igpId, Integer actionBy) {
         System.out.println("APprove material igp called");
         Long id = Long.parseLong(igpId.split("/")[1]);
         IgpMaterialMasterEntity igpMaterialMasterEntity = immr.findById(id).orElseThrow(() -> new RuntimeException("IGP not found"));
         igpMaterialMasterEntity.setStatus("APPROVED");
+         if (actionBy != null) {
+        igpMaterialMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        igpMaterialMasterEntity.setUpdateDate(LocalDateTime.now());
+    }
         immr.save(igpMaterialMasterEntity);
         
         createNewAsset(igpId, igpMaterialMasterEntity.getCreatedBy());
@@ -532,10 +536,14 @@ public List<IgpMaterialInReportDto> getIgpMaterialInReport(String startDate, Str
 
     @Override
     @Transactional
-    public void rejectMaterialIgp(String igpId) {
+    public void rejectMaterialIgp(String igpId, Integer actionBy) {
         Long id = Long.parseLong(igpId.split("/")[1]);
         IgpMaterialMasterEntity igpMaterialMasterEntity = immr.findById(id).orElseThrow(() -> new RuntimeException("IGP not found"));
         igpMaterialMasterEntity.setStatus("REJECTED");
+         if (actionBy != null) {
+        igpMaterialMasterEntity.setUpdatedBy(String.valueOf(actionBy));
+        igpMaterialMasterEntity.setUpdateDate(LocalDateTime.now());
+    }
         immr.save(igpMaterialMasterEntity);
     }
 

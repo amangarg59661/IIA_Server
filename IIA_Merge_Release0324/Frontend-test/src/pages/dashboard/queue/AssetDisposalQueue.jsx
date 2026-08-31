@@ -5,7 +5,7 @@ import TableComponent from "../../../components/DKG_Table";
 import { useSelector } from "react-redux";
 
 const AssetDisposalApproval = () => {
-  const { role } = useSelector((state) => state?.auth);
+  const { role, userId } = useSelector((state) => state?.auth);
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +41,7 @@ const AssetDisposalApproval = () => {
   const handleApprove = async (record) => {
     try {
     await axios.post("/api/process-controller/approveAssetDisposal", null, {
-  params: { disposalId: record.disposalId },
+  params: { disposalId: record.disposalId , actionBy: userId},
 });
 
       message.success("Asset Disposal approved successfully");
@@ -59,7 +59,7 @@ const AssetDisposalApproval = () => {
   const handleReject = async (record) => {
     try {
     await axios.post("/api/process-controller/rejectAssetDisposal", null, {
-      params: { disposalId: record.disposalId },
+      params: { disposalId: record.disposalId , actionBy: userId},
     });
       message.success("Asset Disposal rejected successfully");
       fetchAssetDisposalData();

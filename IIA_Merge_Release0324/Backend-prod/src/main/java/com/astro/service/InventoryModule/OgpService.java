@@ -19,20 +19,20 @@ public interface OgpService {
 
     public OgpPoResponseDto getPoOgp(String processNo);
 
-    void approveOgp(GprApprovalDto req);
+    void approveOgp(GprApprovalDto req, Integer actionBy);
 
-    void rejectOgp(GprApprovalDto req);
+    void rejectOgp(GprApprovalDto req, Integer actionBy);
 
     public String saveOgpRejectedGi(OgpMasterRejectedGiDto req);
     public List<OgpMasterRejectedGiDto> getAwaitingRejectedGi();
-    public void approveGiOgp(String ogpId);
+    public void approveGiOgp(String ogpId, Integer actionBy);
     public List<OgpRejectedGiReportDto> getOgpRejectedGiReport(String startDate, String endDate);
 
-    public void rejectGiOgp(String ogpId);
+    public void rejectGiOgp(String ogpId, Integer actionBy);
     public String saveGtOgp(GtMasterDto gtMasterDto);
     public List<GtMasterDto> getReciverPendingGtOgp(Integer userId);
     public List<GtMasterDto> getPendingGtOgp();
-    public void rejectGtOgp(String ogpId);
-    public void approveGtOgp(String ogpId);
-    public void approveReceiverGtOgp(String ogpId);
+    public void rejectGtOgp(String ogpId, Integer actionBy);
+    public void approveGtOgp(String ogpId, Integer actionBy);
+    public void approveReceiverGtOgp(String ogpId, Integer actionBy);
 }

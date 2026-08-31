@@ -4,6 +4,7 @@ import com.astro.entity.InventoryModule.GiMaterialDtlEntity;
 import com.astro.entity.InventoryModule.GiWorkflowStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
@@ -14,5 +15,7 @@ public interface GiWorkflowStatusRepository extends JpaRepository<GiWorkflowStat
     List<GiWorkflowStatus> findByProcessIdAndSubProcessIdOrderByIdAsc(String processId, Integer subProcessId);
 
     List<GiWorkflowStatus> findBySubProcessIdAndActionOrderByIdDesc(Integer subProcessId, String action);
+    List<GiWorkflowStatus> findByCreatedByAndCreateDateBetween(String createdBy, LocalDateTime start, LocalDateTime end);
+// List<GrnWorkflowStatus> findByCreatedByAndCreateDateBetween(String createdBy, LocalDateTime start, LocalDateTime end);
 
 }

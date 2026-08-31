@@ -46,6 +46,12 @@ public class AssetDisposalMasterEntity {
     private BigDecimal reservePrice;
     private BigDecimal auctionPrice;
     private String vendorName;
+@Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
 
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
 
 }

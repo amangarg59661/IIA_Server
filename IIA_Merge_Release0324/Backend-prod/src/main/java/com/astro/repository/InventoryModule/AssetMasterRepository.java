@@ -46,17 +46,40 @@ public interface AssetMasterRepository extends JpaRepository<AssetMasterEntity, 
         FROM asset_master
         """, nativeQuery = true)
     List<Object[]> getAssetReport();*/
-   @Query(value = """
+      @Query(value = """
         SELECT 
-            am.asset_id, am.material_code, am.material_desc, am.asset_desc, am.make_no, 
+            am.asset_id, am.asset_desc, am.make_no, 
             am.serial_no, am.model_no, am.init_quantity, am.unit_price, am.uom_id,
             am.depriciation_rate, am.end_of_life, am.stock_levels, am.condition_of_goods,
             am.shelf_life, am.component_name, am.component_id, am.create_date, am.created_by,
             am.updated_date, am.updated_by, am.po_id,
             po.total_value_of_po,
-            po.vendor_id  
+            po.vendor_id, ohq.custodian_id,
+            am.asset_code, mm.category, mm.sub_category, ass.locator_id, ass.status, am.grn_no
         FROM asset_master am
         LEFT JOIN purchase_order po ON am.po_id = po.po_id
+        INNER JOIN ohq_master ohq ON am.asset_id = ohq.asset_id
+        INNER JOIN material_master mm ON mm.material_code = am.material_code 
+        LEFT JOIN asset_serial ass ON ass.asset_id = am.asset_id 
+WHERE ohq.custodian_id = :userId
+        """, nativeQuery = true)
+   List<Object[]> getAssetReportRole(String userId);
+
+      @Query(value = """
+        SELECT 
+            am.asset_id, am.asset_desc, am.make_no, 
+            am.serial_no, am.model_no, am.init_quantity, am.unit_price, am.uom_id,
+            am.depriciation_rate, am.end_of_life, am.stock_levels, am.condition_of_goods,
+            am.shelf_life, am.component_name, am.component_id, am.create_date, am.created_by,
+            am.updated_date, am.updated_by, am.po_id,
+            po.total_value_of_po,
+            po.vendor_id, ohq.custodian_id,
+            am.asset_code, mm.category, mm.sub_category, ass.locator_id, ass.status, am.grn_no
+        FROM asset_master am
+        LEFT JOIN purchase_order po ON am.po_id = po.po_id
+        INNER JOIN ohq_master ohq ON am.asset_id = ohq.asset_id
+        INNER JOIN material_master mm ON mm.material_code = am.material_code
+        LEFT JOIN asset_serial ass ON ass.asset_id = am.asset_id
         """, nativeQuery = true)
    List<Object[]> getAssetReport();
 
@@ -71,17 +94,41 @@ public interface AssetMasterRepository extends JpaRepository<AssetMasterEntity, 
             "ORDER BY asset_code DESC LIMIT 1", nativeQuery = true)
     String findMaxAssetCodeByPrefix(@Param("prefix") String prefix);
 
-    @Query("""
+//     @Query("""
+//     SELECT new com.astro.dto.workflow.InventoryModule.AssetFullResponseDto(
+//         a.assetId, a.assetCode, a.materialCode, a.materialDesc, a.assetDesc, a.makeNo,
+//         a.serialNo, a.modelNo, a.uomId, a.componentName, a.componentId, a.initQuantity,
+//         a.poId, a.unitPrice, a.depriciationRate, a.endOfLife, a.stockLevels,
+//         a.conditionOfGoods, a.shelfLife, a.createDate, a.createdBy,
+//         a.updatedDate, a.igpId, a.updatedBy,
+//         o.custodianId, o.locatorId, o.quantity
+//     )
+//     FROM AssetMasterEntity a
+//     JOIN OhqMasterEntity o ON a.assetId = o.assetId
+//     WHERE 
+//         (:assetId IS NULL OR a.assetId = :assetId)
+//         AND (:assetCode IS NULL OR a.assetCode = :assetCode)
+//         AND (:custodianId IS NULL OR o.custodianId = :custodianId)
+//         AND (:locatorId IS NULL OR o.locatorId = :locatorId)
+// """)
+//     List<AssetFullResponseDto> findAssetFullDetails(
+//             Integer assetId,
+//             String assetCode,
+//             String custodianId,
+//             Integer locatorId);
+
+@Query("""
     SELECT new com.astro.dto.workflow.InventoryModule.AssetFullResponseDto(
         a.assetId, a.assetCode, a.materialCode, a.materialDesc, a.assetDesc, a.makeNo,
         a.serialNo, a.modelNo, a.uomId, a.componentName, a.componentId, a.initQuantity,
         a.poId, a.unitPrice, a.depriciationRate, a.endOfLife, a.stockLevels,
         a.conditionOfGoods, a.shelfLife, a.createDate, a.createdBy,
         a.updatedDate, a.igpId, a.updatedBy,
-        o.custodianId, o.locatorId, o.quantity
+        o.custodianId, o.locatorId, o.quantity, u.userName
     )
     FROM AssetMasterEntity a
     JOIN OhqMasterEntity o ON a.assetId = o.assetId
+    LEFT JOIN UserMaster u ON CAST(u.userId AS string) = o.custodianId
     WHERE 
         (:assetId IS NULL OR a.assetId = :assetId)
         AND (:assetCode IS NULL OR a.assetCode = :assetCode)

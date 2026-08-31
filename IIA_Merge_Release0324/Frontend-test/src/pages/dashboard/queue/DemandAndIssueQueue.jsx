@@ -5,7 +5,7 @@ import TableComponent from "../../../components/DKG_Table";
 import { useSelector } from "react-redux";
 
 const DemandAndIssueQueue = () => {
-  const { role } = useSelector((state) => state?.auth);
+  const { role, userId } = useSelector((state) => state?.auth);
   const [dataSource, setDataSource] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +41,7 @@ const DemandAndIssueQueue = () => {
   const handleApprove = async (record) => {
     try {
       await axios.post("/api/process-controller/approveDi", null, {
-        params: { diId: record.id },
+        params: { diId: record.id ,actionBy: userId },
       });
       message.success("Demand & Issue approved successfully");
       fetchDemandAndIssueQueue();
@@ -58,7 +58,7 @@ const DemandAndIssueQueue = () => {
   const handleReject = async (record) => {
     try {
       await axios.post("/api/process-controller/rejectDi", null, {
-        params: { diId: record.id },
+        params: { diId: record.id , actionBy: userId},
       });
       message.success("Demand & Issue rejected successfully");
       fetchDemandAndIssueQueue();

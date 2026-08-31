@@ -16,6 +16,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -58,6 +59,14 @@ public class OgpMasterRejectedGiEntity {
 
     @Column(name = "return_date")
     private LocalDate returnDate;
+
+    @Column(name = "updated_by")
+@LastModifiedBy
+private String updatedBy;
+
+@Column(name = "updated_date")
+@LastModifiedDate
+private LocalDateTime updateDate;
 
 
 }

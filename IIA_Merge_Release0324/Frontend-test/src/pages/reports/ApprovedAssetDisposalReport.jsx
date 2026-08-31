@@ -9,7 +9,9 @@ const AssetDisposalReport = ({ onChartData, selectedBarKey, selectedPieKey }) =>
     { title: 'Disposal ID', dataIndex: 'disposalId', key: 'disposalId', render: (text) => `INV/${text}`, searchable: true },
     { title: 'Disposal Date', dataIndex: 'disposalDate', key: 'disposalDate', render: (text) => text ? new Date(text).toLocaleDateString() : '' },
     { title: 'Location', dataIndex: 'locationId', key: 'locationId', searchable: true },
+    {title: 'Auction Id', dataIndex:'auctionId',key:'auctionId', searchable: true},
     { title: 'Custodian ID', dataIndex: 'custodianId', key: 'custodianId', searchable: true },
+    { title: 'Custodian Name', dataIndex: 'custodianName', key: 'custodianName', searchable: true },
     { title: 'Status', dataIndex: 'status', key: 'status', searchable: true },
     {title: "Store Purchase Officer", dataIndex:"action", key: 'action', searchable:true},
     {
@@ -22,13 +24,17 @@ const AssetDisposalReport = ({ onChartData, selectedBarKey, selectedPieKey }) =>
           pagination={false}
           columns={[
             { title: 'Asset ID', dataIndex: 'assetId', key: 'assetId' },
+            { title: 'Asset Code', dataIndex: 'assetCode', key: 'assetCode' },
             { title: 'Asset Desc', dataIndex: 'assetDesc', key: 'assetDesc' },
+            { title: 'UOM', dataIndex: 'uom', key: 'uom' },
             { title: 'Quantity', dataIndex: 'quantity', key: 'quantity' },
             { title: 'Disposal Category', dataIndex: 'disposalCategory', key: 'disposalCategory' },
             { title: 'Disposal Mode', dataIndex: 'disposalMode', key: 'disposalMode' },
             { title: 'Book Value', dataIndex: 'bookValue', key: 'bookValue' },
             { title: 'Unit Price', dataIndex: 'unitPrice', key: 'unitPrice' },
+            { title: 'PO ID', dataIndex: 'poId', key: 'poId' },
             { title: 'PO Value', dataIndex: 'poValue', key: 'poValue' },
+            { title: 'GRIN Date', dataIndex: 'grinDate', key: 'grinDate' },
             { title: 'Reason for Disposal', dataIndex: 'reasonForDisposal', key: 'reasonForDisposal' },
           ]}
         />

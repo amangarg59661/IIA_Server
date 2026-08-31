@@ -4,15 +4,18 @@ import com.astro.dto.workflow.InventoryModule.paymentVoucherDto;
 import com.astro.dto.workflow.InventoryModule.paymentVoucherMaterials;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
+import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionResponseDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionMaterialLineDto;
 import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
 import com.astro.entity.ProcurementModule.ServiceOrderMaterial;
 import com.astro.dto.workflow.InventoryModule.SoInspectionInfoDto;
 import com.astro.entity.InventoryModule.ServiceInspectionMaster;
+import com.astro.entity.PaymentVoucherJobs;
 import com.astro.entity.InventoryModule.ServiceInspectionMaterialDtl;
 import com.astro.entity.PaymentVoucher;
 import org.springframework.transaction.annotation.Transactional;
 import com.astro.entity.ProcurementModule.ServiceOrder;
+import com.astro.dto.workflow.InventoryModule.paymentVoucherJobs;
 import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 import com.astro.repository.InventoryModule.ServiceInspectionMaterialDtlRepository;
 import com.astro.repository.InventoryModule.ServiceInspectionRepository;
@@ -121,7 +124,7 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
     // AFTER
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String saveServiceInspection(SaveServiceInspectionDto req) {
+    public SaveServiceInspectionResponseDto saveServiceInspection(SaveServiceInspectionDto req) {
         if (req.getSoId() == null || req.getSoId().isEmpty()) {
             throw new RuntimeException("soId is required to create a Service Inspection.");
         }
@@ -152,7 +155,10 @@ public class ServiceInspectionServiceImpl implements ServiceInspectionService {
         // No bespoke approve/reject/changeReq methods here — that's performTransitionAction()'s job.
         workflowService.initiateWorkflow(inspectionProcessId, WORKFLOW_NAME, req.getCreatedBy());
 
-        return inspectionProcessId;
+SaveServiceInspectionResponseDto response = new SaveServiceInspectionResponseDto();
+        response.setInspectionProcessId(inspectionProcessId);
+        return response;
+        // return inspectionProcessId;
     }
 
     // ── DRAFT ENDPOINTS ──────────────────────────────────────────────
@@ -453,32 +459,57 @@ d.setJobDescription(line.getJobDescription());
         dto.setProcessId(inspectionProcessId);
         dto.setVendorName(so.getVendorName());
 
-        List<paymentVoucherMaterials> materials = lines.stream().map(mat -> {
-            paymentVoucherMaterials m = new paymentVoucherMaterials();
-            // m.setMaterialCode(mat.getMaterialCode());
-            // m.setMaterialDescription(mat.getMaterialDescription());
-            m.setMaterialCode(mat.getJobCode());
-m.setMaterialDescription(mat.getJobDescription());
-            m.setQuantity(mat.getAcceptedQty());   // accepted qty only — never the ordered qty
-            m.setUnitPrice(mat.getRate());
-            m.setGst(mat.getGst());
-            BigDecimal qty = mat.getAcceptedQty() != null ? mat.getAcceptedQty() : BigDecimal.ZERO;
-            BigDecimal price = mat.getRate() != null ? mat.getRate() : BigDecimal.ZERO;
-            m.setAmount(qty.multiply(price));
-            return m;
-        }).collect(Collectors.toList());
+        List<paymentVoucherJobs> jobs = lines.stream().map(mat -> {
+    paymentVoucherJobs j = new paymentVoucherJobs();
+    j.setJobCode(mat.getJobCode());
+    j.setJobDescription(mat.getJobDescription());
+    j.setQuantity(mat.getAcceptedQty());   // accepted qty only — never the ordered qty
+    j.setUnitPrice(mat.getRate());
+    j.setGst(mat.getGst());
+    BigDecimal qty = mat.getAcceptedQty() != null ? mat.getAcceptedQty() : BigDecimal.ZERO;
+    BigDecimal price = mat.getRate() != null ? mat.getRate() : BigDecimal.ZERO;
+    j.setAmount(qty.multiply(price));
+    return j;
+}).collect(Collectors.toList());
 
-        dto.setMaterialsList(materials);
+dto.setJobsList(jobs);
 
-        BigDecimal totalAmount = materials.stream()
-                .map(m -> {
-                    BigDecimal amount = m.getAmount() != null ? m.getAmount() : BigDecimal.ZERO;
-                    BigDecimal gst = m.getGst() != null ? m.getGst() : BigDecimal.ZERO;
-                    BigDecimal gstAmount = amount.multiply(gst).divide(BigDecimal.valueOf(100));
-                    return amount.add(gstAmount);
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        dto.setTotalAmount(totalAmount);
+BigDecimal totalAmount = jobs.stream()
+        .map(j -> {
+            BigDecimal amount = j.getAmount() != null ? j.getAmount() : BigDecimal.ZERO;
+            BigDecimal gst = j.getGst() != null ? j.getGst() : BigDecimal.ZERO;
+            BigDecimal gstAmount = amount.multiply(gst).divide(BigDecimal.valueOf(100));
+            return amount.add(gstAmount);
+        })
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+dto.setTotalAmount(totalAmount);
+
+//         List<paymentVoucherMaterials> materials = lines.stream().map(mat -> {
+//             paymentVoucherMaterials m = new paymentVoucherMaterials();
+//             // m.setMaterialCode(mat.getMaterialCode());
+//             // m.setMaterialDescription(mat.getMaterialDescription());
+//             m.setMaterialCode(mat.getJobCode());
+// m.setMaterialDescription(mat.getJobDescription());
+//             m.setQuantity(mat.getAcceptedQty());   // accepted qty only — never the ordered qty
+//             m.setUnitPrice(mat.getRate());
+//             m.setGst(mat.getGst());
+//             BigDecimal qty = mat.getAcceptedQty() != null ? mat.getAcceptedQty() : BigDecimal.ZERO;
+//             BigDecimal price = mat.getRate() != null ? mat.getRate() : BigDecimal.ZERO;
+//             m.setAmount(qty.multiply(price));
+//             return m;
+//         }).collect(Collectors.toList());
+
+//         dto.setMaterialsList(materials);
+
+//         BigDecimal totalAmount = materials.stream()
+//                 .map(m -> {
+//                     BigDecimal amount = m.getAmount() != null ? m.getAmount() : BigDecimal.ZERO;
+//                     BigDecimal gst = m.getGst() != null ? m.getGst() : BigDecimal.ZERO;
+//                     BigDecimal gstAmount = amount.multiply(gst).divide(BigDecimal.valueOf(100));
+//                     return amount.add(gstAmount);
+//                 })
+//                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+//         dto.setTotalAmount(totalAmount);
 
         // NOTE: carry-forward is keyed by soId, same as the old GRN-based method was. For a
         // recurring/AMC SO with multiple inspection cycles this may need to be scoped to

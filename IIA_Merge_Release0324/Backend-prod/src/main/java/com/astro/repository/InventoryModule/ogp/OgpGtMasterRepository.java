@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import com.astro.entity.InventoryModule.OgpGtMasterEntity;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -28,5 +29,9 @@ public interface OgpGtMasterRepository extends JpaRepository<OgpGtMasterEntity,L
             "WHERE gm.create_date BETWEEN :startDate AND :endDate " +
             "GROUP BY gm.id", nativeQuery = true)
     List<Object[]> getOgpGtReport(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    List<OgpGtMasterEntity> findByStatusInOrderByCreateDateAsc(List<String> statuses);
+List<OgpGtMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
 
 }

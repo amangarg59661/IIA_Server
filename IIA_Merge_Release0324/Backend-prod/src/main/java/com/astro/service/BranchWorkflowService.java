@@ -82,6 +82,13 @@ public interface BranchWorkflowService {
      * @return Map of conditions extracted from indent
      */
     Map<String, Object> buildIndentConditions(String requestId);
+ /**
+     * Build conditions map for Cycle Count workflow
+     *
+     * @param requestId Indent ID
+     * @return Map of conditions extracted from indent
+     */
+    Map<String, Object> buildCycleCountConditions(String requestId);
 
     /**
      * Build conditions map for tender workflow

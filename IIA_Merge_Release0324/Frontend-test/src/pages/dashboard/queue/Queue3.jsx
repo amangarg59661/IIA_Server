@@ -9,6 +9,7 @@ import GoodsTransferQueue from './GoodsTransferQueue'
 import DemandAndIssueQueue from './DemandAndIssueQueue'
 import AssetDispoaslQueue from './AssetDisposalQueue'
 import PendingIssueNote from './pendingIssueNote'
+import CycleCountQueue from './CycleCountQueue'
 
 const Queue3 = () => {
 const auth = useSelector((state) => state.auth);
@@ -56,6 +57,11 @@ const roleName=auth.role;
           label: 'Pending Issue Note',
           children: <PendingIssueNote />,
         }] : []),
+         {
+          key: 'CC',
+          label: 'Cycle Count',
+          children: <CycleCountQueue />,
+        },
       ]}
     />
   )

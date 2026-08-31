@@ -220,6 +220,15 @@ private String extractBaseIndentId(String indentId) {
         indentCreation.setFinancialYear(indentRequestDTO.getFinancialYear());
         indentCreation.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
         indentCreation.setBuyBack(indentRequestDTO.getBuyBack());
+        indentCreation.setBuyBackMaterialDescription(indentRequestDTO.getBuyBackMaterialDescription());
+indentCreation.setMake(indentRequestDTO.getMake());
+indentCreation.setBuyBackQuantity(indentRequestDTO.getBuyBackQuantity());
+indentCreation.setStatusOfBuyBackMaterial(indentRequestDTO.getStatusOfBuyBackMaterial());
+indentCreation.setBuyBackYearOfManufacture(
+        indentRequestDTO.getBuyBackYearOfManufacture() != null
+                ? CommonUtils.convertStringToDateObject(indentRequestDTO.getBuyBackYearOfManufacture())
+                : null
+);
 
         if (indentRequestDTO.getUploadBuyBackFileNames() == null || indentRequestDTO.getUploadBuyBackFileNames().isEmpty()) {
             indentCreation.setUploadBuyBackFileNames(null);
@@ -486,6 +495,15 @@ public IndentCreationResponseDTO saveIndentDraft(IndentCreationRequestDTO dto) {
     indent.setFinancialYear(dto.getFinancialYear());
     indent.setProprietaryJustification(dto.getProprietaryJustification());
     indent.setBuyBack(dto.getBuyBack());
+    indent.setBuyBackMaterialDescription(dto.getBuyBackMaterialDescription());
+indent.setMake(dto.getMake());
+indent.setBuyBackQuantity(dto.getBuyBackQuantity());
+indent.setStatusOfBuyBackMaterial(dto.getStatusOfBuyBackMaterial());
+indent.setBuyBackYearOfManufacture(
+        dto.getBuyBackYearOfManufacture() != null
+                ? CommonUtils.convertStringToDateObject(dto.getBuyBackYearOfManufacture())
+                : null
+);
     indent.setSerialNumber(dto.getSerialNumber());
     indent.setModelNumber(dto.getModelNumber());
     indent.setReason(dto.getReason());
@@ -659,6 +677,15 @@ public IndentCreationResponseDTO updateIndentDraft(String indentId, IndentCreati
     existing.setFinancialYear(dto.getFinancialYear());
     existing.setProprietaryJustification(dto.getProprietaryJustification());
     existing.setBuyBack(dto.getBuyBack());
+    existing.setBuyBackMaterialDescription(dto.getBuyBackMaterialDescription());
+existing.setMake(dto.getMake());
+existing.setBuyBackQuantity(dto.getBuyBackQuantity());
+existing.setStatusOfBuyBackMaterial(dto.getStatusOfBuyBackMaterial());
+existing.setBuyBackYearOfManufacture(
+        dto.getBuyBackYearOfManufacture() != null
+                ? CommonUtils.convertStringToDateObject(dto.getBuyBackYearOfManufacture())
+                : null
+);
     existing.setSerialNumber(dto.getSerialNumber());
     existing.setModelNumber(dto.getModelNumber());
     existing.setReason(dto.getReason());
@@ -979,6 +1006,15 @@ if ("DRAFT".equals(old.getCurrentStatus())) {
     newIndent.setProprietaryJustification(indentRequestDTO.getProprietaryJustification());
     newIndent.setReason(indentRequestDTO.getReason());
     newIndent.setBuyBack(indentRequestDTO.getBuyBack());
+    newIndent.setBuyBackMaterialDescription(indentRequestDTO.getBuyBackMaterialDescription());
+newIndent.setMake(indentRequestDTO.getMake());
+newIndent.setBuyBackQuantity(indentRequestDTO.getBuyBackQuantity());
+newIndent.setStatusOfBuyBackMaterial(indentRequestDTO.getStatusOfBuyBackMaterial());
+newIndent.setBuyBackYearOfManufacture(
+        indentRequestDTO.getBuyBackYearOfManufacture() != null
+                ? CommonUtils.convertStringToDateObject(indentRequestDTO.getBuyBackYearOfManufacture())
+                : null
+);
     newIndent.setSerialNumber(indentRequestDTO.getSerialNumber());
     newIndent.setModelNumber(indentRequestDTO.getModelNumber());
     newIndent.setIsUnderProject(indentRequestDTO.getIsUnderProject() != null ? indentRequestDTO.getIsUnderProject() : false);
@@ -1480,6 +1516,13 @@ private String normalizeIndentorLocation(String rawLocation) {
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());
         response.setBuyBack(indentCreation.getBuyBack());
+        response.setBuyBackMaterialDescription(indentCreation.getBuyBackMaterialDescription());
+response.setMake(indentCreation.getMake());
+response.setBuyBackQuantity(indentCreation.getBuyBackQuantity());
+response.setStatusOfBuyBackMaterial(indentCreation.getStatusOfBuyBackMaterial());
+if (indentCreation.getBuyBackYearOfManufacture() != null) {
+    response.setBuyBackYearOfManufacture(CommonUtils.convertDateToString(indentCreation.getBuyBackYearOfManufacture()));
+}
         if (indentCreation.getUploadBuyBackFileNames() == null || indentCreation.getUploadBuyBackFileNames().isEmpty()) {
             response.setUploadBuyBackFileNames(null);
         } else {
@@ -1797,6 +1840,13 @@ jobResponse.setVendorNames(vendorNamesList);
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());
         response.setBuyBack(indentCreation.getBuyBack());
+        response.setBuyBackMaterialDescription(indentCreation.getBuyBackMaterialDescription());
+response.setMake(indentCreation.getMake());
+response.setBuyBackQuantity(indentCreation.getBuyBackQuantity());
+response.setStatusOfBuyBackMaterial(indentCreation.getStatusOfBuyBackMaterial());
+if (indentCreation.getBuyBackYearOfManufacture() != null) {
+    response.setBuyBackYearOfManufacture(CommonUtils.convertDateToString(indentCreation.getBuyBackYearOfManufacture()));
+}
 
         if (indentCreation.getUploadBuyBackFileNames() == null || indentCreation.getUploadBuyBackFileNames().isEmpty()) {
             response.setUploadBuyBackFile(null);
@@ -2002,6 +2052,13 @@ jobResponse.setVendorNames(vendorNamesList);
         response.setReason(indentCreation.getReason());
         response.setFileType(indentCreation.getFileType());
         response.setBuyBack(indentCreation.getBuyBack());
+        response.setBuyBackMaterialDescription(indentCreation.getBuyBackMaterialDescription());
+response.setMake(indentCreation.getMake());
+response.setBuyBackQuantity(indentCreation.getBuyBackQuantity());
+response.setStatusOfBuyBackMaterial(indentCreation.getStatusOfBuyBackMaterial());
+if (indentCreation.getBuyBackYearOfManufacture() != null) {
+    response.setBuyBackYearOfManufacture(CommonUtils.convertDateToString(indentCreation.getBuyBackYearOfManufacture()));
+}
         response.setUploadBuyBackFileNames(indentCreation.getUploadBuyBackFileNames());
         response.setSerialNumber(indentCreation.getSerialNumber());
         response.setModelNumber(indentCreation.getModelNumber());

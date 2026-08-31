@@ -76,6 +76,8 @@ public class MaterialMasterUtil {
     // Added by Aman
       @Column(name = "Asset_Flag")
     private Boolean assetFlag;
+    @Column(name = "update_flag")
+    private Boolean updateFlag;
     // End
 
     @CreatedDate

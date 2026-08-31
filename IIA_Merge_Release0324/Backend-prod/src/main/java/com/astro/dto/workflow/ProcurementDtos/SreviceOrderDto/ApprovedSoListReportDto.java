@@ -9,6 +9,10 @@ import java.util.List;
 public class ApprovedSoListReportDto {
 
     private String approvedDate;
+    private String soDate;
+private String indentorName;
+private String nonGemReason;
+private String gemOrNonGem;
     private String soId;
     private String vendorName;
     private Double value;

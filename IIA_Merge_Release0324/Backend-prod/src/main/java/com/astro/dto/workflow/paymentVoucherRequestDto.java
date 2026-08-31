@@ -36,6 +36,7 @@ public class paymentVoucherRequestDto {
    private String createdBy;
 
     private List<paymentVoucherMaterialRequestDto> materials;
+    private List<paymentVoucherJobRequestDto> jobs;
     private List<paymentVoucherTdsRequestDto> tdsList;
     private List<paymentVoucherDeductionRequestDto> deductions;
 

@@ -89,10 +89,10 @@ const handleOpenPoFormat = () => {
             {date ? new Date(date).toLocaleDateString() : 'N/A'}
           </Descriptions.Item>
           <Descriptions.Item label="Tender Request Copy">
-           <Button onClick={handleOpenTenderFormat}>View Tender Copy</Button>
+           <Button onClick={handleOpenTenderFormat}>View Tender Document </Button>
           </Descriptions.Item>
           <Descriptions.Item label="PO Copy">
-             <Button onClick={handleOpenPoFormat}>View Po Copy</Button>
+             <Button onClick={handleOpenPoFormat}>View PO Document </Button>
           </Descriptions.Item>
         </Descriptions>
       </div>

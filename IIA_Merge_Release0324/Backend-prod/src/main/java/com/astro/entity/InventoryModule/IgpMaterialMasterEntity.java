@@ -47,4 +47,6 @@ public class IgpMaterialMasterEntity {
     private LocalDateTime createDate;
 
     private String locationId;
+    private String updatedBy;
+private LocalDateTime updateDate;
 }

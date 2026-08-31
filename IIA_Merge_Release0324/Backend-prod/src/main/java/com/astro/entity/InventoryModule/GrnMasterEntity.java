@@ -69,5 +69,10 @@ public class GrnMasterEntity {
 
     private Integer custodianId;
 
+     @LastModifiedBy
+    private String updatedBy;
+    @LastModifiedDate
+    private LocalDateTime updateDate;
+
 
 }

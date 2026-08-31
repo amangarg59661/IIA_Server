@@ -28,13 +28,14 @@ const GatePass = () => {
         // Receiver Approval
         await axios.post("/api/process-controller/approveReciverGtOgp", {
           ogpId: record.ogpId,
-        });
+        },
+      {params: {actionby:userId}});
         message.success("Gate Pass Receiver Approved Successfully");
       } else if (role === "Store Purchase Officer") {
         // Final GT Approval
         await axios.post("/api/process-controller/approveGtOgp", {
           ogpId: record.ogpId,
-        });
+        }, {params:{actionBy: userId}});
         message.success("Gate Pass Final Approved Successfully");
       }
       fetchGatePassData();
@@ -45,7 +46,7 @@ const GatePass = () => {
       try {
         await axios.post("/api/process-controller/approveMaterialIgp", {
           igpId: record.igpId,
-        });
+        }, {params: {actionBy:userId}});
         message.success("Gate Pass Approved Successfully");
         fetchGatePassData();
       } catch (error) {
@@ -61,7 +62,7 @@ const GatePass = () => {
       try {
         await axios.post("/api/process-controller/approveGiOgp", {
           ogpId: record.ogpId,
-        });
+        }, {params: {actionBy:userId}});
         message.success("Gate Pass Approved Successfully");
         fetchGatePassData();
       } catch (error) {
@@ -75,7 +76,7 @@ const GatePass = () => {
     }
     if (record.formType === "ASSET_DISPOSAL") {
     try {
-      await axios.post(`/api/process-controller/approveOgpAssetDisposal?disposalOgpId=${record.disposalOgpId}`);
+      await axios.post(`/api/process-controller/approveOgpAssetDisposal?disposalOgpId=${record.disposalOgpId}`, null , {params: {actionBy:userId}});
       message.success("Asset Disposal Approved Successfully");
       fetchGatePassData(); // refresh after approval
     } catch (error) {
@@ -93,7 +94,7 @@ const GatePass = () => {
         {
           processNo: "INV/" + record.ogpSubProcessId,
           type: record?.issueNoteId ? "ISN" : "PO",
-        }
+        },  {params: {actionBy:userId}}
       );
       message.success("Gate Pass approved successfully");
       fetchGatePassData(); // Refresh the data
@@ -119,7 +120,7 @@ const GatePass = () => {
   const handleReject = async (record) => {
     if(record.formType === "GT"){
       try{
-        await axios.post("/api/process-controller/rejectGtOgp", {ogpId: record.ogpId})
+        await axios.post("/api/process-controller/rejectGtOgp", {ogpId: record.ogpId}, {params: {actionBy:userId}})
         message.success("Gate Pass Rejected Successfully");
         fetchGatePassData();
       }
@@ -135,7 +136,7 @@ const GatePass = () => {
       try {
         await axios.post("/api/process-controller/rejectMaterialIgp", {
           igpId: record.igpId,
-        });
+        } , {params: {actionBy:userId}});
         message.success("Gate Pass Rejected Successfully");
         fetchGatePassData();
       } catch (error) {
@@ -151,7 +152,7 @@ const GatePass = () => {
       try {
         await axios.post("/api/process-controller/rejectGiOgp", {
           ogpId: record.ogpId,
-        });
+        }, {params: {actionBy:userId}});
         message.success("Gate Pass Rejected Successfully");
         fetchGatePassData();
       } catch (error) {
@@ -165,7 +166,7 @@ const GatePass = () => {
     }
      if (record.formType === "ASSET_DISPOSAL") {
     try {
-      await axios.post(`/api/process-controller/rejectOgpAssetDisposal?disposalOgpId=${record.disposalOgpId}`);
+      await axios.post(`/api/process-controller/rejectOgpAssetDisposal?disposalOgpId=${record.disposalOgpId}`, null, {params: {actionBy:userId}});
       message.success("Asset Disposal Rejected Successfully");
       fetchGatePassData(); // refresh after rejection
     } catch (error) {
@@ -178,7 +179,7 @@ const GatePass = () => {
       await axios.post(`/api/process-controller/rejectOgp`, {
         processNo: "INV/" + record.ogpSubProcessId,
         type: record?.issueNoteId ? "ISN" : "PO",
-      });
+      } , {params: {actionBy:userId}});
       message.success("Gate Pass rejected successfully");
       fetchGatePassData();
     } catch (error) {

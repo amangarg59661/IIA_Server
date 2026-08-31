@@ -1374,8 +1374,17 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                         },
                         {
                             name: "quarter",
-                            label: "Quarter",
+                            // label: "Quarter",
+                            label: (
+        <span>
+            Quarter
+            <Tooltip title="For capital requirements, please specify the quarter and year in which the budget was projected.">
+                <span style={{ marginLeft: 6, color: '#1890ff', cursor: 'pointer' }}>ⓘ</span>
+            </Tooltip>
+        </span>
+    ),
                             type: "select",
+                            
                             disabled: !formData.isEditable,
                             options: [
                                 { label: "Q1", value: "Q1" },
@@ -1474,12 +1483,23 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                         },
                         ...(formData.buyBack ? [{
                             name: "uploadBuyBackFileNames",
-                            label: "Upload Buy Back File",
+                            label: "Upload additional details of the material Offered for buy back with images",
                             type: "multiImage",
                             // required: true
-                        }, {
+                        }, 
+                        {
+                            name: "buyBackMaterialDescription",
+                            label: "Material Description",
+                            type: "text",
+                            required: true,
+                        },{
                             name: "modelNumber",
                             label: "Model Number",
+                            type: "text",
+                            required: true,
+                        }, {
+                            name: "make",
+                            label: "Make",
                             type: "text",
                             required: true,
                         }, {
@@ -1492,11 +1512,35 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             label: "Date Of Purchase",
                             type: "date",
                             required: true,
-                        }, {
+                        },
+                        {
+                            name: "buyBackYearOfManufacture",
+                            label: "Year of Manufacture",
+                            type: "date",
+                            required: true,
+
+                        }, 
+                        {
+                            name: "buyBackQuantity",
+                            label: "Quantity",
+                            type: "text",
+                            required: true,
+                        },
+                        {
                             name: "buyBackAmount",
                             label: "Buy Back Amount",
                             type: "text",
                             required: true,
+                        },
+                        {
+                            name: "statusOfBuyBackMaterial",
+                            label: "Status of Buy Back Material",
+                            type: "select",
+                            required: true,
+                            options: [
+                                { label: "Funtional", value: "Functional" },
+                                { label: "Non-Functional", value: "Non-Functional" },
+                            ]
                         }
                         ] : []),
                         {
@@ -1510,7 +1554,7 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                             name: "uploadPACOrBrandPACFileName",
                             label: "Upload PAC",
                             type: "multiImage",
-                            required: true,
+                            // required: true,
                         }, {
                             name: "brandAndModel",
                             label: "Brand and Model",

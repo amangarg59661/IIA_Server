@@ -2,6 +2,7 @@ package com.astro.service.InventoryModule;
 
 import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
+import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionResponseDto;
 import com.astro.dto.workflow.InventoryModule.paymentVoucherDto;
 import com.astro.dto.workflow.InventoryModule.EligibleSoDto;
 import com.astro.dto.workflow.InventoryModule.SoInspectionInfoDto;
@@ -13,7 +14,7 @@ public interface ServiceInspectionService {
 
     // Persists master + material lines, then kicks off the generic
     // WorkflowTransition-based approval chain. Returns the new inspectionProcessId.
-    String saveServiceInspection(SaveServiceInspectionDto req);
+    SaveServiceInspectionResponseDto saveServiceInspection(SaveServiceInspectionDto req);
 
     ServiceInspectionDto getServiceInspectionDtls(String inspectionProcessId);
 

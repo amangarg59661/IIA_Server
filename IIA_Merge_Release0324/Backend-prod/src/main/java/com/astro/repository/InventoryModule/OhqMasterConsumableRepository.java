@@ -4,6 +4,8 @@ import com.astro.entity.InventoryModule.OhqMasterConsumableEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.query.Param;
+import java.time.LocalDate;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,4 +47,60 @@ public interface OhqMasterConsumableRepository extends JpaRepository<OhqMasterCo
 List<Object[]> getOhqConsumableReport();
 
     Optional<OhqMasterConsumableEntity> findByMaterialCodeAndCustodianId(String materialCode, String custodianId);
+
+    // @Query(value = """
+    //     WITH movements AS (
+    //         SELECT material_code, locator_id, quantity AS qty, create_date AS txn_date, 'IN' AS direction
+    //         FROM ohq_consumable_store_stock
+
+    //         UNION ALL
+
+    //         SELECT d.material_code, d.sender_locator_id AS locator_id, d.quantity AS qty,
+    //                m.issue_date AS txn_date, 'OUT' AS direction
+    //         FROM demand_and_issue_detail d
+    //         JOIN demand_and_issue_master m ON d.di_id = m.id
+    //         WHERE m.status = 'Approved'
+    //     )
+     @Query(value = """
+        WITH movements AS (
+            SELECT material_code, locator_id, quantity AS qty, create_date AS txn_date, 'IN' AS direction
+            FROM ohq_consumable_store_stock_entity
+
+            UNION ALL
+
+            SELECT d.material_code, d.sender_locator_id AS locator_id, d.quantity AS qty,
+                   m.issue_date AS txn_date, 'OUT' AS direction
+            FROM demand_and_issue_dtl d
+            JOIN demand_and_issue_master m ON d.di_id = m.id
+            WHERE m.status = 'Approved'
+        )
+        SELECT
+            mv.material_code, mm.description, mm.category, mm.sub_category, mm.uom, mm.unit_price,
+            mv.locator_id, lm.locator_desc,
+            SUM(CASE WHEN mv.txn_date < :fyStart AND mv.direction = 'IN'  THEN mv.qty
+                     WHEN mv.txn_date < :fyStart AND mv.direction = 'OUT' THEN -mv.qty ELSE 0 END) AS opening_stock,
+            SUM(CASE WHEN mv.txn_date >= :fyStart AND mv.direction = 'IN'  THEN mv.qty ELSE 0 END) AS quantity_received,
+            SUM(CASE WHEN mv.txn_date >= :fyStart AND mv.direction = 'OUT' THEN mv.qty ELSE 0 END) AS quantity_issued,
+            MAX(mv.txn_date) AS last_updated_date
+        FROM movements mv
+        JOIN material_master mm ON mv.material_code = mm.material_code
+        LEFT JOIN locator_master lm ON mv.locator_id = lm.locator_id
+        GROUP BY mv.material_code, mm.description, mm.category, mm.sub_category, mm.uom, mm.unit_price,
+                 mv.locator_id, lm.locator_desc
+        """, nativeQuery = true)
+    List<Object[]> getStockLedgerMovements(@Param("fyStart") LocalDate fyStart);
+
+    // @Query(value = """
+    //     SELECT material_code, locator_id, SUM(quantity) AS current_stock
+    //     FROM ohq_consumable_store_stock
+    //     GROUP BY material_code, locator_id
+    //     """, nativeQuery = true)
+    // List<Object[]> getCurrentConsumableStoreStock();
+     @Query(value = """
+        SELECT material_code, locator_id, SUM(quantity) AS current_stock
+        FROM ohq_consumable_store_stock_entity
+        GROUP BY material_code, locator_id
+        """, nativeQuery = true)
+    List<Object[]> getCurrentConsumableStoreStock();
+
 }

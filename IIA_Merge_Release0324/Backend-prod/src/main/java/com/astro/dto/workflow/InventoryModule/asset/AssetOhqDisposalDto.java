@@ -21,6 +21,7 @@ public class AssetOhqDisposalDto {
     private String serialNo;
     private String modelNo;
     private String assetCode;
+    private String uom;
 
     private List<String> serialNumbers;
 

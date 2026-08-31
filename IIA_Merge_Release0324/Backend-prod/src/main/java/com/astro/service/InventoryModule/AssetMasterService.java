@@ -17,7 +17,7 @@ public interface AssetMasterService {
     String updateAssetMaster(AssetMasterDto request);
     public String saveAssetDisposal(AssetDisposalDto request);
     AssetMasterDto getAssetDetails(Integer assetId);
-    public List<AssetMasterReportDto> getAssetReport();
+    public List<AssetMasterReportDto> getAssetReport(String userId, String roleName);
     List<Integer> getAllAssetIds();
     public List<OhqMasterEntity> getAssetOhqList();
     public List<AssetOhqDetailsDto> getAssetOhqDetails();
@@ -25,8 +25,8 @@ public interface AssetMasterService {
     public List<OhqConsumableStoreStockEntity> getStoreStockOhqConsumableList();
     public List<AssetOhqDisposalDto> getAllAssetsForDisposal();
     public List<AssetDisposalDto> getAllAssetDisposalAwaitingForApproval();
-    public void approveDisposal(String disposalIdStr);
-    public void rejectDisposal(String disposalIdStr);
+    public void approveDisposal(String disposalIdStr, Integer actionBy);
+    public void rejectDisposal(String disposalIdStr, Integer actionBy);
     public AssetDisposalDto getAssetDisposalById(String disposalIdStr);
     public String updateAssetDisposal(AssetDisposalDto request);
     public List<AssetDisposalDto> getAllApprovedAssetDisposalReport();

@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -128,4 +128,8 @@ public interface GiMasterRepository extends JpaRepository<GiMasterEntity, Intege
     Optional<GiMasterEntity> findByGprnProcessIdAndInspectionSubProcessId(String processId, Integer subProcessId);
 
     Optional<GiMasterEntity> findByInspectionSubProcessId(Integer giSubProcessId);
+
+    List<GiMasterEntity> findByStatusOrderByCreateDateAsc(String status);
+List<GiMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
+
 }

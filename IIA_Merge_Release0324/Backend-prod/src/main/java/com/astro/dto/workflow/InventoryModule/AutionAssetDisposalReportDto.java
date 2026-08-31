@@ -11,6 +11,7 @@ public class AutionAssetDisposalReportDto {
     private String locationId;
     private String status;
     private String custodianId;
+    private String custodianName;
     private String createdBy;
     private String createDate;
     private String action;

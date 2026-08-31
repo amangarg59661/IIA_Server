@@ -15,6 +15,8 @@ public class PurchaseOrderAttributesDTO {
     private BigDecimal exchangeRate;
     private BigDecimal gst;
     private BigDecimal duties;
+    private BigDecimal gstDuties;
+    private BigDecimal gstFreight;
     private BigDecimal freightCharge;
     private String budgetCode;
 

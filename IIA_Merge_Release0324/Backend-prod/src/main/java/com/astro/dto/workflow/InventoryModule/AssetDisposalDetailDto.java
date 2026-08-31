@@ -9,6 +9,7 @@ public class AssetDisposalDetailDto {
     private Integer assetId;
     private String assetCode;
     private String assetDesc;
+    private String uom;
     private BigDecimal quantity;
     private String disposalCategory;
     private String disposalMode;
@@ -19,6 +20,7 @@ public class AssetDisposalDetailDto {
     private BigDecimal depriciationRate;
     private BigDecimal unitPrice;
     private String custodianId;
+    private String custodianName;
     private BigDecimal poValue;
     private String reasonForDisposal;
     private String poId;

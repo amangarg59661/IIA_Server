@@ -30,6 +30,7 @@ public class MaterialMasterUtilResponseDto {
     private LocalDateTime updatedDate;
     // Added by Aman 
     private Boolean asset_Flag;
+    private Boolean updateFlag;
     // End
 }
 

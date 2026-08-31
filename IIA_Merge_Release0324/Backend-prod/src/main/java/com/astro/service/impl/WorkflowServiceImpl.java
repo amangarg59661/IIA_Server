@@ -38,6 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import com.astro.repository.InventoryModule.ServiceInspectionRepository;
+import com.astro.service.InventoryModule.CycleCountService;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -61,6 +62,8 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     @Autowired
     private BudgetService budgetService;
+    @Autowired
+private CycleCountService cycleCountService;
 
     @Autowired
     private InventoryService inventoryService;
@@ -838,6 +841,9 @@ public class WorkflowServiceImpl implements WorkflowService {
         }
         else if (workflowNameUpper.contains("CONTINGENCY")) {
             return branchWorkflowService.buildContingencyConditions(requestId);
+        }
+         else if (workflowNameUpper.contains("CYCLE COUNT")) {
+            return branchWorkflowService.buildCycleCountConditions(requestId);
         }
 
         System.out.println("❌ No matching workflow found for: " + workflowName);
@@ -1812,7 +1818,14 @@ public class WorkflowServiceImpl implements WorkflowService {
                     System.out.println("✅ [REJECTION] ContingencyPurchase " + requestId + " → REJECTED");
                 });
 
-            } else {
+            }  else if (requestId.startsWith("CC") || workflowNameUpper.contains("CYCLE COUNT")) {
+                // Routed through the service, not a direct repository mutation like the
+                // blocks above — CycleCountMasterEntity's PK is a Long, not the requestId
+                // string itself, and rejectCycleCount() already parses "CC/<id>" correctly.
+                cycleCountService.rejectCycleCount(requestId);
+                System.out.println("✅ [REJECTION] Cycle Count " + requestId + " → REJECTED");
+
+            }else {
                 System.err.println("⚠️ [REJECTION] No entity update rule for requestId="
                         + requestId + ", workflowName=" + workflowName
                         + ". Add a branch in updateRequestEntityOnRejection() if needed.");
@@ -2119,7 +2132,7 @@ public class WorkflowServiceImpl implements WorkflowService {
                     throw e; // Block approval if budget insufficient
                 }
             }
-             if (reqId != null && reqId.startsWith("CP")) {
+                         if (reqId != null && reqId.startsWith("CP")) {
                 try {
                     contigencyPurchaseRepository.findById(reqId).ifPresent(cp -> {
                         budgetService.finalizeCpAsSpent(
@@ -2139,12 +2152,57 @@ public class WorkflowServiceImpl implements WorkflowService {
                     throw e; // Block approval if budget insufficient
                 }
             }
+                            // Cycle Count final approval → apply the counted variance to store stock
+            if (reqId != null && reqId.startsWith("CC")) {
+                try {
+                    cycleCountService.approveCycleCount(reqId);
+                    System.out.println("✅ [CC FINAL APPROVAL] Stock adjusted for Cycle Count: " + reqId);
+                } catch (Exception e) {
+                    System.err.println("❌ [CC FINAL APPROVAL] Stock adjustment failed for " + reqId + ": " + e.getMessage());
+                    throw e; // Block approval if the adjustment can't be applied — matches PO/SO/CP
+                }
+            }
         }
 
         workflowTransitionRepository.save(nextWorkflowTransition);
         return nextWorkflowTransition;
     }
+    //          if (reqId != null && reqId.startsWith("CP")) {
+    //             try {
+    //                 contigencyPurchaseRepository.findById(reqId).ifPresent(cp -> {
+    //                     budgetService.finalizeCpAsSpent(
+    //                             cp.getContigencyId(),
+    //                             cp.getCpMaterials(),
+    //                             cp.getCpJobDetails());
+    //                     System.out.println("✅ [CP FINAL APPROVAL] Budget spent for CP: " + reqId);
+    //                       if ("MATERIAL".equalsIgnoreCase(cp.getCpType())) {
+    //                         inventoryService.updateInventoryForCp(cp);
+    //                         System.out.println("✅ [CP FINAL APPROVAL] Inventory updated for CP: " + reqId);
+    //                     } else {
+    //                         System.out.println("ℹ️ [CP FINAL APPROVAL] Job type — inventory update skipped for CP: " + reqId);
+    //                     }
+    //                 });
+    //             } catch (Exception e) {
+    //                 System.err.println("❌ [CP FINAL APPROVAL] Budget finalization failed for " + reqId + ": " + e.getMessage());
+    //                 throw e; // Block approval if budget insufficient
+    //             }
+    //                         // Cycle Count final approval → apply the counted variance to store stock
+    //         if (reqId != null && reqId.startsWith("CC")) {
+    //             try {
+    //                 cycleCountService.approveCycleCount(reqId);
+    //                 System.out.println("✅ [CC FINAL APPROVAL] Stock adjusted for Cycle Count: " + reqId);
+    //             } catch (Exception e) {
+    //                 System.err.println("❌ [CC FINAL APPROVAL] Stock adjustment failed for " + reqId + ": " + e.getMessage());
+    //                 throw e; // Block approval if the adjustment can't be applied — matches PO/SO/CP
+    //             }
+            
+    //         }
+    //     }
 
+    //     workflowTransitionRepository.save(nextWorkflowTransition);
+    //     return nextWorkflowTransition;
+    // }
+    
     /**
      * Create an escalation transition to Director
      */

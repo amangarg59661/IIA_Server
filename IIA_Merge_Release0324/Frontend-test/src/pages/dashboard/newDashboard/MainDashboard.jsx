@@ -336,6 +336,7 @@ import IndentStatus from "../../reports/IndentStatus";
 import { useSelector } from "react-redux";  
 import PendingRecordsReport from "../../reports/pendingRecords";
 import axios from "axios";
+import DashboardOverview from "./DashboardOverview";
 import AssetReport from "../../reports/AssetReport";
 import StockReport from "../../reports/StockReport";
 import GoodsIssueReport from "../../reports/GoodsIssueReport";
@@ -830,8 +831,10 @@ useEffect(() => {
     <div className="px-4 flex flex-col gap-6">
       <h1 className="font-semibold !text-3xl text-center">Dashboard</h1>
 
+      <DashboardOverview />
+
       {/* Tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {/* <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {visibleTiles.map(tile => (
           <div
             key={tile.id}
@@ -843,38 +846,38 @@ useEffect(() => {
             <div className="dashboard-tab-icon">{tile.icon}</div>
             <div className="flex-1 text-right !text-md font-semibold">{tile.title}</div>
           </div>
-        ))}
+        ))} */}
       
+      {/* </div> */}
+        {/* {activeTile && (
+    <div className="flex gap-4 mt-4 items-center">
+      <div>
+        <label>Bar Chart Attribute: </label>
+        <select value={selectedBarKey} onChange={e => setSelectedBarKey(e.target.value)}>
+          {activeTile.attributes.map(attr => (
+            <option key={attr} value={attr}>{attr}</option>
+          ))}
+        </select>
       </div>
-      {activeTile && (
-  <div className="flex gap-4 mt-4 items-center">
-    <div>
-      <label>Bar Chart Attribute: </label>
-      <select value={selectedBarKey} onChange={e => setSelectedBarKey(e.target.value)}>
-        {activeTile.attributes.map(attr => (
-          <option key={attr} value={attr}>{attr}</option>
-        ))}
-      </select>
+      <div>
+        <label>Pie Chart Attribute: </label>
+        <select value={selectedPieKey} onChange={e => setSelectedPieKey(e.target.value)}>
+          {activeTile.attributes.map(attr => (
+            <option key={attr} value={attr}>{attr}</option>
+          ))}
+        </select>
+      </div>
     </div>
-    <div>
-      <label>Pie Chart Attribute: </label>
-      <select value={selectedPieKey} onChange={e => setSelectedPieKey(e.target.value)}>
-        {activeTile.attributes.map(attr => (
-          <option key={attr} value={attr}>{attr}</option>
-        ))}
-      </select>
-    </div>
-  </div>
-)}
+  )} */}
 
 
       {/* Bar Chart */}
     
-{activeTile && (chartDataMap[activeTab]?.chart1?.length > 0 || chartDataMap[activeTab]?.chart2?.length > 0) && (
-  <div className="grid md:grid-cols-2 gap-6 mt-6">
+{/* {activeTile && (chartDataMap[activeTab]?.chart1?.length > 0 || chartDataMap[activeTab]?.chart2?.length > 0) && (
+  <div className="grid md:grid-cols-2 gap-6 mt-6"> */}
 
     {/* Bar Chart */}
-    <div style={{ height: 300 }}>
+    {/* <div style={{ height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartDataMap[activeTab]?.chart1 || []}>
           <CartesianGrid strokeDasharray="3 3" />
@@ -887,7 +890,7 @@ useEffect(() => {
     </div>
 
     {/* Pie Chart */}
-    <div style={{ height: 300 }}>
+    {/*<div style={{ height: 300 }}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -909,17 +912,17 @@ useEffect(() => {
     </div>
 
   </div>
-)}
+)} */}
 
       {/* Report Table Component */}
-      <div className="mt-6">
+      {/* <div className="mt-6">
         {activeTile  && React.createElement(activeTile.component, {selectedBarKey,
           selectedPieKey,
           roleName,
          onChartData: (barData, pieData) => handleChartData(activeTile.id, barData, pieData)
 
         })}
-      </div>
+      </div> */}
     </div>
   );
 };

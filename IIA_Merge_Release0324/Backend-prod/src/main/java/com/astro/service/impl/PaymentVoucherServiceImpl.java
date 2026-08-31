@@ -6,6 +6,9 @@ import com.astro.dto.workflow.PaymentVoucherTdsDto;
 import com.astro.dto.workflow.PaymentVoucherDeductionDto;
 import com.astro.dto.workflow.paymentVoucherMaterialRequestDto;
 import com.astro.dto.workflow.paymentVoucherRequestDto;
+import com.astro.dto.workflow.PaymentVoucherJobDto;
+import com.astro.dto.workflow.paymentVoucherJobRequestDto;
+import com.astro.entity.PaymentVoucherJobs;
 import com.astro.dto.workflow.paymentVoucherTdsRequestDto;
 import com.astro.dto.workflow.paymentVoucherDeductionRequestDto;
 import com.astro.entity.PaymentVoucher;
@@ -140,6 +143,21 @@ if ("Service Order".equalsIgnoreCase(paymentFor) && !"Advance".equalsIgnoreCase(
         }).collect(Collectors.toList());
 
         voucher.setMaterialsList(materialsList);
+        if (dto.getJobs() != null) {
+    List<PaymentVoucherJobs> jobsList = dto.getJobs().stream().map(j -> {
+        PaymentVoucherJobs job = new PaymentVoucherJobs();
+        job.setJobCode(j.getJobCode());
+        job.setJobDescription(j.getJobDescription());
+        job.setQuantity(j.getQuantity());
+        job.setUnitPrice(j.getUnitPrice());
+        job.setCurrency(j.getCurrency());
+        job.setExchangeRate(j.getExchangeRate());
+        job.setGst(j.getGst());
+        job.setPaymentVoucher(voucher);
+        return job;
+    }).collect(Collectors.toList());
+    voucher.setJobsList(jobsList);
+}
 
         List<PaymentVoucherTdsDetails> tdsList = dto.getTdsList() == null ? new ArrayList<>() :
                 dto.getTdsList().stream().map(t -> {
@@ -221,6 +239,10 @@ if ("Service Order".equalsIgnoreCase(paymentFor) && !"Advance".equalsIgnoreCase(
         if (entity.getMaterialsList() != null) {
             dto.setMaterials(entity.getMaterialsList().stream().map(this::mapMaterial).collect(Collectors.toList()));
         }
+
+        if (entity.getJobsList() != null) {
+    dto.setJobs(entity.getJobsList().stream().map(this::mapJob).collect(Collectors.toList()));
+}
         // Map TDS lines
         if (entity.getTdsList() != null) {
             dto.setTdsList(entity.getTdsList().stream().map(this::mapTds).collect(Collectors.toList()));
@@ -233,6 +255,18 @@ if ("Service Order".equalsIgnoreCase(paymentFor) && !"Advance".equalsIgnoreCase(
 
         return dto;
     }
+
+    private paymentVoucherJobRequestDto mapJob(PaymentVoucherJobs j) {
+    paymentVoucherJobRequestDto dto = new paymentVoucherJobRequestDto();
+    dto.setJobCode(j.getJobCode());
+    dto.setJobDescription(j.getJobDescription());
+    dto.setQuantity(j.getQuantity());
+    dto.setUnitPrice(j.getUnitPrice());
+    dto.setCurrency(j.getCurrency());
+    dto.setExchangeRate(j.getExchangeRate());
+    dto.setGst(j.getGst());
+    return dto;
+}
 
     private paymentVoucherMaterialRequestDto mapMaterial(PaymentVoucherMaterials m) {
         paymentVoucherMaterialRequestDto dto = new paymentVoucherMaterialRequestDto();
@@ -361,6 +395,20 @@ public Map<String, BigDecimal> getAdvancePaidStatusByPoId(String poId) {
                     }).toList();
 
             dto.setMaterials(materialDtos);
+
+            List<PaymentVoucherJobDto> jobDtos = voucher.getJobsList() == null ? new ArrayList<>() :
+        voucher.getJobsList().stream().map(j -> {
+            PaymentVoucherJobDto jdto = new PaymentVoucherJobDto();
+            jdto.setJobCode(j.getJobCode());
+            jdto.setJobDescription(j.getJobDescription());
+            jdto.setQuantity(j.getQuantity());
+            jdto.setUnitPrice(j.getUnitPrice());
+            jdto.setCurrency(j.getCurrency());
+            jdto.setExchangeRate(j.getExchangeRate());
+            jdto.setGst(j.getGst());
+            return jdto;
+        }).toList();
+dto.setJobs(jobDtos);
 
             List<PaymentVoucherTdsDto> tdsDtos = voucher.getTdsList() == null ? new ArrayList<>() :
                     voucher.getTdsList().stream().map(t -> {

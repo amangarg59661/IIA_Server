@@ -33,6 +33,9 @@ public class AssetDisposalDetailEntity {
     
     @Column(name = "asset_desc", nullable = false)
     private String assetDesc;
+
+    @Column(name = "uom")
+    private String uom;
     
     @Column(name = "disposal_quantity", nullable = false, precision = 10, scale = 2)
     private BigDecimal disposalQuantity;

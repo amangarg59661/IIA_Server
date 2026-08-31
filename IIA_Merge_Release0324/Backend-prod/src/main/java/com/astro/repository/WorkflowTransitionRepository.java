@@ -353,4 +353,16 @@ ORDER BY wt.requestId, wt.createdDate
 @Query("SELECT wt FROM WorkflowTransition wt WHERE wt.requestId = :requestId AND wt.nextAction = 'Pending' ORDER BY wt.workflowTransitionId DESC")
 List<WorkflowTransition> findPendingTransitionsByRequestId(@Param("requestId") String requestId);
 
+// --- Dashboard summary additions ---
+@Query("""
+SELECT w FROM WorkflowTransition w
+WHERE w.nextRole = :roleName
+AND w.workflowTransitionId = (SELECT MAX(w2.workflowTransitionId) FROM WorkflowTransition w2 WHERE w2.requestId = w.requestId)
+""")
+List<WorkflowTransition> findPendingTransitionsByRole(@Param("roleName") String roleName);
+
+List<WorkflowTransition> findByCreatedByAndCreatedDateBetween(String createdBy, Date start, Date end);
+List<WorkflowTransition> findByUpdatedByAndModificationDateBetween(String updatedBy, Date start, Date end);
+
+
 }

@@ -887,7 +887,10 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
     {
       name: "jobCode",
       label: "Job Code",
-      type: "text",
+      // type: "text",
+      type: "select",
+      showSearch: true,
+      options: [], // populated via hydratedCpDetails → jobOptions state
       span: 2,
       required: true,
     },
@@ -895,6 +898,7 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
       name: "jobDescription",
       label: "Job Description",
       type: "text",
+      disabled: true,
       span: 2,
       required: true,
     },
@@ -902,6 +906,7 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
       name: "uom",
       label: "UOM",
       type: "text",
+      disabled: true,
       required: true,
     },
     {
@@ -955,6 +960,7 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
       name: "jobCategory",
       label: "Job Category",
       type: "select",
+      disabled: true,
       span: 2,
       options: (lovData.materialCategoryLOV || []).map(lov => ({
         label: lov.lovDisplayValue,
@@ -964,6 +970,7 @@ export const CpDetails =(formData = {}, lovData = {} , cpType = "material") => [
     {
       name: "jobSubCategory",
       label: "Job Sub Category",
+      disabled: true,
       type: "select",
       span: 2,
       options: (lovData.materialSubCategoryLOV || []).map(lov => ({

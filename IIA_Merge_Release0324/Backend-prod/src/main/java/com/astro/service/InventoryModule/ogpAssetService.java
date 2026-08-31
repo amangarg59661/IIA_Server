@@ -11,6 +11,6 @@ import java.util.List;
 public interface ogpAssetService {
     String saveAssetDisposalOgp(AssetsAuctionDto request);
     public List<AssetsAuctionDto> getPendingApprovals();
-    public String approveOgpAssetDisposal(Integer disposalId);
-    public String rejectOgpAssetDisposal(Integer disposalId);
+    public String approveOgpAssetDisposal(Integer disposalId, Integer actionBy);
+    public String rejectOgpAssetDisposal(Integer disposalId, Integer actionBy);
 }

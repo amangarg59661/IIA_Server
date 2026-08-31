@@ -2,6 +2,7 @@ package com.astro.controller.InventoryModule;
 
 import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionDto;
 import com.astro.dto.workflow.InventoryModule.serviceInspection.ServiceInspectionDto;
+import com.astro.dto.workflow.InventoryModule.serviceInspection.SaveServiceInspectionResponseDto;
 import com.astro.service.InventoryModule.ServiceInspectionService;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.http.ResponseEntity;
@@ -69,27 +70,33 @@ public class ServiceInspectionController {
 
     @PostMapping("/save")
     public ResponseEntity<Object> saveServiceInspection(@RequestBody SaveServiceInspectionDto req) {
-        return ResponseEntity.ok(serviceInspectionService.saveServiceInspection(req));
+        SaveServiceInspectionResponseDto request = serviceInspectionService.saveServiceInspection(req);
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                request), HttpStatus.OK);
     }
 
     @GetMapping("/details")
     public ResponseEntity<Object> getServiceInspectionDtls(@RequestParam String inspectionProcessId) {
-        return ResponseEntity.ok(serviceInspectionService.getServiceInspectionDtls(inspectionProcessId));
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                serviceInspectionService.getServiceInspectionDtls(inspectionProcessId)), HttpStatus.OK);
     }
 
     @GetMapping("/pendingSoIds")
     public ResponseEntity<Object> getPendingServiceInspectionSoIds() {
-        return ResponseEntity.ok(serviceInspectionService.getPendingServiceInspectionSoIds());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                serviceInspectionService.getPendingServiceInspectionSoIds()), HttpStatus.OK);
     }
 
     @GetMapping("/bySoId")
     public ResponseEntity<Object> getServiceInspectionsBySoId(@RequestParam String soId) {
-        return ResponseEntity.ok(serviceInspectionService.getServiceInspectionsBySoId(soId));
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                serviceInspectionService.getServiceInspectionsBySoId(soId)), HttpStatus.OK);
     }
 
     @GetMapping("/approvedIds")
     public ResponseEntity<Object> getApprovedServiceInspectionIds() {
-        return ResponseEntity.ok(serviceInspectionService.getApprovedServiceInspectionIds());
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                serviceInspectionService.getApprovedServiceInspectionIds()), HttpStatus.OK);
     }
 
      @GetMapping("/approvedSoIds")
@@ -109,6 +116,7 @@ public ResponseEntity<Object> getApprovedInspectionIdsBySoId(@RequestParam Strin
 }
     @GetMapping("/paymentVoucherData")
     public ResponseEntity<Object> getPaymentVoucherDtoByInspectionId(@RequestParam String inspectionProcessId) {
-        return ResponseEntity.ok(serviceInspectionService.getPaymentVoucherDtoByInspectionId(inspectionProcessId));
+        return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(
+                serviceInspectionService.getPaymentVoucherDtoByInspectionId(inspectionProcessId)), HttpStatus.OK);
     }
 }
