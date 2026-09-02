@@ -30,7 +30,9 @@ public interface IndentCreationService {
     public List<IndentCreationResponseDTO> getIndentVersionHistory(String indentId) ;
 
     List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate);
-
+    
+    List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate, Integer userId, String roleName)
+;
     public List<TechnoMomReportDTO> getTechnoMomReport(String startDate, String endDate);
 
     public List<materialHistoryDto> getIndentIdAndUserId(String materialCode);

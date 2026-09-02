@@ -55,11 +55,16 @@ private StoreStockService storeStockService;
         for (GtDtl gtDtl : diMasterDto.getMaterialDtlList()) {
             // Get current stock
             OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
-                    .findByMaterialCodeAndLocatorIdAndCustodianId(
-                            gtDtl.getMaterialCode(),
-                            gtDtl.getSenderLocatorId(),
-                            String.valueOf(diMasterDto.getSenderCustodianId()))
-                    .orElse(null);
+        .findByMaterialCodeAndLocatorId(
+                gtDtl.getMaterialCode(),
+                gtDtl.getSenderLocatorId())
+        .orElse(null);
+            // OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
+            //         .findByMaterialCodeAndLocatorIdAndCustodianId(
+            //                 gtDtl.getMaterialCode(),
+            //                 gtDtl.getSenderLocatorId(),
+            //                 String.valueOf(diMasterDto.getSenderCustodianId()))
+            //         .orElse(null);
 
             BigDecimal requestedQty = gtDtl.getQuantity();
             BigDecimal availableQty = stock != null ? stock.getQuantity() : BigDecimal.ZERO;
@@ -415,11 +420,16 @@ private StoreStockService storeStockService;
                 // Approved — a repeat call (edit, retry, double-submit) must not
                 // decrement again.
                 if (!alreadyIssued) {
+                    // storeStockService.adjustQuantity(
+                    //         gtDtl.getMaterialCode(),
+                    //         gtDtl.getSenderLocatorId(),
+                    //         String.valueOf(di.getSenderCustodianId()),
+                    //         gtDtl.getQuantity().negate());
+
                     storeStockService.adjustQuantity(
-                            gtDtl.getMaterialCode(),
-                            gtDtl.getSenderLocatorId(),
-                            String.valueOf(di.getSenderCustodianId()),
-                            gtDtl.getQuantity().negate());
+        gtDtl.getMaterialCode(),
+        gtDtl.getSenderLocatorId(),
+        gtDtl.getQuantity().negate());
 
                     addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(), gtDtl.getSenderLocatorId());
                 }
@@ -441,11 +451,16 @@ private StoreStockService storeStockService;
                 demandAndIssueDtlEntityRepository.save(newMaterial);
 
                 if (!alreadyIssued) {
+                    // storeStockService.adjustQuantity(
+                    //         gtDtl.getMaterialCode(),
+                    //         gtDtl.getSenderLocatorId(),
+                    //         String.valueOf(di.getSenderCustodianId()),
+                    //         gtDtl.getQuantity().negate());
+
                     storeStockService.adjustQuantity(
-                            gtDtl.getMaterialCode(),
-                            gtDtl.getSenderLocatorId(),
-                            String.valueOf(di.getSenderCustodianId()),
-                            gtDtl.getQuantity().negate());
+        gtDtl.getMaterialCode(),
+        gtDtl.getSenderLocatorId(),
+        gtDtl.getQuantity().negate());
 
                     addToCustodianStock(gtDtl.getMaterialCode(), gtDtl.getQuantity(), di.getSenderCustodianId(), gtDtl.getSenderLocatorId());
                 }

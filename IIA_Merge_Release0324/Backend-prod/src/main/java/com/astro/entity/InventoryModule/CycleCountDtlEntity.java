@@ -37,8 +37,8 @@ public class CycleCountDtlEntity {
     @Column(name = "locator_id")
     private Integer locatorId;
 
-    @Column(name = "custodian_id")
-    private String custodianId; // resolved per row; null until approval for a net-new sweep row with no prior stock
+    // @Column(name = "custodian_id")
+    // private String custodianId; // resolved per row; null until approval for a net-new sweep row with no prior stock
 
     @Column(name = "system_qty_snapshot")
     private BigDecimal systemQtySnapshot;

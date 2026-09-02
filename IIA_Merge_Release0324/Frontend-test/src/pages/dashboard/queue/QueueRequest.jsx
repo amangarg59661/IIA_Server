@@ -975,6 +975,11 @@ const handleCancellationApprove = async (record, approvalStatus) => {
         endpoint = `/api/indents/byId`;
         config = { params: { indentId: record.requestId } };
         break;
+        case 13:
+          endpoint = `/api`;
+          config = { params: { requestId: record.requestId } };
+          break;
+
       default:
         message.error("Invalid workflow ID.");
         setDetailLoading(false);

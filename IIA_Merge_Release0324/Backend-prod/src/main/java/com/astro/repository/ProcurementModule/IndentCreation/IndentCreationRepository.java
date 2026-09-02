@@ -119,19 +119,42 @@ public interface IndentCreationRepository extends JpaRepository<IndentCreation, 
                   ORDER BY wt.createdDate DESC LIMIT 1) AS `Short-Closed and Cancelled Through Amendment`,
                
                  -- Reason for short closure & cancellation
-                 (SELECT wt.remarks
+                                  (SELECT wt.remarks
                   FROM workflow_transition wt
                   WHERE wt.requestId = ic.indent_id AND wt.action = 'Rejected'
-                  ORDER BY wt.createdDate DESC LIMIT 1) AS `Reason for Short-Closure & Cancellation`
-                         
+                  ORDER BY wt.createdDate DESC LIMIT 1) AS `Reason for Short-Closure & Cancellation`,
+
+                 ic.created_date AS `Indent Date`,
+
+                 (SELECT te.evaluation_status
+                  FROM tender_evaluation te
+                  WHERE te.tender_id = tr.tender_id
+                  LIMIT 1) AS `Tender Evaluation Status`
+
             FROM indent_creation ic
                LEFT JOIN indent_id iid ON ic.indent_id = iid.indent_id
                LEFT JOIN tender_request tr ON iid.tender_id = tr.tender_id
                LEFT JOIN  material_details md ON ic.indent_id = md.indent_id
                WHERE ic.created_date BETWEEN :startDate AND :endDate
-                  
                   """, nativeQuery = true)
     List<Object[]> fetchIndentReportDetails(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+    // NEW METHOD — identical SELECT list to the one above, plus:
+    @Query(value = """
+             SELECT
+                 ic.indent_id AS `Indent Id`,
+                 ... (same columns as fetchIndentReportDetails, including Indent Date and Tender Evaluation Status) ...
+
+            FROM indent_creation ic
+               LEFT JOIN indent_id iid ON ic.indent_id = iid.indent_id
+               LEFT JOIN tender_request tr ON iid.tender_id = tr.tender_id
+               LEFT JOIN  material_details md ON ic.indent_id = md.indent_id
+               WHERE ic.created_date BETWEEN :startDate AND :endDate
+                 AND ic.created_by = :userId
+                  """, nativeQuery = true)
+    List<Object[]> fetchIndentReportDetailsByUserId(@Param("startDate") LocalDate startDate,
+                                                      @Param("endDate") LocalDate endDate,
+                                                      @Param("userId") Integer userId);
 
     @Query(value = """
                    SELECT

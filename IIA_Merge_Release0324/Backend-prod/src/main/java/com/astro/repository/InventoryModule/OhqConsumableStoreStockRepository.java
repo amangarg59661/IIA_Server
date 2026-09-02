@@ -21,19 +21,25 @@ public interface OhqConsumableStoreStockRepository extends JpaRepository<OhqCons
     Optional<OhqConsumableStoreStockEntity> findForUpdateByMaterialCodeAndLocatorIdAndCustodianId(String materialCode, Integer locatorId, String custodianId);
 
     @Query(value = """
-        SELECT
-            mm.material_code,
-            mm.description,
-            mm.uom,
-            oss.locator_id,
-            oss.custodian_id,
-            oss.quantity,
-            oss.unit_price
-        FROM material_master mm
-        LEFT JOIN ohq_consumable_store_stock_entity oss
-            ON mm.material_code = oss.material_code
-            AND oss.locator_id = :locatorId
-        """, nativeQuery = true)
-    List<Object[]> getSweepMaterialsForLocator(@Param("locatorId") Integer locatorId);
+    SELECT
+        mm.material_code,
+        mm.description,
+        mm.uom,
+        oss.locator_id,
+        oss.custodian_id,
+        oss.quantity,
+        mm.unit_price
+    FROM material_master mm
+    LEFT JOIN ohq_consumable_store_stock_entity oss
+        ON mm.material_code = oss.material_code
+        AND oss.locator_id = :locatorId
+    """, nativeQuery = true)
+List<Object[]> getSweepMaterialsForLocator(@Param("locatorId") Integer locatorId);
+
+
+        Optional<OhqConsumableStoreStockEntity> findByMaterialCodeAndLocatorId(String materialCode, Integer locatorId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<OhqConsumableStoreStockEntity> findForUpdateByMaterialCodeAndLocatorId(String materialCode, Integer locatorId);
 
 }

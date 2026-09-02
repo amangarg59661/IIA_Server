@@ -14,7 +14,9 @@ public interface StoreStockService {
      *
      * Used by DiServiceImpl at issue time.
      */
-    OhqConsumableStoreStockEntity adjustQuantity(String materialCode, Integer locatorId, String custodianId, BigDecimal delta);
+    // OhqConsumableStoreStockEntity adjustQuantity(String materialCode, Integer locatorId, String custodianId, BigDecimal delta);
+    OhqConsumableStoreStockEntity adjustQuantity(String materialCode, Integer locatorId, BigDecimal delta);
+
 
     /**
      * Same locking/validation as adjustQuantity, but creates a new store-stock
@@ -26,6 +28,6 @@ public interface StoreStockService {
      *
      * Used by CycleCountServiceImpl on approval.
      */
-    OhqConsumableStoreStockEntity adjustOrCreateQuantity(String materialCode, Integer locatorId, String custodianId,
-                                                          BigDecimal delta, BigDecimal unitPriceIfCreating);
+    // OhqConsumableStoreStockEntity adjustOrCreateQuantity(String materialCode, Integer locatorId, String custodianId, BigDecimal delta, BigDecimal unitPriceIfCreating);
+    OhqConsumableStoreStockEntity adjustOrCreateQuantity(String materialCode, Integer locatorId,  BigDecimal delta, BigDecimal unitPriceIfCreating);
 }

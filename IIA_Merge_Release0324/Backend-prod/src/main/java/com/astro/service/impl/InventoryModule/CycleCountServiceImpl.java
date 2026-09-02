@@ -19,6 +19,7 @@ import com.astro.dto.workflow.InventoryModule.cyclecount.InitiateCycleCountDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.ManualCycleCountItemDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.PendingCycleCountDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.SubmitCycleCountDto;
+import com.astro.dto.workflow.InventoryModule.cyclecount.CycleCountReportDto;
 import com.astro.entity.InventoryModule.CycleCountDtlEntity;
 import com.astro.entity.InventoryModule.CycleCountMasterEntity;
 import com.astro.entity.InventoryModule.OhqConsumableStoreStockEntity;
@@ -30,6 +31,8 @@ import com.astro.repository.InventoryModule.CycleCountMasterRepository;
 import com.astro.repository.InventoryModule.OhqConsumableStoreStockRepository;
 import com.astro.service.InventoryModule.CycleCountService;
 import com.astro.service.InventoryModule.StoreStockService;
+import com.astro.repository.MaterialMasterRepository;
+import com.astro.entity.MaterialMaster;
 
 @Service
 public class CycleCountServiceImpl implements CycleCountService {
@@ -42,6 +45,9 @@ public class CycleCountServiceImpl implements CycleCountService {
 
     @Autowired
     private OhqConsumableStoreStockRepository ohqStoreStockRepo;
+
+    @Autowired
+private MaterialMasterRepository mmr;
 
     @Autowired
     private StoreStockService storeStockService;
@@ -57,19 +63,14 @@ public class CycleCountServiceImpl implements CycleCountService {
 
         List<CycleCountDtlEntity> lines = new ArrayList<>();
 
-        if ("SWEEP".equals(req.getCountType())) {
-            if (req.getSweepCustodianId() == null) {
-                throw new InvalidInputException(new ErrorDetails(
-                        AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
-                        AppConstant.ERROR_TYPE_VALIDATION,
-                        "sweepCustodianId is required for a SWEEP cycle count."));
-            }
-            master.setSweepCustodianId(req.getSweepCustodianId());
-
+                if ("SWEEP".equals(req.getCountType())) {
             List<Object[]> rows = ohqStoreStockRepo.getSweepMaterialsForLocator(req.getLocatorId());
 
-            // A material can appear more than once if stock is currently split
-            // across multiple custodians at this locator.
+            // A material can appear more than once only if duplicate/stray rows
+            // exist for the same material+locator (store stock has no custodian
+            // to split across anymore). Flagged below so the approver knows
+            // ahead of time this line will fail at approval -- adjustOrCreateQuantity
+            // throws on a genuine multi-row match -- unless reconciled first.
             Map<String, List<Object[]>> byMaterial = rows.stream()
                     .collect(Collectors.groupingBy(r -> (String) r[0]));
 
@@ -77,34 +78,97 @@ public class CycleCountServiceImpl implements CycleCountService {
                 List<Object[]> group = entry.getValue();
                 Object[] first = group.get(0);
 
-                BigDecimal systemQty = BigDecimal.ZERO;
-                BigDecimal unitPrice = BigDecimal.ZERO;
-                long custodianRowCount = 0;
+                 BigDecimal systemQty = BigDecimal.ZERO;
+                // Unit price now comes from Material Master (column index 6, see
+                // query above), not the store-stock row -- identical for every row
+                // in this group since material_code is Material Master's own
+                // primary key. systemQty still sums across duplicate rows as before.
+                BigDecimal unitPrice = first[6] != null ? (BigDecimal) first[6] : BigDecimal.ZERO;
+                long matchingRowCount = 0;
 
                 for (Object[] row : group) {
                     BigDecimal qty = row[5] != null ? (BigDecimal) row[5] : null;
                     if (qty != null) {
                         systemQty = systemQty.add(qty);
-                        custodianRowCount++;
-                        if (row[6] != null) {
-                            unitPrice = (BigDecimal) row[6]; // last non-null wins across multiple custodian rows
-                        }
+                        matchingRowCount++;
                     }
                 }
+                // BigDecimal systemQty = BigDecimal.ZERO;
+                // BigDecimal unitPrice = BigDecimal.ZERO;
+                // long matchingRowCount = 0;
+
+                // for (Object[] row : group) {
+                //     BigDecimal qty = row[5] != null ? (BigDecimal) row[5] : null;
+                //     if (qty != null) {
+                //         systemQty = systemQty.add(qty);
+                //         matchingRowCount++;
+                //         if (row[6] != null) {
+                //             unitPrice = (BigDecimal) row[6]; // last non-null wins across duplicate rows
+                //         }
+                //     }
+                // }
 
                 CycleCountDtlEntity dtl = new CycleCountDtlEntity();
                 dtl.setMaterialCode(entry.getKey());
                 dtl.setMaterialDesc((String) first[1]);
                 dtl.setUom((String) first[2]);
                 dtl.setLocatorId(req.getLocatorId());
-                dtl.setCustodianId(req.getSweepCustodianId()); // write-back always targets the declared storekeeper
                 dtl.setSystemQtySnapshot(systemQty);
                 dtl.setUnitPriceSnapshot(unitPrice);
-                dtl.setMultipleCustodianRows(custodianRowCount > 1);
+                dtl.setMultipleCustodianRows(matchingRowCount > 1);
                 lines.add(dtl);
             }
 
         } else if ("MANUAL".equals(req.getCountType())) {
+
+        // if ("SWEEP".equals(req.getCountType())) {
+        //     if (req.getSweepCustodianId() == null) {
+        //         throw new InvalidInputException(new ErrorDetails(
+        //                 AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+        //                 AppConstant.ERROR_TYPE_VALIDATION,
+        //                 "sweepCustodianId is required for a SWEEP cycle count."));
+        //     }
+        //     master.setSweepCustodianId(req.getSweepCustodianId());
+
+        //     List<Object[]> rows = ohqStoreStockRepo.getSweepMaterialsForLocator(req.getLocatorId());
+
+        //     // A material can appear more than once if stock is currently split
+        //     // across multiple custodians at this locator.
+        //     Map<String, List<Object[]>> byMaterial = rows.stream()
+        //             .collect(Collectors.groupingBy(r -> (String) r[0]));
+
+        //     for (Map.Entry<String, List<Object[]>> entry : byMaterial.entrySet()) {
+        //         List<Object[]> group = entry.getValue();
+        //         Object[] first = group.get(0);
+
+        //         BigDecimal systemQty = BigDecimal.ZERO;
+        //         BigDecimal unitPrice = BigDecimal.ZERO;
+        //         long custodianRowCount = 0;
+
+        //         for (Object[] row : group) {
+        //             BigDecimal qty = row[5] != null ? (BigDecimal) row[5] : null;
+        //             if (qty != null) {
+        //                 systemQty = systemQty.add(qty);
+        //                 custodianRowCount++;
+        //                 if (row[6] != null) {
+        //                     unitPrice = (BigDecimal) row[6]; // last non-null wins across multiple custodian rows
+        //                 }
+        //             }
+        //         }
+
+        //         CycleCountDtlEntity dtl = new CycleCountDtlEntity();
+        //         dtl.setMaterialCode(entry.getKey());
+        //         dtl.setMaterialDesc((String) first[1]);
+        //         dtl.setUom((String) first[2]);
+        //         dtl.setLocatorId(req.getLocatorId());
+        //         dtl.setCustodianId(req.getSweepCustodianId()); // write-back always targets the declared storekeeper
+        //         dtl.setSystemQtySnapshot(systemQty);
+        //         dtl.setUnitPriceSnapshot(unitPrice);
+        //         dtl.setMultipleCustodianRows(custodianRowCount > 1);
+        //         lines.add(dtl);
+        //     }
+
+        // } else if ("MANUAL".equals(req.getCountType())) {
             if (req.getManualItems() == null || req.getManualItems().isEmpty()) {
                 throw new InvalidInputException(new ErrorDetails(
                         AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -112,28 +176,69 @@ public class CycleCountServiceImpl implements CycleCountService {
                         "At least one item is required for a MANUAL cycle count."));
             }
 
-            for (ManualCycleCountItemDto item : req.getManualItems()) {
+                                    for (ManualCycleCountItemDto item : req.getManualItems()) {
+                MaterialMaster mm = mmr.findById(item.getMaterialCode()).orElse(null);
+                if (mm == null) {
+                    throw new InvalidInputException(new ErrorDetails(
+                            AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+                            AppConstant.ERROR_TYPE_VALIDATION,
+                            "Material code not found in Material Master: " + item.getMaterialCode()));
+                }
+
+                 if (Boolean.TRUE.equals(mm.getAssetFlag())) {
+                    throw new InvalidInputException(new ErrorDetails(
+                            AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
+                            AppConstant.ERROR_TYPE_VALIDATION,
+                            "Material " + item.getMaterialCode() + " is flagged as an asset and cannot be included in a cycle count."));
+                }
+
+                // No .orElseThrow() here on purpose -- a material can be physically
+                // present at a location without ever having a system stock record
+                // (that's exactly the discrepancy a cycle count exists to catch).
+                // Missing row = system says zero; approveCycleCount's
+                // adjustOrCreateQuantity already handles creating the row once
+                // the count is approved.
                 OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
-                        .findByMaterialCodeAndLocatorIdAndCustodianId(
-                                item.getMaterialCode(), item.getLocatorId(), item.getCustodianId())
-                        .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
-                                AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
-                                AppConstant.ERROR_TYPE_VALIDATION,
-                                "No stock record found for material: " + item.getMaterialCode()
-                                        + ", locator: " + item.getLocatorId()
-                                        + ", custodian: " + item.getCustodianId())));
+                        .findByMaterialCodeAndLocatorId(item.getMaterialCode(), item.getLocatorId())
+                        .orElse(null);
 
                 CycleCountDtlEntity dtl = new CycleCountDtlEntity();
-                dtl.setMaterialCode(stock.getMaterialCode());
+                dtl.setMaterialCode(item.getMaterialCode());
                 dtl.setMaterialDesc(item.getMaterialDesc());
-                dtl.setUom(stock.getUom());
-                dtl.setLocatorId(stock.getLocatorId());
-                dtl.setCustodianId(stock.getCustodianId());
-                dtl.setSystemQtySnapshot(stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO);
-                dtl.setUnitPriceSnapshot(stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO);
+                dtl.setUom(mm.getUom());
+                dtl.setLocatorId(item.getLocatorId());
+                // dtl.setSystemQtySnapshot(stock != null && stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO);
+                // dtl.setUnitPriceSnapshot(stock != null && stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO);
+                   dtl.setSystemQtySnapshot(stock != null && stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO);
+                // Always Material Master's price now, not the store-stock row's --
+                // consistent with SWEEP, and doesn't depend on whether a stock row
+                // happens to exist yet.
+                dtl.setUnitPriceSnapshot(mm.getUnitPrice() != null ? mm.getUnitPrice() : BigDecimal.ZERO);
                 dtl.setMultipleCustodianRows(false);
                 lines.add(dtl);
             }
+            // for (ManualCycleCountItemDto item : req.getManualItems()) {
+            //     OhqConsumableStoreStockEntity stock = ohqStoreStockRepo
+            //             .findByMaterialCodeAndLocatorIdAndCustodianId(
+            //                     item.getMaterialCode(), item.getLocatorId(), item.getCustodianId())
+            //             .orElseThrow(() -> new InvalidInputException(new ErrorDetails(
+            //                     AppConstant.ERROR_CODE_RESOURCE, AppConstant.ERROR_TYPE_CODE_RESOURCE,
+            //                     AppConstant.ERROR_TYPE_VALIDATION,
+            //                     "No stock record found for material: " + item.getMaterialCode()
+            //                             + ", locator: " + item.getLocatorId()
+            //                             + ", custodian: " + item.getCustodianId())));
+
+            //     CycleCountDtlEntity dtl = new CycleCountDtlEntity();
+            //     dtl.setMaterialCode(stock.getMaterialCode());
+            //     dtl.setMaterialDesc(item.getMaterialDesc());
+            //     dtl.setUom(stock.getUom());
+            //     dtl.setLocatorId(stock.getLocatorId());
+            //     dtl.setCustodianId(stock.getCustodianId());
+            //     dtl.setSystemQtySnapshot(stock.getQuantity() != null ? stock.getQuantity() : BigDecimal.ZERO);
+            //     dtl.setUnitPriceSnapshot(stock.getUnitPrice() != null ? stock.getUnitPrice() : BigDecimal.ZERO);
+            //     dtl.setMultipleCustodianRows(false);
+            //     lines.add(dtl);
+            // }
         } else {
             throw new InvalidInputException(new ErrorDetails(
                     AppConstant.USER_INVALID_INPUT, AppConstant.ERROR_TYPE_CODE_VALIDATION,
@@ -148,6 +253,28 @@ public class CycleCountServiceImpl implements CycleCountService {
 
         return "CC/" + master.getId();
     }
+
+
+    @Override
+public List<CycleCountReportDto> getCycleCountReport() {
+    return cycleCountDtlRepository.getCycleCountReport().stream().map(row -> {
+        CycleCountReportDto dto = new CycleCountReportDto();
+        dto.setVerificationDate(row[0] != null ? ((java.sql.Date) row[0]).toLocalDate() : null);
+        dto.setItemDescription((String) row[1]);
+        dto.setCategory((String) row[2]);
+        dto.setSubCategory((String) row[3]);
+        dto.setLocation((String) row[4]);
+        dto.setQuantityAsPerRecords((BigDecimal) row[5]);
+        dto.setQuantityFound((BigDecimal) row[6]);
+        dto.setDiscrepancyQty((BigDecimal) row[7]);
+        dto.setDiscrepancyValue((BigDecimal) row[8]);
+        dto.setVerifiedBy(row[9] != null ? (Integer) row[9] : null);
+        String status = (String) row[10];
+        dto.setVerified("APPROVED".equals(status));
+        dto.setRemarks((String) row[11]);
+        return dto;
+    }).collect(Collectors.toList());
+}
 
     @Override
     @Transactional
@@ -221,7 +348,8 @@ public class CycleCountServiceImpl implements CycleCountService {
             }
 
             storeStockService.adjustOrCreateQuantity(
-                    dtl.getMaterialCode(), dtl.getLocatorId(), dtl.getCustodianId(),
+                    dtl.getMaterialCode(), dtl.getLocatorId(),
+                    // dtl.getCustodianId(),
                     dtl.getVarianceQty(), dtl.getUnitPriceSnapshot());
         }
 
@@ -249,7 +377,7 @@ public class CycleCountServiceImpl implements CycleCountService {
         dto.setCycleCountId(cycleCountId);
         dto.setCountType(master.getCountType());
         dto.setLocatorId(master.getLocatorId());
-        dto.setSweepCustodianId(master.getSweepCustodianId());
+        // dto.setSweepCustodianId(master.getSweepCustodianId());
         dto.setStatus(master.getStatus());
         dto.setCountedBy(master.getCountedBy());
         dto.setCountDate(master.getCountDate());
@@ -261,17 +389,40 @@ public class CycleCountServiceImpl implements CycleCountService {
 
     @Override
     public List<PendingCycleCountDto> getPendingCycleCounts() {
-        return cycleCountMasterRepository.findByStatus("AWAITING APPROVAL").stream().map(m -> {
-            PendingCycleCountDto dto = new PendingCycleCountDto();
-            dto.setCycleCountId("CC/" + m.getId());
-            dto.setCountType(m.getCountType());
-            dto.setLocatorId(m.getLocatorId());
-            dto.setStatus(m.getStatus());
-            dto.setCountDate(m.getCountDate());
-            dto.setTotalVarianceValue(m.getTotalVarianceValue());
-            return dto;
-        }).collect(Collectors.toList());
+        return cycleCountMasterRepository.findByStatus("AWAITING APPROVAL").stream()
+                .map(this::toPendingDto).collect(Collectors.toList());
     }
+
+    @Override
+    public List<PendingCycleCountDto> searchCycleCounts(String value) {
+        return cycleCountMasterRepository.searchByIdLocatorOrStatus(value).stream()
+                .map(this::toPendingDto).collect(Collectors.toList());
+    }
+
+    private PendingCycleCountDto toPendingDto(CycleCountMasterEntity m) {
+        PendingCycleCountDto dto = new PendingCycleCountDto();
+        dto.setCycleCountId("CC/" + m.getId());
+        dto.setCountType(m.getCountType());
+        dto.setLocatorId(m.getLocatorId());
+        dto.setStatus(m.getStatus());
+        dto.setCountDate(m.getCountDate());
+        dto.setTotalVarianceValue(m.getTotalVarianceValue());
+        return dto;
+    }
+
+    // @Override
+    // public List<PendingCycleCountDto> getPendingCycleCounts() {
+    //     return cycleCountMasterRepository.findByStatus("AWAITING APPROVAL").stream().map(m -> {
+    //         PendingCycleCountDto dto = new PendingCycleCountDto();
+    //         dto.setCycleCountId("CC/" + m.getId());
+    //         dto.setCountType(m.getCountType());
+    //         dto.setLocatorId(m.getLocatorId());
+    //         dto.setStatus(m.getStatus());
+    //         dto.setCountDate(m.getCountDate());
+    //         dto.setTotalVarianceValue(m.getTotalVarianceValue());
+    //         return dto;
+    //     }).collect(Collectors.toList());
+    // }
 
     private CycleCountLineDto toLineDto(CycleCountDtlEntity dtl) {
         CycleCountLineDto line = new CycleCountLineDto();
@@ -280,7 +431,7 @@ public class CycleCountServiceImpl implements CycleCountService {
         line.setMaterialDesc(dtl.getMaterialDesc());
         line.setUom(dtl.getUom());
         line.setLocatorId(dtl.getLocatorId());
-        line.setCustodianId(dtl.getCustodianId());
+        // line.setCustodianId(dtl.getCustodianId());
         line.setSystemQtySnapshot(dtl.getSystemQtySnapshot());
         line.setUnitPriceSnapshot(dtl.getUnitPriceSnapshot());
         line.setCountedQty(dtl.getCountedQty());

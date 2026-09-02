@@ -11,7 +11,7 @@ public class CycleCountDto {
     private String cycleCountId;
     private String countType;
     private Integer locatorId;
-    private String sweepCustodianId;
+    // private String sweepCustodianId;
     private String status;
     private Integer countedBy;
     private LocalDate countDate;

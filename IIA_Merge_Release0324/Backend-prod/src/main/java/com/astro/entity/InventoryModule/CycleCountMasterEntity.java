@@ -29,8 +29,8 @@ public class CycleCountMasterEntity {
     @Column(name = "locator_id")
     private Integer locatorId; // location being counted
 
-    @Column(name = "sweep_custodian_id")
-    private String sweepCustodianId; // storekeeper for write-back on SWEEP counts only; null for MANUAL
+    // @Column(name = "sweep_custodian_id")
+    // private String sweepCustodianId; // storekeeper for write-back on SWEEP counts only; null for MANUAL
 
     @Column(name = "status")
     private String status; // DRAFT / AWAITING APPROVAL / APPROVED / REJECTED

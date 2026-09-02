@@ -8,6 +8,6 @@ import java.util.List;
 public class InitiateCycleCountDto {
     private String countType;        // MANUAL or SWEEP
     private Integer locatorId;
-    private String sweepCustodianId; // required for SWEEP, ignored for MANUAL
+    // private String sweepCustodianId; // required for SWEEP, ignored for MANUAL
     private List<ManualCycleCountItemDto> manualItems; // required for MANUAL
 }

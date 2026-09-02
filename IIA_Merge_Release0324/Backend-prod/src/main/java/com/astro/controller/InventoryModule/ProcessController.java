@@ -56,6 +56,7 @@ import com.astro.dto.workflow.InventoryModule.cyclecount.InitiateCycleCountDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.SubmitCycleCountDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.CycleCountDto;
 import com.astro.dto.workflow.InventoryModule.cyclecount.PendingCycleCountDto;
+import com.astro.dto.workflow.InventoryModule.cyclecount.CycleCountReportDto;
 
 
 @RestController
@@ -116,6 +117,12 @@ public ResponseEntity<Object> initiateCycleCount(@RequestBody InitiateCycleCount
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
 }
 
+@GetMapping("/getCycleCountReport")
+public ResponseEntity<Object> getCycleCountReport() {
+    List<CycleCountReportDto> res = cycleCountService.getCycleCountReport();
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
+
 @PostMapping("/submitCycleCount")
 public ResponseEntity<Object> submitCycleCount(@RequestBody SubmitCycleCountDto req) {
     cycleCountService.submitCycleCount(req);
@@ -130,6 +137,12 @@ public ResponseEntity<Object> submitCycleCount(@RequestBody SubmitCycleCountDto 
 @GetMapping("/SearchByCycleCountId")
 public ResponseEntity<Object> getCycleCountById(@RequestParam String cycleCountId) {
     CycleCountDto res = cycleCountService.getCycleCountDtls(cycleCountId);
+    return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
+}
+
+@GetMapping("/searchCycleCount")
+public ResponseEntity<Object> searchCycleCount(@RequestParam String value) {
+    List<PendingCycleCountDto> res = cycleCountService.searchCycleCounts(value);
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(res), HttpStatus.OK);
 }
 

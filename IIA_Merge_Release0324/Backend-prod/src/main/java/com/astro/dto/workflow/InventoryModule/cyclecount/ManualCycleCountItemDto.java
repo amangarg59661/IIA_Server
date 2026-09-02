@@ -7,5 +7,5 @@ public class ManualCycleCountItemDto {
     private String materialCode;
     private String materialDesc; // client-supplied, same convention as GtDtl / DemandAndIssueDtlEntity -- not looked up server-side
     private Integer locatorId;
-    private String custodianId;
+    // private String custodianId;
 }

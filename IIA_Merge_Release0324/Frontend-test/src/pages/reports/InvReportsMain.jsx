@@ -15,6 +15,7 @@ import DisposalReport from './DisposalReport';
 import PersonalInventory from './PersonalInventoryReport';
 import ClosingBalanceReport from './ClosingBalanceReport';
 import DailyReceipt from './DailyReceipt';
+import CycleCountReport from './CycleCountReport';  
 
 const InvReportsMain = () => {
     const tiles = [
@@ -100,6 +101,12 @@ const InvReportsMain = () => {
             title: "Daily Receipt",
             icon: <InboxOutlined />,
             path: " /reports/DailyReceipt"
+        },
+        {
+            id: 14,
+            title: "Cycle Count Report",
+            icon: <InboxOutlined />,
+            path: " /reports/CycleCountReport"
         }
         
     ]
@@ -133,6 +140,8 @@ const InvReportsMain = () => {
                 return <ClosingBalanceReport />  
                 case 13 :
                 return <DailyReceipt /> 
+                case 14 :
+                return <CycleCountReport /> 
             default:
                 return <h1>Asset Report</h1>
         }

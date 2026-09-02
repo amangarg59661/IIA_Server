@@ -11,7 +11,7 @@ public class CycleCountLineDto {
     private String materialDesc;
     private String uom;
     private Integer locatorId;
-    private String custodianId;
+    // private String custodianId;
     private BigDecimal systemQtySnapshot;
     private BigDecimal unitPriceSnapshot;
     private BigDecimal countedQty;

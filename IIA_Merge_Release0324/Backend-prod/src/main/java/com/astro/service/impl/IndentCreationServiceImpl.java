@@ -31,6 +31,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.astro.entity.InventoryModule.GrnMasterEntity;
+import com.astro.repository.InventoryModule.grn.GrnMasterRepository;
+import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 
 import javax.mail.MessagingException;
 import javax.transaction.Transactional;
@@ -55,6 +58,12 @@ public class IndentCreationServiceImpl implements IndentCreationService {
 
     @Autowired
     private JobDetailsRepository jobDetailsRepository;
+
+    @Autowired
+private GrnMasterRepository grnMasterRepository;
+
+@Autowired
+private PaymentVoucherReposiotry paymentVoucherReposiotry;
 
     @Autowired
     private BudgetService budgetService;
@@ -2329,49 +2338,190 @@ boolean isRejected = lastTransition != null
             );
         }
     }
+@Override
+public List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate) {
+    // Backward-compatible entry point: no user/role scoping, same as before.
+    return getIndentReport(startDate, endDate, null, null);
+}
 
-    @Override
-    public List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate) {
-        // Convert String dates to LocalDate
-        LocalDate startLocalDate = CommonUtils.convertStringToDateObject(startDate);
-        LocalDate endLocalDate = CommonUtils.convertStringToDateObject(endDate);
+// Role-aware entry point: an "Indent Creator" only sees their own indents; any other role (approver)
+// currently sees the full list for the date range -- this mirrors the existing convention in
+// getAllIndentsReport()/getAllIndentListReport()/getAllIndentListUserIdsReport() above. Tighten this
+// to "pending with this approver" scoping later if that's actually wanted.
+@Override
+public List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate, Integer userId, String roleName) {
+    // Convert String dates to LocalDate
+    LocalDate startLocalDate = CommonUtils.convertStringToDateObject(startDate);
+    LocalDate endLocalDate = CommonUtils.convertStringToDateObject(endDate);
 
-        // Fetch results from the repository
-        List<Object[]> results = indentCreationRepository.fetchIndentReportDetails(startLocalDate, endLocalDate);
-
-        System.out.println(results);
-        // Map results to DTO
-        return results.stream().map(result -> {
-
-            return new IndentReportDetailsDTO(
-                    (String) result[0], // indentId
-                    result[1] != null ? (Date) result[1] : null, // approvedDate
-                    (String) result[2], // assignedTo
-                    (String) result[3], // tenderRequest
-                    (String) result[4], // modeOfTendering
-                    (String) result[5], // correspondingPoSo
-                    (String) result[6], // statusOfPoSo
-                    result[7] != null ? (Date) result[7] : null, // submittedDate
-                    (String) result[8], // pendingApprovalWith
-                    result[9] != null ? (Date) result[9] : null, // poSoApprovedDate
-                    (String) result[10], // material
-                    (String) result[11], // materialCategory
-                    (String) result[12], // materialSubCategory
-                    (String) result[13], // vendorName
-                    (String) result[14], // indentorName
-                    result[15] != null ? ((BigDecimal) result[15]).doubleValue() : null, // valueOfIndent
-                    result[16] != null ? ((BigDecimal) result[16]).doubleValue() : null, // valueOfPo
-                    (String) result[17],
-                    (String) result[18], // project
-                    (String) result[19], // invoiceNo
-                    (String) result[20], // gissNo
-                    result[21] != null ? ((BigDecimal) result[21]).doubleValue() : null, // valuePendingToBePaid
-                    (String) result[22], // currentStageOfIndent
-                    (String) result[23], // shortClosedAndCancelled
-                    (String) result[24] // reasonForShortClosure
-            );
-        }).collect(Collectors.toList());
+    // Fetch results from the repository
+    List<Object[]> results;
+    if ("Indent Creator".equalsIgnoreCase(roleName) && userId != null) {
+        results = indentCreationRepository.fetchIndentReportDetailsByUserId(startLocalDate, endLocalDate, userId);
+    } else {
+        results = indentCreationRepository.fetchIndentReportDetails(startLocalDate, endLocalDate);
     }
+
+    // Map results to DTO
+    return results.stream().map(result -> {
+
+        String correspondingPoSo = (String) result[5];
+
+        // GRIN No / Invoice No / payment stage aren't in the native query above -- the GRN/GI/GPRN
+        // entity chain uses inconsistent key names (processId/subProcessId vs grnProcessId/grnSubProcessId
+        // vs a separate `grn` field) so it isn't safely joinable in raw SQL. Resolved here instead by
+        // reusing the same repository calls GrnServiceImpl.getGrnDetailsByProcessId() already relies on.
+        GrnAndPaymentInfo grnInfo = resolveGrnAndPaymentInfo(correspondingPoSo);
+
+        String currentStage = resolveCurrentStage(
+                correspondingPoSo,
+                (String) result[6],  // existing Status of PO/SO
+                (String) result[26], // Tender Evaluation Status
+                (String) result[22], // existing indent-approval-workflow stage
+                grnInfo
+        );
+
+        return new IndentReportDetailsDTO(
+                (String) result[0], // indentId
+                result[1] != null ? (Date) result[1] : null, // approvedDate
+                (String) result[2], // assignedTo
+                (String) result[3], // tenderRequest
+                (String) result[4], // modeOfTendering
+                correspondingPoSo, // correspondingPoSo
+                (String) result[6], // statusOfPoSo
+                result[7] != null ? (Date) result[7] : null, // submittedDate
+                (String) result[8], // pendingApprovalWith
+                result[9] != null ? (Date) result[9] : null, // poSoApprovedDate
+                (String) result[10], // material
+                (String) result[11], // materialCategory
+                (String) result[12], // materialSubCategory
+                (String) result[13], // vendorName
+                (String) result[14], // indentorName
+                result[15] != null ? ((BigDecimal) result[15]).doubleValue() : null, // valueOfIndent
+                result[16] != null ? ((BigDecimal) result[16]).doubleValue() : null, // valueOfPo
+                (String) result[17],
+                (String) result[18], // project
+                grnInfo.invoiceNo, // invoiceNo -- now resolved for real, was always null before
+                (String) result[20], // gissNo
+                result[21] != null ? ((BigDecimal) result[21]).doubleValue() : null, // valuePendingToBePaid
+                currentStage, // currentStageOfIndent -- now spans the full lifecycle through Payment
+                (String) result[23], // shortClosedAndCancelled
+                (String) result[24], // reasonForShortClosure
+                result[25] != null ? (Date) result[25] : null, // indentDate
+                (String) result[26], // tenderEvaluationStatus
+                grnInfo.grinNo // grinNo
+        );
+    }).collect(Collectors.toList());
+}
+
+// Small holder for the GRN/payment lookup below -- avoids repeating the repository round trips
+// for both the invoice number and the derived "current stage" value.
+private static class GrnAndPaymentInfo {
+    String grinNo;
+    String invoiceNo;
+    boolean grnFound;
+    boolean paymentFound;
+    String paymentStatus;
+}
+
+// Reuses the exact lookup GrnServiceImpl.getGrnDetailsByProcessId() already performs, rather than
+// guessing at grn_master/gi_master/gprn_master table & column names in raw SQL. NOTE: this only
+// resolves anything for PO-backed indents -- GRNs represent physical goods receipt, so an indent
+// whose "Corresponding PO/SO" is a Service Order won't have one, which is expected, not a bug.
+private GrnAndPaymentInfo resolveGrnAndPaymentInfo(String poOrSoId) {
+    GrnAndPaymentInfo info = new GrnAndPaymentInfo();
+    if (poOrSoId == null || poOrSoId.isEmpty()) {
+        return info;
+    }
+    try {
+        String grnLookupKey = poOrSoId.replace("PO", "");
+        List<GrnMasterEntity> grns = grnMasterRepository.findByGrn(grnLookupKey);
+
+        if (grns != null && !grns.isEmpty()) {
+            // Most recently received GRN for this PO
+            GrnMasterEntity latestGrn = grns.stream()
+                    .filter(g -> g.getGrnDate() != null)
+                    .max(Comparator.comparing(GrnMasterEntity::getGrnDate))
+                    .orElse(grns.get(0));
+
+            info.grinNo = "INV" + latestGrn.getGrnProcessId() + "/" + latestGrn.getGrnSubProcessId();
+            info.grnFound = true;
+
+            paymentVoucherReposiotry.findTopByGrnNumberOrderByIdDesc(info.grinNo)
+                    .ifPresent(pv -> {
+                        info.invoiceNo = pv.getVendorInvoiceNumber();
+                        info.paymentStatus = pv.getStatus();
+                        info.paymentFound = pv.getVendorInvoiceNumber() != null;
+                    });
+        }
+    } catch (Exception ex) {
+        // One indent's GRN/payment lookup failing shouldn't take down the whole report
+        System.out.println("Could not resolve GRN/payment info for " + poOrSoId + ": " + ex.getMessage());
+    }
+    return info;
+}
+
+// Precedence: Payment raised -> GRN received -> PO/SO issued -> Tender evaluation in progress ->
+// still in indent approval. Per your call, this stops at Payment -- no material-issuance module
+// exists in this codebase to extend it further.
+private String resolveCurrentStage(String poOrSoId, String statusOfPoSo, String tenderEvaluationStatus,
+                                    String indentApprovalStage, GrnAndPaymentInfo grnInfo) {
+    if (grnInfo.paymentFound) {
+        return "Payment: " + (grnInfo.paymentStatus != null ? grnInfo.paymentStatus : "Raised");
+    }
+    if (grnInfo.grnFound) {
+        return "Goods Received (GRN: " + grnInfo.grinNo + ")";
+    }
+    if (poOrSoId != null && !poOrSoId.isEmpty()) {
+        return "PO/SO Status: " + (statusOfPoSo != null ? statusOfPoSo : poOrSoId);
+    }
+    if (tenderEvaluationStatus != null && !tenderEvaluationStatus.isEmpty()) {
+        return "Tender Evaluation: " + tenderEvaluationStatus;
+    }
+    return indentApprovalStage; // falls back to the existing indent-approval-workflow stage
+}
+    // @Override
+    // public List<IndentReportDetailsDTO> getIndentReport(String startDate, String endDate) {
+    //     // Convert String dates to LocalDate
+    //     LocalDate startLocalDate = CommonUtils.convertStringToDateObject(startDate);
+    //     LocalDate endLocalDate = CommonUtils.convertStringToDateObject(endDate);
+
+    //     // Fetch results from the repository
+    //     List<Object[]> results = indentCreationRepository.fetchIndentReportDetails(startLocalDate, endLocalDate);
+
+    //     System.out.println(results);
+    //     // Map results to DTO
+    //     return results.stream().map(result -> {
+
+    //         return new IndentReportDetailsDTO(
+    //                 (String) result[0], // indentId
+    //                 result[1] != null ? (Date) result[1] : null, // approvedDate
+    //                 (String) result[2], // assignedTo
+    //                 (String) result[3], // tenderRequest
+    //                 (String) result[4], // modeOfTendering
+    //                 (String) result[5], // correspondingPoSo
+    //                 (String) result[6], // statusOfPoSo
+    //                 result[7] != null ? (Date) result[7] : null, // submittedDate
+    //                 (String) result[8], // pendingApprovalWith
+    //                 result[9] != null ? (Date) result[9] : null, // poSoApprovedDate
+    //                 (String) result[10], // material
+    //                 (String) result[11], // materialCategory
+    //                 (String) result[12], // materialSubCategory
+    //                 (String) result[13], // vendorName
+    //                 (String) result[14], // indentorName
+    //                 result[15] != null ? ((BigDecimal) result[15]).doubleValue() : null, // valueOfIndent
+    //                 result[16] != null ? ((BigDecimal) result[16]).doubleValue() : null, // valueOfPo
+    //                 (String) result[17],
+    //                 (String) result[18], // project
+    //                 (String) result[19], // invoiceNo
+    //                 (String) result[20], // gissNo
+    //                 result[21] != null ? ((BigDecimal) result[21]).doubleValue() : null, // valuePendingToBePaid
+    //                 (String) result[22], // currentStageOfIndent
+    //                 (String) result[23], // shortClosedAndCancelled
+    //                 (String) result[24] // reasonForShortClosure
+    //         );
+    //     }).collect(Collectors.toList());
+    // }
 
     public List<TechnoMomReportDTO> getTechnoMomReport(String startDate, String endDate) {
         List<Object[]> results = indentCreationRepository.getTechnoMomReport(CommonUtils.convertStringToDateObject(startDate), CommonUtils.convertStringToDateObject(endDate));

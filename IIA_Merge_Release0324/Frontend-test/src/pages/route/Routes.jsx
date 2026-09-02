@@ -79,7 +79,7 @@ import FieldStationApproverConfig from "../dashboard/admin/FieldStationApproverC
 import FullWorkflowConfig from "../dashboard/admin/FullWorkflowConfig";
 import CommitteeManagement from "../dashboard/admin/CommitteeManagement";
 import PersonalInventory from "../reports/PersonalInventoryReport";
-import CycleCountEntry from "../dashboard/Cycle Count/CycleCountEntry";
+import CycleCountEntry from "../dashboard/CycleCount/CycleCountEntry";
 /*
 const RoutesComponent = () => {
   return (

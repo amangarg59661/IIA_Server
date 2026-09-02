@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface AssetDisposalMasterRepository extends JpaRepository<AssetDisposalMasterEntity, Integer> {
-    @Query(value = "SELECT disposal_id, disposal_date, custodian_id, created_by, create_date, location_id, status, action, auction_id, auction_date,reserve_price,auction_price, updated_date,vendor_name  FROM asset_disposal WHERE status = 'For Disposal' AND action = 'Awaiting For Approval'",
+    @Query(value = "SELECT disposal_id, disposal_date, custodian_id, created_by, create_date,updated_by, location_id, status, action, auction_id, auction_date,reserve_price,auction_price, updated_date,vendor_name  FROM asset_disposal WHERE status = 'For Disposal' AND action = 'Awaiting For Approval'",
             nativeQuery = true)
     List<AssetDisposalMasterEntity> findAllAwaitingForApproval();
     @Query(value = "SELECT disposal_id, disposal_date, custodian_id, created_by, create_date, updated_date, updated_by,location_id, status, action, auction_id, auction_date,reserve_price,auction_price, vendor_name  FROM asset_disposal WHERE status = 'For Disposal' AND action = 'Approved'",
