@@ -239,6 +239,7 @@ com\astro\dto\workflow\CompletedIndentsQueueResponse.class
 com\astro\repository\TechnoFinancialCommitteeRepository.class
 com\astro\dto\workflow\poMaterialHistoryDto.class
 com\astro\dto\workflow\IndentorApprovalRequestDto.class
+com\astro\dto\workflow\InventoryModule\cyclecount\CycleCountReportDto.class
 com\astro\dto\workflow\InventoryModule\GatepassRequestDTO.class
 com\astro\exception\FilesNotFoundException.class
 com\astro\dto\workflow\InventoryModule\SerialCheckResponseDto.class
@@ -505,6 +506,7 @@ com\astro\service\InventoryModule\IgpService.class
 com\astro\dto\workflow\WorkflowTransitionDto.class
 com\astro\service\LocationMasterService.class
 com\astro\repository\InventoryModule\AssetDisposalDetailRepository.class
+com\astro\service\impl\IndentCreationServiceImpl$GrnAndPaymentInfo.class
 com\astro\dto\workflow\InventoryModule\igp\IgpReportDto.class
 com\astro\dto\workflow\InventoryModule\GoodsReceiptInspectionResponseDto.class
 com\astro\exception\EmailNotSentException.class
