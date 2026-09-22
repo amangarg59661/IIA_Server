@@ -50,6 +50,10 @@ public class PurchaseOrderAttributes {
     private BigDecimal freightCharge;
     @Column(name = "budget_code")
     private String budgetCode;
+    @Column(name = "material_description_quotation")
+    private String materialDescriptionQuotation;
+    @Column(name = "project_name")
+    private String projectName;
     @Column(name = "received_quantity")
     private BigDecimal receivedQuantity;
     private BigDecimal totalPoMaterialPriceInInr;

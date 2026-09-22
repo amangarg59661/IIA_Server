@@ -159,7 +159,7 @@ const proprietaryLimitedDeclarationPoints = [
                 // Re-trigger employee details fetch
                 window.location.reload(); // Simple way to re-fetch employee details
             };
-    
+    const [budgetFinancials, setBudgetFinancials] = useState({});
             const [formData, setFormData] = useState({
                 indentorName: '', // ✅ Will be auto-filled from employee table via API
                 indentorMobileNo: '', // ✅ Will be auto-filled from employee table via API
@@ -530,58 +530,161 @@ const [selectedVersionIdx, setSelectedVersionIdx] = useState(0);
                 }
             };
     
-            const fetchAllBudgetCodes = async () => {
-            try {
-                const { data } = await axios.get('/api/admin/budget');
-                const budgetData = data?.responseData || [];
-                const budgetOptions = budgetData.map(budget => ({
-                    label: budget.budgetName,
-                    value: budget.budgetCode
-                }));
-                setAllBudgetCodes(budgetOptions);
-            } catch (error) {
-                console.error('Error fetching all budget codes:', error);
-                setAllBudgetCodes([]);
-            }
-        };
+//             const fetchAllBudgetCodes = async () => {
+//             try {
+//                 const { data } = await axios.get('/api/admin/budget');
+//                 const budgetData = data?.responseData || [];
+//                 const budgetOptions = budgetData.map(budget => {
+//     const allocated = Number(budget.allocatedAmount) || 0;
+//     const hold = Number(budget.onHoldAmount) || 0;
+//     const spent = Number(budget.spentAmount) || 0;
+//     const available = budget.remainingAmount != null
+//         ? Number(budget.remainingAmount)
+//         : (allocated - (hold + spent));
+//     const availDisplay = available.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+//     return {
+//         label: `${budget.budgetName || budget.budgetCode} - ₹${availDisplay}`,
+//         value: budget.budgetCode
+//     };
+// });
+//                 // const budgetOptions = budgetData.map(budget => ({
+//                 //     label: budget.budgetName,
+//                 //     value: budget.budgetCode
+//                 // }));
+//                 setAllBudgetCodes(budgetOptions);
+//             } catch (error) {
+//                 console.error('Error fetching all budget codes:', error);
+//                 setAllBudgetCodes([]);
+//             }
+//         };
+
+const fetchAllBudgetCodes = async () => {
+    try {
+        const { data } = await axios.get('/api/admin/budget');
+        const budgetData = data?.responseData || [];
+        const financialsMap = {};
+        const budgetOptions = budgetData.map(budget => {
+            const allocated = Number(budget.allocatedAmount) || 0;
+            const hold = Number(budget.onHoldAmount) || 0;
+            const spent = Number(budget.spentAmount) || 0;
+            const available = budget.remainingAmount != null
+                ? Number(budget.remainingAmount)
+                : (allocated - (hold + spent));
+            financialsMap[budget.budgetCode] = available;
+            const availDisplay = available.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return {
+                label: `${budget.budgetName || budget.budgetCode} - ₹${availDisplay}`,
+                value: budget.budgetCode
+            };
+        });
+        setAllBudgetCodes(budgetOptions);
+        setBudgetFinancials(financialsMap);
+    } catch (error) {
+        console.error('Error fetching all budget codes:', error);
+        setAllBudgetCodes([]);
+    }
+};
     
     
     
             // ✅ NEW: Fetch budget codes based on selected project
-            const fetchBudgetCodesByProject = async (projectCode) => {
-                if (!projectCode) {
-                    setProjectBudgetCodes([]);
-                    return;
-                }
+//             const fetchBudgetCodesByProject = async (projectCode) => {
+//                 if (!projectCode) {
+//                     setProjectBudgetCodes([]);
+//                     return;
+//                 }
     
-                try {
-                    const { data } = await axios.get(`/api/admin/budget/project/${projectCode}/dropdown`);
-                    let budgetData = [];
+//                 try {
+//                     const { data } = await axios.get(`/api/admin/budget/project/${projectCode}/dropdown`);
+//                     let budgetData = [];
     
-                    if (data?.responseData) {
-                        budgetData = data.responseData;
-                    } else if (data?.data) {
-                        budgetData = data.data;
-                    } else if (Array.isArray(data)) {
-                        budgetData = data;
-                    }
+//                     if (data?.responseData) {
+//                         budgetData = data.responseData;
+//                     } else if (data?.data) {
+//                         budgetData = data.data;
+//                     } else if (Array.isArray(data)) {
+//                         budgetData = data;
+//                     }
     
-                    // const budgetOptions = budgetData.map(budget => ({
-                    //     label: `${budget.budgetCode} - ${budget.budgetName || budget.budgetCode}`,
-                    //     value: budget.budgetCode
-                    // }));
-                    const budgetOptions = budgetData.map(budget => ({
-            label: budget.budgetName || budget.budgetCode,
-            value: budget.budgetCode
-        }));
+                   
+//         //             const budgetOptions = budgetData.map(budget => ({
+//         //     label: budget.budgetName || budget.budgetCode,
+//         //     value: budget.budgetCode
+//         // }));
+
+//         const selectedProject = projectMaster.find(p => p.projectCode === projectCode);
+// const projectLimit = selectedProject?.availableProjectLimit != null
+//     ? Number(selectedProject.availableProjectLimit)
+//     : null;
+
+// const budgetOptions = budgetData.map(budget => {
+//     const allocated = Number(budget.allocatedAmount) || 0;
+//     const hold = Number(budget.onHoldAmount) || 0;
+//     const spent = Number(budget.spentAmount) || 0;
+//     const budgetAvail = budget.remainingAmount != null
+//         ? Number(budget.remainingAmount)
+//         : (allocated - (hold + spent));
+//     const finalAvail = projectLimit != null ? Math.min(projectLimit, budgetAvail) : budgetAvail;
+//     const availDisplay = finalAvail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+//     return {
+//         label: `${budget.budgetName || budget.budgetCode} - ₹${availDisplay}`,
+//         value: budget.budgetCode
+//     };
+// });
     
-                    setProjectBudgetCodes(budgetOptions);
-                    console.log(`✅ Loaded ${budgetOptions.length} budget codes for project ${projectCode}`);
-                } catch (error) {
-                    console.error('Error fetching budget codes for project:', error);
-                    setProjectBudgetCodes([]);
-                }
+//                     setProjectBudgetCodes(budgetOptions);
+//                     console.log(`✅ Loaded ${budgetOptions.length} budget codes for project ${projectCode}`);
+//                 } catch (error) {
+//                     console.error('Error fetching budget codes for project:', error);
+//                     setProjectBudgetCodes([]);
+//                 }
+//             };
+
+// ✅ NEW: Fetch budget codes based on selected project
+const fetchBudgetCodesByProject = async (projectCode) => {
+    if (!projectCode) {
+        setProjectBudgetCodes([]);
+        return;
+    }
+
+    try {
+        const { data } = await axios.get(`/api/admin/budget/project/${projectCode}/dropdown`);
+        let budgetData = [];
+
+        if (data?.responseData) {
+            budgetData = data.responseData;
+        } else if (data?.data) {
+            budgetData = data.data;
+        } else if (Array.isArray(data)) {
+            budgetData = data;
+        }
+
+        // project's own cap — final available = lower of (project limit, budget available)
+        const selectedProject = projectMaster.find(p => p.projectCode === projectCode);
+        const projectLimit = selectedProject?.availableProjectLimit != null
+            ? Number(selectedProject.availableProjectLimit)
+            : null;
+
+        const budgetOptions = budgetData.map(budget => {
+            // this endpoint returns no amount fields → look up from full budget list cache
+            const budgetAvail = budgetFinancials[budget.budgetCode] != null
+                ? Number(budgetFinancials[budget.budgetCode])
+                : 0;
+            const finalAvail = projectLimit != null ? Math.min(projectLimit, budgetAvail) : budgetAvail;
+            const availDisplay = finalAvail.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return {
+                label: `${budget.budgetName || budget.budgetCode} - ₹${availDisplay}`,
+                value: budget.budgetCode
             };
+        });
+
+        setProjectBudgetCodes(budgetOptions);
+        console.log(`✅ Loaded ${budgetOptions.length} budget codes for project ${projectCode}`);
+    } catch (error) {
+        console.error('Error fetching budget codes for project:', error);
+        setProjectBudgetCodes([]);
+    }
+};
     
             // ✅ UPDATED: Auto-fetch employee details (name, department, mobile, email) from employee table
             useEffect(() => {

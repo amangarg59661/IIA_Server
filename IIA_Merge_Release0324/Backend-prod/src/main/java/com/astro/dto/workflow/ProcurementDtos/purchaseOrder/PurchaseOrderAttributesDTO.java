@@ -19,5 +19,7 @@ public class PurchaseOrderAttributesDTO {
     private BigDecimal gstFreight;
     private BigDecimal freightCharge;
     private String budgetCode;
+    private String materialDescriptionQuotation;
+    private String projectName;
 
 }

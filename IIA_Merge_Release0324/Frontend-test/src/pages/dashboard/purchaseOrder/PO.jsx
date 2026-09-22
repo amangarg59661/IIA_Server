@@ -204,8 +204,8 @@ const allMaterials = (tenderDto.indentResponseDTO || []).flatMap(
       dutiesGst: material.dutiesGst || "",
       freightChargeGst: material.freightChargeGst || "",
       projectName: indent.projectName || "",
-      buyBack: indent.buyBack === true,
-      buyBackAmount: indent.buyBack === true ? (indent.buyBackAmount || "") : "",
+      // buyBack: indent.buyBack === true,
+      // buyBackAmount: indent.buyBack === true ? (indent.buyBackAmount || "") : "",
     }))
 );
 
@@ -511,13 +511,26 @@ const baseAmount = baseRate * parseFloat(item.quantity || 0);
 const gstAmount = baseAmount * parseFloat(item.gst / 100 || 0);
 updated[index].gstAmount = gstAmount.toFixed(2);
 
+const dutiesAmount = baseAmount * parseFloat(item.duties / 100 || 0);
+const freightCharge = parseFloat(item.freightCharge || 0);
+const gstDutiesAmount = dutiesAmount * parseFloat(item.dutiesGst / 100 || 0);
+const gstFreightAmount = freightCharge * parseFloat(item.freightChargeGst / 100 || 0);
+
 updated[index].estimatedItemTotal = (
   baseAmount
-  +gstAmount
-  + parseFloat(item.duties || 0)  + parseFloat(item.dutiesGst || 0)
-  + parseFloat(item.freightCharge || 0) + parseFloat(item.freightChargeGst || 0)
-  - parseFloat(item.buyBackAmount || 0)
+  + gstAmount
+  + dutiesAmount
+  + freightCharge
+  + gstDutiesAmount
+  + gstFreightAmount
 ).toFixed(2);
+// updated[index].estimatedItemTotal = (
+//   baseAmount
+//   +gstAmount
+//   + parseFloat(item.duties || 0)  + parseFloat(item.dutiesGst || 0)
+//   + parseFloat(item.freightCharge || 0) + parseFloat(item.freightChargeGst || 0)
+//   - parseFloat(item.buyBackAmount || 0)
+// ).toFixed(2);
 
      
           return { ...prev, materialDtlList: updated };

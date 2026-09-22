@@ -20,7 +20,9 @@ public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTran
 
     @Query("SELECT wt FROM WorkflowTransition wt WHERE wt.requestId = :baseId OR wt.requestId LIKE CONCAT(:baseId, '/%')")
     List<WorkflowTransition> findAllVersionsByRequestId(@Param("baseId") String baseId);
+    List<WorkflowTransition> findByUpdatedByAndModificationDateBetween(String updatedBy, Date start, Date end);
 
+List<WorkflowTransition> findByUpdatedByAndModificationDateAfter(String updatedBy, Date since);
     WorkflowTransition findByWorkflowIdAndTransitionOrder(Integer workflowId, Integer order);
     List<WorkflowTransition> findByWorkflowIdOrCreatedByOrRequestIdOrTransitionId(Integer workflowId, String createdBy, Integer requestId, Integer nextTransitionId);
     List<WorkflowTransition> findByWorkflowIdAndCreatedByAndRequestId(
@@ -362,7 +364,7 @@ AND w.workflowTransitionId = (SELECT MAX(w2.workflowTransitionId) FROM WorkflowT
 List<WorkflowTransition> findPendingTransitionsByRole(@Param("roleName") String roleName);
 
 List<WorkflowTransition> findByCreatedByAndCreatedDateBetween(String createdBy, Date start, Date end);
-List<WorkflowTransition> findByUpdatedByAndModificationDateBetween(String updatedBy, Date start, Date end);
+// List<WorkflowTransition> findByUpdatedByAndModificationDateBetween(String updatedBy, Date start, Date end);
 
 
 }

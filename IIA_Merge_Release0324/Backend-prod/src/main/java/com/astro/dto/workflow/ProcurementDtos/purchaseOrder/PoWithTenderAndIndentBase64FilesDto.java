@@ -32,6 +32,12 @@ public class PoWithTenderAndIndentBase64FilesDto {
         private BigDecimal totalValueOfPo;
         private String projectName;
         private BigDecimal projectLimit;
+        private String indentorName;
+        private String poDescription;
+        private String quotationNumber;
+        private String quotationDate;
+        private String additionalTermsAndConditions;
+        private BigDecimal buyBackAmount;
         private List<String> indentIds;
         private String deliveryDate;
         private List<PurchaseOrderAttributesResponseDTO> purchaseOrderAttributes;

@@ -180,6 +180,8 @@ purchaseOrder.setIsActive(true);
 purchaseOrder.setParentPoId(null);
         purchaseOrder.setTenderId(purchaseOrderRequestDTO.getTenderId());
         purchaseOrder.setIndentId(purchaseOrderRequestDTO.getIndentId());
+         purchaseOrder.setIndentorName(purchaseOrderRequestDTO.getIndentorName());
+        purchaseOrder.setPoDescription(purchaseOrderRequestDTO.getPoDescription());
         purchaseOrder.setWarranty(purchaseOrderRequestDTO.getWarranty());
         purchaseOrder.setConsignesAddress(purchaseOrderRequestDTO.getConsignesAddress());
         purchaseOrder.setBillingAddress(purchaseOrderRequestDTO.getBillingAddress());
@@ -279,6 +281,8 @@ for (PurchaseOrderAttributesDTO dto : purchaseOrderRequestDTO.getPurchaseOrderAt
         attribute.setGstDuties(dto.getGstDuties());
         attribute.setGstFreight(dto.getGstFreight());
         attribute.setBudgetCode(dto.getBudgetCode());
+        attribute.setMaterialDescriptionQuotation(dto.getMaterialDescriptionQuotation());
+        attribute.setProjectName(dto.getProjectName());
         attribute.setTotalPoMaterialPriceInInr(lineTotal);
         attribute.setPurchaseOrder(purchaseOrder);
         clubbedAttrs.put(materialCode, attribute);
@@ -806,6 +810,8 @@ public PurchaseOrderResponseDTO updateMiscFields(String poId, PurchaseOrderReque
         responseDTO.setPoId(purchaseOrder.getPoId());
         responseDTO.setTenderId(purchaseOrder.getTenderId());
         responseDTO.setIndentId(purchaseOrder.getIndentId());
+        // responseDTO.setIndentorName(purchaseOrder.getIndentorName());
+        // responseDTO.setPoDescription(purchaseOrder.getPoDescription());
         responseDTO.setWarranty(purchaseOrder.getWarranty());
         responseDTO.setConsignesAddress(purchaseOrder.getConsignesAddress());
         responseDTO.setBillingAddress(purchaseOrder.getBillingAddress());
@@ -910,10 +916,15 @@ attributeDTO.setReceivedQuantity(attribute.getReceivedQuantity());
                     attributeDTO.setDuties(attribute.getDuties());
                     attributeDTO.setFreightCharge(attribute.getFreightCharge());
                     attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                     attributeDTO.setGstDuties(attribute.getGstDuties());
+                    attributeDTO.setGstFreight(attribute.getGstFreight());
+                    attributeDTO.setMaterialDescriptionQuotation(attribute.getMaterialDescriptionQuotation());
+                    attributeDTO.setProjectName(attribute.getProjectName());
                     MaterialDetailsResponseDTO indentMaterial = indentMaterialMap.get(attribute.getMaterialCode());
                     attributeDTO.setUnitPrice(indentMaterial.getUnitPrice());
                     attributeDTO.setUom(indentMaterial.getUom());
                     attributeDTO.setCategory(indentMaterial.getMaterialCategory());
+                    attributeDTO.setModeOfProcurement(indentMaterial.getModeOfProcurement());
                     return attributeDTO;
                 })
                 .collect(Collectors.toList()));
@@ -964,6 +975,8 @@ if (materialDetails != null) {
         responseDTO.setPoId(purchaseOrder.getPoId());
         responseDTO.setTenderId(purchaseOrder.getTenderId());
         responseDTO.setIndentId(purchaseOrder.getIndentId());
+        responseDTO.setIndentorName(purchaseOrder.getIndentorName());
+        responseDTO.setPoDescription(purchaseOrder.getPoDescription());
         responseDTO.setWarranty(purchaseOrder.getWarranty());
         responseDTO.setConsignesAddress(purchaseOrder.getConsignesAddress());
         responseDTO.setBillingAddress(purchaseOrder.getBillingAddress());
@@ -985,6 +998,10 @@ if (materialDetails != null) {
         responseDTO.setTypeOfSecurity(purchaseOrder.getTypeOfSecurity());
         responseDTO.setSecurityNumber(purchaseOrder.getSecurityNumber());
         responseDTO.setSecurityDate(CommonUtils.convertDateToString(purchaseOrder.getSecurityDate()));
+        responseDTO.setQuotationNumber(purchaseOrder.getQuotationNumber());
+        responseDTO.setQuotationDate(CommonUtils.convertDateToString(purchaseOrder.getQuotationDate()));
+        responseDTO.setAdditionalTermsAndConditions(purchaseOrder.getAdditionalTermsAndConditions());
+        responseDTO.setBuyBackAmount(purchaseOrder.getBuyBackAmount());
         responseDTO.setExpiryDate(CommonUtils.convertDateToString(purchaseOrder.getExpiryDate()));
         //  responseDTO.setProjectName(purchaseOrder.getProjectName());
         // responseDTO.setTotalValueOfPo(tenderWithIndent.getTotalTenderValue());
@@ -1072,15 +1089,29 @@ if (materialDetails != null) {
                     attributeDTO.setGst(attribute.getGst());
                     attributeDTO.setDuties(attribute.getDuties());
                     attributeDTO.setFreightCharge(attribute.getFreightCharge());
-                    attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                                        attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                    attributeDTO.setGstDuties(attribute.getGstDuties());
+                    attributeDTO.setGstFreight(attribute.getGstFreight());
+                    attributeDTO.setMaterialDescriptionQuotation(attribute.getMaterialDescriptionQuotation());
+                    attributeDTO.setProjectName(attribute.getProjectName());
                     // [DRAFT] indentMaterialMap is empty when there is no tender; guard null
                     MaterialDetailsResponseDTO indentMaterial = indentMaterialMap.get(attribute.getMaterialCode());
                     if (indentMaterial != null) {
                         attributeDTO.setUnitPrice(indentMaterial.getUnitPrice());
                         attributeDTO.setUom(indentMaterial.getUom());
                         attributeDTO.setCategory(indentMaterial.getMaterialCategory());
+                        attributeDTO.setModeOfProcurement(indentMaterial.getModeOfProcurement());
                     }
                     return attributeDTO;
+                    // attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                    // // [DRAFT] indentMaterialMap is empty when there is no tender; guard null
+                    // MaterialDetailsResponseDTO indentMaterial = indentMaterialMap.get(attribute.getMaterialCode());
+                    // if (indentMaterial != null) {
+                    //     attributeDTO.setUnitPrice(indentMaterial.getUnitPrice());
+                    //     attributeDTO.setUom(indentMaterial.getUom());
+                    //     attributeDTO.setCategory(indentMaterial.getMaterialCategory());
+                    // }
+                    // return attributeDTO;
                 })
                 .collect(Collectors.toList()));
         // [DRAFT] tenderWithIndent is null when tenderId is absent
@@ -1230,6 +1261,8 @@ if (materialDetails != null) {
         responseDTO.setPoId(purchaseOrder.getPoId());
         responseDTO.setTenderId(purchaseOrder.getTenderId());
         responseDTO.setIndentId(purchaseOrder.getIndentId());
+        responseDTO.setIndentorName(purchaseOrder.getIndentorName());
+        responseDTO.setPoDescription(purchaseOrder.getPoDescription());
         responseDTO.setWarranty(purchaseOrder.getWarranty());
         responseDTO.setConsignesAddress(purchaseOrder.getConsignesAddress());
         responseDTO.setBillingAddress(purchaseOrder.getBillingAddress());
@@ -1254,6 +1287,21 @@ if (materialDetails != null) {
                 purchaseOrder.getGemContractDocuments() == null || purchaseOrder.getGemContractDocuments().isEmpty()
                         ? null
                         : Arrays.asList(purchaseOrder.getGemContractDocuments().split(",")));
+
+                         responseDTO.setBuyBackAmount(purchaseOrder.getBuyBackAmount());
+        responseDTO.setQuotationNumber(purchaseOrder.getQuotationNumber());
+        responseDTO.setAdditionalTermsAndConditions(purchaseOrder.getAdditionalTermsAndConditions());
+        responseDTO.setTypeOfSecurity(purchaseOrder.getTypeOfSecurity());
+        responseDTO.setSecurityNumber(purchaseOrder.getSecurityNumber());
+        if (purchaseOrder.getQuotationDate() != null) {
+            responseDTO.setQuotationDate(CommonUtils.convertDateToString(purchaseOrder.getQuotationDate()));
+        }
+        if (purchaseOrder.getSecurityDate() != null) {
+            responseDTO.setSecurityDate(CommonUtils.convertDateToString(purchaseOrder.getSecurityDate()));
+        }
+        if (purchaseOrder.getExpiryDate() != null) {
+            responseDTO.setExpiryDate(CommonUtils.convertDateToString(purchaseOrder.getExpiryDate()));
+        }
         // [DRAFT] Expose status/version/active so the frontend draft banner and version history work correctly
         responseDTO.setCurrentStatus(purchaseOrder.getCurrentStatus());
         responseDTO.setIsActive(purchaseOrder.getIsActive());
@@ -1286,6 +1334,10 @@ if (materialDetails != null) {
                     attributeDTO.setDuties(attribute.getDuties());
                     attributeDTO.setFreightCharge(attribute.getFreightCharge());
                     attributeDTO.setBudgetCode(attribute.getBudgetCode());
+                    attributeDTO.setGstDuties(attribute.getGstDuties());
+                    attributeDTO.setGstFreight(attribute.getGstFreight());
+                    attributeDTO.setMaterialDescriptionQuotation(attribute.getMaterialDescriptionQuotation());
+                    attributeDTO.setProjectName(attribute.getProjectName());
                     return attributeDTO;
                 })
                 .collect(Collectors.toList()));
@@ -2102,6 +2154,8 @@ public List<ApprovedPoListReportDto> getApprovedPoReport(String startDate, Strin
         // Map all header fields (same mapping as createPurchaseOrder)
         draft.setTenderId(tenderId);
         draft.setIndentId(dto.getIndentId());
+        draft.setIndentorName(dto.getIndentorName());
+        draft.setPoDescription(dto.getPoDescription());
         draft.setWarranty(dto.getWarranty());
         draft.setConsignesAddress(dto.getConsignesAddress());
         draft.setBillingAddress(dto.getBillingAddress());
@@ -2194,6 +2248,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGstDuties(a.getGstDuties());
             attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
+            attr.setMaterialDescriptionQuotation(a.getMaterialDescriptionQuotation());
+            attr.setProjectName(a.getProjectName());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(draft);
             clubbedAttrs.put(materialCode, attr);
@@ -2240,6 +2296,8 @@ List<PurchaseOrderAttributes> attrs = new ArrayList<>(clubbedAttrs.values());
         // Update all header fields in-place (same ID, no versioning)
         existing.setTenderId(dto.getTenderId());
         existing.setIndentId(dto.getIndentId());
+        existing.setIndentorName(dto.getIndentorName());
+        existing.setPoDescription(dto.getPoDescription());
         existing.setWarranty(dto.getWarranty());
         existing.setConsignesAddress(dto.getConsignesAddress());
         existing.setBillingAddress(dto.getBillingAddress());
@@ -2332,6 +2390,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGstDuties(a.getGstDuties());
             attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
+            attr.setMaterialDescriptionQuotation(a.getMaterialDescriptionQuotation());
+            attr.setProjectName(a.getProjectName());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(existing);
             clubbedAttrs.put(materialCode, attr);
@@ -2378,6 +2438,8 @@ List<PurchaseOrderAttributes> newAttrs = new ArrayList<>(clubbedAttrs.values());
         // Update all header fields from the final submitted DTO
         existing.setTenderId(dto.getTenderId());
         existing.setIndentId(dto.getIndentId());
+        existing.setIndentorName(dto.getIndentorName());
+        existing.setPoDescription(dto.getPoDescription());
         existing.setWarranty(dto.getWarranty());
         existing.setConsignesAddress(dto.getConsignesAddress());
         existing.setBillingAddress(dto.getBillingAddress());
@@ -2465,6 +2527,8 @@ if (dto.getPurchaseOrderAttributes() != null) {
             attr.setGstDuties(a.getGstDuties());
             attr.setGstFreight(a.getGstFreight());
             attr.setBudgetCode(a.getBudgetCode());
+            attr.setMaterialDescriptionQuotation(a.getMaterialDescriptionQuotation());
+            attr.setProjectName(a.getProjectName());
             attr.setTotalPoMaterialPriceInInr(lineTotal);
             attr.setPurchaseOrder(existing);
             clubbedAttrs.put(materialCode, attr);

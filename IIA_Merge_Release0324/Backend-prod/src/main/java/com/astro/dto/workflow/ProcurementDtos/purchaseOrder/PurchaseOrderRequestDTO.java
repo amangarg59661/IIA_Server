@@ -30,6 +30,8 @@ public class PurchaseOrderRequestDTO{
         private String vendorType;
         private String vendorAccountName;
         private String deliveryDate;
+        private String indentorName;
+        private String poDescription;
        // private BigDecimal totalValueOfPo;
         private String projectName;
         private String vendorId;

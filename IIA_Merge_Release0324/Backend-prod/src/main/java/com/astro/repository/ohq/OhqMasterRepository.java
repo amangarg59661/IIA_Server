@@ -57,6 +57,10 @@ public interface OhqMasterRepository extends JpaRepository<OhqMasterEntity, Inte
     """, nativeQuery = true)
     List<Object[]> getOhqReport();
 
+
+    @Query("SELECT SUM(o.quantity * o.unitPrice) FROM OhqMasterEntity o")
+BigDecimal sumInventoryValue();
+
         @Query(value = """
         SELECT 
             o.ohq_id AS ohqId,

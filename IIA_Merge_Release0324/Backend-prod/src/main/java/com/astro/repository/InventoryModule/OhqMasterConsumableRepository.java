@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
+import com.astro.dto.dashboard.StockSummaryDto;
+import java.math.BigDecimal;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,15 @@ public interface OhqMasterConsumableRepository extends JpaRepository<OhqMasterCo
     
     Optional<OhqMasterConsumableEntity> findByMaterialCodeAndLocatorId(String materialCode, Integer locatorId);
     Optional<OhqMasterConsumableEntity> findByMaterialCodeAndLocatorIdAndCustodianId(String materialCode, Integer locatorId, String custodianId);
+
+
+@Query("SELECT SUM(o.quantity * o.unitPrice) FROM OhqMasterConsumableEntity o")
+BigDecimal sumInventoryValue();
+
+@Query("SELECT new com.astro.dto.dashboard.StockSummaryDto$CategoryQuantity(o.materialCode, SUM(o.quantity)) " +
+       "FROM OhqMasterConsumableEntity o GROUP BY o.materialCode")
+List<StockSummaryDto.CategoryQuantity> sumQuantityGroupByMaterialCode();
+
 
     @Query(value = """
         SELECT 

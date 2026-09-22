@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -527,4 +528,13 @@ List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentType(@Par
 // ── L433 ──
 @Query("SELECT new com.astro.dto.workflow.ProcurementDtos.IndentDto.SearchIndentIdDto(i.indentId) FROM IndentCreation i WHERE LOWER(i.indentorName) LIKE LOWER(CONCAT('%',:name,'%')) AND i.indentType = :indentType AND i.materialCategoryType = :materialCategoryType")
 List<SearchIndentIdDto> findByIndentorNameContainingIgnoreCaseAndIndentTypeAndMaterialCategoryType(@Param("name") String name, @Param("indentType") String indentType, @Param("materialCategoryType") String materialCategoryType);
+
+
+// ---- new for the Indentor dashboard ----
+long countByCreatedByAndCurrentStatusNotIn(String createdBy, List<String> statuses);
+
+List<IndentCreation> findByCreatedByOrderByCreatedDateDesc(String createdBy, Pageable pageable);
+
+
+
 }

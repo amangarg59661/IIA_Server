@@ -1,5 +1,5 @@
 package com.astro.repository.ProcurementModule.IndentCreation;
-
+import com.astro.dto.dashboard.TopRequestedItemDto;
 import com.astro.entity.ProcurementModule.MaterialDetails;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -25,5 +25,12 @@ public interface MaterialDetailsRepository extends JpaRepository<MaterialDetails
 
     @Query("SELECT m.materialSubCategory FROM MaterialDetails m WHERE m.materialCode = :materialCode")
     String findSubCategoryByMaterialCode(String materialCode);
+
+    // new — for the Indentor dashboard's "Top Requested Items" chart
+    @Query("SELECT new com.astro.dto.dashboard.TopRequestedItemDto(m.materialDescription, COUNT(m)) " +
+           "FROM MaterialDetails m WHERE m.indentCreation.createdBy = :createdBy " +
+           "GROUP BY m.materialDescription ORDER BY COUNT(m) DESC")
+    List<TopRequestedItemDto> countGroupByMaterialForCreator(@Param("createdBy") String createdBy);
+
 
 }

@@ -19,6 +19,8 @@ public interface GrnMasterRepository extends JpaRepository<GrnMasterEntity, Inte
 
     Optional<GrnMasterEntity> findByGrnSubProcessId(Integer subProcessId);
 
+    long countByCreateDateBetweenAndStatus(LocalDateTime start, LocalDateTime end, String status);
+
 
     @Query("SELECT DISTINCT g.grnProcessId FROM GrnMasterEntity g " +
             "WHERE g.grnType = 'GI' AND g.status = 'Approved'")

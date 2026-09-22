@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.math.BigDecimal;
 
 @Repository
 public interface ServiceOrderRepository extends JpaRepository<ServiceOrder, String> {
@@ -75,6 +76,11 @@ List<Object[]> getApprovedSoReport(
         @Param("from") LocalDate from,
         @Param("to") LocalDate to
 );
+
+
+
+@Query("SELECT SUM(s.totalValueOfSo) FROM ServiceOrder s WHERE s.createdDate BETWEEN :start AND :end")
+BigDecimal sumTotalValueByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
 
     // @Query(value = """
     //         SELECT

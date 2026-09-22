@@ -12,6 +12,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.Optional;
+import com.astro.dto.dashboard.PoStatusCountDto;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import java.awt.print.Pageable;
 import java.time.LocalDate;
@@ -44,6 +48,26 @@ public interface PurchaseOrderRepository extends JpaRepository<PurchaseOrder, St
                 ORDER BY po.created_date
             """, nativeQuery = true)
     List<Object[]> getVendorContractDetails(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+
+    @Query("SELECT SUM(p.totalValueOfPo) FROM PurchaseOrder p WHERE p.createdDate BETWEEN :start AND :end")
+    BigDecimal sumTotalValueByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
+
+    Long countByCurrentStatusIn(List<String> statuses);
+
+    long countByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
+
+    long countByCreatedDateBetweenAndCurrentStatus(LocalDateTime start, LocalDateTime end, String status);
+
+    @Query("SELECT new com.astro.dto.dashboard.PoStatusCountDto(p.currentStatus, COUNT(p)) " +
+           "FROM PurchaseOrder p WHERE p.createdDate BETWEEN :start AND :end GROUP BY p.currentStatus")
+    List<PoStatusCountDto> countGroupByStatus(LocalDateTime start, LocalDateTime end);
+
+    List<PurchaseOrder> findTop50ByCreatedDateBetweenOrderByCreatedDateDesc(LocalDateTime start, LocalDateTime end);
+
+    List<PurchaseOrder> findTop10ByCreatedDateAfterOrderByCreatedDateDesc(LocalDateTime since);
+
+    List<PurchaseOrder> findTop10ByUpdatedDateAfterAndCurrentStatusOrderByUpdatedDateDesc(LocalDateTime since, String status);
 
     @Query(value = """
                 SELECT

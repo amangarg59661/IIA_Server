@@ -86,4 +86,20 @@ public interface OgpMasterRepository extends JpaRepository<OgpMasterEntity, Inte
 List<OgpMasterEntity> findByUpdatedByAndUpdateDateBetween(String updatedBy, LocalDateTime start, LocalDateTime end);
 
 
+// ---- new for the Store Person dashboard's "Recent Gate Passes" ----
+// One row per gate-pass line item (not one row per pass) — see GatePassDto's
+// note on why. issued-to uses raw location_id since no receiver-name column
+// exists on ogp_master in the queries I've seen (only the separate
+// ogp_master_rejected_gi table has one).
+@Query(value = """
+    SELECT om.ogp_sub_process_id, om.create_date, od.quantity, om.location_id
+    FROM ogp_master om
+    JOIN ogp_detail od ON om.ogp_sub_process_id = od.ogp_sub_process_id
+    WHERE om.create_date BETWEEN :start AND :end
+    ORDER BY om.create_date DESC
+    """, nativeQuery = true)
+List<Object[]> findRecentGatePassLines(LocalDateTime start, LocalDateTime end);
+
+
+
 }

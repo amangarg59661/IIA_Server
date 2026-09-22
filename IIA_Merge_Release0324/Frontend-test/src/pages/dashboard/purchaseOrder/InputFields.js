@@ -105,6 +105,18 @@ export const PoDetails = [
       }]
     },
     {
+      heading: "Purchase Order Description",
+      colCnt: 2,
+      fieldList: [
+        {
+          name: "poDescription",
+          label: "PO Description",
+          type: "text",
+          span: 2
+        }
+      ]
+    },
+    {
       heading: "Tender Details",
       colCnt: 4,
       fieldList: [
@@ -249,12 +261,12 @@ export const PoDetails = [
             type: "text",
             span: 1
         },
-        {
-          name:"buyBackAmount",
-          label:"Buy Back Amount",
-          type:"text",
-          // required:true
-        },
+        // {
+        //   name:"buyBackAmount",
+        //   label:"Buy Back Amount",
+        //   type:"text",
+        //   // required:true
+        // },
         {
             name: "gst",
             label: "GST (%)",
@@ -316,6 +328,11 @@ export const PoDetails = [
       heading: "Purchase Details",
       colCnt: 2,
       fieldList: [
+        {
+          name: "buyBackAmount",
+          label: "Buy Back Amount",
+          type: "text",
+        },
         {
           name: "warranty",
           label: "Warranty",

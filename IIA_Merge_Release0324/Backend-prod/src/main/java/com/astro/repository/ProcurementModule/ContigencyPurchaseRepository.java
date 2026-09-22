@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import java.math.BigDecimal;
 import static org.hibernate.hql.internal.antlr.HqlTokenTypes.AS;
 import static org.hibernate.hql.internal.antlr.HqlTokenTypes.WHERE;
 import static org.hibernate.loader.Loader.SELECT;
@@ -65,6 +65,15 @@ public interface ContigencyPurchaseRepository extends JpaRepository<ContigencyPu
            @Param("startDate") LocalDate startDate,
            @Param("endDate")   LocalDate endDate
    );*/
+
+
+
+   @Query("SELECT SUM(c.totalCpValue) FROM ContigencyPurchase c WHERE c.createdDate BETWEEN :start AND :end")
+BigDecimal sumTotalValueByCreatedDateBetween(LocalDateTime start, LocalDateTime end);
+
+
+
+
    @Query(value = """
     SELECT 
       cp.contigency_id               AS contigencyId,
