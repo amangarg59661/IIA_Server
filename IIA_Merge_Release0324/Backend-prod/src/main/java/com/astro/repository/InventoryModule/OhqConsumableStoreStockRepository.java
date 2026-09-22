@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import com.astro.dto.dashboard.StockSummaryDto;
 
 import javax.persistence.LockModeType;
 import java.util.List;
@@ -41,5 +42,9 @@ List<Object[]> getSweepMaterialsForLocator(@Param("locatorId") Integer locatorId
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<OhqConsumableStoreStockEntity> findForUpdateByMaterialCodeAndLocatorId(String materialCode, Integer locatorId);
+
+    @Query("SELECT new com.astro.dto.dashboard.StockSummaryDto$CategoryQuantity(o.materialCode, SUM(o.quantity)) " +
+       "FROM OhqConsumableStoreStockEntity o GROUP BY o.materialCode")
+List<StockSummaryDto.CategoryQuantity> sumQuantityGroupByMaterialCode();
 
 }

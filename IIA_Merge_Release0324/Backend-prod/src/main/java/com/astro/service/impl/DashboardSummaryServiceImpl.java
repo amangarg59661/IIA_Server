@@ -19,6 +19,8 @@ import com.astro.repository.ProcurementModule.ContigencyPurchaseRepository; // a
 import com.astro.repository.ProcurementModule.CpMaterialRepository;     // adjust package if different
 import com.astro.repository.ohq.OhqMasterRepository;           // adjust package if different
 import com.astro.repository.InventoryModule.OhqMasterConsumableRepository;
+import com.astro.repository.InventoryModule.OhqConsumableStoreStockRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.astro.service.DashboardSummaryService;
@@ -65,7 +67,8 @@ public class DashboardSummaryServiceImpl  implements DashboardSummaryService {
     @Autowired private CpMaterialRepository cpMaterialsRepository;
     @Autowired private OhqMasterRepository ohqMasterEntityRepository;
     @Autowired private OhqMasterConsumableRepository ohqMasterConsumableEntityRepository;
-     @Autowired private IndentCreationRepository indentCreationRepository;
+    @Autowired private OhqConsumableStoreStockRepository ohqMasterConsumableStoreStockEntityRepository;
+    @Autowired private IndentCreationRepository indentCreationRepository;
     @Autowired private MaterialDetailsRepository materialDetailsRepository;
 
 
@@ -421,11 +424,11 @@ public List<ProcurementTransactionDto> getProcurementTransactions(LocalDate star
  
 @Override
 public StockSummaryDto getStockSummary() {
-    long totalItems = ohqMasterConsumableEntityRepository.count() + ohqMasterEntityRepository.count();
+    long totalItems = ohqMasterConsumableStoreStockEntityRepository.count() + ohqMasterEntityRepository.count();
  
     // Groups by materialCode today — swap for a real category field once a
     // material-master join is available for consumables.
-    List<StockSummaryDto.CategoryQuantity> levels = ohqMasterConsumableEntityRepository.sumQuantityGroupByMaterialCode();
+    List<StockSummaryDto.CategoryQuantity> levels = ohqMasterConsumableStoreStockEntityRepository.sumQuantityGroupByMaterialCode();
  
     // "In Stock / Low Stock / Out of Stock" needs a reorder threshold to
     // classify quantity — there's no such field on OhqMasterConsumableEntity
@@ -433,7 +436,7 @@ public StockSummaryDto getStockSummary() {
     // Stock). Replace with your real reorder-level logic once defined, and
     // move this to a DB-level query if the consumables table grows large —
     // loading all rows into Java is fine at today's scale but not at 10k+ rows.
-    List<OhqMasterConsumableEntity> consumables = ohqMasterConsumableEntityRepository.findAll();
+    List<OhqConsumableStoreStockEntity> consumables = ohqMasterConsumableStoreStockEntityRepository.findAll();
     long outOfStock = consumables.stream()
         .filter(c -> c.getQuantity() == null || c.getQuantity().compareTo(BigDecimal.ZERO) <= 0).count();
     long lowStock = consumables.stream()
