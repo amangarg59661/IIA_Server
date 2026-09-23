@@ -585,6 +585,7 @@ List<SearchPOIdDto> findByCreatedDateBetweenAndIsActive(@Param("start") LocalDat
     // Add inside the interface, just before the closing }
 
 // Draft support
+long countByCreatedDateBetweenAndCurrentStatusIsNull(LocalDateTime start, LocalDateTime end);
 List<PurchaseOrder> findByCreatedByAndCurrentStatusOrderByCreatedDateDesc(
         String createdBy, String currentStatus);
 }

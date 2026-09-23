@@ -210,7 +210,7 @@ const StorePersonDashboard = () => {
             unavailable={poGrnUnavailable}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        {/* <Col xs={24} sm={12} lg={6}>
           <DashboardKpiCard
             icon={<ClockCircleOutlined />}
             title="Yet to be Received"
@@ -219,7 +219,7 @@ const StorePersonDashboard = () => {
             loading={poGrnLoading}
             unavailable={poGrnUnavailable}
           />
-        </Col>
+        </Col> */}
       </Row>
 
       <Row gutter={[16, 16]}>

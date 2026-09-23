@@ -535,6 +535,7 @@ long countByCreatedByAndCurrentStatusNotIn(String createdBy, List<String> status
 
 List<IndentCreation> findByCreatedByOrderByCreatedDateDesc(String createdBy, Pageable pageable);
 
-
+@Query("SELECT i.indentId FROM IndentCreation i WHERE i.createdBy = :createdBy")
+List<String> findIndentIdsByCreatedBy(@Param("createdBy") String createdBy);
 
 }

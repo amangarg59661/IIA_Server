@@ -20,6 +20,7 @@ import com.astro.repository.ProcurementModule.CpMaterialRepository;     // adjus
 import com.astro.repository.ohq.OhqMasterRepository;           // adjust package if different
 import com.astro.repository.InventoryModule.OhqMasterConsumableRepository;
 import com.astro.repository.InventoryModule.OhqConsumableStoreStockRepository;
+import com.astro.repository.InventoryModule.grn.GrnMaterialDtlRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,7 @@ public class DashboardSummaryServiceImpl  implements DashboardSummaryService {
     @Autowired private OhqConsumableStoreStockRepository ohqMasterConsumableStoreStockEntityRepository;
     @Autowired private IndentCreationRepository indentCreationRepository;
     @Autowired private MaterialDetailsRepository materialDetailsRepository;
+    @Autowired private GrnMaterialDtlRepository grnMaterialDtlRepository;
 
 
     private static final List<String> PURCHASE_STORES_ROLES = List.of(
@@ -391,8 +393,10 @@ public PurchasePersonnelSummaryDto getPurchasePersonnelSummary(LocalDate startDa
     long total = purchaseOrderRepository.countByCreatedDateBetween(start, end);
     // PLACEHOLDER status values — confirm against real PurchaseOrder.currentStatus data
     long approved = purchaseOrderRepository.countByCreatedDateBetweenAndCurrentStatus(start, end, "APPROVED");
-    long pending = purchaseOrderRepository.countByCreatedDateBetweenAndCurrentStatus(start, end, "PENDING APPROVAL");
+    long pending = purchaseOrderRepository.countByCreatedDateBetweenAndCurrentStatusIsNull(start, end);
     long rejected = purchaseOrderRepository.countByCreatedDateBetweenAndCurrentStatus(start, end, "REJECTED");
+
+    System.out.println("Total: " + total + ", Approved: " + approved + ", Pending: " + pending + ", Rejected: " + rejected);
  
     return new PurchasePersonnelSummaryDto(total, approved, pending, rejected);
 }
@@ -463,7 +467,9 @@ public PoGrnPaymentStatusDto getPoGrnPaymentStatus(LocalDate startDate, LocalDat
     // Assumes GrnMasterEntity has createDate/status fields, matching the
     // pattern already used elsewhere in this class for the other inventory
     // repos (e.g. gprnMasterRepository.findByStatusOrderByCreateDateAsc).
-    long grnCompleted = grnMasterRepository.countByCreateDateBetweenAndStatus(start, end, "COMPLETED");
+    long grnCompleted = grnMasterRepository.countByCreateDateBetweenAndStatus(start, end, "APPROVED");
+
+    System.out.println("POs Approved: " + posApproved + ", GRNs Completed: " + grnCompleted);
  
     // Payment Voucher entity hasn't been reviewed yet — left at 0 rather
     // than guessed. Wire this up once that entity/repository is available.
@@ -538,8 +544,13 @@ public IndentorSummaryDto getIndentorSummary(Integer userId) {
     long approvedThisMonth = indentCreationRepository.findByCreatedByAndCurrentStatus(createdBy, "APPROVED").stream()
         .filter(i -> i.getUpdatedDate() != null && i.getUpdatedDate().isAfter(monthStart))
         .count();
+        List<String> indentIds = indentCreationRepository.findIndentIdsByCreatedBy(createdBy);
+    BigDecimal myReceivedItemsThisMonth = indentIds.isEmpty()
+        ? BigDecimal.ZERO
+        : grnMaterialDtlRepository.sumReceivedQuantityForIndents(
+              indentIds, LocalDate.now().withDayOfMonth(1), LocalDate.now());
 
-    return new IndentorSummaryDto(myPurchaseRequests, approvedThisMonth, null, null);
+    return new IndentorSummaryDto(myPurchaseRequests, approvedThisMonth, myReceivedItemsThisMonth, null);
 }
 
 @Override
@@ -584,8 +595,8 @@ public List<GatePassDto> getRecentGatePasses(LocalDate startDate, LocalDate endD
             String.valueOf(row[0]),
             row[1] instanceof java.sql.Timestamp ? ((java.sql.Timestamp) row[1]).toLocalDateTime() : null,
             // (String) row[2],
-            row[2] == null ? null : new BigDecimal(row[3].toString()),
-            row[3] == null ? "--" : String.valueOf(row[4])
+            row[2] == null ? null : new BigDecimal(row[2].toString()),
+            row[3] == null ? "--" : String.valueOf(row[3])
         ));
     }
     return result;

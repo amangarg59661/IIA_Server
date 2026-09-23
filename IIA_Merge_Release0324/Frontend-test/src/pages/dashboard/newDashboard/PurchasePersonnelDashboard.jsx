@@ -35,12 +35,19 @@ import useDashboardData from "./useDashboardData";
 
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
+const PO_STATUS_LABELS = {
+  DRAFT: "Draft",
+  REJECTED: "Rejected",
+  ACCEPTED: "Approved",
+};
+const normalizePoStatus = (rawStatus) =>
+  rawStatus == null ? "In Progress" : PO_STATUS_LABELS[rawStatus] || rawStatus;
+
 const STATUS_COLORS = {
-  "Delivered/Completed": "#52c41a",
+  Approved: "#52c41a",
   "In Progress": "#1890ff",
-  "Pending Approval": "#faad14",
+  Draft: "#faad14",
   Rejected: "#f5222d",
-  Cancelled: "#8c8c8c",
 };
 
 /*
@@ -96,6 +103,15 @@ const PurchasePersonnelDashboard = () => {
     true
   );
 
+  const normalizedStatusBreakdown = React.useMemo(() => {
+    const counts = new Map();
+    (statusBreakdown || []).forEach((s) => {
+      const label = normalizePoStatus(s.status);
+      counts.set(label, (counts.get(label) || 0) + (s.count || 0));
+    });
+    return Array.from(counts, ([status, count]) => ({ status, count }));
+  }, [statusBreakdown]);
+
   const { data: pendingSummary, loading: pendingLoading } = useDashboardData(
     "/api/dashboard/dashboardPendingSummary",
     { roleName: "Purchase personnel" },
@@ -111,8 +127,8 @@ const PurchasePersonnelDashboard = () => {
       true
     );
 
-  const totalPos = (statusBreakdown || []).reduce(
-    (sum, s) => sum + (s.count || 0),
+  const totalPos = normalizedStatusBreakdown.reduce(
+    (sum, s) => sum + s.count,
     0
   );
 
@@ -206,19 +222,20 @@ const PurchasePersonnelDashboard = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={15}>
           <Card title="Purchase Order Status" size="small" loading={statusLoading}>
-            {statusBreakdown && statusBreakdown.length ? (
+            {normalizedStatusBreakdown.length ? (
               <div style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={statusBreakdown}
+                    data={normalizedStatusBreakdown}
+                      // data={statusBreakdown}
                       dataKey="count"
                       nameKey="status"
                       innerRadius={55}
                       outerRadius={90}
                       label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                     >
-                      {statusBreakdown.map((entry, i) => (
+                      {normalizedStatusBreakdown.map((entry, i) => (
                         <Cell
                           key={i}
                           fill={STATUS_COLORS[entry.status] || "#8c8c8c"}

@@ -3,6 +3,7 @@ package com.astro.dto.dashboard;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 /**
  * Response for GET /api/dashboard/indentorSummary.
@@ -23,6 +24,6 @@ import lombok.NoArgsConstructor;
 public class IndentorSummaryDto {
     private Long myPurchaseRequests;
     private Long myApprovedRequestsThisMonth;
-    private Long myReceivedItemsThisMonth;
+    private BigDecimal myReceivedItemsThisMonth;
     private Double inventoryStatusPercent;
 }

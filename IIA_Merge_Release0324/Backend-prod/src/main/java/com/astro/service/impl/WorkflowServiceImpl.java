@@ -1849,6 +1849,94 @@ private CycleCountService cycleCountService;
         }
     }
 
+    
+    /**
+     * Updates the underlying request entity (Indent, Tender, PO, SO, SI, CP) to APPROVED
+     * status once the workflow reaches final completion (no more approvers in the chain).
+     *
+     * <p>Unlike updateRequestEntityOnRejection, a failure here is RETHROWN so the
+     * enclosing @Transactional call rolls back — an approval must not be marked COMPLETED
+     * if the underlying entity's status could not be updated.
+     *
+     * <p>Cycle Count (CC) is intentionally skipped — its status is already handled via
+     * cycleCountService.approveCycleCount() at the call site.
+     */
+    private void updateRequestEntityOnApproval(
+            String requestId, String workflowName,
+            Integer actionBy, String remarks, Date now) {
+
+        if (requestId == null || workflowName == null) {
+            System.err.println("⚠️ [APPROVAL] Cannot update entity — requestId or workflowName is null.");
+            return;
+        }
+
+        String workflowNameUpper = workflowName.toUpperCase();
+
+        try {
+            if (requestId.startsWith("IND") || workflowNameUpper.contains("INDENT")) {
+                indentCreationRepository.findById(requestId).ifPresent(indent -> {
+                    indent.setCurrentStatus("APPROVED");
+                    indent.setCurrentStage("INDENT_APPROVED");
+                    indent.setIsEditable(false);
+                    indentCreationRepository.save(indent);
+                    System.out.println("✅ [APPROVAL] IndentCreation " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("T") || workflowNameUpper.contains("TENDER")) {
+                tenderRequestRepository.findById(requestId).ifPresent(tender -> {
+                    tender.setCurrentStatus("APPROVED");
+                    tenderRequestRepository.save(tender);
+                    System.out.println("✅ [APPROVAL] TenderRequest " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("PO") || workflowNameUpper.contains("PO")) {
+                purchaseOrderRepository.findById(requestId).ifPresent(po -> {
+                    po.setCurrentStatus("APPROVED");
+                    purchaseOrderRepository.save(po);
+                    System.out.println("✅ [APPROVAL] PurchaseOrder " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("SO") || workflowNameUpper.contains("SO")) {
+                serviceOrderRepository.findById(requestId).ifPresent(so -> {
+                    so.setCurrentStatus("APPROVED");
+                    serviceOrderRepository.save(so);
+                    System.out.println("✅ [APPROVAL] ServiceOrder " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("SI") || workflowNameUpper.contains("SERVICE INSPECTION")) {
+                serviceInspectionRepository.findById(requestId).ifPresent(si -> {
+                    si.setCurrentStatus("APPROVED");
+                    serviceInspectionRepository.save(si);
+                    System.out.println("✅ [APPROVAL] ServiceInspection " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("CP") || workflowNameUpper.contains("CONTINGENCY")) {
+                contigencyPurchaseRepository.findById(requestId).ifPresent(cp -> {
+                    cp.setCurrentStatus("APPROVED");
+                    contigencyPurchaseRepository.save(cp);
+                    System.out.println("✅ [APPROVAL] ContingencyPurchase " + requestId + " → APPROVED");
+                });
+
+            } else if (requestId.startsWith("CC") || workflowNameUpper.contains("CYCLE COUNT")) {
+                // Intentionally skipped — Cycle Count status is handled separately via
+                // cycleCountService.approveCycleCount() at the call site, not here.
+
+            } else {
+                System.err.println("⚠️ [APPROVAL] No entity update rule for requestId="
+                        + requestId + ", workflowName=" + workflowName
+                        + ". Add a branch in updateRequestEntityOnApproval() if needed.");
+            }
+
+        } catch (Exception e) {
+            // Rethrow — unlike rejection, a failed approval status update must block/rollback
+            // the approval itself (matches the existing budget-finalization behavior below).
+            System.err.println("❌ [APPROVAL] Failed to update request entity for "
+                    + requestId + ": " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
     // private void approveTransition(WorkflowTransition currentWorkflowTransition, TransitionMaster currentTransition, TransitionActionReqDto transitionActionReqDto) {
     private WorkflowTransitionDto approveTransition(WorkflowTransition currentWorkflowTransition, TransitionMaster currentTransition, TransitionActionReqDto transitionActionReqDto) {
         WorkflowTransition nextWorkflowTransition = null;
@@ -2162,6 +2250,13 @@ private CycleCountService cycleCountService;
                     throw e; // Block approval if the adjustment can't be applied — matches PO/SO/CP
                 }
             }
+
+            updateRequestEntityOnApproval(
+                    reqId,
+                    currentWorkflowTransition.getWorkflowName(),
+                    transitionActionReqDto.getActionBy(),
+                    transitionActionReqDto.getRemarks(),
+                    new Date());
         }
 
         workflowTransitionRepository.save(nextWorkflowTransition);
@@ -2367,13 +2462,13 @@ private CycleCountService cycleCountService;
             nextWorkflowTransition.setStatus(AppConstant.COMPLETED_TYPE);
             nextWorkflowTransition.setNextAction(null);
             nextWorkflowTransition.setNextRole(null);
-
-            if (indent != null) {
-                indent.setCurrentStatus("APPROVED");
-                indent.setCurrentStage("INDENT_APPROVED");
-                indent.setIsEditable(false);
-                indentCreationRepository.save(indent);
-            }
+// Update the underlying request entity's status to APPROVED (IND/T/PO/SO/SI/CP)
+            updateRequestEntityOnApproval(
+                    requestId,
+                    pendingTransition.getWorkflowName(),
+                    null, // auto-approved — no acting user
+                    nextWorkflowTransition.getRemarks(),
+                    new Date());
         }
 
         workflowTransitionRepository.save(nextWorkflowTransition);

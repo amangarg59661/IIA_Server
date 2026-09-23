@@ -130,7 +130,7 @@ const IndentorDashboard = () => {
             unavailable={summaryUnavailable}
           />
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        {/* <Col xs={24} sm={12} lg={6}>
           <DashboardKpiCard
             icon={<AppstoreOutlined />}
             title="Inventory Status (My Dept.)"
@@ -140,7 +140,7 @@ const IndentorDashboard = () => {
             loading={summaryLoading}
             unavailable={summaryUnavailable}
           />
-        </Col>
+        </Col> */}
       </Row>
 
       <Row gutter={[16, 16]}>
