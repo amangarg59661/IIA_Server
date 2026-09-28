@@ -3,6 +3,8 @@ package com.astro.service.impl;
 
 import com.astro.constant.AppConstant;
 
+import com.astro.service.WorkflowService;
+
 import com.astro.dto.workflow.MaterialTransitionHistory;
 import com.astro.dto.workflow.ProcurementDtos.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentDto.IndentCreationResponseDTO;
@@ -56,6 +58,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import com.astro.service.BudgetService;
+import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 
 import java.math.RoundingMode;
@@ -111,6 +114,8 @@ private BudgetService budgetService;
     private IiaFreightForwarderDetailsRepository iiaFreightForwarderDetailsRepository;
     @Autowired
     private OfficerSignatureRepository officerSignatureRepository;
+       @Autowired
+    private WorkflowService workflowService;
 
     // added new by abhinav
     @Autowired
@@ -129,7 +134,8 @@ private BudgetService budgetService;
 
 
 
-
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public PurchaseOrderResponseDTO createPurchaseOrder(PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
 
         // BR_PO_001: PO cannot be created until Tender Evaluation is APPROVED.
@@ -342,7 +348,7 @@ List<PurchaseOrderAttributes> purchaseOrderAttributes = new ArrayList<>(clubbedA
                     .warn("Failed to deactivate committee member roles for tender {}: {}",
                             purchaseOrderRequestDTO.getTenderId(), e.getMessage());
         }
-
+        workflowService.initiateWorkflow(poId, "PO Workflow", purchaseOrderRequestDTO.getCreatedBy());
         return mapToResponseDTO(purchaseOrder);
     }
 
@@ -375,6 +381,7 @@ public List<PurchaseOrderResponseDTO> getPoVersionHistory(String poId) {
             .collect(Collectors.toList());
 }
 @Override
+@Transactional(rollbackFor = Exception.class)
 public PurchaseOrderResponseDTO updatePurchaseOrder(String poId, PurchaseOrderRequestDTO dto) {
 
     // 1. Load existing active PO
@@ -561,7 +568,7 @@ List<PurchaseOrderAttributes> newAttributes = new ArrayList<>(clubbedAttrs.value
     budgetService.checkBudgetForPo(newPoId, newPO.getTenderId(), newAttributes);
     // 10. Save new PO version
     purchaseOrderRepository.save(newPO);
-
+ workflowService.initiateWorkflow(newPoId, "PO Workflow", dto.getCreatedBy());
     return mapToResponseDTO(newPO);
 }
 
@@ -2418,6 +2425,7 @@ List<PurchaseOrderAttributes> newAttrs = new ArrayList<>(clubbedAttrs.values());
      * Locks the tender on success.
      * The CONTROLLER must call WorkflowService.initiateWorkflow after this returns.
      */
+    @Transactional(rollbackFor = Exception.class)
     public PurchaseOrderResponseDTO submitPoDraft(String poId, PurchaseOrderRequestDTO dto) {
         PurchaseOrder existing = purchaseOrderRepository.findById(poId)
                 .orElseThrow(() -> new BusinessException(new ErrorDetails(
@@ -2571,7 +2579,7 @@ List<PurchaseOrderAttributes> finalAttrs = new ArrayList<>(clubbedAttrs.values()
                     .warn("Failed to deactivate committee member roles for tender {}: {}",
                             dto.getTenderId(), e.getMessage());
         }
-
+workflowService.initiateWorkflow(poId, "PO Workflow", dto.getCreatedBy());
         return mapToResponseDTO(existing);
     }
 

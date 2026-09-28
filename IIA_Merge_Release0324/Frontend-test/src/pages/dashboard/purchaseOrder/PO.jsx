@@ -758,7 +758,10 @@ const canCancelPo =
       setGeneratedPOId(data.responseData.poId);
       setModalOpen(true);
     } catch (error) {
-      message.error("Failed to submit purchase order");
+      message.error(
+    error?.response?.data?.responseStatus?.message || "Failed to submit purchase order"
+  );
+      // message.error("Failed to submit purchase order");
     } finally {
       setSubmitBtnLoading(false);
     }

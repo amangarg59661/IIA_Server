@@ -49,7 +49,7 @@ public class PurchaseOrderController {
         String userId = purchaseOrderRequestDTO.getCreatedBy();
 
         // Call initiateWorkflow API
-        WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
+        // WorkflowTransitionDto workflowTransitionDto = workflowService.initiateWorkflow(requestId, workflowName, userId);
 
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(createdPO), HttpStatus.OK);
     }
@@ -75,7 +75,7 @@ public ResponseEntity<Object> submitPoDraft(
         @RequestBody PurchaseOrderRequestDTO dto) {
     PurchaseOrderResponseDTO response = poService.submitPoDraft(poId, dto);
     // Initiate workflow — same pattern as createPurchaseOrder
-    workflowService.initiateWorkflow(response.getPoId(), "PO Workflow", dto.getCreatedBy());
+    // workflowService.initiateWorkflow(response.getPoId(), "PO Workflow", dto.getCreatedBy());
     return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(response), HttpStatus.OK);
 }
 
@@ -98,12 +98,6 @@ public ResponseEntity<Object> updateMiscFields(
             @RequestBody @Valid PurchaseOrderRequestDTO purchaseOrderRequestDTO) {
         PurchaseOrderResponseDTO updatedPO = poService.updatePurchaseOrder(poId, purchaseOrderRequestDTO);
 
-        // added by abhinav new line
-        String requestId = updatedPO.getPoId();
-        String workflowName = "PO Workflow";
-        String userId = purchaseOrderRequestDTO.getCreatedBy();
-
-        workflowService.initiateWorkflow(requestId, workflowName, userId);
 
         return new ResponseEntity<Object>(ResponseBuilder.getSuccessResponse(updatedPO), HttpStatus.OK);
     }

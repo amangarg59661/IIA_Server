@@ -107,6 +107,7 @@ private CycleCountService cycleCountService;
     WorkOrderService workOrderService;
 
     @Autowired
+    @Lazy
     PurchaseOrderService purchaseOrderService;
 
     @Autowired
@@ -2512,7 +2513,7 @@ private CycleCountService cycleCountService;
                         AppConstant.ERROR_TYPE_VALIDATION, "Error occurred at approval. No next transition found."));
             }
 
-            //update currentWorkflowTransition nextSatus and save
+            //update currentWorkflowTransition nextStatus and save
             currentWorkflowTransition.setNextAction(AppConstant.COMPLETED_TYPE);
             workflowTransitionRepository.save(currentWorkflowTransition);
 

@@ -299,16 +299,7 @@ const PurchasePersonnelDashboard = () => {
         />
       </Card>
 
-      <Card size="small" title="Quick Links">
-        <Space wrap size="middle">
-          {quickLinks.map(({ label, icon }) => (
-            // TODO: wire onClick to the app's actual route for each link
-            <Button key={label} icon={icon}>
-              {label}
-            </Button>
-          ))}
-        </Space>
-      </Card>
+     
     </div>
   );
 };
