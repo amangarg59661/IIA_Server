@@ -46,7 +46,14 @@ const Igp = () => {
 
   const {locatorMaster, userMaster} = useSelector(state => state?.masters);
 
-  const indentList = userMaster?.filter(item => item.roleName === "Indent Creator").map(item => ({label: item.userName, value: item.userId}));
+  const indentList = userMaster?.filter(item => item.roleName === "Indent Creator").map(item => 
+    ({
+  label: item.departmentName
+    ? `${item.userName} - ${item.departmentName}`
+    : item.userName,
+  value: item.userId
+}));
+    // ({label: item.userName, value: item.userId}));
 
 
   const {locationMaster} = useSelector(state => state.masters);

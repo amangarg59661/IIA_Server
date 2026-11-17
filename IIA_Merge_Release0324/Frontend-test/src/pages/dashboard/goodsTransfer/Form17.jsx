@@ -63,7 +63,14 @@ const Form17 = () => {
   }, {});
   const indentList = userMaster
     ?.filter((item) => item.roleName.includes("Indent Creator") && item.isActive)
-    .map((item) => ({ label: item.userName, value: item.userId }));
+    .map((item) =>
+      ({
+    label: item.departmentName
+      ? `${item.userName} - ${item.departmentName}`
+      : item.userName,
+    value: item.userId
+  })); 
+      // ({ label: item.userName, value: item.userId }));
 
   const formattedLocations = locationMaster?.map((item) => ({
     label: item.locationName,

@@ -50,7 +50,12 @@ public class ApproverController {
     // Get approver by ID
     @GetMapping("/{approverId}")
     public ResponseEntity<Object> getApproverById(@PathVariable Long approverId) {
-        ApproverMaster approver = approverRepository.findById(approverId)
+
+        if (approverId == null) {
+            throw new IllegalArgumentException("Approver ID must not be null");
+        }
+        ApproverMaster approver = approverRepository.findById(approverId)  
+
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
         return new ResponseEntity<>(ResponseBuilder.getSuccessResponse(approver), HttpStatus.OK);
     }
@@ -115,6 +120,9 @@ public class ApproverController {
     // Update approver
     @PutMapping("/{approverId}")
     public ResponseEntity<Object> updateApprover(@PathVariable Long approverId, @RequestBody ApproverMaster approver) {
+         if (approverId == null) {
+            throw new IllegalArgumentException("Approver ID must not be null");
+        }
         ApproverMaster existing = approverRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
 
@@ -145,6 +153,9 @@ public class ApproverController {
     // Delete approver
     @DeleteMapping("/{approverId}")
     public ResponseEntity<Object> deleteApprover(@PathVariable Long approverId) {
+         if (approverId == null) {
+            throw new IllegalArgumentException("Approver ID must not be null");
+        }
         ApproverMaster approver = approverRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
         approverRepository.delete(approver);
@@ -157,6 +168,9 @@ public class ApproverController {
             @PathVariable Long approverId,
             @RequestParam String status,
             @RequestParam String updatedBy) {
+                 if (approverId == null) {
+            throw new IllegalArgumentException("Approver ID must not be null");
+        }
         ApproverMaster approver = approverRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
 
@@ -250,6 +264,12 @@ public class ApproverController {
     // Update workflow branch
     @PutMapping("/branches/{branchId}")
     public ResponseEntity<Object> updateWorkflowBranch(@PathVariable Long branchId, @RequestBody WorkflowBranchMaster branch) {
+           if (branchId == null) {
+            throw new IllegalArgumentException("Branch ID must not be null");
+        }
+        if (branch == null) {
+            throw new IllegalArgumentException("Branch payload must not be null");
+        }
         WorkflowBranchMaster existing = branchRepository.findById(branchId)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
 
@@ -268,6 +288,9 @@ public class ApproverController {
     // Delete workflow branch
     @DeleteMapping("/branches/{branchId}")
     public ResponseEntity<Object> deleteWorkflowBranch(@PathVariable Long branchId) {
+         if (branchId == null) {
+            throw new IllegalArgumentException("Branch ID must not be null");
+        }
         WorkflowBranchMaster branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
         branchRepository.delete(branch);

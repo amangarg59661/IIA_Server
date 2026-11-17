@@ -21,7 +21,16 @@ const Asset = () => {
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
+    
+    onAfterPrint: () => {
+      // ✅ Automatically mark the label as printed once the actual print completes
+      setFormData(prev => ({
+        ...prev,
+        labelPrinted: true
+      }));
+    },
   });
+  
 const debounceTimer = useRef(null); // add this alongside existing useRef(printRef)
   const [assetIdList, setAssetIdList] = useState([]);
 const [searchParams, setSearchParams] = useState({ keyword: "" });
@@ -268,7 +277,14 @@ const assetFields = [
                 type: "text",
                 span: 2,
                 required: true
-            }
+            },
+                  {
+  name: "labelPrinted",
+  label: "Label Printed",
+  type: "checkbox",
+  span: 2,
+  required: false
+}
         ]
     }
 ];
@@ -294,7 +310,8 @@ const assetFields = [
     stockLevels: null,
     conditionOfGoods: "",
     shelfLife: "",
-    locatorId: null
+    locatorId: null,
+    labelPrinted: false
   });
   const handleSearch = async (value) => {
    console.log("handleSearch received value:", value);

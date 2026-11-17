@@ -33,7 +33,13 @@ const [isEditable, setIsEditable] = useState(false);
 
   const indentList = userMaster
     ?.filter((item) => item.roleName.includes( "Indent Creator"))
-    .map((item) => ({ label: item.userName, value: item.userId.toString() }));
+    .map((item) =>  ({
+    label: item.departmentName
+      ? `${item.userName} - ${item.departmentName}`
+      : item.userName,
+    value: item.userId.toString(),
+  }));
+      //  ({ label: item.userName, value: item.userId.toString() }));
 
   const [formData, setFormData] = useState({
     disposalDate: null,

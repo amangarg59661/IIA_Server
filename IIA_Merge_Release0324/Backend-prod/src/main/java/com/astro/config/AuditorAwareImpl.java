@@ -10,6 +10,8 @@ public class AuditorAwareImpl implements AuditorAware<String> {
 
     @Override
     public Optional<String> getCurrentAuditor() {
-        return Optional.ofNullable(UserContextHolder.get());
+        // return Optional.ofNullable(UserContextHolder.get());
+        String currentAuditor = UserContextHolder.get();
+        return currentAuditor != null ? Optional.of(currentAuditor) : Optional.empty();
     }
 }
