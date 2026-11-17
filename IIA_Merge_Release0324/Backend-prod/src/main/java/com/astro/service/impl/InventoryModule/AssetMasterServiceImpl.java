@@ -87,7 +87,27 @@ public class AssetMasterServiceImpl implements AssetMasterService {
     public AssetMasterServiceImpl(@Value("${filePath}") String bp) {
         this.basePath = bp + "/INV";
     }
+  @Override
+    public List<AssetMasterReportDto> getPersonalInventoryReport() {
+        return getAssetReport("", "Store Person");
+    }
 
+    @Override
+public List<AssetMasterReportDto> getPersonalInventory(String userId, String roleName) {
+
+    List<AssetMasterReportDto> allAssets = getAssetReport(userId, roleName);
+
+    // Duplicate rows hatao (ek assetId sirf ek baar)
+    Map<Object, AssetMasterReportDto> uniqueAssets = new LinkedHashMap<>();
+    for (AssetMasterReportDto dto : allAssets) {
+        uniqueAssets.putIfAbsent(dto.getAssetId(), dto);
+    }
+
+    // Sirf logged-in user ke assets
+    return uniqueAssets.values().stream()
+            .filter(dto -> userId.equals(String.valueOf(dto.getCustodianId())))
+            .collect(Collectors.toList());
+}
     @Override
     @Transactional
     public String saveAssetMaster(AssetMasterDto request) {

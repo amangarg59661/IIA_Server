@@ -22,5 +22,5 @@ public class AssetSerialUpdateRequestDto {
     private String uomId;
     private BigDecimal quantity;
     private BigDecimal unitPrice;
-    private List<String> serialNumbers;
+    private List<String> serialNumbers;private Boolean labelPrinted;
 }

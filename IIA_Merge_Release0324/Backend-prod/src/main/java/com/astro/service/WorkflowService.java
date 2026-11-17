@@ -14,7 +14,7 @@ public interface WorkflowService {
 
     public TransitionDto transitionsByWorkflowIdAndOrder(Integer workflowId, Integer order, Integer subOrder);
 
-    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, String createdBy);
+    public WorkflowTransitionDto initiateWorkflow(String requestId, String workflowName, String createdBy);public List<ApprovedIndentsDto> getAllApprovedIndentsForTender(Integer userId);
 
     public List<WorkflowTransitionDto> workflowTransitionHistory(String requestId);
 

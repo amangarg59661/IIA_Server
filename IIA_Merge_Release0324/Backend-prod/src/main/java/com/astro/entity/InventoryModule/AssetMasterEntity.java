@@ -73,7 +73,8 @@ public class AssetMasterEntity {
     @Column(name = "updated_date")
     @LastModifiedDate
     private LocalDateTime updatedDate;
-
+   @Column(name = "label_printed")
+    private Boolean labelPrinted;
     @Column(name="igp_id")
     private Long igpId;
     

@@ -17,6 +17,7 @@ public class AssetMasterDto {
     private BigDecimal initQuantity;
     private BigDecimal unitPrice;
     private String uomId;
+    private Boolean labelPrinted;
     private BigDecimal depriciationRate;
     private LocalDate endOfLife;
     private BigDecimal stockLevels;

@@ -37,7 +37,27 @@ public class ServiceOrder {
     @Column(name = "payment_terms")
     private String paymentTerms;
     @Column(name = "vendor_id")
-    private String vendorId;
+    private String vendorId;   @Column(name = "security_received_date")
+private LocalDate securityReceivedDate;
+
+@Column(name = "type_of_procurement")
+private String typeOfProcurement;
+
+@Column(name = "bank_name")
+private String bankName;
+
+@Column(name = "security_claim_expiry_date")
+private LocalDate securityClaimExpiryDate;
+
+@Column(name = "security_percentage")
+private BigDecimal securityPercentage;
+
+@Column(name = "security_amount")
+private BigDecimal securityAmount;
+
+@Column(name = "security_returned_date")
+private LocalDate securityReturnedDate;
+
     @Column(name = "vendor_name")
     private String vendorName;
     @Column(name = "vendor_address")

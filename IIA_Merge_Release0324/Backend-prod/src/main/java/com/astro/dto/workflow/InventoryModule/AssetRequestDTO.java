@@ -19,7 +19,7 @@ public class AssetRequestDTO {
     private String locator;
     private String transactionHistory;
     private String currentCondition;
-
+private Boolean labelPrinted;
     private String updatedBy;
     private String createdBy;
 }

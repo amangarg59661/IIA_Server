@@ -57,5 +57,8 @@ public class Asset {
     @LastModifiedDate
     private LocalDateTime updatedDate;
 
+      @Column(name = "label_printed")
+    private Boolean labelPrinted;
+
 
 }

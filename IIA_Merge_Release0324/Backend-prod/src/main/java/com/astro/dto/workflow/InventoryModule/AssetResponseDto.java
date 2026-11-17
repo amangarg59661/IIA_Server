@@ -19,7 +19,7 @@ public class AssetResponseDto {
 
 
     private String uom;
-
+private Boolean labelPrinted;
     private String makeNo;
     private String modelNo;
     private String serialNo;

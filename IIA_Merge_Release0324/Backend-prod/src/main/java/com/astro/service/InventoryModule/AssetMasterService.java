@@ -44,4 +44,6 @@ public interface AssetMasterService {
     public SerialCheckResponseDto checkSerials(String assetCode, Integer assetId, String custodianId, Integer locatorId, Integer quantity);
 
     public String addRemainingSerials(AssetSerialUpdateRequestDto req) ;
+        List<AssetMasterReportDto> getPersonalInventoryReport();
+    List<AssetMasterReportDto> getPersonalInventory(String userId, String roleName);
     }

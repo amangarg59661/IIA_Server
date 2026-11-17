@@ -33,7 +33,7 @@ public class FileProcessingServiceImpl implements FileProcessingService {
     @Value("${filePath}")
     private String basePath;
 
-    final List<String> FILE_TYPE_LIST = Arrays.asList("Indent", "Tender", "CP", "INV","Material");
+    final List<String> FILE_TYPE_LIST = Arrays.asList("Indent", "Tender", "CP", "INV","Material","SO","PO","GPRN","GRN","Invoice","Payment","Asset");
 
     private static final Logger log = LoggerFactory.getLogger(FileProcessingServiceImpl.class);
 

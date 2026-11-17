@@ -6,7 +6,9 @@ import com.astro.dto.workflow.ProcurementDtos.IndentDto.*;
 import com.astro.dto.workflow.ProcurementDtos.IndentWorkflowStatusDto;
 import com.astro.dto.workflow.ProcurementDtos.TechnoMomReportDTO;
 import com.astro.service.BudgetService;
-
+import com.astro.entity.InventoryModule.GrnMasterEntity;
+import com.astro.repository.InventoryModule.grn.GrnMasterRepository;
+import com.astro.repository.InventoryModule.PaymentVoucherReposiotry;
 import com.astro.entity.*;
 import com.astro.entity.ProcurementModule.IndentCreation;
 import com.astro.entity.ProcurementModule.JobDetails;
@@ -70,7 +72,11 @@ private PaymentVoucherReposiotry paymentVoucherReposiotry;
 
     @Autowired
     private IndentMaterialMappingRepository indentMaterialMappingRepository;
+ @Autowired
+private GrnMasterRepository grnMasterRepository;
 
+@Autowired
+private PaymentVoucherReposiotry paymentVoucherReposiotry;
     @Autowired
     private ProjectMasterRepository projectMasterRepository;
 

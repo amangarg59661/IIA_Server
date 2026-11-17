@@ -16,7 +16,13 @@ public class soWithTenderAndIndentResponseDTO {
     private BigDecimal jobCompletionPeriod;
     private Boolean ifLdClauseApplicable;
     private String incoTerms;
-    private String paymentTerms;
+    private String paymentTerms;private String securityReceivedDate;
+private String typeOfProcurement;
+private String bankName;
+private String securityClaimExpiryDate;
+private BigDecimal securityPercentage;
+private BigDecimal securityAmount;
+private String securityReturnedDate;private Boolean isApproved;
     private String vendorName;
     private String vendorAddress;
     private String applicablePBGToBeSubmitted;

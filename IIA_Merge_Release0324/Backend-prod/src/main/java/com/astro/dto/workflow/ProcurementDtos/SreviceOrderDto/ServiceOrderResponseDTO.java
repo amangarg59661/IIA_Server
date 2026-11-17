@@ -47,6 +47,13 @@ public class ServiceOrderResponseDTO {
     private String securityNumber;
     private String securityDate;
     private String expiryDate;
+     private String securityReceivedDate;
+    private String typeOfProcurement;
+    private String bankName;
+    private String securityClaimExpiryDate;
+    private BigDecimal securityPercentage;
+    private BigDecimal securityAmount;
+    private String securityReturnedDate;
     private String startDateAmc;
     private String endDateAmc;
     private LocalDateTime createdDate;
